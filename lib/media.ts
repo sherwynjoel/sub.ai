@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 const run = promisify(execFile);
 const bin = (name: string) => (process.env.FFMPEG_DIR ? join(process.env.FFMPEG_DIR, name) : name);
 
-export const STORAGE = resolve(process.env.STORAGE_DIR || "./storage");
+export const STORAGE = resolve(/*turbopackIgnore: true*/ process.env.STORAGE_DIR || "./storage");
 export const CHUNK_SECONDS = 300; // shorter chunks = tighter AI timestamps
 
 /** Duration in seconds, or null if the file has no audio stream / isn't media. */
