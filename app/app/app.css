@@ -9,7 +9,7 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 
 .minutes { display: grid; gap: 4px; text-decoration: none; font-size: .85rem; font-weight: 600; min-width: 120px; }
 .meter, .bar { display: block; height: 6px; border-radius: 3px; background: #e3e7ee; overflow: hidden; }
-.meter i, .bar i { display: block; height: 100%; background: var(--ink); border-radius: inherit; transition: width .4s; }
+.meter i, .bar i { display: block; height: 100%; background: var(--ink); border-radius: inherit; }
 .bar.big { height: 10px; margin: 18px 0 10px; }
 
 /* Upload */

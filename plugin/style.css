@@ -1,4 +1,4 @@
-:root { --bg: #232323; --panel: #2c2c2c; --line: #3d3d3d; --text: #e6e6e6; --muted: #9a9a9a; --sub: #ffd400; --blue: #2d8ceb; --bad: #ff7b6e; }
+:root { --bg: #232323; --panel: #2c2c2c; --line: #3d3d3d; --text: #e6e6e6; --muted: #9a9a9a; --sub: #ffd400; --blue: #1f6fc4; --link: #6aaef2; --bad: #ff7b6e; }
 * { box-sizing: border-box; }
 body { margin: 0; padding: 12px 14px 20px; background: var(--bg); color: var(--text); font: 13px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif; }
 header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
@@ -19,11 +19,11 @@ input:focus, select:focus { outline: none; border-color: var(--blue); }
 .btn[disabled] { opacity: .45; cursor: default; filter: none; }
 .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--text); }
 .btn.small { padding: 6px 9px; font-weight: 500; white-space: nowrap; }
-.link { font: inherit; background: none; border: 0; padding: 0; color: var(--blue); cursor: pointer; justify-self: start; }
+.link { font: inherit; background: none; border: 0; padding: 0; color: var(--link); cursor: pointer; justify-self: start; }
 .muted { color: var(--muted); }
 .error { color: var(--bad); min-height: 1em; }
 .ok { color: #7fd49b; }
 .meter { height: 6px; background: #3a3a3a; border-radius: 3px; overflow: hidden; }
-.meter i { display: block; height: 100%; width: 0; background: var(--sub); transition: width .3s; }
+.meter i { display: block; height: 100%; width: 0; background: var(--sub); }
 details summary { cursor: pointer; color: var(--muted); }
 details label { margin-top: 8px; }
