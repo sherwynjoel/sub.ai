@@ -2,6 +2,16 @@
   "detector": {
     "ignoreRules": [],
     "ignoreFiles": [],
-    "ignoreValues": []
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "tamil",
+        "files": [
+          "plugin/index.html"
+        ],
+        "createdAt": "2026-10-07T07:12:59.880Z",
+        "reason": "false positive: panel now self-hosts the documented Anek Tamil face (plugin/fonts/AnekTamil.ttf); detector reads its rendered name as 'tamil'"
+      }
+    ]
   }
 }

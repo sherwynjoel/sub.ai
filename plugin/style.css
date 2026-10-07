@@ -1,10 +1,11 @@
-:root { --bg: #121410; --panel: #1b1e17; --line: #33382c; --text: #e6e6e6; --muted: #9a9a9a; --sub: #ffd21f; --plaque: #ffd21f; --link: #ffd21f; --bad: #ff6b57; }
+@font-face { font-family: "Anek Tamil"; src: url("fonts/AnekTamil.ttf") format("truetype"); font-weight: 100 800; font-stretch: 75% 125%; }
+:root { --bg: #121410; --panel: #1b1e17; --line: #33382c; --text: #f3f1e8; --muted: #a7ab9c; --sub: #ffd21f; --plaque: #ffd21f; --link: #ffd21f; --bad: #ff6b57; }
 * { box-sizing: border-box; }
-body { margin: 0; padding: 12px 14px 20px; background: var(--bg); color: var(--text); font: 13px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif; }
+body { margin: 0; padding: 12px 14px 20px; background: var(--bg); color: var(--text); font: 13px/1.5 "Anek Tamil", system-ui, sans-serif; }
 header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-.logo { font-weight: 600; font-size: 14px; display: inline-flex; gap: 7px; align-items: center; }
+.logo { font-weight: 600; font-size: 1rem; font-stretch: 80%; font-weight: 800; display: inline-flex; gap: 7px; align-items: center; }
 .logo i { width: 18px; height: 12px; border-radius: 4px; background: #0c6a3c; position: relative; }
-.logo i::after { content: ""; position: absolute; left: 3px; right: 3px; bottom: 2px; height: 2px; background: var(--sub); border-radius: 1px; }
+.logo i::after { content: ""; position: absolute; left: 3px; right: 3px; bottom: 2px; height: 2px; background: var(--sub); border-radius: 4px; }
 h1 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
 p { margin: 0 0 10px; }
 section { display: grid; gap: 12px; }
@@ -23,7 +24,7 @@ input:focus, select:focus { outline: none; border-color: var(--plaque); }
 .muted { color: var(--muted); }
 .error { color: var(--bad); min-height: 1em; }
 .ok { color: #4cc787; }
-.meter { height: 6px; background: #2a2e24; border-radius: 3px; overflow: hidden; }
+.meter { height: 6px; background: #2a2e24; border-radius: 4px; overflow: hidden; }
 .meter i { display: block; height: 100%; width: 0; background: var(--sub); }
 details summary { cursor: pointer; color: var(--muted); }
 details label { margin-top: 8px; }
