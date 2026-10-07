@@ -29,7 +29,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   const signup = mode === "signup";
   return (
-    <form className="panel auth" onSubmit={submit}>
+    <form className="board auth" onSubmit={submit}>
       <h1>{signup ? "Create your account" : "Welcome back"}</h1>
       <p className="muted">{signup ? "Your first 15 minutes of subtitles are free." : "Sign in to your projects."}</p>
       {signup && <label>Name<input name="name" autoComplete="name" required /></label>}
@@ -40,6 +40,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
       </label>
       {error && <p className="error" role="alert">{error}</p>}
       <button className="btn" disabled={busy}>{busy ? "Please wait…" : signup ? "Create account" : "Sign in"}</button>
+      <div className="strip"><span>{signup ? "15 minutes free" : "Your projects"}</span><span>Tamil + English</span></div>
       <p className="muted switch">
         {signup ? <>Already have an account? <Link href="/login">Sign in</Link></> : <>New here? <Link href={`/signup${plan ? `?plan=${plan}` : ""}`}>Create an account</Link></>}
       </p>

@@ -23,11 +23,11 @@ export default function LanguageDemo() {
   const c = CUES[i];
   return (
     <div className="demo">
-      <div className="demo-screen tilt">
-        <div className="scene" />
-        <div className="subtitle on-screen" key={`${i}${view}`}>
-          {view !== "en" && <div lang="ta">{c.ta}</div>}
-          {view !== "ta" && <div className="en">{c.en}</div>}
+      <div className="demo-screen">
+        <span className="screen-tc tc">{c.t}</span>
+        <div className="screen-cue subtitle" key={`${i}${view}`}>
+          {view !== "en" && <span className="paint" lang="ta">{c.ta}</span>}
+          {view !== "ta" && <span className="paint en">{c.en}</span>}
         </div>
       </div>
       <div className="demo-side">
@@ -39,7 +39,7 @@ export default function LanguageDemo() {
         <ol className="demo-cues">
           {CUES.map((x, n) => (
             <li key={x.t} className={n === i ? "on" : undefined}>
-              <span className="time">{x.t}</span>
+              <span className="time tc">{x.t}</span>
               {view !== "en" && <span lang="ta">{x.ta}</span>}
               {view !== "ta" && <span className="muted">{x.en}</span>}
             </li>

@@ -2,57 +2,31 @@
 import { useEffect } from "react";
 
 /**
- * Page-wide motion in one place:
- *  - `.reveal` elements fade/slide in when scrolled into view
- *  - `.tilt` cards lean toward the pointer in 3D and get a spotlight (--mx/--my)
- *  - `[data-step]` sections set data-active on their `[data-steps]` container (sticky story)
- * Does nothing extra when the user prefers reduced motion.
+ * Page motion in one grammar:
+ *  - `.hoist` boards swing down into place on their top hinge when scrolled into view
+ *  - `--walk` (0→1 over the first screen) lets the street scene dolly past as you scroll
+ * Content is visible without JS: the hidden pre-state only applies once `.js` is on <html>.
  */
 export default function Effects() {
   useEffect(() => {
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const reveal = new IntersectionObserver(
-      (entries) => entries.forEach((e) => e.isIntersecting && (e.target.classList.add("in"), reveal.unobserve(e.target))),
-      { rootMargin: "0px 0px -10% 0px" },
+    const root = document.documentElement;
+    root.classList.add("js");
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((e) => e.isIntersecting && (e.target.classList.add("up"), io.unobserve(e.target))),
+      { rootMargin: "0px 0px -12% 0px" },
     );
-    document.querySelectorAll(".reveal").forEach((el) => reveal.observe(el));
-
-    const steps = new IntersectionObserver(
-      (entries) => entries.forEach((e) => {
-        if (!e.isIntersecting) return;
-        const box = (e.target as HTMLElement).closest<HTMLElement>("[data-steps]");
-        if (box) box.dataset.active = (e.target as HTMLElement).dataset.step;
-      }),
-      { rootMargin: "-45% 0px -45% 0px" },
-    );
-    document.querySelectorAll("[data-step]").forEach((el) => steps.observe(el));
+    document.querySelectorAll(".hoist").forEach((el) => io.observe(el));
 
     let raf = 0;
-    const move = (e: PointerEvent) => {
-      const card = (e.target as HTMLElement).closest<HTMLElement>(".tilt");
+    const walk = () => {
       cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        document.documentElement.style.setProperty("--cx", `${e.clientX}px`);
-        document.documentElement.style.setProperty("--cy", `${e.clientY}px`);
-        if (!card) return;
-        const r = card.getBoundingClientRect();
-        const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
-        card.style.setProperty("--mx", `${x * 100}%`);
-        card.style.setProperty("--my", `${y * 100}%`);
-        if (!still) card.style.transform = `perspective(900px) rotateX(${(0.5 - y) * 8}deg) rotateY(${(x - 0.5) * 10}deg) translateZ(0)`;
-      });
+      raf = requestAnimationFrame(() => root.style.setProperty("--walk", Math.min(1, scrollY / innerHeight).toFixed(3)));
     };
-    const leave = (e: PointerEvent) => {
-      const card = (e.target as HTMLElement).closest?.<HTMLElement>(".tilt");
-      if (card && !card.contains(e.relatedTarget as Node)) card.style.transform = "";
-    };
-    addEventListener("pointermove", move, { passive: true });
-    document.addEventListener("pointerout", leave);
+    walk();
+    addEventListener("scroll", walk, { passive: true });
     return () => {
-      reveal.disconnect();
-      steps.disconnect();
-      removeEventListener("pointermove", move);
-      document.removeEventListener("pointerout", leave);
+      io.disconnect();
+      removeEventListener("scroll", walk);
     };
   }, []);
   return null;

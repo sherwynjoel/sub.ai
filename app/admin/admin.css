@@ -1,8 +1,8 @@
 .admin-shell { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 32px; padding: 32px 0 80px; align-items: start; }
 .admin-nav { position: sticky; top: 84px; display: grid; gap: 2px; }
 .admin-nav a { text-decoration: none; padding: .55em .8em; border-radius: var(--r-sm); font-weight: 500; color: var(--ink-2); }
-.admin-nav a:hover { background: rgba(139, 92, 246, .12); color: var(--ink); }
-.admin-nav a[aria-current="page"] { background: linear-gradient(135deg, var(--accent), var(--accent-deep)); color: #fff; box-shadow: var(--glow); }
+.admin-nav a:hover { background: rgba(243, 241, 232, .07); color: var(--ink); }
+.admin-nav a[aria-current="page"] { background: var(--green); color: var(--white); box-shadow: inset 0 0 0 2px var(--green-deep); }
 .admin-main { display: grid; gap: 24px; min-width: 0; }
 .admin-main h1 { font-size: clamp(1.7rem, 3vw, 2.2rem); margin: 0; }
 .admin-main h2 { font-size: 1.35rem; margin: 0 0 .6em; }
@@ -10,10 +10,10 @@
 
 /* Stat row: label + value, numbers carry the story */
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 0; }
-.stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px 20px; display: grid; gap: 2px; backdrop-filter: blur(18px); transition: border-color .2s, transform .3s var(--ease); }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px 20px; display: grid; gap: 2px; transition: border-color .2s, transform .3s var(--ease); }
 .stat:hover { border-color: var(--line-hi); transform: translateY(-2px); }
 .stat dt { font-size: .88rem; color: var(--muted); }
-.stat dd { margin: 0; font: 600 1.7rem/1.25 var(--font-head); letter-spacing: -.02em; }
+.stat dd { margin: 0; font-weight: 800; font-stretch: 75%; font-size: 2.1rem; line-height: 1.15; }
 .stat .sub { font-size: .85rem; color: var(--muted); }
 
 /* Status with icon + word, never colour alone */
@@ -63,7 +63,7 @@
   .two-col { grid-template-columns: 1fr; }
 }
 .spaced { margin-top: 16px; }
-.notice-panel { border-color: rgba(200, 255, 61, .35); background: rgba(200, 255, 61, .05); }
+.notice-panel { background: var(--green); border-color: transparent; box-shadow: inset 0 0 0 6px var(--green-deep), var(--shadow); }
 .notice-panel ul { margin: 0 0 16px; padding-left: 1.2em; display: grid; gap: 4px; }
 .test-row .result, .action .error { white-space: normal; }
 .plan-form label { min-width: 0; }

@@ -48,3 +48,6 @@ next-env.d.ts
 
 /plugin/.tools
 !.env.example
+
+# design review captures (regenerated)
+/.impeccable/review

@@ -1,0 +1,123 @@
+{
+  "title": "Choose the visual world for Vasanam",
+  "question": "The roll assigned Release-Night Banner Street, translated into your black-and-green brief. Keep it, take an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Release-Night Banner Street",
+      "kicker": "THE ROLL",
+      "lineage": "Hand-painted Kollywood release banners on bamboo scaffolding, floodlit at night",
+      "thesis": "Every upload gets a release-night title board: Tamil above, English below, painted big and lit against the dark.",
+      "palette": ["#0b0c0a", "#0f7a45", "#f3f1e8", "#ffd21f", "#c63b2c"],
+      "materials": ["enamel paint on board", "bamboo scaffold", "floodlight", "sign-writer lettering"],
+      "viewport": "A black night street; one giant green board stands at depth on scaffolding, its Tamil and English lines painting on in sync with a playing clip, the Start free plaque nailed to the board.",
+      "risk": "Banner culture tips into fan-cutout kitsch if the lettering discipline slips; it must read as a working page, not a poster.",
+      "raised": [
+        { "from": "challenger-riso", "raise": "Two-enamel rule: every board uses at most two paints plus black; no gradients, no glows." },
+        { "from": "challenger-teletext", "raise": "Addressable reel: each section carries a real timecode address that doubles as the header navigation." },
+        { "from": "challenger-zine", "raise": "Scale is hierarchy: one painted word per board is biggest, and it is the one that matters." },
+        { "from": "challenger-sneaker", "raise": "Label strip: every plan and feature board carries the same small painted label strip (name, minutes, price)." },
+        { "from": "challenger-sun", "raise": "One light governs: a single warm floodlight temperature lights every board; nothing glows on its own." }
+      ]
+    },
+    {
+      "id": "model-pick",
+      "label": "Censor Certificate",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "The CBFC certificate frame that opens every Tamil film",
+      "thesis": "The page opens like a film: a certified title frame, bilingual and official, then the reel rolls.",
+      "palette": ["#06070a", "#0d3b2e", "#e9e6dc", "#d7b65a"],
+      "materials": ["ornamental border card", "projected light", "film grain"],
+      "viewport": "A full black frame holding one ornate bordered certificate card naming the clip, its Tamil and English subtitle lines, runtime, and a Start free stamp.",
+      "risk": "The certificate is the most familiar frame in Tamil cinema; it can read as a costume if the card stops being a working form."
+    },
+    {
+      "id": "challenger-bluenote",
+      "label": "Session Sleeve",
+      "verdict": "competitive",
+      "lineage": "Blue Note session sleeves",
+      "thesis": "Each cut as a record sleeve: a hard-cropped duotone still and one flat green band carrying the subtitle line.",
+      "palette": ["#0b0b0b", "#1d8a52", "#f2f0ea"],
+      "materials": ["duotone photograph", "flat spot colour", "angled sans caps"],
+      "viewport": "A duotone still cropped hard into a corner, a full-strength green band across the rest, the Tamil line set big across it at an angle.",
+      "case": "Holds clarity: the band is a strong frame for subtitle lines. Loses identification: jazz sleeves are not this audience's world, and it needs real film stills you do not have yet.",
+      "risk": "Without real stills the crop has nothing to hold."
+    },
+    {
+      "id": "challenger-riso",
+      "label": "Risograph Print",
+      "verdict": "declined",
+      "lineage": "Riso spot-ink printing",
+      "palette": ["#f1ece0", "#ff48b0", "#0078bf"],
+      "materials": ["spot inks", "paper grain"],
+      "thesis": "Spot inks misregistering on paper.",
+      "viewport": "Ink-layered sections on a paper ground.",
+      "risk": "Light paper ground breaks the dark brief.",
+      "case": "Loses both axes: not the editor's world, and a light ground contradicts the brief.",
+      "kept": "Total commitment to two inks."
+    },
+    {
+      "id": "challenger-teletext",
+      "label": "Teletext Magazine",
+      "verdict": "declined",
+      "lineage": "Broadcast teletext",
+      "palette": ["#000000", "#ffff00", "#00ffff", "#ffffff"],
+      "materials": ["block mosaic", "40x24 grid"],
+      "thesis": "Numbered pages in a fixed character grid.",
+      "viewport": "A P100 index of features.",
+      "risk": "Retro novelty for an Indian audience that never used teletext.",
+      "case": "Loses both: no cultural pull here, and the rigid grid fights Tamil script.",
+      "kept": "Every section is addressable."
+    },
+    {
+      "id": "challenger-zine",
+      "label": "Punk Paste-up Zine",
+      "verdict": "declined",
+      "lineage": "Xerox punk flyers",
+      "palette": ["#111111", "#f4f4f0", "#ff3ea5"],
+      "materials": ["toner", "ransom letters"],
+      "thesis": "Ransom-note headlines on photocopies.",
+      "viewport": "A gritty stapled flyer.",
+      "risk": "The opposite of the clean, classic brief.",
+      "case": "Loses both: gritty where the brief asks clean, and foreign to the audience.",
+      "kept": "Scale is hierarchy."
+    },
+    {
+      "id": "challenger-sneaker",
+      "label": "Sneaker Box Wall",
+      "verdict": "declined",
+      "lineage": "Sneaker archive shelves",
+      "palette": ["#c4551f", "#111111", "#f6f4ef"],
+      "materials": ["box board", "end labels"],
+      "thesis": "A wall of labelled boxes you slide open.",
+      "viewport": "Stacked boxes with poem-like labels.",
+      "risk": "Orange box board fights the black-and-green brief.",
+      "case": "Loses both: no link to subtitling or editors.",
+      "kept": "One label grid rules every card."
+    },
+    {
+      "id": "challenger-sun",
+      "label": "Indoor Weather Sun",
+      "verdict": "declined",
+      "lineage": "Mirrored-ceiling light installation",
+      "palette": ["#e88a1a", "#140c04"],
+      "materials": ["sodium haze", "mirror"],
+      "thesis": "One amber light flattening everything.",
+      "viewport": "A half sun doubled by a mirror.",
+      "risk": "Amber monochrome breaks the green brief.",
+      "case": "Loses both: atmospheric, but says nothing about subtitles.",
+      "kept": "A single light governs the palette."
+    }
+  ],
+  "reroll": { "registers": ["safer", "bolder"] },
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A dark product page in the manner of polished developer tools, executed at full craft.",
+    "palette": ["#08090a", "#f7f8f8", "#22c55e"],
+    "materials": ["clean grid", "product screenshots", "subtle depth"],
+    "viewport": "Headline and Start free on the left, a large tilted screenshot of the subtitle editor on the right.",
+    "risk": "Indistinguishable from every other AI tool's landing page by design."
+  },
+  "steer": true
+}

@@ -184,7 +184,9 @@ export default function Editor({ initial }: { initial: Job }) {
           {cues.map((c, i) => (
             <li key={i} className={i === activeIdx ? "on" : undefined}>
               <div className="times">
-                <button className="seek" onClick={() => seek(c.start)} title="Play from here" aria-label={`Play from ${tc(c.start)}`}>▶</button>
+                <button className="seek" onClick={() => seek(c.start)} title="Play from here" aria-label={`Play from ${tc(c.start)}`}>
+                  <svg width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5z" fill="currentColor" /></svg>
+                </button>
                 <TimeInput key={`s${c.start}`} value={c.start} onChange={(start) => edit(i, { start })} label="Start" />
                 <TimeInput key={`e${c.end}`} value={c.end} onChange={(end) => edit(i, { end })} label="End" />
                 <span className="row-tools">

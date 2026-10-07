@@ -1,26 +1,24 @@
-.auth-page { position: relative; min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 28px; padding: 32px 16px; overflow: hidden; }
-.auth-orb {
-  position: absolute; width: 560px; height: 560px; left: 50%; top: 50%; margin: -280px 0 0 -280px; border-radius: 50%; z-index: -1;
-  background: conic-gradient(from 0deg, var(--accent), var(--pink), var(--sub), var(--accent));
-  filter: blur(110px); opacity: .35; animation: spin 18s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.floater {
-  position: absolute; z-index: -1; padding: .45em .9em; border-radius: 999px; font-size: .85rem; font-weight: 600;
-  background: rgba(20, 17, 32, .7); border: 1px solid var(--line-hi); color: var(--ink-2);
-  animation: bob 7s ease-in-out infinite;
-}
-.floater:nth-of-type(odd) { color: var(--sub); }
-@keyframes bob { 50% { transform: translateY(-18px) rotate(-3deg); } }
+.auth-page { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 72px; padding: 40px 16px 0; overflow: hidden; }
+.auth-rig { position: relative; perspective: 1400px; padding-bottom: 96px; }
 .auth {
-  width: min(420px, calc(100vw - 32px)); display: grid; gap: 18px; padding: 36px;
-  animation: authIn .8s var(--ease) both;
-  background: linear-gradient(var(--card-solid), var(--card-solid)) padding-box, linear-gradient(140deg, rgba(167, 139, 250, .6), rgba(232, 121, 249, .15) 40%, rgba(200, 255, 61, .35)) border-box;
-  border: 1px solid transparent;
+  width: min(420px, calc(100vw - 32px)); display: grid; gap: 18px; padding: 44px 36px 32px; transform-origin: 50% 0;
+  animation: authHoist 1.1s var(--ease) both;
 }
-@keyframes authIn { from { opacity: 0; transform: translateY(24px) scale(.97); } }
-.auth h1 { font-size: 1.9rem; margin: 0; }
+@keyframes authHoist { from { opacity: 0; rotate: x -70deg; translate: 0 -30px; } }
+.auth h1 { font-size: 2.6rem; margin: 0; }
 .auth p { margin: 0; }
-.auth .switch { font-size: .92rem; }
-.auth .btn { margin-top: 4px; }
-@media (max-width: 600px) { .floater { display: none; } }
+.auth .switch { font-size: .95rem; }
+.auth .btn { margin-top: 6px; }
+
+/* Lamp above, bamboo legs below: the same street furniture as the landing page */
+.auth-lamp { position: absolute; z-index: 2; top: -36px; left: 50%; width: 64px; height: 18px; margin-left: -32px; border-radius: 4px 4px 10px 10px; background: linear-gradient(to top, rgba(var(--flood), .55) 3px, #262a22 3px); }
+.auth-lamp::after {
+  content: ""; position: absolute; top: 16px; left: 50%; width: 360px; height: 150px; margin-left: -180px; pointer-events: none;
+  background: radial-gradient(60% 75% at 50% 0, rgba(var(--flood), .16), rgba(var(--flood), 0) 72%);
+  clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%); mix-blend-mode: screen; opacity: 0; animation: authLamp 1s linear 1s forwards;
+}
+@keyframes authLamp { 0% { opacity: 0; } 15% { opacity: .9; } 22% { opacity: .2; } 35%, 100% { opacity: 1; } }
+.auth-legs { position: absolute; left: 16%; right: 16%; bottom: 0; height: 96px; background: linear-gradient(transparent 40%, var(--bamboo) 40% 46%, transparent 46%); }
+.auth-legs::before, .auth-legs::after { content: ""; position: absolute; top: 0; bottom: 0; width: 10px; border-radius: 3px; background: repeating-linear-gradient(to bottom, var(--bamboo) 0 36px, var(--bamboo-dark) 36px 39px); }
+.auth-legs::before { left: 0; }
+.auth-legs::after { right: 0; }
