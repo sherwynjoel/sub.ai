@@ -51,3 +51,4 @@ next-env.d.ts
 
 # design review captures (regenerated)
 /.impeccable/review
+/.impeccable/questions
