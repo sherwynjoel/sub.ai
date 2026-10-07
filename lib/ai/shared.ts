@@ -6,6 +6,7 @@ export type AiConfig = { provider: string; model: string; sttModel: string };
 export type Provider = (audio: Buffer, durationSec: number, cfg: AiConfig) => Promise<Cue[]>;
 
 /** fetch with retries on rate limits / server errors. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped vendor JSON
 export async function postJson(url: string, init: RequestInit, tries = 4): Promise<any> {
   for (let i = 1; ; i++) {
     const res = await fetch(url, { ...init, method: "POST", signal: AbortSignal.timeout(10 * 60e3) });

@@ -50,7 +50,7 @@ async function processJob(job: typeof jobs.$inferSelect) {
         await db.update(jobs).set({ progress: Math.round(5 + (90 * done) / plan.length), updatedAt: new Date() }).where(eq(jobs.id, job.id));
       }
     }));
-    await db.update(jobs).set({ status: "done", progress: 100, cues: mergeChunks(results), updatedAt: new Date() }).where(eq(jobs.id, job.id));
+    await db.update(jobs).set({ status: "done", progress: 100, error: null, cues: mergeChunks(results), updatedAt: new Date() }).where(eq(jobs.id, job.id));
     console.log(`job ${job.id} done (${plan.length} chunks, ${cfg.provider}/${cfg.model})`);
   } finally {
     await rm(dir, { recursive: true, force: true });
