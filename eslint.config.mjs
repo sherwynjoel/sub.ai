@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Adobe panel: ExtendScript/CEP code, not part of the Next app.
+    "plugin/**",
   ]),
 ]);
 

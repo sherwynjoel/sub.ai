@@ -16,7 +16,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!FORMATS[fmt]) return json({ error: "Unknown format" }, 400);
   const [fn, type] = FORMATS[fmt];
   const base = j.filename.replace(/\.[^.]+$/, "").replace(/[^\w\- ]+/g, "_") || "subtitles";
-  return new Response("﻿" + fn(j.cues, lang), {
+  return new Response("\uFEFF" + fn(j.cues, lang), {
     headers: {
       "content-type": `${type}; charset=utf-8`,
       "content-disposition": `attachment; filename="${base}.${lang}.${fmt}"`,

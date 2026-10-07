@@ -1,0 +1,29 @@
+:root { --bg: #232323; --panel: #2c2c2c; --line: #3d3d3d; --text: #e6e6e6; --muted: #9a9a9a; --sub: #ffd400; --blue: #2d8ceb; --bad: #ff7b6e; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 12px 14px 20px; background: var(--bg); color: var(--text); font: 13px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif; }
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.logo { font-weight: 600; font-size: 14px; display: inline-flex; gap: 7px; align-items: center; }
+.logo i { width: 18px; height: 12px; border-radius: 2px; background: #3a4a70; position: relative; }
+.logo i::after { content: ""; position: absolute; left: 3px; right: 3px; bottom: 2px; height: 2px; background: var(--sub); border-radius: 1px; }
+h1 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+p { margin: 0 0 10px; }
+section { display: grid; gap: 12px; }
+label, .field { display: grid; gap: 5px; color: var(--muted); }
+.label { color: var(--muted); }
+input, select { font: inherit; color: var(--text); background: #1b1b1b; border: 1px solid var(--line); border-radius: 4px; padding: 7px 8px; width: 100%; }
+input:focus, select:focus { outline: none; border-color: var(--blue); }
+.row { display: flex; gap: 8px; align-items: center; }
+.pill { flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.btn { font: inherit; font-weight: 600; border: 0; border-radius: 4px; padding: 9px 12px; background: var(--blue); color: #fff; cursor: pointer; }
+.btn:hover { filter: brightness(1.1); }
+.btn[disabled] { opacity: .45; cursor: default; filter: none; }
+.btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--text); }
+.btn.small { padding: 6px 9px; font-weight: 500; white-space: nowrap; }
+.link { font: inherit; background: none; border: 0; padding: 0; color: var(--blue); cursor: pointer; justify-self: start; }
+.muted { color: var(--muted); }
+.error { color: var(--bad); min-height: 1em; }
+.ok { color: #7fd49b; }
+.meter { height: 6px; background: #3a3a3a; border-radius: 3px; overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: var(--sub); transition: width .3s; }
+details summary { cursor: pointer; color: var(--muted); }
+details label { margin-top: 8px; }

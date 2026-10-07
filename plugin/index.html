@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Vasanam</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <span class="logo"><i></i>Vasanam</span>
+    <button id="settingsBtn" class="link" hidden>Account</button>
+  </header>
+
+  <!-- Connect: shown until a key works -->
+  <section id="connect" hidden>
+    <h1>Connect your account</h1>
+    <p class="muted">Create a key on the website under <strong>Plugin</strong>, then paste it here.</p>
+    <label>Your key<input id="key" type="password" placeholder="vsn_…" autocomplete="off" /></label>
+    <details>
+      <summary>Server</summary>
+      <label>Website address<input id="server" /></label>
+    </details>
+    <button id="connectBtn" class="btn">Connect</button>
+    <p id="connectMsg" class="error" role="alert"></p>
+  </section>
+
+  <!-- Main -->
+  <section id="main" hidden>
+    <p id="account" class="muted"></p>
+    <div class="field">
+      <span class="label">Clip</span>
+      <div class="row">
+        <span id="clip" class="pill">Nothing selected</span>
+        <button id="pickBtn" class="btn ghost small">Use selection</button>
+      </div>
+    </div>
+    <label>Subtitles in
+      <select id="lang">
+        <option value="ta">Tamil</option>
+        <option value="en">English</option>
+        <option value="both">Tamil + English</option>
+      </select>
+    </label>
+    <button id="goBtn" class="btn" disabled>Generate subtitles</button>
+    <div id="progress" hidden>
+      <div class="meter"><i id="bar"></i></div>
+      <p id="status" class="muted"></p>
+    </div>
+    <p id="msg" role="status"></p>
+    <button id="openBtn" class="link" hidden>Open in the web editor</button>
+  </section>
+
+  <script src="subs.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

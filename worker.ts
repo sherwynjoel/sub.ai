@@ -78,7 +78,10 @@ async function main() {
   console.log("worker ready");
   let lastPurge = 0;
   for (;;) {
-    if (Date.now() - lastPurge > 3600e3) await purgeOld().catch(console.error), (lastPurge = Date.now());
+    if (Date.now() - lastPurge > 3600e3) {
+      lastPurge = Date.now();
+      await purgeOld().catch(console.error);
+    }
     const job = await claim().catch((e) => (console.error(e), null));
     if (!job) { await new Promise((r) => setTimeout(r, 2000)); continue; }
     await processJob(job).catch((e) => fail(job, e));
