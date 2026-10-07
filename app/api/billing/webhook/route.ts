@@ -1,11 +1,12 @@
 import { db, billingEvents } from "@/db";
 import { json } from "@/lib/auth";
 import { applySubscription, hmacOk } from "@/lib/razorpay";
+import { getSecret } from "@/lib/secrets";
 
 /** Razorpay webhook (Dashboard → Webhooks → <APP_URL>/api/billing/webhook, subscription.* events). */
 export async function POST(req: Request) {
   const raw = await req.text();
-  if (!hmacOk(raw, req.headers.get("x-razorpay-signature"))) return json({ error: "bad signature" }, 400);
+  if (!hmacOk(raw, req.headers.get("x-razorpay-signature"), await getSecret("RAZORPAY_WEBHOOK_SECRET"))) return json({ error: "bad signature" }, 400);
   const evt = JSON.parse(raw);
   const id = req.headers.get("x-razorpay-event-id") || `${evt.event}:${evt.created_at}:${evt.payload?.subscription?.entity?.id}`;
   const fresh = await db.insert(billingEvents).values({ id, type: evt.event, payload: evt }).onConflictDoNothing().returning();

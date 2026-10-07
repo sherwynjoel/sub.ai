@@ -2,13 +2,14 @@ import { db, settings } from "@/db";
 import type { AiConfig, Provider } from "./shared";
 import { gemini } from "./gemini";
 import { openaiCompatible } from "./openai";
+import { getSecret } from "@/lib/secrets";
 
 export type { AiConfig };
 
 const OPENAI_LIKE = {
   openai: { baseUrl: "https://api.openai.com/v1", key: "OPENAI_API_KEY", stt: "whisper-1", llm: "gpt-4.1-mini" },
   groq: { baseUrl: "https://api.groq.com/openai/v1", key: "GROQ_API_KEY", stt: "whisper-large-v3-turbo", llm: "llama-3.3-70b-versatile" },
-  custom: { baseUrl: process.env.AI_BASE_URL || "", key: "AI_API_KEY", stt: "whisper-1", llm: "" },
+  custom: { baseUrl: "", key: "AI_API_KEY", stt: "whisper-1", llm: "" }, // base URL comes from AI_BASE_URL
 } as const;
 
 export const PROVIDERS = ["gemini", "openai", "groq", "custom"] as const;
@@ -34,9 +35,16 @@ export async function saveAiConfig(cfg: AiConfig) {
     await db.insert(settings).values({ key, value }).onConflictDoUpdate({ target: settings.key, set: { value } });
 }
 
-export const transcribe: Provider = (audio, dur, cfg) => {
+export const transcribe: Provider = async (audio, dur, cfg) => {
   if (cfg.provider === "gemini") return gemini(audio, dur, cfg);
-  const p = OPENAI_LIKE[cfg.provider as keyof typeof OPENAI_LIKE];
-  if (!p) throw new Error(`Unknown AI provider "${cfg.provider}"`);
-  return openaiCompatible(audio, dur, cfg, { baseUrl: p.baseUrl, apiKey: process.env[p.key] || "" });
+  const api = await openaiApi(cfg.provider);
+  return openaiCompatible(audio, dur, cfg, api);
 };
+
+/** Base URL + key for an OpenAI-style provider (also used by the admin "Test" button). */
+export async function openaiApi(provider: string) {
+  const p = OPENAI_LIKE[provider as keyof typeof OPENAI_LIKE];
+  if (!p) throw new Error(`Unknown AI provider "${provider}"`);
+  const baseUrl = provider === "custom" ? (await getSecret("AI_BASE_URL")).replace(/\/+$/, "") : p.baseUrl;
+  return { baseUrl, apiKey: await getSecret(p.key) };
+}

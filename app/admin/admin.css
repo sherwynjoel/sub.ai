@@ -1,0 +1,68 @@
+.admin-shell { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 32px; padding: 32px 0 80px; align-items: start; }
+.admin-nav { position: sticky; top: 84px; display: grid; gap: 2px; }
+.admin-nav a { text-decoration: none; padding: .55em .8em; border-radius: var(--r-sm); font-weight: 500; color: var(--ink-2); }
+.admin-nav a:hover { background: rgba(20, 33, 61, .06); }
+.admin-nav a[aria-current="page"] { background: var(--ink); color: #fff; }
+.admin-main { display: grid; gap: 24px; min-width: 0; }
+.admin-main h1 { font-size: clamp(1.7rem, 3vw, 2.2rem); margin: 0; }
+.admin-main h2 { font-size: 1.35rem; margin: 0 0 .6em; }
+.admin-main .panel > p:last-child { margin-bottom: 0; }
+
+/* Stat row: label + value, numbers carry the story */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 0; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 16px 18px; display: grid; gap: 2px; }
+.stat dt { font-size: .88rem; color: var(--muted); }
+.stat dd { margin: 0; font-size: 1.9rem; font-weight: 600; line-height: 1.2; }
+.stat .sub { font-size: .85rem; color: var(--muted); }
+
+/* Status with icon + word, never colour alone */
+.status { display: inline-flex; align-items: center; gap: .4em; font-weight: 600; font-size: .9rem; white-space: nowrap; }
+.status::before { content: ""; width: .6em; height: .6em; border-radius: 50%; background: currentColor; }
+.status.good { color: var(--ok); }
+.status.bad { color: var(--bad); }
+.status.wait { color: #8a6d00; }
+.status.neutral { color: var(--muted); }
+
+.filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+.filters label { min-width: 160px; }
+.filters input[type="search"] { min-width: 240px; }
+.pager { display: flex; gap: 12px; align-items: center; justify-content: flex-end; }
+
+.table-wrap td.actions { white-space: nowrap; text-align: right; }
+.table-wrap td.num, .table-wrap th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.table-wrap td .muted { display: block; font-size: .82rem; }
+.table-wrap td a { font-weight: 500; }
+.action { display: inline-flex; gap: 8px; align-items: center; }
+
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 8px 24px; margin: 0; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+.inline-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+.inline-form input, .inline-form select { width: auto; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Connections */
+.conn { display: grid; gap: 4px; padding: 16px 0; border-top: 1px solid var(--line); }
+.conn:first-of-type { border-top: 0; padding-top: 4px; }
+.conn-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+.conn-head strong { font-weight: 600; }
+.conn .now { font-size: .9rem; color: var(--ink-2); overflow-wrap: anywhere; }
+.conn form { display: flex; gap: 8px; margin-top: 6px; }
+.conn form input { flex: 1; min-width: 0; }
+.test-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.test-row .result { font-size: .92rem; }
+.copy { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.copy code { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-sm); padding: .45em .7em; font-size: .88rem; overflow-wrap: anywhere; }
+
+@media (max-width: 900px) {
+  .admin-shell { grid-template-columns: 1fr; gap: 16px; padding-top: 20px; }
+  .admin-nav { position: static; display: flex; overflow-x: auto; gap: 4px; }
+  .admin-nav a { white-space: nowrap; }
+  .two-col { grid-template-columns: 1fr; }
+}
+.spaced { margin-top: 16px; }
+.notice-panel { border-color: #f0dc7a; background: #fffbea; }
+.notice-panel ul { margin: 0 0 16px; padding-left: 1.2em; display: grid; gap: 4px; }
+.test-row .result, .action .error { white-space: normal; }
+.plan-form label { min-width: 0; }

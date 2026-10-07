@@ -22,9 +22,19 @@ npm test                        # unit checks; plus: node plugin/subs.test.js
 
 Needs **ffmpeg/ffprobe** on PATH (or `FFMPEG_DIR`). The account whose email equals `ADMIN_EMAIL` becomes admin at sign-up.
 
+## Admin panel (`/admin`)
+
+- **Overview** — setup checklist, worker status, queue, projects today, minutes, users, MRR, money collected.
+- **Operations** — every project, search/filter, retry failed ones, delete.
+- **Users** — search; per user: plan, minutes, projects, billing history; give a plan for N days, add bonus minutes, reset usage, sign out everywhere, make admin.
+- **Subscriptions** — subscribers with Razorpay status and links, every webhook event with amounts.
+- **Connections** — paste API keys and Razorpay keys/plan IDs (AES-256-GCM encrypted in the DB, never shown again in full), test buttons, AI model switch, webhook URL, worker status.
+
+Keys saved in the admin panel override `.env.local`. The encryption key is `SETTINGS_SECRET` if set, otherwise generated once into `storage/.settings-key` — back that file up (or set `SETTINGS_SECRET`), or saved keys must be re-entered.
+
 ## Switching the AI model
 
-`/admin → Subtitle AI` (stored in DB, no redeploy). Env vars are the fallback.
+`/admin → Connections → Subtitle AI` (stored in DB, no redeploy). Env vars are the fallback.
 
 | Provider | How it works | Keys | Notes |
 |---|---|---|---|

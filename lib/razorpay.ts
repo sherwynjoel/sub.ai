@@ -2,10 +2,13 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, users } from "@/db";
-import { planFromRazorpayId } from "@/lib/plans";
+import { PAID, type PlanId } from "@/lib/plans";
+import { getSecret, type ConnectionName } from "@/lib/secrets";
 
 export async function rzp(path: string, body?: unknown) {
-  const auth = Buffer.from(`${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`).toString("base64");
+  const [id, secret] = await Promise.all([getSecret("RAZORPAY_KEY_ID"), getSecret("RAZORPAY_KEY_SECRET")]);
+  if (!id || !secret) throw new Error("Payments aren't set up yet. Add the Razorpay keys in Admin → Connections.");
+  const auth = Buffer.from(`${id}:${secret}`).toString("base64");
   const res = await fetch(`https://api.razorpay.com/v1${path}`, {
     method: body ? "POST" : "GET",
     headers: { authorization: `Basic ${auth}`, "content-type": "application/json" },
@@ -16,7 +19,7 @@ export async function rzp(path: string, body?: unknown) {
   return data;
 }
 
-export function hmacOk(payload: string, signature: string | null, secret = process.env.RAZORPAY_WEBHOOK_SECRET || "") {
+export function hmacOk(payload: string, signature: string | null, secret: string) {
   if (!signature || !secret) return false;
   const want = Buffer.from(createHmac("sha256", secret).update(payload).digest("hex"));
   const got = Buffer.from(signature);
@@ -25,9 +28,16 @@ export function hmacOk(payload: string, signature: string | null, secret = proce
 
 type Sub = { id: string; plan_id: string; status: string; current_end?: number | null; notes?: { userId?: string } };
 
+export const razorpayPlanId = (plan: PlanId) => getSecret(`RAZORPAY_PLAN_${plan.toUpperCase()}` as ConnectionName);
+
+export async function planFromRazorpayId(id: string): Promise<PlanId | null> {
+  for (const p of PAID) if ((await razorpayPlanId(p)) === id) return p;
+  return null;
+}
+
 /** Mirror a Razorpay subscription onto the user. `charged` = a new billing period was paid → reset usage. */
 export async function applySubscription(s: Sub, charged: boolean) {
-  const plan = planFromRazorpayId(s.plan_id);
+  const plan = await planFromRazorpayId(s.plan_id);
   const where = s.notes?.userId ? eq(users.id, s.notes.userId) : eq(users.subscriptionId, s.id);
   await db
     .update(users)

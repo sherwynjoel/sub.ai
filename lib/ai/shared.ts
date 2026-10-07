@@ -12,7 +12,11 @@ export async function postJson(url: string, init: RequestInit, tries = 4): Promi
     const res = await fetch(url, { ...init, method: "POST", signal: AbortSignal.timeout(10 * 60e3) });
     if (res.ok) return res.json();
     const body = await res.text();
-    if (i >= tries || (res.status !== 429 && res.status < 500)) throw new Error(`AI ${res.status}: ${body.slice(0, 300)}`);
+    if (i >= tries || (res.status !== 429 && res.status < 500)) {
+      let detail = body;
+      try { detail = JSON.parse(body).error?.message ?? body; } catch { /* not JSON */ }
+      throw new Error(`AI service error ${res.status}: ${String(detail).slice(0, 300)}`);
+    }
     await new Promise((r) => setTimeout(r, 2 ** i * 1500));
   }
 }

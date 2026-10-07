@@ -6,7 +6,7 @@ import { mkdtemp, readFile, rm, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { and, eq, lt, isNotNull, sql } from "drizzle-orm";
-import { db, jobs, users, type Cue } from "./db";
+import { db, jobs, settings, users, type Cue } from "./db";
 import { getAiConfig, transcribe } from "./lib/ai";
 import { extractChunks, probe } from "./lib/media";
 import { mergeChunks } from "./lib/subtitles";
@@ -72,7 +72,15 @@ async function purgeOld() {
   }
 }
 
+/** Lets /admin show whether the worker is alive. */
+async function heartbeat() {
+  const value = new Date().toISOString();
+  await db.insert(settings).values({ key: "worker_heartbeat", value }).onConflictDoUpdate({ target: settings.key, set: { value } });
+}
+
 async function main() {
+  heartbeat().catch(console.error);
+  setInterval(() => heartbeat().catch(console.error), 20e3);
   // ponytail: assumes a single worker process; with several, only requeue jobs whose updated_at is stale.
   await db.update(jobs).set({ status: "queued", progress: 0 }).where(eq(jobs.status, "processing"));
   console.log("worker ready");

@@ -9,14 +9,6 @@ export const PLANS: Record<PlanId, { name: string; priceInr: number; minutes: nu
 
 export const PAID: PlanId[] = ["creator", "pro", "studio"];
 
-export function razorpayPlanId(plan: PlanId) {
-  return process.env[`RAZORPAY_PLAN_${plan.toUpperCase()}`] || "";
-}
-
-export function planFromRazorpayId(id: string): PlanId | null {
-  return PAID.find((p) => razorpayPlanId(p) === id) ?? null;
-}
-
 type Quota = { plan: string; secondsUsed: number; periodEnd: Date | null };
 
 /** A paid plan counts only while its period is running; otherwise the user falls back to the trial. */

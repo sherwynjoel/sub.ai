@@ -1,81 +1,77 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { count, desc, eq, sql } from "drizzle-orm";
-import AdminAi from "@/components/AdminAi";
+import { desc, eq } from "drizzle-orm";
 import { db, jobs, users } from "@/db";
-import { DEFAULT_MODELS, getAiConfig, PROVIDERS } from "@/lib/ai";
-import { requireUser } from "@/lib/auth";
-import { BRAND } from "@/lib/brand";
-import { effectivePlan } from "@/lib/plans";
-import "../app/app.css";
+import { getAiConfig } from "@/lib/ai";
+import { inr, mins, overview, when } from "@/lib/admin";
+import { PLANS, PAID } from "@/lib/plans";
+import { connectionStatus } from "@/lib/secrets";
 
-export default async function Admin() {
-  const u = await requireUser();
-  if (!u.isAdmin) notFound();
-  const [cfg, people, recent, [stats]] = await Promise.all([
+export default async function Overview() {
+  const [o, cfg, conns, recentFails] = await Promise.all([
+    overview(),
     getAiConfig(),
-    db.select().from(users).orderBy(desc(users.createdAt)).limit(50),
-    db.select({ j: jobs, email: users.email }).from(jobs).innerJoin(users, eq(users.id, jobs.userId)).orderBy(desc(jobs.createdAt)).limit(50),
-    db.select({
-      jobs: count(),
-      minutes: sql<number>`coalesce(round(sum(${jobs.durationSec}) / 60), 0)`,
-      failed: sql<number>`count(*) filter (where ${jobs.status} = 'failed')`,
-    }).from(jobs),
+    connectionStatus(),
+    db.select({ j: jobs, email: users.email }).from(jobs).innerJoin(users, eq(users.id, jobs.userId))
+      .where(eq(jobs.status, "failed")).orderBy(desc(jobs.createdAt)).limit(5),
   ]);
+  const has = (n: string) => conns.some((c) => c.name === n && c.source);
+  const aiKey = { gemini: "GEMINI_API_KEY", openai: "OPENAI_API_KEY", groq: "GROQ_API_KEY", custom: "AI_API_KEY" }[cfg.provider] ?? "";
+  const todo = [
+    !has(aiKey) && `Add the ${cfg.provider} API key so videos can be subtitled.`,
+    !has("RAZORPAY_KEY_ID") || !has("RAZORPAY_KEY_SECRET") ? "Add your Razorpay keys so users can subscribe." : null,
+    PAID.some((p) => !has(`RAZORPAY_PLAN_${p.toUpperCase()}`)) && "Add the three Razorpay plan IDs.",
+    !has("RAZORPAY_WEBHOOK_SECRET") && "Add the Razorpay webhook secret so renewals update automatically.",
+  ].filter(Boolean) as string[];
 
   return (
     <>
-      <header className="app-head">
-        <div className="wrap site-head">
-          <Link href="/app" className="logo"><i />{BRAND.name} admin</Link>
-          <Link href="/app" className="btn ghost small">Back to app</Link>
+      <h1>Overview</h1>
+
+      {todo.length > 0 && (
+        <section className="panel notice-panel">
+          <h2>Finish setup</h2>
+          <ul>{todo.map((t) => <li key={t}>{t}</li>)}</ul>
+          <Link href="/admin/connections" className="btn small">Open Connections</Link>
+        </section>
+      )}
+
+      <dl className="stats">
+        <div className="stat">
+          <dt>Worker</dt>
+          <dd><span className={`status ${o.worker.online ? "good" : "bad"}`}>{o.worker.online ? "Running" : "Stopped"}</span></dd>
+          <span className="sub">Last seen {when(o.worker.last)}</span>
         </div>
-      </header>
-      <main className="wrap app-main admin">
-        <p className="muted">{people.length} recent users · {stats.jobs} projects · {stats.minutes} minutes processed · {stats.failed} failed</p>
+        <div className="stat"><dt>In the queue</dt><dd>{o.jobs.queued + o.jobs.processing}</dd><span className="sub">{o.jobs.processing} processing now</span></div>
+        <div className="stat"><dt>Projects today</dt><dd>{o.jobs.today}</dd><span className="sub">{o.jobs.failedToday} failed</span></div>
+        <div className="stat"><dt>Minutes subtitled, 30 days</dt><dd>{o.jobs.minutes30d.toLocaleString("en-IN")}</dd><span className="sub">Using {cfg.provider} / {cfg.model}</span></div>
+        <div className="stat"><dt>Users</dt><dd>{o.users.total.toLocaleString("en-IN")}</dd><span className="sub">{o.users.new7d} new this week</span></div>
+        <div className="stat"><dt>On paid plans</dt><dd>{o.subscribers}</dd><span className="sub">{PAID.map((p) => `${PLANS[p].name} ${o.byPlan[p] ?? 0}`).join(", ")}</span></div>
+        <div className="stat"><dt>Monthly recurring revenue</dt><dd>{inr(o.mrr)}</dd><span className="sub">Active subscriptions at list price</span></div>
+        <div className="stat"><dt>Collected, 30 days</dt><dd>{inr(o.revenue30d)}</dd><span className="sub">{o.charges30d} Razorpay charges</span></div>
+      </dl>
 
-        <section className="panel">
-          <h2>Subtitle AI</h2>
-          <p className="muted">New projects use this provider and model. Compare quality by re-uploading the same clip after switching; each project records what made it.</p>
-          <AdminAi current={cfg} providers={[...PROVIDERS]} defaults={DEFAULT_MODELS} />
-        </section>
+      {!o.worker.online && (
+        <p className="error">The worker isn&apos;t running, so uploads will wait in the queue. Start it with <code>npm run worker</code> (or <code>pm2 restart vasanam-worker</code> on the server).</p>
+      )}
 
-        <section className="panel">
-          <h2>Recent projects</h2>
+      <section className="panel">
+        <h2>Recent failures</h2>
+        {recentFails.length === 0 ? (
+          <p className="muted">No failed projects.</p>
+        ) : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>File</th><th>User</th><th>Length</th><th>Status</th><th>Made with</th><th>When</th></tr></thead>
+              <thead><tr><th>File</th><th>User</th><th>Reason</th><th>When</th></tr></thead>
               <tbody>
-                {recent.map(({ j, email }) => (
-                  <tr key={j.id}>
-                    <td>{j.filename}</td><td>{email}</td><td>{Math.round(j.durationSec / 60)} min</td>
-                    <td title={j.error ?? undefined}>{j.status}{j.error ? ` — ${j.error.slice(0, 60)}` : ""}</td>
-                    <td>{j.provider ? `${j.provider} / ${j.model}` : "—"}</td>
-                    <td>{j.createdAt.toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}</td>
-                  </tr>
+                {recentFails.map(({ j, email }) => (
+                  <tr key={j.id}><td>{j.filename}<span className="muted">{mins(j.durationSec)}</span></td><td>{email}</td><td>{j.error}</td><td>{when(j.createdAt)}</td></tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </section>
-
-        <section className="panel">
-          <h2>Users</h2>
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>Used</th><th>Subscription</th><th>Joined</th></tr></thead>
-              <tbody>
-                {people.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.name}</td><td>{p.email}</td><td>{effectivePlan(p)}</td><td>{Math.round(p.secondsUsed / 60)} min</td>
-                    <td>{p.subscriptionStatus ?? "—"}</td><td>{p.createdAt.toLocaleDateString("en-IN")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </main>
+        )}
+        <p><Link href="/admin/jobs?status=failed">See all failed projects</Link></p>
+      </section>
     </>
   );
 }

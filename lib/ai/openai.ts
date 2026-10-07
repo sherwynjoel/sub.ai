@@ -6,7 +6,7 @@ import type { Cue } from "@/db";
  * 1) Whisper-style transcription gives timed segments, 2) a chat model writes Tamil + English for each.
  */
 export async function openaiCompatible(audio: Buffer, _dur: number, cfg: AiConfig, api: { baseUrl: string; apiKey: string }): Promise<Cue[]> {
-  if (!api.baseUrl || !api.apiKey) throw new Error(`API URL/key missing for provider "${cfg.provider}"`);
+  if (!api.baseUrl || !api.apiKey) throw new Error(`API key or URL for "${cfg.provider}" is not set. Add it in Admin → Connections.`);
   const auth = { authorization: `Bearer ${api.apiKey}` };
 
   const form = new FormData();

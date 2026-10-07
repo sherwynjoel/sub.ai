@@ -1,3 +1,4 @@
+import { getSecret } from "@/lib/secrets";
 import { postJson, SUBTITLE_RULES, type Provider } from "./shared";
 
 const schema = {
@@ -12,8 +13,8 @@ const schema = {
 
 /** Gemini hears the audio directly and returns timed Tamil + English cues in a single call. */
 export const gemini: Provider = async (audio, dur, cfg) => {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY is not set");
+  const key = await getSecret("GEMINI_API_KEY");
+  if (!key) throw new Error("Gemini API key is not set. Add it in Admin → Connections.");
   const prompt = `${SUBTITLE_RULES}
 Listen to this ${dur.toFixed(1)}-second audio clip and return subtitle cues for ALL speech, in order.
 "start"/"end" are seconds from the start of this clip (decimals allowed, between 0 and ${dur.toFixed(1)}), aligned tightly to when the words are spoken. Return [] if there is no speech.`;
