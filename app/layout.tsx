@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Anek_Tamil, Newsreader } from "next/font/google";
+import { Anek_Tamil, Unbounded } from "next/font/google";
 import { BRAND } from "@/lib/brand";
 import "./globals.css";
 
 const sans = Anek_Tamil({ subsets: ["latin", "tamil"], variable: "--font-sans", display: "swap" });
-const serif = Newsreader({ subsets: ["latin"], variable: "--font-serif", display: "swap", style: ["normal", "italic"] });
+const display = Unbounded({ subsets: ["latin"], variable: "--font-display", display: "swap" });
 
 export const metadata: Metadata = {
   title: `${BRAND.name} — ${BRAND.tagline}`,
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${serif.variable}`}>
+    <html lang="en" className={`${sans.variable} ${display.variable}`}>
       <body>{children}</body>
     </html>
   );
