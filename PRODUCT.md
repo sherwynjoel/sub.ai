@@ -28,7 +28,8 @@ Editors work on desktop in Premiere Pro or After Effects, often late, against cl
 
 ## Brand Commitments
 - Name "Vasanam" (Tamil for dialogue) is a working name, not final; keep it in `lib/brand.ts` so it can change.
-- The user asked for a dark interface (black with green or purple), classic and clean, with 3D animation and scroll effects, and explicitly rejected the previous glassy violet/aurora/gradient-text look as AI-generated.
+- Standing preference (2026-10-09): a premium tech product look in the class of Apple, Linear and Vercel: clean, generous space, the product shown big, subtle 3D and smooth scroll motion. Theme left to the designer.
+- Rejected so far: (1) glassy violet/aurora/gradient-text dark UI as AI-generated; (2) the themed "release-night banner street" (green/yellow enamel boards, bamboo, floodlights, condensed lettering) as gimmicky, wrong colours, cramped fonts and not premium. Do not bring back themed costumes, condensed display type, or green/yellow-on-black.
 
 ## Evidence on Hand
 The user has some real proof (testimonials, sample clips, client logos) to share later; none is in the repo yet. Until provided, the site must not invent testimonials, customer names, logos, usage numbers or accuracy figures. Reserve a place for proof without filling it with fabrications.

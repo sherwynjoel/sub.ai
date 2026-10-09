@@ -1,32 +1,22 @@
 import Link from "next/link";
 import Effects from "@/components/Effects";
-import LanguageDemo from "@/components/LanguageDemo";
-import ScreenBoard from "@/components/ScreenBoard";
+import ProductShot from "@/components/ProductShot";
+import StoryScroll from "@/components/StoryScroll";
 import { BRAND } from "@/lib/brand";
 import { PLANS, type PlanId } from "@/lib/plans";
 import "./landing.css";
 
-// Section addresses double as navigation, the way an editor jumps to a timecode.
-const NAV = [
-  ["#how", "00:12", "How it works"],
-  ["#formats", "00:31", "What you get"],
-  ["#plugin", "00:48", "Plugin"],
-  ["#pricing", "01:05", "Pricing"],
-] as const;
-
-const STEPS = [
-  { ta: "பதிவேற்று", en: "Upload", body: "Drop an MP4, MOV, MKV or audio file up to 4 GB, from the website or from inside your editor.", strip: ["Step 1", "Up to 4 GB"] },
-  { ta: "திருத்து", en: "Fix", body: "Tamil and English sit side by side with the video. Change a word or nudge a timing, then save.", strip: ["Step 2", "Side by side"] },
-  { ta: "அனுப்பு", en: "Ship", body: "Download SRT or VTT, or let the panel lay the captions on your sequence.", strip: ["Step 3", "SRT, VTT, TXT"] },
+const FACTS = [
+  ["Colloquial Tamil", "Spoken Tamil stays spoken Tamil, written in proper Tamil script."],
+  ["Tanglish", "Code-mixed lines come out readable in both languages."],
+  ["One timing", "Tamil and English share every timestamp, so nothing drifts."],
 ];
 
-const RATES = [
-  ["Tamil script", "Colloquial Tamil stays colloquial, in proper Tamil script"],
-  ["Tanglish", "Code-mixed lines come out readable in both languages"],
-  ["One timing", "Tamil and English share every timestamp"],
-  ["Formats", "SRT, WebVTT and plain text, per language or stacked"],
-  ["Your editor", "Caption track in Premiere Pro, text layers in After Effects"],
-  ["Privacy", "Videos are deleted automatically after 7 days"],
+const FORMATS = [
+  ["SRT", "Premiere Pro, Resolve, YouTube"],
+  ["WebVTT", "Web players and HTML5 video"],
+  ["Plain text", "Scripts, captions, show notes"],
+  ["Caption track", "Straight onto your Premiere sequence"],
 ];
 
 // Real proof only. Add the user's own testimonials here; the section stays hidden while this is empty.
@@ -45,13 +35,13 @@ export default function Home() {
   return (
     <>
       <Effects />
-      <header className="street-head">
+      <header className="top">
         <div className="wrap site-head">
           <Link href="/" className="logo"><i />{BRAND.name}</Link>
           <nav aria-label="Main">
-            {NAV.map(([href, t, label]) => (
-              <a key={href} href={href} className="hide-sm"><span className="tc addr">{t}</span>{label}</a>
-            ))}
+            <a href="#how" className="hide-sm">How it works</a>
+            <a href="#plugin" className="hide-sm">Plugin</a>
+            <a href="#pricing" className="hide-sm">Pricing</a>
             <Link href="/login">Sign in</Link>
             <Link href="/signup" className="btn small">Start free</Link>
           </nav>
@@ -59,153 +49,100 @@ export default function Home() {
       </header>
 
       <main>
-        {/* First viewport: the banner street at night */}
-        <section className="street">
-          <div className="street-scene">
-            <div className="rig">
-              <article className="board offer-board">
-                <span className="lamp" aria-hidden="true" />
-                <h1><span className="h1-lead">Tamil and English subtitles,</span> <span className="h1-big">painted on your timeline.</span></h1>
-                <p className="offer-copy">Upload a cut, fix a few lines, and drop SRT or captions into Premiere Pro.</p>
-                <div className="offer-actions">
-                  <Link href="/signup" className="btn">Start free, 15 minutes</Link>
-                  <a href="#how" className="offer-link">See how it works</a>
-                </div>
-                <div className="strip"><span>No card needed</span><span>UPI and cards when you upgrade</span></div>
-                <span className="legs" aria-hidden="true" />
-              </article>
-              <div className="screen-wrap">
-                <span className="lamp" aria-hidden="true" />
-                <ScreenBoard />
-                <span className="legs" aria-hidden="true" />
-              </div>
+        <section className="hero">
+          <div className="wrap hero-copy">
+            <h1>Tamil and English subtitles. In minutes.</h1>
+            <p className="lede">Upload a cut and get every line of dialogue in Tamil script and English, timed and ready for your timeline.</p>
+            <div className="hero-actions">
+              <Link href="/signup" className="btn">Start free</Link>
+              <a href="#how" className="link-arrow">See how it works<svg width="8" height="12" viewBox="0 0 8 12" aria-hidden="true"><path d="M1.5 1.5L6 6l-4.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg></a>
+              <span className="note">15 minutes free. No card needed.</span>
             </div>
           </div>
-          <div className="ground" aria-hidden="true" />
-        </section>
-
-        <section className="section" id="how">
-          <div className="wrap">
-            <h2 className="sec-title"><span className="tc addr">00:12</span> Three steps from cut to captions</h2>
-            <ol className="steps">
-              {STEPS.map((s, i) => (
-                <li key={s.en} className="board step-board hoist" style={{ "--d": `${i * 0.12}s` } as React.CSSProperties}>
-                  <span className="lamp" aria-hidden="true" />
-                  <span className="step-ta" lang="ta">{s.ta}</span>
-                  <h3>{s.en}</h3>
-                  <p>{s.body}</p>
-                  <div className="strip">{s.strip.map((x) => <span key={x}>{x}</span>)}</div>
-                  <span className="legs short" aria-hidden="true" />
-                </li>
-              ))}
-            </ol>
+          <div className="shot-stage">
+            <ProductShot />
           </div>
         </section>
 
-        <section className="section" id="formats">
+        <section className="section tamil">
           <div className="wrap">
-            <div className="board rate-board hoist">
-              <span className="lamp" aria-hidden="true" />
-              <h2><span className="tc addr">00:31</span> What you get</h2>
-              <dl className="rates">
-                {RATES.map(([k, v]) => (
+            <h2 className="reveal">Made for the way Tamil is actually spoken.</h2>
+            <figure className="specimen reveal">
+              <p className="spec-ta" lang="ta">அப்போ நாளைக்கு எல்லார் முன்னாடியும் சொல்லு.</p>
+              <p className="spec-en">Then say it tomorrow, in front of everyone.</p>
+              <figcaption className="spec-time tc"><span>00:01:18,900</span><span className="rule" /><span>00:01:22,100</span></figcaption>
+            </figure>
+            <dl className="facts reveal">
+              {FACTS.map(([k, v]) => (
+                <div key={k}><dt>{k}</dt><dd>{v}</dd></div>
+              ))}
+            </dl>
+          </div>
+        </section>
+
+        <section className="section how" id="how">
+          <div className="wrap">
+            <h2 className="reveal">From cut to captions in four steps.</h2>
+            <StoryScroll />
+          </div>
+        </section>
+
+        <section className="section plugin" id="plugin">
+          <div className="wrap plugin-grid">
+            <div className="reveal">
+              <h2>Right inside Premiere Pro and After Effects.</h2>
+              <p className="lede">
+                Install the panel once and connect it with your key. Select a clip, choose Tamil, English or both, and click
+                Generate. Premiere gets a caption track; After Effects gets timed text layers.
+              </p>
+              <dl className="formats">
+                {FORMATS.map(([k, v]) => (
                   <div key={k}><dt>{k}</dt><dd>{v}</dd></div>
                 ))}
               </dl>
-              <div className="strip"><span>Every plan</span><span>Tamil + English</span></div>
-              <span className="legs short" aria-hidden="true" />
+              <Link href="/signup" className="btn ghost">Get the plugin</Link>
             </div>
-          </div>
-        </section>
-
-        <section className="section" id="demo">
-          <div className="wrap">
-            <h2 className="sec-title">One timing, two languages</h2>
-            <p className="sec-lede">Switch the view between Tamil, English or both. The cues never drift apart, so you never re-sync.</p>
-            <div className="board demo-board hoist">
-              <span className="lamp" aria-hidden="true" />
-              <LanguageDemo />
-              <div className="strip"><span>Sample dialogue</span><span>Same timing in both languages</span></div>
-              <span className="legs short" aria-hidden="true" />
-            </div>
-          </div>
-        </section>
-
-        <section className="interval" aria-label="Interval">
-          <div className="wrap interval-inner hoist">
-            <span className="interval-ta" lang="ta">இடைவேளை</span>
-            <p>Interval. Your first 15 minutes are free; pick a plan when you need more.</p>
-          </div>
-        </section>
-
-        <section className="section" id="plugin">
-          <div className="wrap">
-            <div className="board plugin-board hoist">
-              <span className="lamp" aria-hidden="true" />
-              <div>
-                <h2><span className="tc addr">00:48</span> Right inside Premiere Pro and After Effects</h2>
-                <p>
-                  Install the panel once and connect it with your key. Select a clip, choose Tamil, English or both, and click
-                  Generate. Premiere gets a caption track; After Effects gets timed text layers.
-                </p>
-                <Link href="/signup" className="btn">Get the plugin</Link>
-                <div className="strip"><span>Premiere Pro 2022+</span><span>After Effects 2022+</span><span>Windows and macOS</span></div>
+            <div className="pr-window reveal" aria-hidden="true">
+              <div className="shot-bar">
+                <span className="dots"><i /><i /><i /></span>
+                <span className="shot-title">Premiere Pro — Sequence 01</span>
               </div>
-              <div className="mock-panel" aria-hidden="true">
-                <div className="bar">{BRAND.name}</div>
-                <div className="body">
-                  <div className="row"><span>Clip</span><span className="pill">interview_A_cam.mov</span></div>
-                  <div className="row"><span>Language</span><span className="pill">Tamil + English</span></div>
-                  <div className="meter"><i /></div>
-                  <div className="row"><span>Writing subtitles</span><span className="tc">72%</span></div>
-                  <div className="go">Generate subtitles</div>
+              <div className="pr-body">
+                <div className="pr-monitor">
+                  <span className="shot-tag">Program</span>
+                  <div className="subtitle pr-caption">
+                    <span lang="ta">நீ சொன்னது எல்லாம் உண்மைதானா?</span>
+                    <span className="en">Was everything you said true?</span>
+                  </div>
+                </div>
+                <div className="panel-shot">
+                  <div className="ps-bar"><span>{BRAND.name}</span></div>
+                  <div className="ps-body">
+                    <div className="ps-row"><span>Clip</span><span className="ps-pill">interview_A_cam.mov</span></div>
+                    <div className="ps-row"><span>Subtitles in</span><span className="ps-pill">Tamil + English</span></div>
+                    <span className="ps-bar-track"><i /></span>
+                    <div className="ps-row"><span>Writing subtitles</span><span className="tc">72%</span></div>
+                    <span className="ps-go">Generate subtitles</span>
+                  </div>
                 </div>
               </div>
-              <span className="legs short" aria-hidden="true" />
-            </div>
-          </div>
-        </section>
-
-        <section className="section" id="pricing">
-          <div className="wrap">
-            <h2 className="sec-title"><span className="tc addr">01:05</span> Pick a plan</h2>
-            <p className="sec-lede">Pay for the minutes of video you subtitle. Billed monthly in rupees through Razorpay, with UPI or card.</p>
-            <div className="tickets">
-              {(Object.keys(PLANS) as PlanId[]).map((id, i) => {
-                const p = PLANS[id];
-                return (
-                  <div key={id} className={`ticket hoist${id === "pro" ? " featured" : ""}`} style={{ "--d": `${i * 0.08}s` } as React.CSSProperties}>
-                    <div className="ticket-main">
-                      <h3>{p.name}</h3>
-                      <div className="amt">{p.priceInr ? `₹${p.priceInr.toLocaleString("en-IN")}` : "Free"}{p.priceInr ? <small>a month</small> : null}</div>
-                      <p>{p.blurb}</p>
-                      <ul>
-                        <li>{p.minutes.toLocaleString("en-IN")} minutes of video{id === "free" ? ", once" : " a month"}</li>
-                        <li>Tamil and English SRT, VTT, TXT</li>
-                        <li>Premiere Pro and After Effects panel</li>
-                      </ul>
-                    </div>
-                    <div className="ticket-stub">
-                      <Link href={id === "free" ? "/signup" : `/signup?plan=${id}`} className={`btn${id === "pro" ? "" : " ghost"}`}>
-                        {id === "free" ? "Start free" : `Choose ${p.name}`}
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })}
+              <div className="pr-track">
+                <span className="pr-lane">V1</span><span className="pr-clip video" />
+                <span className="pr-lane">C1</span><span className="pr-clip caps"><i /><i /><i /><i /></span>
+              </div>
             </div>
           </div>
         </section>
 
         {PROOF.length > 0 && (
-          <section className="section" id="proof">
+          <section className="section proof">
             <div className="wrap">
-              <h2 className="sec-title">Editors on the street</h2>
-              <div className="proof">
+              <h2 className="reveal">Editors who switched.</h2>
+              <div className="proof-grid">
                 {PROOF.map((p) => (
-                  <figure key={p.name} className="board proof-board hoist">
+                  <figure key={p.name} className="reveal">
                     <blockquote>{p.quote}</blockquote>
-                    <figcaption className="strip"><span>{p.name}</span><span>{p.work}</span></figcaption>
+                    <figcaption><b>{p.name}</b><span>{p.work}</span></figcaption>
                   </figure>
                 ))}
               </div>
@@ -213,34 +150,62 @@ export default function Home() {
           </section>
         )}
 
-        <section className="section faq">
-          <div className="wrap faq-grid">
-            <h2 className="sec-title">Questions editors ask</h2>
-            <div className="board faq-board">
-              {FAQ.map(([q, a]) => (
-                <details key={q}><summary>{q}</summary><p>{a}</p></details>
-              ))}
-              <div className="strip"><span>Notice board</span><span>More questions: write to us after you sign up</span></div>
+        <section className="section pricing" id="pricing">
+          <div className="wrap">
+            <h2 className="reveal">Simple monthly plans.</h2>
+            <p className="lede reveal">Pay for the minutes of video you subtitle. Billed monthly in rupees through Razorpay, with UPI or card.</p>
+            <div className="plans reveal">
+              {(Object.keys(PLANS) as PlanId[]).map((id) => {
+                const p = PLANS[id];
+                return (
+                  <div key={id} className={`plan-col${id === "pro" ? " featured" : ""}`}>
+                    <h3>{p.name}</h3>
+                    <p className="plan-blurb">{p.blurb}</p>
+                    <div className="plan-price">
+                      {p.priceInr ? `₹${p.priceInr.toLocaleString("en-IN")}` : "Free"}
+                      {p.priceInr ? <span>/month</span> : null}
+                    </div>
+                    <Link href={id === "free" ? "/signup" : `/signup?plan=${id}`} className={`btn${id === "pro" ? "" : " ghost"}`}>
+                      {id === "free" ? "Start free" : `Choose ${p.name}`}
+                    </Link>
+                    <ul>
+                      <li>{p.minutes.toLocaleString("en-IN")} minutes of video{id === "free" ? ", once" : " a month"}</li>
+                      <li>Tamil and English subtitles</li>
+                      <li>SRT, VTT and text export</li>
+                      <li>Premiere Pro and After Effects panel</li>
+                    </ul>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
 
-        <section className="section final">
-          <div className="wrap">
-            <div className="board final-board hoist">
-              <span className="lamp" aria-hidden="true" />
-              <h2><span className="h1-lead">Your next cut,</span> <span className="h1-big">subtitled tonight.</span></h2>
-              <Link href="/signup" className="btn">Start free, 15 minutes</Link>
-              <div className="strip"><span>15 minutes free</span><span>No card needed</span></div>
-              <span className="legs short" aria-hidden="true" />
+        <section className="section faq">
+          <div className="wrap faq-grid">
+            <h2 className="reveal">Questions.</h2>
+            <div className="faq-list reveal">
+              {FAQ.map(([q, a]) => (
+                <details key={q}><summary>{q}</summary><p>{a}</p></details>
+              ))}
             </div>
+          </div>
+        </section>
+
+        <section className="final">
+          <div className="wrap final-inner reveal">
+            <h2>Your next cut, subtitled tonight.</h2>
+            <Link href="/signup" className="btn">Start free</Link>
+            <p className="note">15 minutes free. No card needed.</p>
           </div>
         </section>
       </main>
 
-      <footer className="wrap site-foot">
-        <span className="logo"><i />{BRAND.name}</span>
-        <span className="muted">Made in Tamil Nadu for editors everywhere. © 2026</span>
+      <footer className="foot">
+        <div className="wrap foot-inner">
+          <span className="logo"><i />{BRAND.name}</span>
+          <span className="muted">Made in Tamil Nadu for editors everywhere. © 2026</span>
+        </div>
       </footer>
     </>
   );

@@ -1,265 +1,310 @@
 ---
 name: Vasanam
-description: Tamil and English subtitles, painted on enamel boards on a floodlit release-night street.
+description: Tamil and English subtitles, shown on the real editor like a device on a white page.
 colors:
-  chrome-yellow: "#ffd21f"
-  chrome-yellow-lit: "#ffdc4d"
-  enamel-green: "#0c6a3c"
-  enamel-green-deep: "#08502d"
-  enamel-green-lit: "#4cc787"
-  enamel-white: "#f3f1e8"
-  vermilion: "#ff6b57"
-  bamboo: "#a8844a"
-  bamboo-dark: "#6d5430"
-  flood: "#ffe9b4"
-  night: "#0b0c0a"
-  night-board: "#121410"
-  night-well: "#1b1e17"
-  screen-black: "#050604"
-  ink-soft: "#c9cbbf"
-  ink-muted: "#a7ab9c"
+  signal-blue: "#1557ff"
+  signal-blue-hover: "#0a47e6"
+  blue-wash: "#eaf0ff"
+  ground: "#fbfbfd"
+  ground-alt: "#f5f5f7"
+  surface: "#ffffff"
+  ink: "#1d1d1f"
+  ink-secondary: "#424245"
+  muted: "#6e6e73"
+  hairline: "#d2d2d7"
+  hairline-soft: "#e8e8ed"
+  success: "#1a7f37"
+  error: "#d70015"
+  warning: "#b25000"
+  device: "#111113"
+  device-raised: "#1c1c1f"
+  device-well: "#2a2a2e"
+  device-line: "#38383d"
+  device-ink: "#f5f5f7"
+  device-muted: "#a1a1a6"
+  device-blue: "#5b8cff"
+  subtitle-yellow: "#ffd60a"
 typography:
   display:
-    fontFamily: "Anek Tamil, system-ui, sans-serif"
-    fontSize: "clamp(2.8rem, 6.2vw, 5.6rem)"
-    fontWeight: 800
-    lineHeight: 0.98
-    letterSpacing: "-0.01em"
-    fontVariation: "'wdth' 75"
+    fontFamily: "Geist, Noto Sans Tamil, system-ui, -apple-system, sans-serif"
+    fontSize: "clamp(2.6rem, 6.2vw, 5.4rem)"
+    fontWeight: 600
+    lineHeight: 1.05
+    letterSpacing: "-0.035em"
   headline:
-    fontFamily: "Anek Tamil, system-ui, sans-serif"
-    fontSize: "clamp(2.1rem, 4.4vw, 3.8rem)"
-    fontWeight: 800
-    lineHeight: 0.98
-    letterSpacing: "-0.01em"
-    fontVariation: "'wdth' 75"
+    fontFamily: "Geist, Noto Sans Tamil, system-ui, -apple-system, sans-serif"
+    fontSize: "clamp(2rem, 4.2vw, 3.5rem)"
+    fontWeight: 600
+    lineHeight: 1.05
+    letterSpacing: "-0.035em"
   title:
-    fontFamily: "Anek Tamil, system-ui, sans-serif"
-    fontSize: "1.6rem"
-    fontWeight: 800
-    lineHeight: 0.98
-    fontVariation: "'wdth' 75"
+    fontFamily: "Geist, Noto Sans Tamil, system-ui, -apple-system, sans-serif"
+    fontSize: "1.3rem"
+    fontWeight: 600
+    lineHeight: 1.25
+    letterSpacing: "-0.02em"
+  lede:
+    fontFamily: "Geist, Noto Sans Tamil, system-ui, -apple-system, sans-serif"
+    fontSize: "clamp(1.1rem, 1.6vw, 1.3rem)"
+    fontWeight: 400
+    lineHeight: 1.5
   body:
-    fontFamily: "Anek Tamil, system-ui, sans-serif"
+    fontFamily: "Geist, Noto Sans Tamil, system-ui, -apple-system, sans-serif"
     fontSize: "17px"
     fontWeight: 400
-    lineHeight: 1.6
-    fontVariation: "'wdth' 100"
+    lineHeight: 1.55
   label:
-    fontFamily: "Anek Tamil, system-ui, sans-serif"
-    fontSize: "0.78rem"
-    fontWeight: 700
-    letterSpacing: "0.04em"
-    fontVariation: "'wdth' 85"
-  plaque:
-    fontFamily: "Anek Tamil, system-ui, sans-serif"
-    fontSize: "1rem"
-    fontWeight: 800
-    lineHeight: 1
-    letterSpacing: "0.01em"
-    fontVariation: "'wdth' 85"
+    fontFamily: "Geist, Noto Sans Tamil, system-ui, -apple-system, sans-serif"
+    fontSize: "0.9rem"
+    fontWeight: 500
+    lineHeight: 1.4
+  tamil:
+    fontFamily: "Noto Sans Tamil, Geist, sans-serif"
+    fontSize: "clamp(2rem, 5.2vw, 4.2rem)"
+    fontWeight: 600
+    lineHeight: 1.25
+    letterSpacing: "-0.01em"
+  timecode:
+    fontFamily: "Geist Mono, ui-monospace, monospace"
+    fontSize: "11px"
+    fontWeight: 400
+    letterSpacing: "0"
+    fontFeature: "tnum"
 rounded:
-  sm: "4px"
-  lg: "6px"
+  inner: "6px"
+  sm: "10px"
+  device: "18px"
+  lg: "20px"
+  pill: "999px"
 spacing:
-  gutter: "16px"
-  panel: "24px"
-  board: "46px"
-  section: "128px"
+  gutter: "20px"
+  stack: "24px"
+  section-gap: "64px"
+  section: "140px"
+  section-compact: "96px"
 components:
   button-primary:
-    backgroundColor: "{colors.chrome-yellow}"
-    textColor: "{colors.night}"
-    typography: "{typography.plaque}"
-    rounded: "{rounded.sm}"
-    padding: "0.95em 1.4em"
+    backgroundColor: "{colors.signal-blue}"
+    textColor: "{colors.surface}"
+    typography: "{typography.label}"
+    rounded: "{rounded.pill}"
+    padding: "0.85em 1.35em"
   button-primary-hover:
-    backgroundColor: "{colors.chrome-yellow-lit}"
+    backgroundColor: "{colors.signal-blue-hover}"
+    textColor: "{colors.surface}"
+  button-primary-disabled:
+    backgroundColor: "{colors.hairline-soft}"
+    textColor: "{colors.muted}"
   button-ghost:
     backgroundColor: "transparent"
-    textColor: "{colors.enamel-white}"
-    rounded: "{rounded.sm}"
-    padding: "0.95em 1.4em"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.pill}"
+    padding: "0.85em 1.35em"
+  button-ghost-hover:
+    backgroundColor: "{colors.ground-alt}"
+  button-small:
+    rounded: "{rounded.pill}"
+    padding: "0.6em 1em"
   button-danger:
     backgroundColor: "transparent"
-    textColor: "{colors.vermilion}"
-    rounded: "{rounded.sm}"
+    textColor: "{colors.error}"
+    rounded: "{rounded.pill}"
   input:
-    backgroundColor: "{colors.night-well}"
-    textColor: "{colors.enamel-white}"
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
     rounded: "{rounded.sm}"
-    padding: "0.72em 0.85em"
-  board:
-    backgroundColor: "{colors.enamel-green}"
-    textColor: "{colors.enamel-white}"
-    rounded: "{rounded.lg}"
-    padding: "{spacing.board}"
+    padding: "0.7em 0.85em"
   panel:
-    backgroundColor: "{colors.night-board}"
-    textColor: "{colors.enamel-white}"
+    backgroundColor: "{colors.surface}"
     rounded: "{rounded.lg}"
-    padding: "{spacing.panel}"
-  ticket:
-    backgroundColor: "{colors.enamel-white}"
-    textColor: "{colors.night}"
-    rounded: "{rounded.lg}"
-  ticket-featured:
-    backgroundColor: "{colors.chrome-yellow}"
-    textColor: "{colors.night}"
+    padding: "24px"
+  nav-link:
+    textColor: "{colors.ink-secondary}"
+    rounded: "{rounded.pill}"
+    padding: "0.45em 0.75em"
+  nav-link-active:
+    backgroundColor: "{colors.ground-alt}"
+    textColor: "{colors.ink}"
+  device-window:
+    backgroundColor: "{colors.device}"
+    textColor: "{colors.device-ink}"
+    rounded: "{rounded.device}"
+  device-titlebar:
+    backgroundColor: "{colors.device-raised}"
+    height: "44px"
+  segmented-control:
+    backgroundColor: "{colors.hairline-soft}"
+    rounded: "{rounded.sm}"
+    padding: "3px"
+  notice:
+    backgroundColor: "{colors.blue-wash}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.sm}"
+    padding: "10px 14px"
 ---
 
 # Design System: Vasanam
 
 ## Overview
 
-**Creative North Star: "Release-Night Banner Street"**
+**Creative North Star: "The Device on the White Page"**
 
-The product is a floodlit Kollywood banner street at night. The ground is near-black; the things that speak are opaque enamel signboards in Tamil Nadu signboard green, lettered by a sign-writer in enamel white and chrome yellow, bolted into a painted frame and standing on bamboo scaffolding. One warm floodlight temperature lights everything. Tamil and English share the same board, the same lettering family, and the same timing, the way they share a subtitle track.
+Vasanam presents itself the way premium hardware and developer tools present themselves: a quiet, light page that steps aside so the product can be shown big and exact. The page is near-white with near-black ink; the product (the subtitle editor, the Premiere window, the plugin panel) is rendered as a dark device sitting on it, with subtitle yellow living only inside that device. One signal blue carries every action and link. Typography and space do the persuading: large, tightly tracked Geist headlines, generous section padding, and no decoration beyond hairlines and soft shadow under the product.
 
-Persuade surfaces (landing, auth) are the street itself: boards on scaffolds, lamps above them, boards that hoist into place on a top hinge. Operate surfaces (app, editor, admin) step off the street into the workshop: dark night boards (panels) carry the work, and the green enamel and yellow plaques appear only where an action or the current place needs announcing. The user rejected the previous glassy violet, aurora, gradient-text look as AI-generated; this world replaces it with paint, metal and wood.
+Density changes with the job. Persuade surfaces (the landing page) are spacious and centered, with 140px section rhythm and a single idea per section. Operate surfaces (auth, app, admin) are calm and compact: light panels on a pale well, hairline-bordered rows, pill navigation, the same blue for actions. Motion is limited to a few deliberate ideas: a gentle rise on entry, the hero device straightening from a 3D tilt as you scroll, and a pinned product panel that changes state as steps pass.
+
+This world replaces two rejected ones and must not drift back toward either: the glassy violet/aurora/gradient-text dark UI (read as AI-generated), and the themed "release-night banner street" (green/yellow enamel boards, bamboo, floodlights, condensed lettering; read as gimmicky, cramped and not premium).
 
 **Key Characteristics:**
-- Night ground, opaque green enamel boards, white and chrome-yellow lettering.
-- One family (Anek Tamil) for both scripts; its width axis separates painted lettering (condensed) from reading text (normal).
-- Every board is framed, bolted and closed by a label strip.
-- One warm floodlight; no colored light, no glow, no glass.
-- Motion is physical: boards hoist on a hinge, subtitle lines paint on left to right, lamps flicker on once.
+- Light ground, near-black ink, one signal blue for actions and links only.
+- The product is a dark device on the light page; subtitle yellow appears only inside it.
+- Geist at normal width with tight tracking on display sizes; Noto Sans Tamil for Tamil; Geist Mono only for timecodes.
+- Pill buttons and pill nav, 10px fields, 20px panels, hairline borders.
+- Soft, diffuse shadows; the heavy shadow belongs to product shots alone.
+- Motion is few and smooth: rise on entry, tilt-to-flat on scroll, pinned state changes.
 
 ## Colors
 
-A night street lit by one warm lamp: near-black ground, one enamel green, two lettering paints, and wood.
+A near-monochrome light system with one blue voice, plus a separate dark device palette that carries subtitle yellow.
 
 ### Primary
-- **Chrome Yellow** (chrome-yellow): The plaque paint and the subtitle paint. Primary buttons, Tamil subtitle lines, timecode addresses, the active cue, meters, selection, caret and focus ring. Its lit step (chrome-yellow-lit) is the plaque hover only.
+- **Signal Blue** (signal-blue): Every primary button, every link, focus rings, caret, selection tint, the active cue border in the editor, and checkmarks in plan lists. Hover deepens to **Pressed Blue** (signal-blue-hover). **Blue Wash** (blue-wash) is its quiet tint for notices and the drag-over upload state.
+- **Device Blue** (device-blue): The lighter blue used inside dark product surfaces for playheads, progress fills, editing outlines and the plugin's links, where Signal Blue would be too dark against the device.
 
 ### Secondary
-- **Signboard Green** (enamel-green): The board field. Offer, step, rate, demo, plugin, final and auth boards; the admin nav's current item; the logo plate; scrollbar thumb. White lettering on it reads at 5.9:1.
-- **Frame Green** (enamel-green-deep): The painted frame inset inside every green board and plate.
-- **Lit Green** (enamel-green-lit): Green as text on night: success status, completed jobs.
-
-### Tertiary
-- **Bamboo** and **Bamboo Knot** (bamboo, bamboo-dark): Scaffold poles and lashings under boards. Never used for text or controls.
-- **Floodlight** (flood, used as `rgba(255, 233, 180, alpha)` at .16 to .55): The lamp lip and the light cone. The only light in the world.
-- **Vermilion** (vermilion): Errors and destructive actions only.
+- **Subtitle Yellow** (subtitle-yellow): Subtitles as they appear on screen (Tamil line in yellow, English line in white, both with a hard legibility text-shadow), the active cue in product shots, caption clips on timelines, and the stroke inside the logo mark. It exists only on dark device surfaces.
 
 ### Neutral
-- **Night** (night): Page ground and header.
-- **Night Board** (night-board): Panels, the notice board, interval band, ground strip, dropdown options.
-- **Night Well** (night-well): Inputs, code, meter tracks.
-- **Screen Black** (screen-black): The face of a screen board, where a clip plays.
-- **Enamel White** (enamel-white): Primary lettering and ink; also the pricing ticket stock.
-- **Soft Ink** (ink-soft) and **Muted Ink** (ink-muted): Secondary text and labels (muted reads 8.3:1 on night).
-- Hairlines are enamel white at 12% (rest) and 26% (emphasis) alpha.
+- **Ground** (ground): Page background on Persuade surfaces and the translucent sticky header.
+- **Ground Alt** (ground-alt): Alternating sections (How it works, Pricing), the auth page well, ghost-button and nav hover fills.
+- **Surface** (surface): Cards, panels, inputs, the plans table, and white button text.
+- **Ink** (ink): Headlines and body text; also the logo tile and usage-meter fill.
+- **Ink Secondary** (ink-secondary): Lede paragraphs, labels, nav links at rest.
+- **Muted** (muted): Notes, descriptions, table headers, stat labels (5.1:1 on white).
+- **Hairline** (hairline) and **Hairline Soft** (hairline-soft): Field borders, list and FAQ dividers, panel and table borders, disabled button fill.
+- **Status** (success, error, warning): Job state, admin status dots and danger actions; always paired with a word, never colour alone.
+- **Device** (device), **Device Raised** (device-raised), **Device Well** (device-well), **Device Line** (device-line): The dark product body, its title bar and timeline strip, active chips and clips, and its internal dividers. **Device Ink** and **Device Muted** are the text pair on these surfaces.
 
 ### Named Rules
-**The Two-Paint Rule.** A board carries at most two lettering paints: enamel white and chrome yellow. Green lettering lives on night, never on a green board.
+**The One Voice Rule.** Signal Blue is the only accent on light surfaces and it means "act" or "go": buttons, links, focus, selection. It is never used for decoration, headings or backgrounds larger than a notice.
 
-**The One Floodlight Rule.** All light is the warm flood color at low alpha, cast downward from a lamp. No colored light, no glow halos, no neon.
-
-**The Vermilion Is Trouble Rule.** Vermilion means error or destruction. It never decorates.
+**The Yellow Lives in the Device Rule.** Subtitle Yellow appears only on dark device surfaces, as subtitle text, active-cue highlight or caption clips. The one exception is the logo mark, itself a tiny dark screen carrying a subtitle stroke. It never appears on the light page as an accent, fill or button.
 
 ## Typography
 
-**Display Font:** Anek Tamil (with system-ui, sans-serif), loaded through next/font with the `wdth` axis, Latin and Tamil subsets.
-**Body Font:** Anek Tamil at normal width.
+**Display Font:** Geist (with Noto Sans Tamil, system-ui, -apple-system fallback)
+**Body Font:** Geist (same stack)
+**Tamil Font:** Noto Sans Tamil, applied to every `lang="ta"` element
+**Label/Mono Font:** Geist Mono, for timecodes and file extensions only
 
-**Character:** A single family carries both scripts, so a Tamil line and its English twin look painted by the same hand. Width is the voice switch: condensed extra-bold is sign-writer lettering, normal width is reading text.
+**Character:** One normal-width grotesk carries everything Latin, tightened on large sizes until headlines read as solid blocks; Tamil is set in a proper Tamil face at full size and weight, never as decoration.
 
 ### Hierarchy
-- **Display** (800, clamp(2.8rem, 6.2vw, 5.6rem), 0.98, width 75%): Page H1 and the hero board's biggest phrase.
-- **Headline** (800, clamp(2.1rem, 4.4vw, 3.8rem), 0.98, width 75%): Section titles on the street; app page titles step down to clamp(2.2rem, 4vw, 3.2rem).
-- **Title** (800, 1.6rem, width 75%): Board and panel headings; step-board titles scale up to clamp(3rem, 5.2vw, 4.6rem) because they are the board's biggest word.
-- **Body** (400, 17px, 1.6, width 100%): Running text, max 66ch.
-- **Label** (700, 0.78rem, +0.04em, width 85%): Label strips and timecode addresses. Sentence case, never uppercase.
-- **Plaque** (800, 1rem, width 85%): Button lettering.
-- **Numerals** (800, width 75%, 2.1rem to 3rem): Prices and admin stats; tabular figures wherever time or counts align.
+- **Display** (600, clamp 2.6rem to 5.4rem, 1.05, -0.035em): The hero H1 and final call to action (clamp 2.4rem to 4.6rem), balanced, max ~13 to 15ch.
+- **Headline** (600, clamp 2rem to 3.5rem, 1.05, -0.035em): Section H2s, max 18ch, left aligned in content sections. App page titles use clamp 2.2rem to 3.2rem.
+- **Title** (600, 1.3rem, 1.25, -0.02em): H3s, plan names, export headings; story step titles enlarge to clamp 1.6rem to 2.1rem.
+- **Lede** (400, clamp 1.1rem to 1.3rem, 1.5): One-sentence subcopy under headlines, ink-secondary, max 44ch.
+- **Body** (400, 17px, 1.55): Paragraphs at max 66ch with pretty wrapping.
+- **Label** (500, 0.9rem): Form labels, notes, nav links (0.92rem), buttons (1rem at 500).
+- **Tamil specimen** (600, clamp 2rem to 4.2rem, 1.25, -0.01em): The large Tamil dialogue line on the landing page; Tamil keeps a looser line height than Latin display.
+- **Timecode** (Geist Mono, 11 to 12px, tabular figures): SRT/VTT timestamps, file extensions, timeline lane labels.
 
 ### Named Rules
-**The Width-Is-Voice Rule.** 75% width is painted lettering, 85% is plaques and strips, 100% is reading. Never set a paragraph condensed or a headline at normal width.
+**The Normal-Width Rule.** Display type is Geist at normal width, weight 600, tracked tight. No condensed, compressed or novelty display faces anywhere.
 
-**The One Biggest Word Rule.** Each board paints one phrase biggest. When a heading has a lead-in, the lead-in is set at half size on its own line inside the same heading element.
-
-**The Subtitle Lettering Rule.** Subtitle lines are centered, 800 condensed yellow for Tamil over 600 normal-width white for English, with a hard black text shadow (`0 2px 0 #000, 0 0 2px #000`) as on a burned-in subtitle. That shadow belongs to subtitle lettering only.
+**The Mono Is for Time Rule.** Geist Mono appears only where the content is machine time or a file format (timecodes, .srt/.vtt, lane labels). It is never used for headings, labels or decoration.
 
 ## Layout
 
-Content sits in a centered wrap of min(1200px, 100% minus 32px). Street sections breathe at 128px vertical padding (96px under 980px); boards stagger in height (step boards offset 0 / 56px / 20px) so the street does not read as a grid of cards. The hero is a two-column rig (1fr / 1.12fr, 64px gap) seen in perspective; boards turn a few degrees toward the viewer and scrolling dollies the camera. Under 980px the rig flattens to one column with no rotation and scaffolds shorten; under 600px board padding drops to about 24px and multi-column sets go single.
+Content sits in a centered column of min(1120px, 100% minus 40px); the hero product shot breaks wider to min(1200px, 100% minus 40px). Persuade sections use 140px vertical padding (96px under 900px), with 64px to 80px gaps between two-column halves. The hero is centered: H1, lede, a row of primary pill plus arrow text link, and a short muted note, with the product shot directly below bleeding past the fold.
 
-Operate surfaces are denser: 36px top padding, 24px gaps between panels, panels padded 24px; the admin shell uses a 180px sticky side nav. Section anchors on the landing page are timecode addresses (00:12, 00:31, 00:48, 01:05) that appear both in the header nav and before the matching section heading, so navigation reads like jumping to a timecode.
+Two-column compositions are asymmetric (roughly 1 : 1.15 for story, 0.85 : 1.25 for the plugin section, 1 : 2 for FAQ) and collapse to one column under 900px. Facts and formats use top-hairline definition lists in three and two columns. Pricing is a single bordered table of four columns (two under 900px, one under 560px), not four floating cards.
+
+Operate surfaces use a sticky translucent header, a 24px stack gap between panels, a 180px sticky side nav in admin (horizontal scroller under 900px), and an editor grid of 1.15 : 1 with a sticky video viewer that unsticks under 960px.
 
 ## Elevation & Depth
 
-Depth is physical, not atmospheric. Boards are opaque paint with a soft, low drop shadow beneath them and inset rings that draw the painted frame; panels get the same drop shadow plus a 1px top highlight. There is no glass, no backdrop blur, no glow. Distance on the street is real 3D (perspective, rotateY, translateZ), and light comes only from the floodlight cone.
+A hybrid: light surfaces are nearly flat and rely on hairlines and tonal steps (ground, ground-alt, surface); depth is reserved for the product. Panels carry only a whisper shadow, the auth card a soft ambient one, and the dark device shots a heavy, diffuse product shadow plus a 1px near-black ring and a faint inner top highlight. 3D is real perspective on the device, not shadow tricks: the hero tilts back 22 degrees and straightens as you scroll; the Premiere window is turned about 10 degrees and eases toward flat on hover.
 
 ### Shadow Vocabulary
-- **Board drop** (`0 22px 40px -22px rgba(0,0,0,.85), 0 2px 6px rgba(0,0,0,.35)`): Under every board and panel.
-- **Painted frame** (`inset 0 0 0 7px <frame>, inset 0 0 0 8px rgba(243,241,232,.18)`): The frame ring on boards; frame green on green boards, green on screen boards, #1f231b on the notice board.
-- **Plaque rim** (`inset 0 0 0 2px rgba(11,12,10,.55), inset 0 0 0 4px <plaque>, inset 0 0 0 5px rgba(11,12,10,.25), 0 10px 18px -10px rgba(0,0,0,.9)`): The double rim and short drop of a yellow plaque.
-- **Focus wash** (`0 0 0 3px rgba(255,210,31,.2)`): Input focus, with a yellow border.
+- **Whisper** (`box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 1px 1px rgba(0,0,0,.03)`): Panels, the plans table, active segmented-control button, active admin nav item.
+- **Ambient** (`box-shadow: 0 2px 6px rgba(0,0,0,.04), 0 12px 32px -12px rgba(0,0,0,.12)`): The floating auth card.
+- **Product** (`box-shadow: 0 0 0 1px rgba(0,0,0,.9), 0 30px 60px -20px rgba(0,0,0,.35), 0 18px 36px -18px rgba(0,0,0,.3)`): Dark device shots only (hero editor, story panel, Premiere window).
+- **Focus halo** (`box-shadow: 0 0 0 4px rgba(21,87,255,.15)`): Focused fields; a 3px version at .12 marks the active cue and the picked plan.
 
 ### Named Rules
-**The Opaque Enamel Rule.** Board faces are one solid paint. Gradients appear only where the world draws a physical thing: the lamp lip, the light cone, bamboo poles and lashings, ticket notches.
+**The Product Casts the Shadow Rule.** Only device surfaces get the heavy product shadow and perspective. Light UI stays flat with hairlines and a whisper shadow at most.
 
 ## Shapes
 
-Corners are barely softened, like cut sheet metal: 4px for plaques, inputs, chips and list rows; 6px for boards, panels, screens and tickets; 3px for code, focus outlines and cue rows. Boards carry two round bolts 16px in from the top corners. Pricing tickets are notched with two 11px semicircles where the stub tears off, with a dashed tear line. Status uses a dot plus a word, never color alone.
+Soft, consistent geometry. Every button and nav link is a full pill (999px). Fields, rows, notices and small controls use 10px; panels, stats, the upload zone, the video player and the plans table use 20px; device windows use 16px to 20px (18px for the hero). Inner details inside devices (chips, clips, code, segmented buttons, the logo tile) use 6px. Borders are 1px hairlines; the upload zone alone uses a 1.5px dashed border. Status dots and step numbers are circles.
 
 ## Components
 
 ### Buttons
-Enamel plaques: flat paint, a painted double rim, a short drop.
-- **Shape:** Slightly softened plaque (4px).
-- **Primary:** Chrome yellow with night lettering, plaque type, padding 0.95em 1.4em; small variant 0.62em 1em at 0.9rem.
-- **Hover / Active:** Lifts 2px, lightens to chrome-yellow-lit, drop lengthens; presses 1px down on active. Ease `cubic-bezier(.16,1,.3,1)`, 0.2s.
-- **Ghost:** Transparent with a 1.5px enamel-white hairline ring (26%); ring goes full white on hover.
-- **Danger:** Transparent with a vermilion ring and vermilion lettering.
-- **Disabled:** Transparent, muted lettering, hairline ring, no lift.
-- **On a featured (yellow) ticket:** inverts to a night plaque with yellow lettering.
-
-### Chips (segmented toggle)
-- **Style:** A row of buttons in one 4px frame divided by 1.5px rules; soft-ink lettering.
-- **State:** The pressed segment is painted chrome yellow with night lettering.
+Confident and quiet: solid blue pills that press slightly.
+- **Shape:** Full pill (999px).
+- **Primary:** Signal Blue fill, white 1rem/500 text, -0.01em tracking, 0.85em by 1.35em padding.
+- **Hover / Focus / Active:** Background deepens to Pressed Blue; active scales to 0.98; focus shows a 2px Signal Blue outline at 2px offset.
+- **Ghost:** Transparent with an inset 1px hairline ring and ink text; hover fills Ground Alt. Used for secondary plan choices and "Get the plugin".
+- **Small:** 0.6em by 1em at 0.9rem, used in headers.
+- **Danger:** Transparent with red text and a 35% red inset ring; hover adds a 6% red wash.
+- **Disabled:** Hairline Soft fill, muted text, no transform.
+- **Text link with arrow:** Blue 500 text with an inline SVG chevron that slides 3px on hover; the secondary action beside a primary pill.
 
 ### Cards / Containers
-- **Board (green):** Signboard green, 6px corners, painted frame ring, two bolts, board drop. Padding about 46px on the street, 24px on small screens. Ends in a label strip. Hoists into place.
-- **Panel (night board):** Night board fill, 1px hairline, 6px corners, board drop, 24px padding. The container of every Operate page.
-- **Screen board:** Night board framed in green, screen-black face at 16:9 where the clip and its subtitle play; waveform and timecode in the strip.
-- **Ticket:** Enamel white (featured: chrome yellow) stock with notches and a dashed stub holding the plaque.
+- **Corner Style:** 20px.
+- **Background:** Surface on a Ground or Ground Alt page.
+- **Shadow Strategy:** Whisper (see Elevation).
+- **Border:** 1px Hairline Soft (panels) or Hairline (job rows, stats, cues).
+- **Internal Padding:** 24px panels, 18px by 20px stats, 14px by 18px job rows.
+- **Hover:** Job rows nudge 4px right; stats lift 2px. Selected cards (picked plan, active cue) take a blue border plus a 3px blue halo.
 
 ### Inputs / Fields
-- **Style:** Night well fill, 1px enamel hairline (26%), 4px corners, padding 0.72em 0.85em; labels 600 at 0.92rem in soft ink above the field. Selects carry a yellow chevron.
-- **Focus:** Border turns chrome yellow with the 3px yellow focus wash. Caret is yellow.
-- **Error:** Vermilion text; on a green board the error sits on a night chip so it stays legible.
-- **On a green board:** fields switch to a night fill.
+- **Style:** Surface fill, 1px Hairline border, 10px radius, 0.7em by 0.85em padding, inherited 17px type. Selects use a custom SVG chevron.
+- **Focus:** Border turns Signal Blue with a 4px 15% blue halo; no outline.
+- **Error:** Red 0.92rem message text below the field.
+- **Timecode fields:** Geist Mono 0.82rem with tabular figures, 124px wide.
 
 ### Navigation
-- **Street header:** Sticky, night fill, hairline bottom. Logo is a small green plate with a yellow underline stroke beside the condensed wordmark. Links in soft ink, 600, with a 7% white wash on hover and for the current page; each landing link is prefixed by its yellow timecode address. The trailing action is a small yellow plaque. Address links hide under 980px.
-- **Admin side nav:** Soft-ink links; the current item becomes a green enamel plate with a frame-green inset.
+- **Header:** 60px row, logo left (ink tile with a yellow-and-white subtitle stroke, 600 weight wordmark), links right. Sticky with an 82 to 85% Ground backdrop, saturate-and-blur, and a 6% black bottom hairline.
+- **Links:** Ink Secondary 0.92rem pills; hover and current page fill Ground Alt with ink text. The primary action is a small blue pill. Section links hide under 900px.
+- **App:** Same header with nav centered; sign out is a quiet muted text button, not a pill. Wraps nav to its own row under 720px.
+- **Admin side nav:** 180px sticky list of 10px-radius links; current item is Surface with a whisper shadow and hairline ring.
 
-### Label Strip (signature)
-The small painted strip at the foot of every board: a 1.5px rule in the board's lettering color, then short items divided by vertical 1.5px rules, label type at 90% opacity. It carries plain facts (No card needed, Tamil + English, versions, a live timecode), never slogans.
+### Segmented Control
+A 3px-padded Hairline Soft track with 10px radius holding 8px-radius buttons; the pressed option becomes Surface with a whisper shadow. Used for Tamil / English / Both switching.
 
-### Subtitle Paint-On (signature)
-Subtitle lines reveal left to right with a clip-path wipe (0.95s, English delayed 0.32s), as if brushed on. The active cue in the waveform and cue lists is marked in chrome yellow.
+### Device Window (signature)
+The product rendered as a dark window: Device body, 44px Device Raised title bar with three muted dots and centered muted title, Device Line dividers, Product shadow and 1px near-black ring. Inside: video pane with on-screen subtitles, bilingual cue list (mono timecode, Tamil in Device Ink, English in Device Muted; the active cue turns its Tamil line yellow with a 40% yellow inset ring), and a timeline strip with caption clips and a Device Blue playhead. The same shell is reused for the "How it works" story panel and the Premiere Pro window.
 
-### Hoist and Floodlight (signature motion)
-Boards swing down on a top hinge as they enter (rotate X from about -62deg, 1.1s, staggered 0.12s). Once a board lands, its lamp flickers on once and stays lit. Operate pages use a quieter 18px rise. All of it is removed under reduced motion, with lamps left on.
+### On-Screen Subtitle
+600-weight centered text, Subtitle Yellow for Tamil and white 500 for English at 0.82em, line height 1.3, with a hard dark text-shadow (`0 1px 2px rgba(0,0,0,.9), 0 0 1px #000`). Lines fade and rise 6px into place, English 80ms after Tamil.
+
+### Motion
+One easing for everything: `cubic-bezier(.22, 1, .36, 1)`. Content rises 18 to 24px with opacity over 0.7 to 0.9s, staggered 60 to 80ms. The hero device straightens from 22 degrees and scale 0.94 to flat over the first 70% of a viewport of scroll. "How it works" pins the device panel while four steps scroll past at 30% opacity until active. All motion is removed under reduced-motion, and content is visible without JavaScript.
+
+### Adobe Panel
+The CEP panel is a compact dark version of the same world: Device Raised background, Geist 13px, Device Well chips, 8px fields, blue pill actions, Device Blue links and meter, and the same logo mark.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** put Operate work on night-board panels and reserve green enamel for boards that announce (hero, auth, steps, current admin nav item).
-- **Do** close every board with a label strip of plain facts.
-- **Do** keep Tamil and English together and at the same timing; Tamil leads in yellow, English follows in white.
-- **Do** use condensed 800 lettering (width 75%) for headings and numerals and normal width for reading text.
-- **Do** mark the current item, active cue and focus in chrome yellow.
-- **Do** pair status color with a dot and a word.
-- **Do** honor reduced motion: no hoist, no paint-on, lamps on.
+- **Do** keep the page light (ground, ground-alt) and show the product as a dark device on it.
+- **Do** use Signal Blue (#1557ff) only for actions, links, focus and selection; one primary blue pill per decision.
+- **Do** set display type in Geist 600 at normal width with -0.035em tracking and balanced wrapping.
+- **Do** set every Tamil string with `lang="ta"` in Noto Sans Tamil, at full size beside its English.
+- **Do** reserve Geist Mono and tabular figures for timecodes and file formats.
+- **Do** use pills for buttons and nav, 10px for fields and rows, 20px for panels.
+- **Do** keep light UI flat with hairlines and the whisper shadow; give the product shadow and perspective only to device shots.
+- **Do** pair every status colour with a word or dot-plus-word.
+- **Do** use the single ease `cubic-bezier(.22, 1, .36, 1)` and honour reduced motion.
 
 ### Don't:
-- **Don't** paint gradients, glass, backdrop blur or glow on boards or lettering; the floodlight cone and bamboo drawing are the only gradients.
-- **Don't** add a third lettering paint to a board, or letter green on green.
-- **Don't** use vermilion for anything but errors and destructive actions.
-- **Don't** introduce colored or cool light; every light is the warm flood.
-- **Don't** set uppercase tracked labels above headings; addresses are timecodes that also navigate, and the strip lives at the foot of a board.
-- **Don't** round boards, panels, plaques or fields past 6px; only physical fixtures (bolts, lamp housings) curve further.
+- **Don't** bring back the glassy violet, aurora or gradient-text dark UI; it was rejected as AI-generated.
+- **Don't** bring back the themed "release-night banner street" world: no enamel boards, bamboo, floodlights, themed costumes, or green/yellow-on-black.
+- **Don't** use condensed or compressed display type anywhere.
+- **Don't** use gradient text, glow effects or frosted-glass panels; the only translucency is the sticky header's backdrop blur.
+- **Don't** use Subtitle Yellow on the light page outside the logo mark; it belongs inside the device.
+- **Don't** introduce a second accent colour on light surfaces.
+- **Don't** put a label, kicker or eyebrow above headlines; headlines stand alone.

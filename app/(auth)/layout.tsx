@@ -6,11 +6,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="auth-page">
       <Link href="/" className="logo"><i />{BRAND.name}</Link>
-      <div className="auth-rig">
-        <span className="auth-lamp" aria-hidden="true" />
-        {children}
-        <span className="auth-legs" aria-hidden="true" />
-      </div>
+      {children}
+      <p className="auth-foot muted">Tamil and English subtitles for editors.</p>
     </div>
   );
 }

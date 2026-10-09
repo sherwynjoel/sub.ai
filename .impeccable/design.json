@@ -1,498 +1,602 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-07T07:09:51.760Z",
+  "generatedAt": "2026-10-09T06:40:21.718Z",
   "title": "Design System: Vasanam",
   "extensions": {
     "colorMeta": {
-      "chrome-yellow": {
+      "signal-blue": {
         "role": "primary",
-        "displayName": "Chrome Yellow",
-        "canonical": "#ffd21f",
-        "cssVar": "--yellow",
+        "displayName": "Signal Blue",
+        "canonical": "#1557ff",
+        "cssVar": "--blue",
         "tonalRamp": [
-          "#493b04",
-          "#7e6607",
-          "#b39109",
-          "#e9bc0c",
-          "#f5cf38",
-          "#f7dc6e",
-          "#faeaa8",
-          "#fef9e7"
+          "#000038",
+          "#000080",
+          "#002cb5",
+          "#0b4cf5",
+          "#4880ff",
+          "#84acff",
+          "#bad1fe",
+          "#e6efff"
         ]
       },
-      "chrome-yellow-lit": {
+      "signal-blue-hover": {
         "role": "primary",
-        "displayName": "Chrome Yellow, Lit",
-        "canonical": "#ffdc4d",
+        "displayName": "Pressed Blue",
+        "canonical": "#0a47e6",
+        "cssVar": "--blue-hover",
         "tonalRamp": [
-          "#493b04",
-          "#7e6607",
-          "#b39109",
-          "#e9bc0c",
-          "#f5cf38",
-          "#f7dc6e",
-          "#faeaa8",
-          "#fef9e7"
+          "#000038",
+          "#000080",
+          "#002cb6",
+          "#1250ee",
+          "#4880ff",
+          "#84acfe",
+          "#bad1ff",
+          "#e7effe"
         ]
       },
-      "enamel-green": {
-        "role": "secondary",
-        "displayName": "Signboard Green",
-        "canonical": "#0c6a3c",
-        "cssVar": "--green",
+      "blue-wash": {
+        "role": "primary",
+        "displayName": "Blue Wash",
+        "canonical": "#eaf0ff",
+        "cssVar": "--blue-soft",
         "tonalRamp": [
-          "#084527",
-          "#0d7743",
-          "#13aa60",
-          "#19dc7c",
-          "#43ea98",
-          "#76efb4",
-          "#adf6d2",
-          "#e8fcf2"
+          "#080b14",
+          "#222631",
+          "#404551",
+          "#616673",
+          "#848996",
+          "#a8aebc",
+          "#cbd1df",
+          "#e8eefd"
         ]
       },
-      "enamel-green-deep": {
-        "role": "secondary",
-        "displayName": "Frame Green",
-        "canonical": "#08502d",
-        "cssVar": "--green-deep",
-        "tonalRamp": [
-          "#074627",
-          "#0c7944",
-          "#11ac60",
-          "#16df7d",
-          "#41ec99",
-          "#74f1b4",
-          "#acf7d2",
-          "#e8fdf3"
-        ]
-      },
-      "enamel-green-lit": {
-        "role": "secondary",
-        "displayName": "Lit Green",
-        "canonical": "#4cc787",
-        "cssVar": "--green-hi",
-        "tonalRamp": [
-          "#123a25",
-          "#206541",
-          "#2d905c",
-          "#3aba78",
-          "#60cd94",
-          "#8adbb1",
-          "#b9e9d0",
-          "#ecf9f2"
-        ]
-      },
-      "bamboo": {
-        "role": "tertiary",
-        "displayName": "Bamboo",
-        "canonical": "#a8844a",
-        "cssVar": "--bamboo",
-        "tonalRamp": [
-          "#352a17",
-          "#5c4829",
-          "#83673a",
-          "#aa864b",
-          "#bfa06e",
-          "#d0b995",
-          "#e3d5bf",
-          "#f7f3ed"
-        ]
-      },
-      "bamboo-dark": {
-        "role": "tertiary",
-        "displayName": "Bamboo Knot",
-        "canonical": "#6d5430",
-        "cssVar": "--bamboo-dark",
-        "tonalRamp": [
-          "#352917",
-          "#5c4729",
-          "#83653a",
-          "#aa834b",
-          "#bf9e6e",
-          "#d0b895",
-          "#e3d4bf",
-          "#f7f3ed"
-        ]
-      },
-      "flood": {
-        "role": "tertiary",
-        "displayName": "Floodlight",
-        "canonical": "rgb(255, 233, 180)",
-        "cssVar": "--flood (rgb triplet)",
-        "tonalRamp": [
-          "#493404",
-          "#7e5b07",
-          "#b38109",
-          "#e9a80c",
-          "#f5bd38",
-          "#f7cf6e",
-          "#fae2a8",
-          "#fef7e7"
-        ]
-      },
-      "vermilion": {
-        "role": "tertiary",
-        "displayName": "Vermilion",
-        "canonical": "#ff6b57",
-        "cssVar": "--vermilion",
-        "tonalRamp": [
-          "#490c04",
-          "#7e1507",
-          "#b31e09",
-          "#e9260c",
-          "#f54f38",
-          "#f77e6e",
-          "#fab2a8",
-          "#feeae7"
-        ]
-      },
-      "night": {
+      "ground": {
         "role": "neutral",
-        "displayName": "Night",
-        "canonical": "#0b0c0a",
-        "cssVar": "--night",
+        "displayName": "Ground",
+        "canonical": "#fbfbfd",
+        "cssVar": "--bg",
         "tonalRamp": [
-          "#262a23",
-          "#42483c",
-          "#5e6756",
-          "#7a866f",
-          "#96a08d",
-          "#b3b9ac",
-          "#d1d5cd",
-          "#f2f3f1"
+          "#0b0b0c",
+          "#262628",
+          "#454546",
+          "#666667",
+          "#89898b",
+          "#aeaeaf",
+          "#d1d1d3",
+          "#eeeef0"
         ]
       },
-      "night-board": {
+      "ground-alt": {
         "role": "neutral",
-        "displayName": "Night Board",
-        "canonical": "#121410",
-        "cssVar": "--night-2",
+        "displayName": "Ground Alt",
+        "canonical": "#f5f5f7",
+        "cssVar": "--bg-2",
         "tonalRamp": [
-          "#262b22",
-          "#424a3b",
-          "#5e6954",
-          "#7a886d",
-          "#96a28b",
-          "#b3bbaa",
-          "#d1d6cc",
-          "#f2f4f1"
+          "#0b0b0c",
+          "#262628",
+          "#454546",
+          "#666667",
+          "#89898b",
+          "#aeaeaf",
+          "#d1d1d3",
+          "#eeeef0"
         ]
       },
-      "night-well": {
+      "surface": {
         "role": "neutral",
-        "displayName": "Night Well",
-        "canonical": "#1b1e17",
-        "cssVar": "--night-3",
+        "displayName": "Surface",
+        "canonical": "#ffffff",
+        "cssVar": "--surface",
         "tonalRamp": [
-          "#272b21",
-          "#444b3a",
-          "#606b52",
-          "#7d8b6a",
-          "#98a489",
-          "#b4bda8",
-          "#d2d7cb",
-          "#f2f4f1"
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
         ]
       },
-      "screen-black": {
+      "ink": {
         "role": "neutral",
-        "displayName": "Screen Black",
-        "canonical": "#050604",
-        "cssVar": "--screen",
+        "displayName": "Ink",
+        "canonical": "#1d1d1f",
+        "cssVar": "--ink",
         "tonalRamp": [
-          "#262a23",
-          "#42483c",
-          "#5e6756",
-          "#7a866f",
-          "#96a08d",
-          "#b3b9ac",
-          "#d1d5cd",
-          "#f2f3f1"
+          "#0b0b0d",
+          "#262628",
+          "#454547",
+          "#666668",
+          "#89898b",
+          "#adadb0",
+          "#d1d1d3",
+          "#eeeef1"
         ]
       },
-      "enamel-white": {
+      "ink-secondary": {
         "role": "neutral",
-        "displayName": "Enamel White",
-        "canonical": "#f3f1e8",
-        "cssVar": "--white",
-        "tonalRamp": [
-          "#322e1a",
-          "#57502d",
-          "#7c7141",
-          "#a19354",
-          "#b7ab76",
-          "#cbc29a",
-          "#e0dac3",
-          "#f6f5ee"
-        ]
-      },
-      "ink-soft": {
-        "role": "neutral",
-        "displayName": "Soft Ink",
-        "canonical": "#c9cbbf",
+        "displayName": "Ink Secondary",
+        "canonical": "#424245",
         "cssVar": "--ink-2",
         "tonalRamp": [
-          "#292a22",
-          "#47493b",
-          "#656855",
-          "#83876e",
-          "#9ea18c",
-          "#b8baab",
-          "#d4d6cc",
-          "#f3f4f1"
+          "#0b0b0d",
+          "#262629",
+          "#454548",
+          "#666669",
+          "#89898c",
+          "#adadb1",
+          "#d0d0d4",
+          "#eeeef2"
         ]
       },
-      "ink-muted": {
+      "muted": {
         "role": "neutral",
-        "displayName": "Muted Ink",
-        "canonical": "#a7ab9c",
+        "displayName": "Muted",
+        "canonical": "#6e6e73",
         "cssVar": "--muted",
         "tonalRamp": [
-          "#282923",
-          "#45483d",
-          "#626657",
-          "#7f8470",
-          "#9a9f8e",
-          "#b5b9ac",
-          "#d3d5cd",
-          "#f3f3f1"
+          "#0b0b0e",
+          "#26262a",
+          "#444449",
+          "#65656a",
+          "#88888e",
+          "#adadb3",
+          "#d0d0d6",
+          "#eeeef4"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#d2d2d7",
+        "cssVar": "--line",
+        "tonalRamp": [
+          "#0b0b0e",
+          "#26262a",
+          "#454449",
+          "#66656a",
+          "#89898d",
+          "#adadb2",
+          "#d0d0d5",
+          "#eeeef3"
+        ]
+      },
+      "hairline-soft": {
+        "role": "neutral",
+        "displayName": "Hairline Soft",
+        "canonical": "#e8e8ed",
+        "cssVar": "--line-2",
+        "tonalRamp": [
+          "#0b0b0e",
+          "#26262a",
+          "#454449",
+          "#66666a",
+          "#89898d",
+          "#adadb2",
+          "#d0d0d5",
+          "#eeeef3"
+        ]
+      },
+      "success": {
+        "role": "neutral",
+        "displayName": "Success Green",
+        "canonical": "#1a7f37",
+        "cssVar": "--green",
+        "tonalRamp": [
+          "#001001",
+          "#00300d",
+          "#01541e",
+          "#127b33",
+          "#42a056",
+          "#6ac67a",
+          "#8dea9c",
+          "#c9ffcf"
+        ]
+      },
+      "error": {
+        "role": "neutral",
+        "displayName": "Error Red",
+        "canonical": "#d70015",
+        "cssVar": "--red",
+        "tonalRamp": [
+          "#200000",
+          "#500002",
+          "#860008",
+          "#c10112",
+          "#f33532",
+          "#fe8579",
+          "#ffbfb6",
+          "#fee9e6"
+        ]
+      },
+      "warning": {
+        "role": "neutral",
+        "displayName": "Warning Amber",
+        "canonical": "#b25000",
+        "cssVar": "--amber",
+        "tonalRamp": [
+          "#1a0400",
+          "#421800",
+          "#702f00",
+          "#a24800",
+          "#ce692a",
+          "#f78f53",
+          "#ffc1a1",
+          "#ffeadf"
+        ]
+      },
+      "device": {
+        "role": "neutral",
+        "displayName": "Device",
+        "canonical": "#111113",
+        "cssVar": "--dev",
+        "tonalRamp": [
+          "#0b0b0d",
+          "#262628",
+          "#454547",
+          "#666668",
+          "#89898b",
+          "#adadb0",
+          "#d0d1d3",
+          "#eeeef1"
+        ]
+      },
+      "device-raised": {
+        "role": "neutral",
+        "displayName": "Device Raised",
+        "canonical": "#1c1c1f",
+        "cssVar": "--dev-2",
+        "tonalRamp": [
+          "#0b0b0e",
+          "#262629",
+          "#454548",
+          "#666669",
+          "#89898c",
+          "#adadb1",
+          "#d0d0d5",
+          "#eeeef2"
+        ]
+      },
+      "device-well": {
+        "role": "neutral",
+        "displayName": "Device Well",
+        "canonical": "#2a2a2e",
+        "cssVar": "--dev-3",
+        "tonalRamp": [
+          "#0b0b0e",
+          "#26262a",
+          "#444449",
+          "#65656a",
+          "#88898d",
+          "#adadb2",
+          "#d0d0d6",
+          "#eeeef3"
+        ]
+      },
+      "device-line": {
+        "role": "neutral",
+        "displayName": "Device Line",
+        "canonical": "#38383d",
+        "cssVar": "--dev-line",
+        "tonalRamp": [
+          "#0b0b0f",
+          "#26262b",
+          "#44444a",
+          "#65656b",
+          "#88888e",
+          "#adadb3",
+          "#d0d0d6",
+          "#eeeef4"
+        ]
+      },
+      "device-ink": {
+        "role": "neutral",
+        "displayName": "Device Ink",
+        "canonical": "#f5f5f7",
+        "cssVar": "--dev-ink",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#262628",
+          "#454546",
+          "#666667",
+          "#89898b",
+          "#aeaeaf",
+          "#d1d1d3",
+          "#eeeef0"
+        ]
+      },
+      "device-muted": {
+        "role": "neutral",
+        "displayName": "Device Muted",
+        "canonical": "#a1a1a6",
+        "cssVar": "--dev-muted",
+        "tonalRamp": [
+          "#0b0b0e",
+          "#26262a",
+          "#444449",
+          "#65656a",
+          "#89898d",
+          "#adadb2",
+          "#d0d0d6",
+          "#eeeef3"
+        ]
+      },
+      "device-blue": {
+        "role": "primary",
+        "displayName": "Device Blue",
+        "canonical": "#5b8cff",
+        "cssVar": "--dev-blue",
+        "tonalRamp": [
+          "#000038",
+          "#02067b",
+          "#1236a2",
+          "#315ccb",
+          "#5282f4",
+          "#86acfe",
+          "#bcd1fe",
+          "#e7effe"
+        ]
+      },
+      "subtitle-yellow": {
+        "role": "secondary",
+        "displayName": "Subtitle Yellow",
+        "canonical": "#ffd60a",
+        "cssVar": "--sub",
+        "tonalRamp": [
+          "#100b00",
+          "#2f2600",
+          "#534400",
+          "#796400",
+          "#a28704",
+          "#cdab09",
+          "#f6ce00",
+          "#ffefb3"
         ]
       }
     },
     "typographyMeta": {
       "display": {
         "displayName": "Display",
-        "purpose": "Page H1 and the hero board's biggest phrase; condensed sign-writer lettering."
+        "purpose": "Hero H1 and final call to action; Geist 600, tight tracking, balanced."
       },
       "headline": {
         "displayName": "Headline",
-        "purpose": "Section titles on the street; app page titles step down."
+        "purpose": "Section H2s and app page titles."
       },
       "title": {
         "displayName": "Title",
-        "purpose": "Board and panel headings."
+        "purpose": "H3s, plan names, panel headings, story step titles."
+      },
+      "lede": {
+        "displayName": "Lede",
+        "purpose": "One-sentence subcopy under headlines, max 44ch."
       },
       "body": {
         "displayName": "Body",
-        "purpose": "Running text at normal width, max 66ch."
+        "purpose": "Paragraphs at max 66ch."
       },
       "label": {
         "displayName": "Label",
-        "purpose": "Label strips and timecode addresses; sentence case."
+        "purpose": "Form labels, notes, nav links, button text."
       },
-      "plaque": {
-        "displayName": "Plaque",
-        "purpose": "Button lettering."
+      "tamil": {
+        "displayName": "Tamil Specimen",
+        "purpose": "Large Tamil dialogue line; every lang=ta element uses Noto Sans Tamil."
+      },
+      "timecode": {
+        "displayName": "Timecode",
+        "purpose": "Geist Mono with tabular figures for timestamps and file formats only."
       }
     },
     "shadows": [
       {
-        "name": "board-drop",
-        "value": "0 22px 40px -22px rgba(0,0,0,.85), 0 2px 6px rgba(0,0,0,.35)",
-        "purpose": "Under every board and panel (--shadow)."
+        "name": "whisper",
+        "value": "0 1px 2px rgba(0,0,0,.05), 0 1px 1px rgba(0,0,0,.03)",
+        "purpose": "Panels, plans table, pressed segmented option, current admin nav item."
       },
       {
-        "name": "painted-frame",
-        "value": "inset 0 0 0 7px #08502d, inset 0 0 0 8px rgba(243,241,232,.18)",
-        "purpose": "Frame ring inside a green board."
+        "name": "ambient",
+        "value": "0 2px 6px rgba(0,0,0,.04), 0 12px 32px -12px rgba(0,0,0,.12)",
+        "purpose": "Floating auth card."
       },
       {
-        "name": "plaque-rim",
-        "value": "inset 0 0 0 2px rgba(11,12,10,.55), inset 0 0 0 4px #ffd21f, inset 0 0 0 5px rgba(11,12,10,.25), 0 10px 18px -10px rgba(0,0,0,.9)",
-        "purpose": "Double rim and short drop of a yellow plaque."
+        "name": "product",
+        "value": "0 0 0 1px rgba(0,0,0,.9), 0 30px 60px -20px rgba(0,0,0,.35), 0 18px 36px -18px rgba(0,0,0,.3)",
+        "purpose": "Dark device shots only."
       },
       {
-        "name": "focus-wash",
-        "value": "0 0 0 3px rgba(255,210,31,.2)",
-        "purpose": "Input focus with a yellow border."
+        "name": "focus-halo",
+        "value": "0 0 0 4px rgba(21,87,255,.15)",
+        "purpose": "Focused fields."
       },
       {
-        "name": "subtitle-shadow",
-        "value": "text-shadow: 0 2px 0 #000, 0 0 2px #000",
-        "purpose": "Subtitle lettering only, as on burned-in subtitles."
+        "name": "selected-halo",
+        "value": "0 0 0 3px rgba(21,87,255,.12)",
+        "purpose": "Active cue and picked plan, with a blue border."
       }
     ],
     "motion": [
       {
         "name": "ease",
-        "value": "cubic-bezier(.16, 1, .3, 1)",
-        "purpose": "All state transitions and entrances (--ease)."
-      },
-      {
-        "name": "hoist",
-        "value": "rotate x -62deg to 0, translate 0 -24px to 0, 1.1s, stagger 0.12s",
-        "purpose": "Boards swing down on a top hinge when scrolled in."
-      },
-      {
-        "name": "paint-on",
-        "value": "clip-path inset(0 100% 0 0) to inset(0), 0.95s; English +0.32s",
-        "purpose": "Subtitle lines brushed on left to right."
-      },
-      {
-        "name": "lamp-on",
-        "value": "opacity flicker 0 / .9 / .15 / 1 over 1.1s, after the board lands",
-        "purpose": "Floodlight switches on once."
+        "value": "cubic-bezier(.22, 1, .36, 1)",
+        "purpose": "The single easing for all transitions and entrances."
       },
       {
         "name": "rise",
-        "value": "translateY(18px) to 0, 0.7s, stagger 0.06s",
-        "purpose": "Operate page entrance."
+        "value": "opacity 0 to 1, translate 18-24px to 0, .7-.9s, stagger 60-80ms",
+        "purpose": "Entrance for hero copy, app page content and reveal sections."
       },
       {
-        "name": "plaque-lift",
-        "value": "translateY(-2px), 0.2s",
-        "purpose": "Button hover."
+        "name": "tilt-to-flat",
+        "value": "rotateX((1 - p) * 22deg) scale(.94 + p * .06), p = scrollY / (0.7 * viewport height), perspective 2200px",
+        "purpose": "Hero device straightens as the page scrolls."
+      },
+      {
+        "name": "pinned-story",
+        "value": "sticky panel; states cross-fade with a 14px rise over .5-.6s",
+        "purpose": "How it works: the panel pins while four steps scroll past."
+      },
+      {
+        "name": "subtitle-in",
+        "value": "opacity + 6px rise, .45s, English delayed 80ms",
+        "purpose": "On-screen subtitle lines appearing."
+      },
+      {
+        "name": "press",
+        "value": "scale(.98)",
+        "purpose": "Button active state."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "all animation and transition removed",
+        "purpose": "prefers-reduced-motion: reduce."
       }
     ],
     "breakpoints": [
       {
-        "name": "compact",
-        "value": "980px"
+        "name": "sm",
+        "value": "560px"
       },
       {
-        "name": "phone",
-        "value": "600px"
+        "name": "md",
+        "value": "720px"
+      },
+      {
+        "name": "lg",
+        "value": "900px"
+      },
+      {
+        "name": "xl",
+        "value": "960px"
       }
     ]
   },
   "components": [
     {
-      "name": "Primary Plaque",
+      "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Chrome-yellow enamel plaque for the main action.",
-      "html": "<button class=\"ds-btn\">Start free, 15 minutes</button>",
-      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;font:800 1rem/1 var(--font-anek,system-ui),sans-serif;font-stretch:85%;letter-spacing:.01em;padding:.95em 1.4em;border-radius:4px;border:0;cursor:pointer;background:#ffd21f;color:#0b0c0a;box-shadow:inset 0 0 0 2px rgba(11,12,10,.55),inset 0 0 0 4px #ffd21f,inset 0 0 0 5px rgba(11,12,10,.25),0 10px 18px -10px rgba(0,0,0,.9);transition:transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s cubic-bezier(.16,1,.3,1),background .2s}.ds-btn:hover{transform:translateY(-2px);background:#ffdc4d;box-shadow:inset 0 0 0 2px rgba(11,12,10,.55),inset 0 0 0 4px #ffdc4d,inset 0 0 0 5px rgba(11,12,10,.25),0 16px 22px -12px rgba(0,0,0,.95)}.ds-btn:active{transform:translateY(1px)}.ds-btn:focus-visible{outline:2px solid #ffd21f;outline-offset:3px}"
+      "description": "Solid Signal Blue pill for the one primary action per decision.",
+      "html": "<button class=\"ds-btn\">Start free</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; gap: .45em; font: 500 1rem/1 var(--font-body, Geist, system-ui, sans-serif); letter-spacing: -.01em; padding: .85em 1.35em; border-radius: 999px; border: 0; cursor: pointer; background: var(--blue, #1557ff); color: #fff; transition: background .2s, transform .2s cubic-bezier(.22,1,.36,1); } .ds-btn:hover { background: var(--blue-hover, #0a47e6); } .ds-btn:active { transform: scale(.98); } .ds-btn:focus-visible { outline: 2px solid var(--blue, #1557ff); outline-offset: 2px; }"
     },
     {
-      "name": "Ghost Plaque",
+      "name": "Ghost Button",
       "kind": "button",
       "refersTo": "button-ghost",
-      "description": "Secondary action: transparent with a hairline ring.",
-      "html": "<button class=\"ds-btn-ghost\">Sign in</button>",
-      "css": ".ds-btn-ghost{font:800 1rem/1 var(--font-anek,system-ui),sans-serif;font-stretch:85%;padding:.95em 1.4em;border-radius:4px;border:0;cursor:pointer;background:transparent;color:#f3f1e8;box-shadow:inset 0 0 0 1.5px rgba(243,241,232,.26);transition:background .2s,box-shadow .2s}.ds-btn-ghost:hover{background:rgba(243,241,232,.06);box-shadow:inset 0 0 0 1.5px #f3f1e8}.ds-btn-ghost:focus-visible{outline:2px solid #ffd21f;outline-offset:3px}"
+      "description": "Transparent pill with an inset hairline ring for secondary choices.",
+      "html": "<button class=\"ds-btn-ghost\">Get the plugin</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; font: 500 1rem/1 var(--font-body, Geist, system-ui, sans-serif); letter-spacing: -.01em; padding: .85em 1.35em; border-radius: 999px; border: 0; cursor: pointer; background: transparent; color: var(--ink, #1d1d1f); box-shadow: inset 0 0 0 1px var(--line, #d2d2d7); transition: background .2s, transform .2s cubic-bezier(.22,1,.36,1); } .ds-btn-ghost:hover { background: var(--bg-2, #f5f5f7); } .ds-btn-ghost:active { transform: scale(.98); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--blue, #1557ff); outline-offset: 2px; }"
     },
     {
-      "name": "Danger Plaque",
-      "kind": "button",
-      "refersTo": "button-danger",
-      "description": "Destructive action only.",
-      "html": "<button class=\"ds-btn-danger\">Delete project</button>",
-      "css": ".ds-btn-danger{font:800 .9rem/1 var(--font-anek,system-ui),sans-serif;font-stretch:85%;padding:.62em 1em;border-radius:4px;border:0;cursor:pointer;background:transparent;color:#ff6b57;box-shadow:inset 0 0 0 1.5px rgba(255,107,87,.55);transition:background .2s,box-shadow .2s}.ds-btn-danger:hover{background:rgba(255,107,87,.1);box-shadow:inset 0 0 0 1.5px #ff6b57}.ds-btn-danger:focus-visible{outline:2px solid #ffd21f;outline-offset:3px}"
+      "name": "Text Link with Arrow",
+      "kind": "custom",
+      "refersTo": "button-primary",
+      "description": "Secondary action beside a primary pill; the SVG chevron slides on hover.",
+      "html": "<a class=\"ds-link-arrow\" href=\"#\">See how it works<svg width=\"8\" height=\"12\" viewBox=\"0 0 8 12\" aria-hidden=\"true\"><path d=\"M1.5 1.5L6 6l-4.5 4.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></a>",
+      "css": ".ds-link-arrow { display: inline-flex; align-items: center; gap: 7px; font: 500 1.0625rem var(--font-body, Geist, system-ui, sans-serif); color: var(--blue, #1557ff); text-decoration: none; } .ds-link-arrow svg { transition: translate .2s cubic-bezier(.22,1,.36,1); } .ds-link-arrow:hover svg { translate: 3px 0; } .ds-link-arrow:focus-visible { outline: 2px solid var(--blue, #1557ff); outline-offset: 2px; border-radius: 6px; }"
     },
     {
-      "name": "Field",
+      "name": "Text Field",
       "kind": "input",
       "refersTo": "input",
-      "description": "Night-well text field with a yellow focus.",
-      "html": "<label class=\"ds-label\">Email<input class=\"ds-input\" placeholder=\"you@studio.in\"></label>",
-      "css": ".ds-label{display:grid;gap:.4em;font:600 .92rem var(--font-anek,system-ui),sans-serif;color:#c9cbbf}.ds-input{font:400 17px/1.6 var(--font-anek,system-ui),sans-serif;color:#f3f1e8;background:#1b1e17;border:1px solid rgba(243,241,232,.26);border-radius:4px;padding:.72em .85em;caret-color:#ffd21f;transition:border-color .2s,box-shadow .2s}.ds-input::placeholder{color:#a7ab9c}.ds-input:focus,.ds-input:focus-visible{outline:none;border-color:#ffd21f;box-shadow:0 0 0 3px rgba(255,210,31,.2)}"
+      "description": "White field, hairline border, 10px radius; blue border and halo on focus.",
+      "html": "<label class=\"ds-field\">Email<input class=\"ds-input\" type=\"email\" placeholder=\"you@studio.in\"></label>",
+      "css": ".ds-field { display: grid; gap: .4em; font: 500 .9rem var(--font-body, Geist, system-ui, sans-serif); color: var(--ink-2, #424245); } .ds-input { font: 400 17px var(--font-body, Geist, system-ui, sans-serif); color: var(--ink, #1d1d1f); background: var(--surface, #fff); border: 1px solid var(--line, #d2d2d7); border-radius: 10px; padding: .7em .85em; transition: border-color .15s, box-shadow .15s; } .ds-input::placeholder { color: #8e8e93; } .ds-input:focus { outline: none; border-color: var(--blue, #1557ff); box-shadow: 0 0 0 4px rgba(21,87,255,.15); }"
     },
     {
-      "name": "Segmented Toggle",
-      "kind": "chip",
-      "refersTo": "",
-      "description": "Language switch; the pressed segment is painted yellow.",
-      "html": "<div class=\"ds-seg\"><button aria-pressed=\"true\">Tamil</button><button aria-pressed=\"false\">English</button><button aria-pressed=\"false\">Both</button></div>",
-      "css": ".ds-seg{display:inline-flex;border:1.5px solid rgba(243,241,232,.26);border-radius:4px;overflow:hidden;background:#0b0c0a}.ds-seg button{font:700 .95rem var(--font-anek,system-ui),sans-serif;padding:.55em 1.1em;border:0;background:none;color:#c9cbbf;cursor:pointer;transition:background .2s,color .2s}.ds-seg button+button{border-left:1.5px solid rgba(243,241,232,.26)}.ds-seg button:hover{color:#f3f1e8}.ds-seg button[aria-pressed=true]{background:#ffd21f;color:#0b0c0a}.ds-seg button:focus-visible{outline:2px solid #ffd21f;outline-offset:-2px}"
-    },
-    {
-      "name": "Street Header",
+      "name": "Header Navigation",
       "kind": "nav",
-      "refersTo": "",
-      "description": "Logo plate, timecode-addressed links, small plaque.",
-      "html": "<nav class=\"ds-nav\"><a class=\"ds-logo\" href=\"#\"><i></i>Vasanam</a><span><a href=\"#how\"><b>00:12</b>How it works</a><a href=\"#price\"><b>01:05</b>Pricing</a><a class=\"ds-cta\" href=\"#\">Start free</a></span></nav>",
-      "css": ".ds-nav{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px;background:#0b0c0a;border-bottom:1px solid rgba(243,241,232,.12);font-family:var(--font-anek,system-ui),sans-serif}.ds-nav span{display:flex;gap:2px;align-items:center}.ds-logo{display:inline-flex;align-items:center;gap:.55em;font-weight:800;font-stretch:80%;font-size:1.35rem;color:#f3f1e8;text-decoration:none}.ds-logo i{position:relative;width:30px;height:20px;border-radius:3px;background:#0c6a3c;box-shadow:inset 0 0 0 2px #08502d}.ds-logo i::after{content:'';position:absolute;left:6px;right:6px;bottom:5px;height:3px;border-radius:1px;background:#ffd21f}.ds-nav span a:not(.ds-cta){text-decoration:none;padding:.5em .8em;border-radius:4px;font-weight:600;color:#c9cbbf;transition:color .2s,background .2s}.ds-nav span a:not(.ds-cta):hover{color:#f3f1e8;background:rgba(243,241,232,.07)}.ds-nav b{color:#ffd21f;font-size:.78rem;font-weight:700;margin-right:.5em;font-variant-numeric:tabular-nums}.ds-cta{font-weight:800;font-stretch:85%;font-size:.9rem;padding:.62em 1em;border-radius:4px;background:#ffd21f;color:#0b0c0a;text-decoration:none;box-shadow:inset 0 0 0 2px rgba(11,12,10,.55),inset 0 0 0 4px #ffd21f}.ds-nav a:focus-visible{outline:2px solid #ffd21f;outline-offset:3px}"
+      "refersTo": "nav-link",
+      "description": "Translucent sticky header: logo mark, pill links, small blue action.",
+      "html": "<header class=\"ds-head\"><a class=\"ds-logo\" href=\"#\"><i></i>Vasanam</a><nav class=\"ds-nav\"><a href=\"#\" aria-current=\"page\">How it works</a><a href=\"#\">Pricing</a><a href=\"#\" class=\"ds-nav-cta\">Start free</a></nav></header>",
+      "css": ".ds-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 60px; padding: 0 20px; background: rgba(251,251,253,.82); backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid rgba(0,0,0,.06); font-family: var(--font-body, Geist, system-ui, sans-serif); } .ds-logo { display: inline-flex; align-items: center; gap: .5em; color: #1d1d1f; font-weight: 600; font-size: 1.1rem; letter-spacing: -.03em; text-decoration: none; } .ds-logo i { width: 22px; height: 22px; border-radius: 6px; background: #1d1d1f; position: relative; display: inline-block; } .ds-logo i::after { content: \"\"; position: absolute; left: 5px; right: 5px; bottom: 6px; height: 2.5px; border-radius: 2px; background: #ffd60a; box-shadow: 0 -4px 0 rgba(255,255,255,.85); } .ds-nav { display: flex; gap: 4px; align-items: center; } .ds-nav a { color: #424245; font-size: .92rem; padding: .45em .75em; border-radius: 999px; text-decoration: none; } .ds-nav a:hover, .ds-nav a[aria-current=\"page\"] { color: #1d1d1f; background: #f5f5f7; } .ds-nav a:focus-visible { outline: 2px solid #1557ff; outline-offset: 2px; } .ds-nav .ds-nav-cta { background: #1557ff; color: #fff; font-weight: 500; padding: .6em 1em; } .ds-nav .ds-nav-cta:hover { background: #0a47e6; color: #fff; }"
     },
     {
-      "name": "Enamel Board",
-      "kind": "card",
-      "refersTo": "board",
-      "description": "Green board: painted frame, two bolts, label strip.",
-      "html": "<article class=\"ds-board\"><h3>Painted on your timeline.</h3><p>Upload a cut, fix a few lines, ship SRT.</p><div class=\"ds-strip\"><span>No card needed</span><span>Tamil + English</span></div></article>",
-      "css": ".ds-board{position:relative;max-width:420px;padding:46px 40px 24px;background:#0c6a3c;color:#f3f1e8;border-radius:6px;font:400 17px/1.6 var(--font-anek,system-ui),sans-serif;box-shadow:inset 0 0 0 7px #08502d,inset 0 0 0 8px rgba(243,241,232,.18),0 22px 40px -22px rgba(0,0,0,.85),0 2px 6px rgba(0,0,0,.35);transition:rotate .5s cubic-bezier(.16,1,.3,1)}.ds-board:hover{rotate:z -.6deg}.ds-board::before,.ds-board::after{content:'';position:absolute;top:16px;width:7px;height:7px;border-radius:50%;background:#2b2f26;box-shadow:inset 1px 1px 0 rgba(255,255,255,.25)}.ds-board::before{left:16px}.ds-board::after{right:16px}.ds-board h3{font-weight:800;font-stretch:75%;font-size:2.4rem;line-height:.98;margin:0 0 .4em}.ds-board p{margin:0}.ds-strip{display:flex;flex-wrap:wrap;border-top:1.5px solid currentColor;margin-top:22px;font-size:.78rem;font-weight:700;font-stretch:85%;letter-spacing:.04em;opacity:.9}.ds-strip span{padding:8px 12px 0 0;margin-right:12px;border-right:1.5px solid currentColor}.ds-strip span:last-child{border-right:0;margin-right:0}"
-    },
-    {
-      "name": "Night Panel",
+      "name": "Panel",
       "kind": "card",
       "refersTo": "panel",
-      "description": "The working container of every Operate page.",
-      "html": "<section class=\"ds-panel\"><h3>Export</h3><p>Download SRT, VTT or TXT per language.</p></section>",
-      "css": ".ds-panel{max-width:420px;padding:24px;background:#121410;color:#f3f1e8;border:1px solid rgba(243,241,232,.12);border-radius:6px;font:400 17px/1.6 var(--font-anek,system-ui),sans-serif;box-shadow:inset 0 1px 0 rgba(243,241,232,.05),0 22px 40px -22px rgba(0,0,0,.85),0 2px 6px rgba(0,0,0,.35);transition:border-color .2s}.ds-panel:hover{border-color:rgba(243,241,232,.26)}.ds-panel h3{font-weight:800;font-stretch:75%;font-size:1.6rem;line-height:.98;margin:0 0 .45em}.ds-panel p{margin:0;color:#c9cbbf}"
+      "description": "White Operate-surface container with hairline border and whisper shadow.",
+      "html": "<section class=\"ds-panel\"><h3>Export</h3><p>SRT, WebVTT or plain text, in Tamil, English or both.</p></section>",
+      "css": ".ds-panel { background: var(--surface, #fff); border: 1px solid var(--line-2, #e8e8ed); border-radius: 20px; padding: 24px; box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 1px 1px rgba(0,0,0,.03); font: 17px/1.55 var(--font-body, Geist, system-ui, sans-serif); color: #1d1d1f; } .ds-panel h3 { margin: 0 0 .5em; font-size: 1.3rem; font-weight: 600; letter-spacing: -.02em; line-height: 1.25; } .ds-panel p { margin: 0; color: #6e6e73; }"
     },
     {
-      "name": "Subtitle Lettering",
+      "name": "Segmented Control",
+      "kind": "chip",
+      "refersTo": "segmented-control",
+      "description": "Language switch: pale track, pressed option lifts to white.",
+      "html": "<div class=\"ds-seg\" role=\"group\"><button aria-pressed=\"true\">Both</button><button aria-pressed=\"false\">Tamil</button><button aria-pressed=\"false\">English</button></div>",
+      "css": ".ds-seg { display: inline-flex; gap: 2px; padding: 3px; background: #e8e8ed; border-radius: 10px; } .ds-seg button { font: 500 .9rem var(--font-body, Geist, system-ui, sans-serif); padding: .45em 1em; border: 0; border-radius: 8px; background: none; cursor: pointer; color: #424245; transition: background .2s, color .2s, box-shadow .2s; } .ds-seg button:hover { color: #1d1d1f; } .ds-seg button[aria-pressed=\"true\"] { background: #fff; color: #1d1d1f; box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 1px 1px rgba(0,0,0,.03); } .ds-seg button:focus-visible { outline: 2px solid #1557ff; outline-offset: 2px; }"
+    },
+    {
+      "name": "Device Window",
       "kind": "custom",
-      "refersTo": "",
-      "description": "Tamil in yellow over English in white, painted on.",
-      "html": "<div class=\"ds-screen\"><p class=\"ds-sub\"><span lang=\"ta\">நாளைக்கு ஷூட் இருக்கு</span><span class=\"en\">We have a shoot tomorrow</span></p></div>",
-      "css": ".ds-screen{aspect-ratio:16/9;max-width:480px;display:grid;align-items:end;padding-bottom:10%;background:#050604;border-radius:6px;box-shadow:inset 0 0 0 7px #0c6a3c,inset 0 0 0 8px rgba(243,241,232,.2)}.ds-sub{display:grid;gap:8px;margin:0;padding:0 6%;text-align:center;font:800 1.6rem/1.25 var(--font-anek,system-ui),sans-serif;font-stretch:85%;color:#ffd21f;text-shadow:0 2px 0 #000,0 0 2px #000}.ds-sub span{clip-path:inset(0 100% 0 0);animation:ds-paint .95s cubic-bezier(.16,1,.3,1) forwards}.ds-sub .en{color:#f3f1e8;font-weight:600;font-stretch:100%;font-size:.78em;animation-delay:.32s}@keyframes ds-paint{to{clip-path:inset(0 0 0 0)}}@media (prefers-reduced-motion:reduce){.ds-sub span{clip-path:none;animation:none}}"
+      "refersTo": "device-window",
+      "description": "Signature: the product as a dark window on the light page, with on-screen subtitle and active cue. The video frame is a flat placeholder here; real frames come from footage.",
+      "html": "<div class=\"ds-device\"><div class=\"ds-device-bar\"><span class=\"ds-dots\"><i></i><i></i><i></i></span><span class=\"ds-device-title\">interview_A_cam.mov</span></div><div class=\"ds-device-body\"><div class=\"ds-frame\"><div class=\"ds-sub\"><span lang=\"ta\">நீ சொன்னது எல்லாம் உண்மைதானா?</span><span class=\"ds-en\">Was everything you said true?</span></div></div><div class=\"ds-cue\"><span class=\"ds-tc\">00:01:12,400 → 00:01:15,050</span><span lang=\"ta\">நீ சொன்னது எல்லாம் உண்மைதானா?</span><span class=\"ds-cue-en\">Was everything you said true?</span></div></div></div>",
+      "css": ".ds-device { background: #111113; color: #f5f5f7; border-radius: 18px; overflow: hidden; font: 14px/1.5 var(--font-body, Geist, system-ui, sans-serif); box-shadow: 0 0 0 1px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.08), 0 30px 60px -20px rgba(0,0,0,.35), 0 18px 36px -18px rgba(0,0,0,.3); max-width: 560px; } .ds-device-bar { height: 44px; display: flex; align-items: center; gap: 16px; padding: 0 16px; background: #1c1c1f; border-bottom: 1px solid #38383d; } .ds-dots { display: flex; gap: 7px; } .ds-dots i { width: 11px; height: 11px; border-radius: 50%; background: #3a3a3f; } .ds-device-title { flex: 1; text-align: center; color: #a1a1a6; font-size: 13px; } .ds-device-body { padding: 16px; display: grid; gap: 12px; } .ds-frame { position: relative; aspect-ratio: 16/9; border-radius: 10px; background: #0b0b0c; } .ds-sub { position: absolute; left: 6%; right: 6%; bottom: 9%; display: grid; gap: 4px; text-align: center; font-weight: 600; line-height: 1.3; color: #ffd60a; text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 1px #000; font-size: 1.1rem; } .ds-sub [lang=\"ta\"], .ds-cue [lang=\"ta\"] { font-family: var(--font-tamil, 'Noto Sans Tamil'), sans-serif; } .ds-sub .ds-en { color: #fff; font-weight: 500; font-size: .82em; } .ds-cue { display: grid; gap: 3px; padding: 10px 12px; border-radius: 10px; background: #1c1c1f; box-shadow: inset 0 0 0 1px rgba(255,214,10,.4); transition: background .3s; } .ds-cue:hover { background: #2a2a2e; } .ds-tc { font: 11px var(--font-mono, 'Geist Mono', ui-monospace, monospace); font-variant-numeric: tabular-nums; color: #a1a1a6; } .ds-cue [lang=\"ta\"] { color: #ffd60a; } .ds-cue-en { color: #a1a1a6; font-size: 13px; }"
     }
   ],
   "narrative": {
-    "northStar": "Release-Night Banner Street",
-    "overview": "The product is a floodlit Kollywood banner street at night. The ground is near-black; the things that speak are opaque enamel signboards in Tamil Nadu signboard green, lettered by a sign-writer in enamel white and chrome yellow, bolted into a painted frame and standing on bamboo scaffolding. One warm floodlight temperature lights everything. Tamil and English share the same board, the same lettering family, and the same timing, the way they share a subtitle track.\n\nPersuade surfaces (landing, auth) are the street itself: boards on scaffolds, lamps above them, boards that hoist into place on a top hinge. Operate surfaces (app, editor, admin) step off the street into the workshop: dark night boards (panels) carry the work, and the green enamel and yellow plaques appear only where an action or the current place needs announcing. The user rejected the previous glassy violet, aurora, gradient-text look as AI-generated; this world replaces it with paint, metal and wood.",
+    "northStar": "The Device on the White Page",
+    "overview": "Vasanam presents itself the way premium hardware and developer tools present themselves: a quiet, light page that steps aside so the product can be shown big and exact. The page is near-white with near-black ink; the product (the subtitle editor, the Premiere window, the plugin panel) is rendered as a dark device sitting on it, with subtitle yellow living only inside that device. One signal blue carries every action and link. Typography and space do the persuading: large, tightly tracked Geist headlines, generous section padding, and no decoration beyond hairlines and soft shadow under the product.\n\nDensity changes with the job. Persuade surfaces (the landing page) are spacious and centered, with 140px section rhythm and a single idea per section. Operate surfaces (auth, app, admin) are calm and compact: light panels on a pale well, hairline-bordered rows, pill navigation, the same blue for actions. Motion is limited to a few deliberate ideas: a gentle rise on entry, the hero device straightening from a 3D tilt as you scroll, and a pinned product panel that changes state as steps pass.\n\nThis world replaces two rejected ones and must not drift back toward either: the glassy violet/aurora/gradient-text dark UI (read as AI-generated), and the themed \"release-night banner street\" (green/yellow enamel boards, bamboo, floodlights, condensed lettering; read as gimmicky, cramped and not premium).",
     "keyCharacteristics": [
-      "Night ground, opaque green enamel boards, white and chrome-yellow lettering.",
-      "One family (Anek Tamil) for both scripts; its width axis separates painted lettering (condensed) from reading text (normal).",
-      "Every board is framed, bolted and closed by a label strip.",
-      "One warm floodlight; no colored light, no glow, no glass.",
-      "Motion is physical: boards hoist on a hinge, subtitle lines paint on left to right, lamps flicker on once."
+      "Light ground, near-black ink, one signal blue for actions and links only.",
+      "The product is a dark device on the light page; subtitle yellow appears only inside it.",
+      "Geist at normal width with tight tracking on display sizes; Noto Sans Tamil for Tamil; Geist Mono only for timecodes.",
+      "Pill buttons and pill nav, 10px fields, 20px panels, hairline borders.",
+      "Soft, diffuse shadows; the heavy shadow belongs to product shots alone.",
+      "Motion is few and smooth: rise on entry, tilt-to-flat on scroll, pinned state changes."
     ],
     "rules": [
       {
-        "name": "The Two-Paint Rule",
-        "body": "A board carries at most two lettering paints: enamel white and chrome yellow. Green lettering lives on night, never on a green board.",
+        "name": "The One Voice Rule",
+        "body": "Signal Blue is the only accent on light surfaces and it means \"act\" or \"go\": buttons, links, focus, selection. It is never used for decoration, headings or backgrounds larger than a notice.",
         "section": "colors"
       },
       {
-        "name": "The One Floodlight Rule",
-        "body": "All light is the warm flood color at low alpha, cast downward from a lamp. No colored light, no glow halos, no neon.",
+        "name": "The Yellow Lives in the Device Rule",
+        "body": "Subtitle Yellow appears only on dark device surfaces, as subtitle text, active-cue highlight or caption clips. The one exception is the logo mark, itself a tiny dark screen carrying a subtitle stroke. It never appears on the light page as an accent, fill or button.",
         "section": "colors"
       },
       {
-        "name": "The Vermilion Is Trouble Rule",
-        "body": "Vermilion means error or destruction. It never decorates.",
-        "section": "colors"
-      },
-      {
-        "name": "The Width-Is-Voice Rule",
-        "body": "75% width is painted lettering, 85% is plaques and strips, 100% is reading. Never set a paragraph condensed or a headline at normal width.",
+        "name": "The Normal-Width Rule",
+        "body": "Display type is Geist at normal width, weight 600, tracked tight. No condensed, compressed or novelty display faces anywhere.",
         "section": "typography"
       },
       {
-        "name": "The One Biggest Word Rule",
-        "body": "Each board paints one phrase biggest. When a heading has a lead-in, the lead-in is set at half size on its own line inside the same heading element.",
+        "name": "The Mono Is for Time Rule",
+        "body": "Geist Mono appears only where the content is machine time or a file format (timecodes, .srt/.vtt, lane labels). It is never used for headings, labels or decoration.",
         "section": "typography"
       },
       {
-        "name": "The Subtitle Lettering Rule",
-        "body": "Subtitle lines are centered, 800 condensed yellow for Tamil over 600 normal-width white for English, with a hard black text shadow (`0 2px 0 #000, 0 0 2px #000`) as on a burned-in subtitle. That shadow belongs to subtitle lettering only.",
-        "section": "typography"
-      },
-      {
-        "name": "The Opaque Enamel Rule",
-        "body": "Board faces are one solid paint. Gradients appear only where the world draws a physical thing: the lamp lip, the light cone, bamboo poles and lashings, ticket notches.",
+        "name": "The Product Casts the Shadow Rule",
+        "body": "Only device surfaces get the heavy product shadow and perspective. Light UI stays flat with hairlines and a whisper shadow at most.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "Do put Operate work on night-board panels and reserve green enamel for boards that announce (hero, auth, steps, current admin nav item).",
-      "Do close every board with a label strip of plain facts.",
-      "Do keep Tamil and English together and at the same timing; Tamil leads in yellow, English follows in white.",
-      "Do use condensed 800 lettering (width 75%) for headings and numerals and normal width for reading text.",
-      "Do mark the current item, active cue and focus in chrome yellow.",
-      "Do pair status color with a dot and a word.",
-      "Do honor reduced motion: no hoist, no paint-on, lamps on."
+      "Do keep the page light (ground, ground-alt) and show the product as a dark device on it.",
+      "Do use Signal Blue (#1557ff) only for actions, links, focus and selection; one primary blue pill per decision.",
+      "Do set display type in Geist 600 at normal width with -0.035em tracking and balanced wrapping.",
+      "Do set every Tamil string with `lang=\"ta\"` in Noto Sans Tamil, at full size beside its English.",
+      "Do reserve Geist Mono and tabular figures for timecodes and file formats.",
+      "Do use pills for buttons and nav, 10px for fields and rows, 20px for panels.",
+      "Do keep light UI flat with hairlines and the whisper shadow; give the product shadow and perspective only to device shots.",
+      "Do pair every status colour with a word or dot-plus-word.",
+      "Do use the single ease `cubic-bezier(.22, 1, .36, 1)` and honour reduced motion."
     ],
     "donts": [
-      "Don't paint gradients, glass, backdrop blur or glow on boards or lettering; the floodlight cone and bamboo drawing are the only gradients.",
-      "Don't add a third lettering paint to a board, or letter green on green.",
-      "Don't use vermilion for anything but errors and destructive actions.",
-      "Don't introduce colored or cool light; every light is the warm flood.",
-      "Don't set uppercase tracked labels above headings; addresses are timecodes that also navigate, and the strip lives at the foot of a board.",
-      "Don't round boards, panels, plaques or fields past 6px; only physical fixtures (bolts, lamp housings) curve further."
+      "Don't bring back the glassy violet, aurora or gradient-text dark UI; it was rejected as AI-generated.",
+      "Don't bring back the themed \"release-night banner street\" world: no enamel boards, bamboo, floodlights, themed costumes, or green/yellow-on-black.",
+      "Don't use condensed or compressed display type anywhere.",
+      "Don't use gradient text, glow effects or frosted-glass panels; the only translucency is the sticky header's backdrop blur.",
+      "Don't use Subtitle Yellow on the light page outside the logo mark; it belongs inside the device.",
+      "Don't introduce a second accent colour on light surfaces.",
+      "Don't put a label, kicker or eyebrow above headlines; headlines stand alone."
     ]
   }
 }

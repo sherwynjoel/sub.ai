@@ -4,13 +4,13 @@
     "ignoreFiles": [],
     "ignoreValues": [
       {
-        "rule": "design-system-font",
-        "value": "tamil",
+        "rule": "overused-font",
+        "value": "geist",
         "files": [
-          "plugin/index.html"
+          "plugin/style.css"
         ],
-        "createdAt": "2026-10-07T07:12:59.880Z",
-        "reason": "false positive: panel now self-hosts the documented Anek Tamil face (plugin/fonts/AnekTamil.ttf); detector reads its rendered name as 'tamil'"
+        "createdAt": "2026-10-09T06:24:34.150Z",
+        "reason": "user chose the premium-tech canon and named Vercel as a reference (chat, 2026-10-09); Geist is Vercel's typeface and the site's documented face"
       }
     ]
   }

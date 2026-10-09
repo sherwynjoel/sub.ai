@@ -6,25 +6,23 @@ related_targets: ["app/app/page.tsx","app/admin/page.tsx"]
 ---
 
 ## Scope
-Landing page (/) in Persuade mode; the same world carries auth, app (dashboard, editor, billing, plugin) and admin in Operate mode.
+Landing page (/) in Persuade mode; the same system carries auth, app (dashboard, editor, billing, plugin) and admin in Operate mode, and the Adobe panel.
 
 ## Audience and action
-Freelance Tamil video editors. Primary action: start the free trial (15 minutes, no card). Proof: user has real testimonials/clips/logos to supply later; none may be invented meanwhile.
+Freelance Tamil video editors. Primary action: start the free trial (15 minutes, no card). Proof: user has real testimonials/clips/logos to supply later; none may be invented (PROOF array in app/page.tsx stays hidden while empty).
 
 ## Direction contract
-THESIS: Every upload gets a release-night title board: the page is a floodlit Kollywood banner street where Tamil and English lines are painted big on enamel boards. It refuses the dark-SaaS split hero with a tilted screenshot, glass, gradients and glow.
+THESIS: The product is the hero. Show the real Vasanam editor big and exact, the way premium tech products show their device, and let typography and space do the persuading. Refuses themed costumes, glow, gradient text and condensed display type.
 
-OWN-WORLD: Night black ground; boards in Tamil Nadu signboard green enamel with white and chrome-yellow sign-writer lettering; bamboo scaffold poles and lashings; one warm floodlight temperature lights everything. Anek Tamil condensed extra-bold for painted lettering in both scripts, normal width for body. Boards are opaque, framed, bolted; buttons are enamel plaques. Max two lettering paints per board, no gradients or glows.
+OWN-WORLD: Light ground (#fbfbfd / #f5f5f7 sections), near-black ink #1d1d1f, one accent, signal blue #1557ff, used for actions and links only. Product surfaces are dark (#111113 / #1c1c1f) with subtitle yellow #ffd60a, like a device on a white page. Geist for all Latin text at normal width, tight tracking on display sizes; Noto Sans Tamil for Tamil; Geist Mono only for timecodes. Pill buttons, 12–20px radii, hairline borders, soft offset shadows under product shots only.
 
-STORY: The visitor sees their own kind of dialogue painted in Tamil and English, understands it lands on their timeline as SRT or a caption track, sees honest formats and prices, and starts the free trial.
+STORY: The visitor sees their own Tamil dialogue subtitled in both languages inside a real-looking editor, understands the four steps from upload to timeline, sees honest formats and prices, and starts the free trial.
 
-FIRST VIEWPORT: Black street. Left, a tall green offer board on scaffolding, slightly turned toward the viewer: label strip, H1 "Tamil and English subtitles, painted on your timeline.", one line of subcopy, a yellow "Start free — 15 minutes" plaque, "No card needed". Right and deeper, a wide screen board on its own scaffold shows a clip; its current cue paints on in yellow Tamil over white English while a timecode ticks on its label strip. Floodlights above both.
+FIRST VIEWPORT: Centered, no label above it: the H1 "Tamil and English subtitles. In minutes." at ~5.5rem, one sentence of subcopy, two buttons (blue "Start free" pill, text link "See how it works"), "15 minutes free. No card needed." Below, filling the width and bleeding past the fold: the dark editor shot (video with painting subtitle, Tamil/English cue list, timeline) tilted back in 3D.
 
-FORM: Release-Night Banner Street, my candidate 4 of 7 (assigned by the roll); seed key 33c87a60. Signature interaction: boards hoist into place on a top hinge as they scroll in, and subtitle lines paint on left to right with a wet brush edge. Raises: two-paint rule (Riso); timecode section addresses as navigation (Teletext); one biggest word per board (Zine); one label strip for every board (Sneaker boxes); one floodlight governs (Indoor sun).
+FORM: Category standard executed at full craft (canon path chosen by the user in words: "Premium tech product, like Apple / Linear / Vercel"); no concept roll. References that set the bar: apple.com product pages, linear.app, vercel.com. Signature interaction: the hero editor straightens from a 3D tilt to flat as you scroll; "How it works" pins the product panel while four steps scroll past and the panel changes state.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 ## Unresolved
-Brand name is a placeholder (lib/brand.ts).
-Proof: the PROOF array in app/page.tsx is empty; its section renders automatically once the user's real testimonials are added. Nothing is invented meanwhile.
-Hero clip: the screen board is waveform-only until the user supplies a real sample clip (no imagery available; a CSS-drawn fake frame is refused). Reserve the screen face for that clip.
+Brand name is a placeholder (lib/brand.ts). Real proof and a real sample clip to be supplied by the user; the hero video pane uses a synthetic frame labelled "Sample".

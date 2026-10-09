@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Anek_Tamil } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans_Tamil } from "next/font/google";
 import { BRAND } from "@/lib/brand";
 import "./globals.css";
 
-// One family for both scripts; its width axis gives the condensed sign-writer lettering.
-const anek = Anek_Tamil({ subsets: ["latin", "tamil"], axes: ["wdth"], variable: "--font-anek", display: "swap" });
+const sans = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
+const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono", display: "swap" });
+const tamil = Noto_Sans_Tamil({ subsets: ["tamil"], variable: "--font-tamil", display: "swap" });
 
 export const metadata: Metadata = {
   title: `${BRAND.name} — ${BRAND.tagline}`,
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={anek.variable}>
+    <html lang="en" className={`${sans.variable} ${mono.variable} ${tamil.variable}`}>
       <body>{children}</body>
     </html>
   );

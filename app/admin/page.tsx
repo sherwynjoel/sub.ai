@@ -35,20 +35,28 @@ export default async function Overview() {
         </section>
       )}
 
-      <dl className="stats">
-        <div className="stat">
-          <dt>Worker</dt>
-          <dd><span className={`status ${o.worker.online ? "good" : "bad"}`}>{o.worker.online ? "Running" : "Stopped"}</span></dd>
-          <span className="sub">Last seen {when(o.worker.last)}</span>
-        </div>
-        <div className="stat"><dt>In the queue</dt><dd>{o.jobs.queued + o.jobs.processing}</dd><span className="sub">{o.jobs.processing} processing now</span></div>
-        <div className="stat"><dt>Projects today</dt><dd>{o.jobs.today}</dd><span className="sub">{o.jobs.failedToday} failed</span></div>
-        <div className="stat"><dt>Minutes subtitled, 30 days</dt><dd>{o.jobs.minutes30d.toLocaleString("en-IN")}</dd><span className="sub">Using {cfg.provider} / {cfg.model}</span></div>
-        <div className="stat"><dt>Users</dt><dd>{o.users.total.toLocaleString("en-IN")}</dd><span className="sub">{o.users.new7d} new this week</span></div>
-        <div className="stat"><dt>On paid plans</dt><dd>{o.subscribers}</dd><span className="sub">{PAID.map((p) => `${PLANS[p].name} ${o.byPlan[p] ?? 0}`).join(", ")}</span></div>
-        <div className="stat"><dt>Monthly recurring revenue</dt><dd>{inr(o.mrr)}</dd><span className="sub">Active subscriptions at list price</span></div>
-        <div className="stat"><dt>Collected, 30 days</dt><dd>{inr(o.revenue30d)}</dd><span className="sub">{o.charges30d} Razorpay charges</span></div>
-      </dl>
+      <section className="stat-group">
+        <h2>Operations</h2>
+        <dl className="stats">
+          <div className="stat">
+            <dt>Worker</dt>
+            <dd><span className={`status ${o.worker.online ? "good" : "bad"}`}>{o.worker.online ? "Running" : "Stopped"}</span></dd>
+            <span className="sub">Last seen {when(o.worker.last)}</span>
+          </div>
+          <div className="stat"><dt>In the queue</dt><dd>{o.jobs.queued + o.jobs.processing}</dd><span className="sub">{o.jobs.processing} processing now</span></div>
+          <div className="stat"><dt>Projects today</dt><dd>{o.jobs.today}</dd><span className="sub">{o.jobs.failedToday} failed</span></div>
+          <div className="stat"><dt>Minutes subtitled, 30 days</dt><dd>{o.jobs.minutes30d.toLocaleString("en-IN")}</dd><span className="sub">Using {cfg.provider} / {cfg.model}</span></div>
+        </dl>
+      </section>
+      <section className="stat-group">
+        <h2>Customers and revenue</h2>
+        <dl className="stats">
+          <div className="stat"><dt>Users</dt><dd>{o.users.total.toLocaleString("en-IN")}</dd><span className="sub">{o.users.new7d} new this week</span></div>
+          <div className="stat"><dt>On paid plans</dt><dd>{o.subscribers}</dd><span className="sub">{PAID.map((p) => `${PLANS[p].name} ${o.byPlan[p] ?? 0}`).join(", ")}</span></div>
+          <div className="stat"><dt>Monthly recurring revenue</dt><dd>{inr(o.mrr)}</dd><span className="sub">Active subscriptions at list price</span></div>
+          <div className="stat"><dt>Collected, 30 days</dt><dd>{inr(o.revenue30d)}</dd><span className="sub">{o.charges30d} Razorpay charges</span></div>
+        </dl>
+      </section>
 
       {!o.worker.online && (
         <p className="error">The worker isn&apos;t running, so uploads will wait in the queue. Start it with <code>npm run worker</code> (or <code>pm2 restart vasanam-worker</code> on the server).</p>

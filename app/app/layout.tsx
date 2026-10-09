@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AppNav from "@/components/AppNav";
+import SignOut from "@/components/SignOut";
 import { requireUser } from "@/lib/auth";
 import { BRAND } from "@/lib/brand";
 import { effectivePlan, PLANS, secondsLeft } from "@/lib/plans";
@@ -16,10 +17,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="wrap site-head">
           <Link href="/app" className="logo"><i />{BRAND.name}</Link>
           <AppNav isAdmin={u.isAdmin} />
-          <Link href="/app/billing" className="minutes" title={`${PLANS[plan].name} plan`}>
-            <span>{Math.floor(left / 60)} min left</span>
-            <span className="meter" aria-hidden="true"><i style={{ width: `${(left / total) * 100}%` }} /></span>
-          </Link>
+          <div className="account">
+            <Link href="/app/billing" className="minutes" title={`${PLANS[plan].name} plan`}>
+              <span>{Math.floor(left / 60)} min left</span>
+              <span className="meter" aria-hidden="true"><i style={{ width: `${(left / total) * 100}%` }} /></span>
+            </Link>
+            <SignOut />
+          </div>
         </div>
       </header>
       <main className="wrap app-main">{children}</main>

@@ -36,7 +36,7 @@ export default function BillingActions({ current, live, preselect }: { current: 
         name: "Vasanam",
         description: `${PLANS[plan].name} plan, monthly`,
         prefill: { name: data.name, email: data.email },
-        theme: { color: "#8b5cf6" },
+        theme: { color: "#1557ff" },
         handler: async (r: Record<string, string>) => {
           const v = await fetch("/api/billing/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(r) });
           setMsg(v.ok ? `You're on ${PLANS[plan].name}. Your minutes are ready.` : "Payment received; it may take a minute to show here.");
