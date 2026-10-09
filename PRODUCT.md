@@ -28,8 +28,8 @@ Editors work on desktop in Premiere Pro or After Effects, often late, against cl
 
 ## Brand Commitments
 - Name "Vasanam" (Tamil for dialogue) is a working name, not final; keep it in `lib/brand.ts` so it can change.
-- Standing preference (2026-10-09): a premium tech product look in the class of Apple, Linear and Vercel: clean, generous space, the product shown big, subtle 3D and smooth scroll motion. Theme left to the designer.
-- Rejected so far: (1) glassy violet/aurora/gradient-text dark UI as AI-generated; (2) the themed "release-night banner street" (green/yellow enamel boards, bamboo, floodlights, condensed lettering) as gimmicky, wrong colours, cramped fonts and not premium. Do not bring back themed costumes, condensed display type, or green/yellow-on-black.
+- Standing preference (2026-10-09, latest): short pages with only the needed information; some animation, 3D and scroll effects; a colourful, non-standard palette. The user picked the "Sunset gradient" sample (orange #ff7e5f to peach #ffd29d, plum #3a1020 ink/buttons, hot pink #ff4f81 accent, cream cards) and the landing sections Hero + 3D subtitle cards, 3 quick steps, Plugin teaser, Pricing.
+- Rejected so far: (1) dark violet glass with aurora/gradient text; (2) themed "release-night banner street" (green/yellow enamel boards, condensed lettering); (3) premium white/near-black/blue product page (too long, too normal). Do not bring back long pages, FAQ walls, white/black schemes, or themed costumes.
 
 ## Evidence on Hand
 The user has some real proof (testimonials, sample clips, client logos) to share later; none is in the repo yet. Until provided, the site must not invent testimonials, customer names, logos, usage numbers or accuracy figures. Reserve a place for proof without filling it with fabrications.

@@ -1,458 +1,372 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-09T06:40:21.718Z",
+  "generatedAt": "2026-10-09T07:17:51.962Z",
   "title": "Design System: Vasanam",
   "extensions": {
     "colorMeta": {
-      "signal-blue": {
-        "role": "primary",
-        "displayName": "Signal Blue",
-        "canonical": "#1557ff",
-        "cssVar": "--blue",
+      "sunset-orange": {
+        "role": "tertiary",
+        "displayName": "Sunset Orange",
         "tonalRamp": [
-          "#000038",
-          "#000080",
-          "#002cb5",
-          "#0b4cf5",
-          "#4880ff",
-          "#84acff",
-          "#bad1fe",
-          "#e6efff"
+          "#412018",
+          "#74392b",
+          "#a8533e",
+          "#db6c52",
+          "#ff8a6e",
+          "#ffb09d",
+          "#ffd3c8",
+          "#ffefeb"
         ]
       },
-      "signal-blue-hover": {
-        "role": "primary",
-        "displayName": "Pressed Blue",
-        "canonical": "#0a47e6",
-        "cssVar": "--blue-hover",
+      "sunset-apricot": {
+        "role": "tertiary",
+        "displayName": "Sunset Apricot",
         "tonalRamp": [
-          "#000038",
-          "#000080",
-          "#002cb6",
-          "#1250ee",
-          "#4880ff",
-          "#84acfe",
-          "#bad1ff",
-          "#e7effe"
+          "#332419",
+          "#5b412c",
+          "#845d40",
+          "#ac7a53",
+          "#d59767",
+          "#feb47b",
+          "#fed5b5",
+          "#fff0e4"
         ]
       },
-      "blue-wash": {
-        "role": "primary",
-        "displayName": "Blue Wash",
-        "canonical": "#eaf0ff",
-        "cssVar": "--blue-soft",
+      "sunset-peach": {
+        "role": "tertiary",
+        "displayName": "Sunset Peach",
         "tonalRamp": [
-          "#080b14",
-          "#222631",
-          "#404551",
-          "#616673",
-          "#848996",
-          "#a8aebc",
-          "#cbd1df",
-          "#e8eefd"
+          "#2d251c",
+          "#514332",
+          "#766148",
+          "#9a7f5f",
+          "#be9c75",
+          "#e2ba8b",
+          "#ffd6a6",
+          "#fff0df"
+        ]
+      },
+      "plum": {
+        "role": "primary",
+        "displayName": "Deep Plum",
+        "tonalRamp": [
+          "#3a1020",
+          "#5f3d4a",
+          "#795d67",
+          "#937d85",
+          "#ae9ca3",
+          "#c8bcc1",
+          "#e0dadc",
+          "#f4f2f3"
+        ]
+      },
+      "plum-2": {
+        "role": "primary",
+        "displayName": "Plum Dusk",
+        "tonalRamp": [
+          "#4d1a2b",
+          "#6d384a",
+          "#855968",
+          "#9d7a86",
+          "#b59aa3",
+          "#cdbbc1",
+          "#e3d9dc",
+          "#f5f1f3"
+        ]
+      },
+      "pink": {
+        "role": "secondary",
+        "displayName": "Hot Pink",
+        "tonalRamp": [
+          "#511929",
+          "#922d4a",
+          "#d3416b",
+          "#ff5c8a",
+          "#ff84a7",
+          "#ffacc3",
+          "#ffd0de",
+          "#ffeef3"
+        ]
+      },
+      "pink-soft": {
+        "role": "secondary",
+        "displayName": "Blush"
+      },
+      "cream": {
+        "role": "neutral",
+        "displayName": "Cream",
+        "tonalRamp": [
+          "#272625",
+          "#474542",
+          "#666360",
+          "#86817d",
+          "#a5a09b",
+          "#c5beb8",
+          "#e1dad3",
+          "#fff7ef"
+        ]
+      },
+      "coral": {
+        "role": "tertiary",
+        "displayName": "Subtitle Coral",
+        "tonalRamp": [
+          "#5c1724",
+          "#a52941",
+          "#cd4460",
+          "#d7697f",
+          "#e18e9e",
+          "#ebb3be",
+          "#f4d4da",
+          "#fbf0f2"
         ]
       },
       "ground": {
         "role": "neutral",
-        "displayName": "Ground",
-        "canonical": "#fbfbfd",
-        "cssVar": "--bg",
+        "displayName": "Peach Ground",
         "tonalRamp": [
-          "#0b0b0c",
-          "#262628",
-          "#454546",
-          "#666667",
-          "#89898b",
-          "#aeaeaf",
-          "#d1d1d3",
-          "#eeeef0"
+          "#282624",
+          "#484441",
+          "#68635e",
+          "#88817b",
+          "#a89f98",
+          "#c9beb5",
+          "#e6d9cf",
+          "#fff1e6"
         ]
       },
-      "ground-alt": {
+      "ground-2": {
         "role": "neutral",
-        "displayName": "Ground Alt",
-        "canonical": "#f5f5f7",
-        "cssVar": "--bg-2",
+        "displayName": "Deeper Peach",
         "tonalRamp": [
-          "#0b0b0c",
-          "#262628",
-          "#454546",
-          "#666667",
-          "#89898b",
-          "#aeaeaf",
-          "#d1d1d3",
-          "#eeeef0"
+          "#2a2623",
+          "#4b443e",
+          "#6c625a",
+          "#8e8076",
+          "#af9e92",
+          "#d0bcad",
+          "#ffe6d4",
+          "#fff0e5"
         ]
       },
-      "surface": {
+      "ink-2": {
         "role": "neutral",
-        "displayName": "Surface",
-        "canonical": "#ffffff",
-        "cssVar": "--surface",
-        "tonalRamp": [
-          "#0b0b0b",
-          "#262626",
-          "#454545",
-          "#666666",
-          "#898989",
-          "#aeaeae",
-          "#d1d1d1",
-          "#eeeeee"
-        ]
-      },
-      "ink": {
-        "role": "neutral",
-        "displayName": "Ink",
-        "canonical": "#1d1d1f",
-        "cssVar": "--ink",
-        "tonalRamp": [
-          "#0b0b0d",
-          "#262628",
-          "#454547",
-          "#666668",
-          "#89898b",
-          "#adadb0",
-          "#d1d1d3",
-          "#eeeef1"
-        ]
-      },
-      "ink-secondary": {
-        "role": "neutral",
-        "displayName": "Ink Secondary",
-        "canonical": "#424245",
-        "cssVar": "--ink-2",
-        "tonalRamp": [
-          "#0b0b0d",
-          "#262629",
-          "#454548",
-          "#666669",
-          "#89898c",
-          "#adadb1",
-          "#d0d0d4",
-          "#eeeef2"
-        ]
+        "displayName": "Plum Ink 2"
       },
       "muted": {
         "role": "neutral",
-        "displayName": "Muted",
-        "canonical": "#6e6e73",
-        "cssVar": "--muted",
+        "displayName": "Muted Plum",
         "tonalRamp": [
-          "#0b0b0e",
-          "#26262a",
-          "#444449",
-          "#65656a",
-          "#88888e",
-          "#adadb3",
-          "#d0d0d6",
-          "#eeeef4"
+          "#372126",
+          "#633c45",
+          "#7a4a55",
+          "#9d7a82",
+          "#b59ba1",
+          "#cdbbbf",
+          "#e3d9db",
+          "#f5f1f2"
         ]
       },
-      "hairline": {
+      "line": {
         "role": "neutral",
-        "displayName": "Hairline",
-        "canonical": "#d2d2d7",
-        "cssVar": "--line",
-        "tonalRamp": [
-          "#0b0b0e",
-          "#26262a",
-          "#454449",
-          "#66656a",
-          "#89898d",
-          "#adadb2",
-          "#d0d0d5",
-          "#eeeef3"
-        ]
+        "displayName": "Plum Line"
       },
-      "hairline-soft": {
+      "line-soft": {
         "role": "neutral",
-        "displayName": "Hairline Soft",
-        "canonical": "#e8e8ed",
-        "cssVar": "--line-2",
-        "tonalRamp": [
-          "#0b0b0e",
-          "#26262a",
-          "#454449",
-          "#66666a",
-          "#89898d",
-          "#adadb2",
-          "#d0d0d5",
-          "#eeeef3"
-        ]
+        "displayName": "Plum Line Soft"
       },
-      "success": {
+      "line-hi": {
         "role": "neutral",
-        "displayName": "Success Green",
-        "canonical": "#1a7f37",
-        "cssVar": "--green",
-        "tonalRamp": [
-          "#001001",
-          "#00300d",
-          "#01541e",
-          "#127b33",
-          "#42a056",
-          "#6ac67a",
-          "#8dea9c",
-          "#c9ffcf"
-        ]
+        "displayName": "Plum Line Strong"
       },
-      "error": {
+      "video": {
         "role": "neutral",
-        "displayName": "Error Red",
-        "canonical": "#d70015",
-        "cssVar": "--red",
+        "displayName": "Video Plum",
         "tonalRamp": [
-          "#200000",
-          "#500002",
-          "#860008",
-          "#c10112",
-          "#f33532",
-          "#fe8579",
-          "#ffbfb6",
-          "#fee9e6"
+          "#2a0c1a",
+          "#573f4a",
+          "#725f68",
+          "#8e7e86",
+          "#aa9ea3",
+          "#c5bdc1",
+          "#dfdadc",
+          "#f3f2f3"
         ]
       },
-      "warning": {
+      "subtitle-peach": {
         "role": "neutral",
-        "displayName": "Warning Amber",
-        "canonical": "#b25000",
-        "cssVar": "--amber",
-        "tonalRamp": [
-          "#1a0400",
-          "#421800",
-          "#702f00",
-          "#a24800",
-          "#ce692a",
-          "#f78f53",
-          "#ffc1a1",
-          "#ffeadf"
-        ]
+        "displayName": "Subtitle Peach"
       },
-      "device": {
+      "field": {
         "role": "neutral",
-        "displayName": "Device",
-        "canonical": "#111113",
-        "cssVar": "--dev",
-        "tonalRamp": [
-          "#0b0b0d",
-          "#262628",
-          "#454547",
-          "#666668",
-          "#89898b",
-          "#adadb0",
-          "#d0d1d3",
-          "#eeeef1"
-        ]
+        "displayName": "Field White"
       },
-      "device-raised": {
+      "green": {
         "role": "neutral",
-        "displayName": "Device Raised",
-        "canonical": "#1c1c1f",
-        "cssVar": "--dev-2",
+        "displayName": "Status Green",
         "tonalRamp": [
-          "#0b0b0e",
-          "#262629",
-          "#454548",
-          "#666669",
-          "#89898c",
-          "#adadb1",
-          "#d0d0d5",
-          "#eeeef2"
+          "#0b2f1b",
+          "#145530",
+          "#1d7a45",
+          "#4b956b",
+          "#77af8f",
+          "#a3c9b3",
+          "#cbe1d5",
+          "#edf4f0"
         ]
       },
-      "device-well": {
+      "red": {
         "role": "neutral",
-        "displayName": "Device Well",
-        "canonical": "#2a2a2e",
-        "cssVar": "--dev-3",
+        "displayName": "Status Red",
         "tonalRamp": [
-          "#0b0b0e",
-          "#26262a",
-          "#444449",
-          "#65656a",
-          "#88898d",
-          "#adadb2",
-          "#d0d0d6",
-          "#eeeef3"
+          "#69131d",
+          "#c22436",
+          "#cb4655",
+          "#d66a77",
+          "#e08f98",
+          "#eab3b9",
+          "#f3d5d8",
+          "#fbf0f1"
         ]
       },
-      "device-line": {
+      "amber": {
         "role": "neutral",
-        "displayName": "Device Line",
-        "canonical": "#38383d",
-        "cssVar": "--dev-line",
+        "displayName": "Status Amber",
         "tonalRamp": [
-          "#0b0b0f",
-          "#26262b",
-          "#44444a",
-          "#65656b",
-          "#88888e",
-          "#adadb3",
-          "#d0d0d6",
-          "#eeeef4"
-        ]
-      },
-      "device-ink": {
-        "role": "neutral",
-        "displayName": "Device Ink",
-        "canonical": "#f5f5f7",
-        "cssVar": "--dev-ink",
-        "tonalRamp": [
-          "#0b0b0c",
-          "#262628",
-          "#454546",
-          "#666667",
-          "#89898b",
-          "#aeaeaf",
-          "#d1d1d3",
-          "#eeeef0"
-        ]
-      },
-      "device-muted": {
-        "role": "neutral",
-        "displayName": "Device Muted",
-        "canonical": "#a1a1a6",
-        "cssVar": "--dev-muted",
-        "tonalRamp": [
-          "#0b0b0e",
-          "#26262a",
-          "#444449",
-          "#65656a",
-          "#89898d",
-          "#adadb2",
-          "#d0d0d6",
-          "#eeeef3"
-        ]
-      },
-      "device-blue": {
-        "role": "primary",
-        "displayName": "Device Blue",
-        "canonical": "#5b8cff",
-        "cssVar": "--dev-blue",
-        "tonalRamp": [
-          "#000038",
-          "#02067b",
-          "#1236a2",
-          "#315ccb",
-          "#5282f4",
-          "#86acfe",
-          "#bcd1fe",
-          "#e7effe"
-        ]
-      },
-      "subtitle-yellow": {
-        "role": "secondary",
-        "displayName": "Subtitle Yellow",
-        "canonical": "#ffd60a",
-        "cssVar": "--sub",
-        "tonalRamp": [
-          "#100b00",
-          "#2f2600",
-          "#534400",
-          "#796400",
-          "#a28704",
-          "#cdab09",
-          "#f6ce00",
-          "#ffefb3"
+          "#442100",
+          "#7a3c00",
+          "#a14f00",
+          "#b8793d",
+          "#c99a6d",
+          "#dbbb9c",
+          "#ebd9c8",
+          "#f8f1eb"
         ]
       }
     },
     "typographyMeta": {
       "display": {
         "displayName": "Display",
-        "purpose": "Hero H1 and final call to action; Geist 600, tight tracking, balanced."
+        "purpose": "Landing H1 only, about 9ch wide."
       },
       "headline": {
         "displayName": "Headline",
-        "purpose": "Section H2s and app page titles."
+        "purpose": "Section headings and app page titles."
       },
       "title": {
         "displayName": "Title",
-        "purpose": "H3s, plan names, panel headings, story step titles."
-      },
-      "lede": {
-        "displayName": "Lede",
-        "purpose": "One-sentence subcopy under headlines, max 44ch."
+        "purpose": "Card, panel and step headings."
       },
       "body": {
         "displayName": "Body",
-        "purpose": "Paragraphs at max 66ch."
+        "purpose": "Running copy, max 60ch."
+      },
+      "lede": {
+        "displayName": "Lede",
+        "purpose": "The one supporting line under the hero H1."
       },
       "label": {
         "displayName": "Label",
-        "purpose": "Form labels, notes, nav links, button text."
+        "purpose": "Form labels, nav links, notes, tags."
       },
-      "tamil": {
-        "displayName": "Tamil Specimen",
-        "purpose": "Large Tamil dialogue line; every lang=ta element uses Noto Sans Tamil."
-      },
-      "timecode": {
-        "displayName": "Timecode",
-        "purpose": "Geist Mono with tabular figures for timestamps and file formats only."
+      "tamil-line": {
+        "displayName": "Tamil Line",
+        "purpose": "Tamil half of a subtitle card, coral on cream."
       }
     },
+    "gradients": [
+      {
+        "name": "sunset",
+        "value": "linear-gradient(160deg, #ff7e5f 0%, #feb47b 55%, #ffd29d 100%)",
+        "purpose": "Ground of landing hero, auth page and app header band."
+      },
+      {
+        "name": "flow",
+        "value": "linear-gradient(180deg, #ffd29d 0%, #feb47b 50%, #ff8f6b 100%)",
+        "purpose": "Landing continuation below the hero, behind steps and plugin teaser."
+      }
+    ],
     "shadows": [
       {
-        "name": "whisper",
-        "value": "0 1px 2px rgba(0,0,0,.05), 0 1px 1px rgba(0,0,0,.03)",
-        "purpose": "Panels, plans table, pressed segmented option, current admin nav item."
+        "name": "hairline-lift",
+        "value": "0 2px 6px rgba(58,16,32,.06), 0 0 0 1px rgba(58,16,32,.09)",
+        "purpose": "App panels, active admin nav, pressed segmented option."
       },
       {
-        "name": "ambient",
-        "value": "0 2px 6px rgba(0,0,0,.04), 0 12px 32px -12px rgba(0,0,0,.12)",
-        "purpose": "Floating auth card."
+        "name": "float",
+        "value": "0 18px 40px -18px rgba(58,16,32,.35)",
+        "purpose": "Auth card."
       },
       {
-        "name": "product",
-        "value": "0 0 0 1px rgba(0,0,0,.9), 0 30px 60px -20px rgba(0,0,0,.35), 0 18px 36px -18px rgba(0,0,0,.3)",
-        "purpose": "Dark device shots only."
+        "name": "cue-float",
+        "value": "0 24px 40px -18px rgba(58,16,32,.55)",
+        "purpose": "Hero subtitle cue cards."
+      },
+      {
+        "name": "panel-float",
+        "value": "0 30px 60px -24px rgba(58,16,32,.6)",
+        "purpose": "Tilting plugin mini panel."
+      },
+      {
+        "name": "button-glow",
+        "value": "0 10px 20px -10px rgba(58,16,32,.6)",
+        "purpose": "Plum pill buttons at rest; hover 0 14px 24px -10px rgba(58,16,32,.65)."
+      },
+      {
+        "name": "header-band",
+        "value": "0 10px 24px -18px rgba(58,16,32,.5)",
+        "purpose": "Sticky sunset app header."
       },
       {
         "name": "focus-halo",
-        "value": "0 0 0 4px rgba(21,87,255,.15)",
-        "purpose": "Focused fields."
+        "value": "0 0 0 4px rgba(255,79,129,.2)",
+        "purpose": "Focused inputs."
       },
       {
-        "name": "selected-halo",
-        "value": "0 0 0 3px rgba(21,87,255,.12)",
-        "purpose": "Active cue and picked plan, with a blue border."
+        "name": "selected-ring",
+        "value": "0 0 0 3px rgba(255,79,129,.25)",
+        "purpose": "Active cue row, picked plan."
       }
     ],
     "motion": [
       {
         "name": "ease",
         "value": "cubic-bezier(.22, 1, .36, 1)",
-        "purpose": "The single easing for all transitions and entrances."
+        "purpose": "Default easing for all transitions and entrances."
+      },
+      {
+        "name": "card-exit",
+        "value": "transform .6s cubic-bezier(.55, 0, .7, .2), opacity .5s ease-in",
+        "purpose": "Front cue card leaving toward the viewer."
+      },
+      {
+        "name": "card-cycle",
+        "value": "3000ms",
+        "purpose": "Interval between cue changes in the hero stack."
+      },
+      {
+        "name": "flip-reveal",
+        "value": "perspective(900px) rotateX(-48deg) translateY(24px) to none, 1s",
+        "purpose": "Scroll-in reveal for steps and proof, staggered via --d."
       },
       {
         "name": "rise",
-        "value": "opacity 0 to 1, translate 18-24px to 0, .7-.9s, stagger 60-80ms",
-        "purpose": "Entrance for hero copy, app page content and reveal sections."
+        "value": "opacity 0, translateY 18-22px to rest, .7-.9s",
+        "purpose": "Page and hero-copy entrance, staggered .06-.08s."
       },
       {
-        "name": "tilt-to-flat",
-        "value": "rotateX((1 - p) * 22deg) scale(.94 + p * .06), p = scrollY / (0.7 * viewport height), perspective 2200px",
-        "purpose": "Hero device straightens as the page scrolls."
+        "name": "drift",
+        "value": "7-9s ease-in-out infinite, rotate 14deg, scale 1.06",
+        "purpose": "Floating pink circle and plum square."
       },
       {
-        "name": "pinned-story",
-        "value": "sticky panel; states cross-fade with a 14px rise over .5-.6s",
-        "purpose": "How it works: the panel pins while four steps scroll past."
+        "name": "tilt",
+        "value": "rotateY(-40deg) rotateX(16deg) translateY(50px) to rotateY(-8deg) rotateX(3deg), view() timeline",
+        "purpose": "Plugin mini panel straightens on scroll."
       },
       {
-        "name": "subtitle-in",
-        "value": "opacity + 6px rise, .45s, English delayed 80ms",
-        "purpose": "On-screen subtitle lines appearing."
-      },
-      {
-        "name": "press",
-        "value": "scale(.98)",
-        "purpose": "Button active state."
-      },
-      {
-        "name": "reduced-motion",
-        "value": "all animation and transition removed",
-        "purpose": "prefers-reduced-motion: reduce."
+        "name": "button-lift",
+        "value": "translateY(-2px), .25s",
+        "purpose": "Button hover."
       }
     ],
     "breakpoints": [
@@ -471,6 +385,10 @@
       {
         "name": "xl",
         "value": "960px"
+      },
+      {
+        "name": "container",
+        "value": "1120px"
       }
     ]
   },
@@ -479,124 +397,134 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Solid Signal Blue pill for the one primary action per decision.",
-      "html": "<button class=\"ds-btn\">Start free</button>",
-      "css": ".ds-btn { display: inline-flex; align-items: center; gap: .45em; font: 500 1rem/1 var(--font-body, Geist, system-ui, sans-serif); letter-spacing: -.01em; padding: .85em 1.35em; border-radius: 999px; border: 0; cursor: pointer; background: var(--blue, #1557ff); color: #fff; transition: background .2s, transform .2s cubic-bezier(.22,1,.36,1); } .ds-btn:hover { background: var(--blue-hover, #0a47e6); } .ds-btn:active { transform: scale(.98); } .ds-btn:focus-visible { outline: 2px solid var(--blue, #1557ff); outline-offset: 2px; }"
+      "description": "Plum pill with peach text; every primary action.",
+      "html": "<button class=\"ds-btn\">Try 15 minutes free</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;font:700 1rem/1 'Bricolage Grotesque',system-ui,sans-serif;padding:.95em 1.5em;border-radius:999px;border:0;cursor:pointer;background:#3a1020;color:#ffd29d;box-shadow:0 10px 20px -10px rgba(58,16,32,.6);transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .25s cubic-bezier(.22,1,.36,1),background .2s}.ds-btn:hover{background:#5a1f33;transform:translateY(-2px);box-shadow:0 14px 24px -10px rgba(58,16,32,.65)}.ds-btn:active{transform:translateY(0) scale(.98)}.ds-btn:focus-visible{outline:3px solid #ff4f81;outline-offset:2px}"
     },
     {
       "name": "Ghost Button",
       "kind": "button",
       "refersTo": "button-ghost",
-      "description": "Transparent pill with an inset hairline ring for secondary choices.",
+      "description": "Secondary pill with a plum ring.",
       "html": "<button class=\"ds-btn-ghost\">Get the plugin</button>",
-      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; font: 500 1rem/1 var(--font-body, Geist, system-ui, sans-serif); letter-spacing: -.01em; padding: .85em 1.35em; border-radius: 999px; border: 0; cursor: pointer; background: transparent; color: var(--ink, #1d1d1f); box-shadow: inset 0 0 0 1px var(--line, #d2d2d7); transition: background .2s, transform .2s cubic-bezier(.22,1,.36,1); } .ds-btn-ghost:hover { background: var(--bg-2, #f5f5f7); } .ds-btn-ghost:active { transform: scale(.98); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--blue, #1557ff); outline-offset: 2px; }"
+      "css": ".ds-btn-ghost{display:inline-flex;align-items:center;font:700 1rem/1 'Bricolage Grotesque',system-ui,sans-serif;padding:.95em 1.5em;border-radius:999px;border:0;cursor:pointer;background:transparent;color:#3a1020;box-shadow:inset 0 0 0 2px #3a1020;transition:background .2s}.ds-btn-ghost:hover{background:rgba(58,16,32,.06)}.ds-btn-ghost:focus-visible{outline:3px solid #ff4f81;outline-offset:2px}"
     },
     {
-      "name": "Text Link with Arrow",
-      "kind": "custom",
-      "refersTo": "button-primary",
-      "description": "Secondary action beside a primary pill; the SVG chevron slides on hover.",
-      "html": "<a class=\"ds-link-arrow\" href=\"#\">See how it works<svg width=\"8\" height=\"12\" viewBox=\"0 0 8 12\" aria-hidden=\"true\"><path d=\"M1.5 1.5L6 6l-4.5 4.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></a>",
-      "css": ".ds-link-arrow { display: inline-flex; align-items: center; gap: 7px; font: 500 1.0625rem var(--font-body, Geist, system-ui, sans-serif); color: var(--blue, #1557ff); text-decoration: none; } .ds-link-arrow svg { transition: translate .2s cubic-bezier(.22,1,.36,1); } .ds-link-arrow:hover svg { translate: 3px 0; } .ds-link-arrow:focus-visible { outline: 2px solid var(--blue, #1557ff); outline-offset: 2px; border-radius: 6px; }"
-    },
-    {
-      "name": "Text Field",
+      "name": "Text Input",
       "kind": "input",
       "refersTo": "input",
-      "description": "White field, hairline border, 10px radius; blue border and halo on focus.",
-      "html": "<label class=\"ds-field\">Email<input class=\"ds-input\" type=\"email\" placeholder=\"you@studio.in\"></label>",
-      "css": ".ds-field { display: grid; gap: .4em; font: 500 .9rem var(--font-body, Geist, system-ui, sans-serif); color: var(--ink-2, #424245); } .ds-input { font: 400 17px var(--font-body, Geist, system-ui, sans-serif); color: var(--ink, #1d1d1f); background: var(--surface, #fff); border: 1px solid var(--line, #d2d2d7); border-radius: 10px; padding: .7em .85em; transition: border-color .15s, box-shadow .15s; } .ds-input::placeholder { color: #8e8e93; } .ds-input:focus { outline: none; border-color: var(--blue, #1557ff); box-shadow: 0 0 0 4px rgba(21,87,255,.15); }"
+      "description": "White field, plum hairline, pink focus halo.",
+      "html": "<label class=\"ds-label\">Email<input class=\"ds-input\" placeholder=\"you@studio.in\"></label>",
+      "css": ".ds-label{display:grid;gap:.4em;font:600 .92rem 'Bricolage Grotesque',system-ui,sans-serif;color:#5a2a38}.ds-input{font:400 17px 'Bricolage Grotesque',system-ui,sans-serif;color:#3a1020;background:#fff;border:1.5px solid rgba(58,16,32,.16);border-radius:12px;padding:.7em .9em;transition:border-color .15s,box-shadow .15s}.ds-input::placeholder{color:#a07985}.ds-input:focus{outline:none;border-color:#ff4f81;box-shadow:0 0 0 4px rgba(255,79,129,.2)}"
     },
     {
-      "name": "Header Navigation",
+      "name": "Site Header",
       "kind": "nav",
-      "refersTo": "nav-link",
-      "description": "Translucent sticky header: logo mark, pill links, small blue action.",
-      "html": "<header class=\"ds-head\"><a class=\"ds-logo\" href=\"#\"><i></i>Vasanam</a><nav class=\"ds-nav\"><a href=\"#\" aria-current=\"page\">How it works</a><a href=\"#\">Pricing</a><a href=\"#\" class=\"ds-nav-cta\">Start free</a></nav></header>",
-      "css": ".ds-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 60px; padding: 0 20px; background: rgba(251,251,253,.82); backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid rgba(0,0,0,.06); font-family: var(--font-body, Geist, system-ui, sans-serif); } .ds-logo { display: inline-flex; align-items: center; gap: .5em; color: #1d1d1f; font-weight: 600; font-size: 1.1rem; letter-spacing: -.03em; text-decoration: none; } .ds-logo i { width: 22px; height: 22px; border-radius: 6px; background: #1d1d1f; position: relative; display: inline-block; } .ds-logo i::after { content: \"\"; position: absolute; left: 5px; right: 5px; bottom: 6px; height: 2.5px; border-radius: 2px; background: #ffd60a; box-shadow: 0 -4px 0 rgba(255,255,255,.85); } .ds-nav { display: flex; gap: 4px; align-items: center; } .ds-nav a { color: #424245; font-size: .92rem; padding: .45em .75em; border-radius: 999px; text-decoration: none; } .ds-nav a:hover, .ds-nav a[aria-current=\"page\"] { color: #1d1d1f; background: #f5f5f7; } .ds-nav a:focus-visible { outline: 2px solid #1557ff; outline-offset: 2px; } .ds-nav .ds-nav-cta { background: #1557ff; color: #fff; font-weight: 500; padding: .6em 1em; } .ds-nav .ds-nav-cta:hover { background: #0a47e6; color: #fff; }"
+      "refersTo": "",
+      "description": "Logo tile left, pill links and a small plum call right, on the sunset band.",
+      "html": "<header class=\"ds-head\"><a class=\"ds-logo\"><i></i>Vasanam</a><nav><a class=\"ds-nav\" aria-current=\"page\">Projects</a><a class=\"ds-nav\">Billing</a><a class=\"ds-call\">Start free</a></nav></header>",
+      "css": ".ds-head{display:flex;align-items:center;justify-content:space-between;gap:16px;height:68px;padding:0 20px;background:linear-gradient(160deg,#ff7e5f 0%,#feb47b 55%,#ffd29d 100%);border-radius:0 0 28px 28px;font-family:'Bricolage Grotesque',system-ui,sans-serif}.ds-head nav{display:flex;gap:4px;align-items:center}.ds-logo{display:inline-flex;align-items:center;gap:.5em;color:#3a1020;font-weight:800;font-size:1.2rem;letter-spacing:-.03em}.ds-logo i{width:26px;height:26px;border-radius:9px;background:#3a1020;position:relative;display:inline-block}.ds-logo i::before,.ds-logo i::after{content:'';position:absolute;left:6px;height:3px;border-radius:2px}.ds-logo i::before{right:6px;bottom:11px;background:#ffd29d}.ds-logo i::after{right:10px;bottom:6px;background:#ff4f81}.ds-nav{color:#3a1020;font-weight:600;font-size:.95rem;padding:.5em .85em;border-radius:999px;cursor:pointer}.ds-nav:hover,.ds-nav[aria-current=page]{background:rgba(58,16,32,.08)}.ds-call{font-weight:700;font-size:.9rem;padding:.62em 1.05em;border-radius:999px;background:#3a1020;color:#ffd29d;cursor:pointer}.ds-call:hover{background:#5a1f33}"
     },
     {
       "name": "Panel",
       "kind": "card",
       "refersTo": "panel",
-      "description": "White Operate-surface container with hairline border and whisper shadow.",
-      "html": "<section class=\"ds-panel\"><h3>Export</h3><p>SRT, WebVTT or plain text, in Tamil, English or both.</p></section>",
-      "css": ".ds-panel { background: var(--surface, #fff); border: 1px solid var(--line-2, #e8e8ed); border-radius: 20px; padding: 24px; box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 1px 1px rgba(0,0,0,.03); font: 17px/1.55 var(--font-body, Geist, system-ui, sans-serif); color: #1d1d1f; } .ds-panel h3 { margin: 0 0 .5em; font-size: 1.3rem; font-weight: 600; letter-spacing: -.02em; line-height: 1.25; } .ds-panel p { margin: 0; color: #6e6e73; }"
+      "description": "Cream work surface on the peach ground.",
+      "html": "<div class=\"ds-ground\"><div class=\"ds-panel\"><h3>Export</h3><p>SRT, VTT or TXT, per language or both stacked.</p></div></div>",
+      "css": ".ds-ground{background:#fff1e6;padding:24px}.ds-panel{background:#fff7ef;color:#3a1020;border-radius:22px;padding:24px;box-shadow:0 2px 6px rgba(58,16,32,.06),0 0 0 1px rgba(58,16,32,.09);font:400 17px/1.55 'Bricolage Grotesque',system-ui,sans-serif}.ds-panel h3{margin:0 0 .4em;font-weight:700;font-size:1.35rem;letter-spacing:-.02em}.ds-panel p{margin:0;color:#7a4a55}"
     },
     {
-      "name": "Segmented Control",
-      "kind": "chip",
-      "refersTo": "segmented-control",
-      "description": "Language switch: pale track, pressed option lifts to white.",
-      "html": "<div class=\"ds-seg\" role=\"group\"><button aria-pressed=\"true\">Both</button><button aria-pressed=\"false\">Tamil</button><button aria-pressed=\"false\">English</button></div>",
-      "css": ".ds-seg { display: inline-flex; gap: 2px; padding: 3px; background: #e8e8ed; border-radius: 10px; } .ds-seg button { font: 500 .9rem var(--font-body, Geist, system-ui, sans-serif); padding: .45em 1em; border: 0; border-radius: 8px; background: none; cursor: pointer; color: #424245; transition: background .2s, color .2s, box-shadow .2s; } .ds-seg button:hover { color: #1d1d1f; } .ds-seg button[aria-pressed=\"true\"] { background: #fff; color: #1d1d1f; box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 1px 1px rgba(0,0,0,.03); } .ds-seg button:focus-visible { outline: 2px solid #1557ff; outline-offset: 2px; }"
-    },
-    {
-      "name": "Device Window",
+      "name": "Subtitle Cue Card",
       "kind": "custom",
-      "refersTo": "device-window",
-      "description": "Signature: the product as a dark window on the light page, with on-screen subtitle and active cue. The video frame is a flat placeholder here; real frames come from footage.",
-      "html": "<div class=\"ds-device\"><div class=\"ds-device-bar\"><span class=\"ds-dots\"><i></i><i></i><i></i></span><span class=\"ds-device-title\">interview_A_cam.mov</span></div><div class=\"ds-device-body\"><div class=\"ds-frame\"><div class=\"ds-sub\"><span lang=\"ta\">நீ சொன்னது எல்லாம் உண்மைதானா?</span><span class=\"ds-en\">Was everything you said true?</span></div></div><div class=\"ds-cue\"><span class=\"ds-tc\">00:01:12,400 → 00:01:15,050</span><span lang=\"ta\">நீ சொன்னது எல்லாம் உண்மைதானா?</span><span class=\"ds-cue-en\">Was everything you said true?</span></div></div></div>",
-      "css": ".ds-device { background: #111113; color: #f5f5f7; border-radius: 18px; overflow: hidden; font: 14px/1.5 var(--font-body, Geist, system-ui, sans-serif); box-shadow: 0 0 0 1px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.08), 0 30px 60px -20px rgba(0,0,0,.35), 0 18px 36px -18px rgba(0,0,0,.3); max-width: 560px; } .ds-device-bar { height: 44px; display: flex; align-items: center; gap: 16px; padding: 0 16px; background: #1c1c1f; border-bottom: 1px solid #38383d; } .ds-dots { display: flex; gap: 7px; } .ds-dots i { width: 11px; height: 11px; border-radius: 50%; background: #3a3a3f; } .ds-device-title { flex: 1; text-align: center; color: #a1a1a6; font-size: 13px; } .ds-device-body { padding: 16px; display: grid; gap: 12px; } .ds-frame { position: relative; aspect-ratio: 16/9; border-radius: 10px; background: #0b0b0c; } .ds-sub { position: absolute; left: 6%; right: 6%; bottom: 9%; display: grid; gap: 4px; text-align: center; font-weight: 600; line-height: 1.3; color: #ffd60a; text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 1px #000; font-size: 1.1rem; } .ds-sub [lang=\"ta\"], .ds-cue [lang=\"ta\"] { font-family: var(--font-tamil, 'Noto Sans Tamil'), sans-serif; } .ds-sub .ds-en { color: #fff; font-weight: 500; font-size: .82em; } .ds-cue { display: grid; gap: 3px; padding: 10px 12px; border-radius: 10px; background: #1c1c1f; box-shadow: inset 0 0 0 1px rgba(255,214,10,.4); transition: background .3s; } .ds-cue:hover { background: #2a2a2e; } .ds-tc { font: 11px var(--font-mono, 'Geist Mono', ui-monospace, monospace); font-variant-numeric: tabular-nums; color: #a1a1a6; } .ds-cue [lang=\"ta\"] { color: #ffd60a; } .ds-cue-en { color: #a1a1a6; font-size: 13px; }"
+      "refersTo": "cue-card",
+      "description": "Signature: timecode, coral Tamil line, plum English line, pink playing bar, tilted in 3D over sunset.",
+      "html": "<div class=\"ds-sun\"><div class=\"ds-cue\"><span class=\"ds-tc\">00:01:15,050</span><span class=\"ds-ta\" lang=\"ta\">சத்தியமா, ஒரு வார்த்தை கூட பொய் இல்லை.</span><span class=\"ds-en\">I swear, not a single word was a lie.</span><span class=\"ds-bar\"><i></i></span></div></div>",
+      "css": ".ds-sun{background:linear-gradient(160deg,#ff7e5f 0%,#feb47b 55%,#ffd29d 100%);padding:40px 32px;perspective:1100px}.ds-cue{display:grid;gap:4px;padding:20px 24px 18px;border-radius:22px;background:#fff7ef;color:#3a1020;box-shadow:0 24px 40px -18px rgba(58,16,32,.55);transform:rotateX(10deg) rotateY(-8deg) rotateZ(-4deg);transition:transform .9s cubic-bezier(.22,1,.36,1);font-family:'Bricolage Grotesque','Noto Sans Tamil',system-ui,sans-serif}.ds-cue:hover{transform:none}.ds-tc{font-size:.78rem;color:#7a4a55;font-variant-numeric:tabular-nums}.ds-ta{font-family:'Noto Sans Tamil','Bricolage Grotesque',sans-serif;font-size:1.3rem;font-weight:700;color:#c8314f;line-height:1.35}.ds-en{font-size:1rem}.ds-bar{display:block;height:3px;margin-top:10px;border-radius:2px;background:rgba(58,16,32,.09);overflow:hidden}.ds-bar i{display:block;height:100%;width:60%;background:#ff4f81}"
+    },
+    {
+      "name": "Price Card",
+      "kind": "card",
+      "refersTo": "plan-card",
+      "description": "Cream plan card on the plum band; the featured plan is pink.",
+      "html": "<div class=\"ds-band\"><div class=\"ds-plan\"><h3>Creator</h3><div class=\"ds-price\">₹499<small>/mo</small></div><p>300 minutes a month</p></div><div class=\"ds-plan ds-hot\"><h3>Pro</h3><div class=\"ds-price\">₹1,499<small>/mo</small></div><p>1,200 minutes a month</p></div></div>",
+      "css": ".ds-band{display:grid;grid-template-columns:1fr 1fr;gap:16px;background:#3a1020;padding:32px;font-family:'Bricolage Grotesque',system-ui,sans-serif}.ds-plan{display:grid;gap:6px;background:#fff7ef;color:#3a1020;border-radius:24px;padding:26px 24px;transition:transform .3s cubic-bezier(.22,1,.36,1)}.ds-plan:hover{transform:translateY(-4px) rotate(-1deg)}.ds-plan h3{margin:0;font-size:1.2rem;font-weight:700}.ds-price{font-size:2.3rem;font-weight:800;letter-spacing:-.04em;line-height:1.1}.ds-price small{font-size:1rem;font-weight:500;color:#7a4a55;letter-spacing:0}.ds-plan p{margin:0;color:#7a4a55}.ds-hot{background:#ff4f81}.ds-hot p,.ds-hot .ds-price small{color:#3a1020}"
+    },
+    {
+      "name": "Step Number",
+      "kind": "chip",
+      "refersTo": "step-number",
+      "description": "Plum circle with peach numeral heading each landing step.",
+      "html": "<div class=\"ds-step\"><span class=\"ds-n\">1</span><div><h3>Upload</h3><p>Drop your cut, up to 4 GB.</p></div></div>",
+      "css": ".ds-step{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;background:#ffd29d;padding:24px;font-family:'Bricolage Grotesque',system-ui,sans-serif;color:#3a1020}.ds-n{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:#3a1020;color:#ffd29d;font-weight:800}.ds-step h3{margin:0;font-size:1.9rem;font-weight:800;letter-spacing:-.035em;line-height:1}.ds-step p{margin:0;color:#5a1f33;font-weight:500}"
     }
   ],
   "narrative": {
-    "northStar": "The Device on the White Page",
-    "overview": "Vasanam presents itself the way premium hardware and developer tools present themselves: a quiet, light page that steps aside so the product can be shown big and exact. The page is near-white with near-black ink; the product (the subtitle editor, the Premiere window, the plugin panel) is rendered as a dark device sitting on it, with subtitle yellow living only inside that device. One signal blue carries every action and link. Typography and space do the persuading: large, tightly tracked Geist headlines, generous section padding, and no decoration beyond hairlines and soft shadow under the product.\n\nDensity changes with the job. Persuade surfaces (the landing page) are spacious and centered, with 140px section rhythm and a single idea per section. Operate surfaces (auth, app, admin) are calm and compact: light panels on a pale well, hairline-bordered rows, pill navigation, the same blue for actions. Motion is limited to a few deliberate ideas: a gentle rise on entry, the hero device straightening from a 3D tilt as you scroll, and a pinned product panel that changes state as steps pass.\n\nThis world replaces two rejected ones and must not drift back toward either: the glassy violet/aurora/gradient-text dark UI (read as AI-generated), and the themed \"release-night banner street\" (green/yellow enamel boards, bamboo, floodlights, condensed lettering; read as gimmicky, cramped and not premium).",
+    "northStar": "Subtitles at Golden Hour",
+    "overview": "The whole system is a warm sunset that subtitles float across. A 160° gradient from orange through apricot to peach is the ground of every arrival surface (landing hero, auth, the app header band); deep plum carries all ink and every primary action; hot pink exists only as shape and selection; cream cards hold the actual words. The product's real material, a timed Tamil line with its English twin, is the hero object, shown as soft cream cards stacked in 3D depth rather than as a screenshot of a tool.\n\nPages are short and colourful. The landing is one screen of sunset, then a peach-to-orange flow holding three numbered steps and a tilting plugin panel, then a plum pricing band that runs into a plum footer. Nothing else. Operate surfaces (dashboard, editor, billing, plugin, admin) keep the same voice at lower volume: the sunset shrinks to a sticky header band with rounded bottom corners, the ground turns to soft peach, and work happens on cream panels.\n\nMotion is playful but purposeful: cards leave toward the viewer, step rows flip up on a 3D axis as they arrive, the plugin panel straightens as it scrolls in, and two simple shapes (a pink circle, a plum rounded square) drift and parallax behind the hero. All of it stops under reduced motion and none of it hides content without JS.",
     "keyCharacteristics": [
-      "Light ground, near-black ink, one signal blue for actions and links only.",
-      "The product is a dark device on the light page; subtitle yellow appears only inside it.",
-      "Geist at normal width with tight tracking on display sizes; Noto Sans Tamil for Tamil; Geist Mono only for timecodes.",
-      "Pill buttons and pill nav, 10px fields, 20px panels, hairline borders.",
-      "Soft, diffuse shadows; the heavy shadow belongs to product shots alone.",
-      "Motion is few and smooth: rise on entry, tilt-to-flat on scroll, pinned state changes."
+      "Sunset gradient ground on arrival surfaces; soft peach ground on work surfaces.",
+      "Plum ink and plum pill buttons with peach text; pink for shapes and selection only.",
+      "Cream cards with generous 22–28px corners and soft plum-tinted shadows.",
+      "One family, Bricolage Grotesque, at heavy display weights with tight tracking; Noto Sans Tamil for every Tamil glyph.",
+      "3D depth motion (stack, flip, tilt) and slow drifting geometric shapes.",
+      "Short pages: hero, three steps, plugin, price."
     ],
     "rules": [
       {
-        "name": "The One Voice Rule",
-        "body": "Signal Blue is the only accent on light surfaces and it means \"act\" or \"go\": buttons, links, focus, selection. It is never used for decoration, headings or backgrounds larger than a notice.",
+        "name": "The Pink Never Speaks Rule",
+        "body": "Hot pink is never used for text. It fills shapes, bars, rings, outlines and selections; text sitting on pink is plum.",
         "section": "colors"
       },
       {
-        "name": "The Yellow Lives in the Device Rule",
-        "body": "Subtitle Yellow appears only on dark device surfaces, as subtitle text, active-cue highlight or caption clips. The one exception is the logo mark, itself a tiny dark screen carrying a subtitle stroke. It never appears on the light page as an accent, fill or button.",
+        "name": "The One Dark Rule",
+        "body": "Plum is the only dark. Text, buttons, bands and the video surface are all plum or plum-black; no neutral greys and no pure black.",
         "section": "colors"
       },
       {
-        "name": "The Normal-Width Rule",
-        "body": "Display type is Geist at normal width, weight 600, tracked tight. No condensed, compressed or novelty display faces anywhere.",
+        "name": "The Sunset Arrives First Rule",
+        "body": "The gradient belongs to arrival: the landing hero, the auth page, the app header band. Work surfaces sit on flat peach so cream panels and content stay calm.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Scripts, One Voice Rule",
+        "body": "Every subtitle shows Tamil first, larger and heavier, with its English twin below at body size. Never English alone where the product promise is shown.",
         "section": "typography"
       },
       {
-        "name": "The Mono Is for Time Rule",
-        "body": "Geist Mono appears only where the content is machine time or a file format (timecodes, .srt/.vtt, lane labels). It is never used for headings, labels or decoration.",
+        "name": "The Heavy Top Rule",
+        "body": "Headings are 800 weight with negative tracking and balanced wrapping; everything below the heading drops to regular or medium. No intermediate shouting.",
         "section": "typography"
       },
       {
-        "name": "The Product Casts the Shadow Rule",
-        "body": "Only device surfaces get the heavy product shadow and perspective. Light UI stays flat with hairlines and a whisper shadow at most.",
+        "name": "The Four Sections Rule",
+        "body": "The landing is hero, three steps, plugin, pricing (plus a proof section only when real proof exists). New information earns a place only by replacing something.",
+        "section": "layout"
+      },
+      {
+        "name": "The Warm Shadow Rule",
+        "body": "Every shadow is plum-tinted and blurred with negative spread. No grey or black shadows, no hard offsets.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "Do keep the page light (ground, ground-alt) and show the product as a dark device on it.",
-      "Do use Signal Blue (#1557ff) only for actions, links, focus and selection; one primary blue pill per decision.",
-      "Do set display type in Geist 600 at normal width with -0.035em tracking and balanced wrapping.",
-      "Do set every Tamil string with `lang=\"ta\"` in Noto Sans Tamil, at full size beside its English.",
-      "Do reserve Geist Mono and tabular figures for timecodes and file formats.",
-      "Do use pills for buttons and nav, 10px for fields and rows, 20px for panels.",
-      "Do keep light UI flat with hairlines and the whisper shadow; give the product shadow and perspective only to device shots.",
-      "Do pair every status colour with a word or dot-plus-word.",
-      "Do use the single ease `cubic-bezier(.22, 1, .36, 1)` and honour reduced motion."
+      "Do use the sunset gradient (`linear-gradient(160deg, #ff7e5f 0%, #feb47b 55%, #ffd29d 100%)`) as the ground for arrival surfaces and the app header band.",
+      "Do set all text in plum; use peach for text on plum surfaces.",
+      "Do keep hot pink to shapes, bars, rings, selection and focus.",
+      "Do show real Tamil script (coral, 700) above its English twin whenever the product is demonstrated.",
+      "Do put content on cream cards with 22–28px corners and plum-tinted shadows.",
+      "Do make every button, tag and nav link a full pill.",
+      "Do keep pages short: hero, three steps, plugin, pricing.",
+      "Do give 3D motion a reduced-motion fallback and keep content visible without JS.",
+      "Do pair every status colour with a word and a dot."
     ],
     "donts": [
-      "Don't bring back the glassy violet, aurora or gradient-text dark UI; it was rejected as AI-generated.",
-      "Don't bring back the themed \"release-night banner street\" world: no enamel boards, bamboo, floodlights, themed costumes, or green/yellow-on-black.",
-      "Don't use condensed or compressed display type anywhere.",
-      "Don't use gradient text, glow effects or frosted-glass panels; the only translucency is the sticky header's backdrop blur.",
-      "Don't use Subtitle Yellow on the light page outside the logo mark; it belongs inside the device.",
-      "Don't introduce a second accent colour on light surfaces.",
-      "Don't put a label, kicker or eyebrow above headlines; headlines stand alone."
+      "Don't use pink as a text colour.",
+      "Don't build long pages or FAQ walls; the user rejected the long premium product page.",
+      "Don't use white or black page schemes (white or near-black grounds with a single blue accent were rejected).",
+      "Don't bring back dark violet glass, aurora backgrounds or gradient text (rejected).",
+      "Don't dress the product in a themed costume such as the green/yellow enamel \"banner street\" with condensed lettering (rejected).",
+      "Don't use grey lines, grey text or black shadows; tint them plum.",
+      "Don't invent testimonials, logos, usage numbers or accuracy figures to fill the proof slot."
     ]
   }
 }

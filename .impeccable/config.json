@@ -2,16 +2,6 @@
   "detector": {
     "ignoreRules": [],
     "ignoreFiles": [],
-    "ignoreValues": [
-      {
-        "rule": "overused-font",
-        "value": "geist",
-        "files": [
-          "plugin/style.css"
-        ],
-        "createdAt": "2026-10-09T06:24:34.150Z",
-        "reason": "user chose the premium-tech canon and named Vercel as a reference (chat, 2026-10-09); Geist is Vercel's typeface and the site's documented face"
-      }
-    ]
+    "ignoreValues": []
   }
 }

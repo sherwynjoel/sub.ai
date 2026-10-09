@@ -6,23 +6,23 @@ related_targets: ["app/app/page.tsx","app/admin/page.tsx"]
 ---
 
 ## Scope
-Landing page (/) in Persuade mode; the same system carries auth, app (dashboard, editor, billing, plugin) and admin in Operate mode, and the Adobe panel.
+Landing page (/) in Persuade mode; the same Sunset system carries auth, app (dashboard, editor, billing, plugin) and admin in Operate mode, and the Adobe panel.
 
 ## Audience and action
-Freelance Tamil video editors. Primary action: start the free trial (15 minutes, no card). Proof: user has real testimonials/clips/logos to supply later; none may be invented (PROOF array in app/page.tsx stays hidden while empty).
+Freelance Tamil video editors. Primary action: start the free trial (15 minutes, no card). Proof: user has real testimonials to supply later; the PROOF array in app/page.tsx stays empty and its section hidden until then.
 
 ## Direction contract
-THESIS: The product is the hero. Show the real Vasanam editor big and exact, the way premium tech products show their device, and let typography and space do the persuading. Refuses themed costumes, glow, gradient text and condensed display type.
+THESIS: A short, warm, colourful page where subtitles themselves are the hero: real Tamil and English lines arrive as a 3D stack of cards over a sunset gradient. Only what an editor needs to decide: what it does, three steps, the plugin, the price. Refuses long pages, FAQ walls, white/black schemes and themed costumes.
 
-OWN-WORLD: Light ground (#fbfbfd / #f5f5f7 sections), near-black ink #1d1d1f, one accent, signal blue #1557ff, used for actions and links only. Product surfaces are dark (#111113 / #1c1c1f) with subtitle yellow #ffd60a, like a device on a white page. Geist for all Latin text at normal width, tight tracking on display sizes; Noto Sans Tamil for Tamil; Geist Mono only for timecodes. Pill buttons, 12–20px radii, hairline borders, soft offset shadows under product shots only.
+OWN-WORLD: Sunset gradient ground (#ff7e5f → #feb47b → #ffd29d, 160°) on landing and auth; soft peach #fff1e6 ground in the app and admin. Deep plum #3a1020 ink and pill buttons with peach text; hot pink #ff4f81 for shapes and selected states (never as text); cream #fff7ef cards; deep coral #c8314f for Tamil subtitle lines on cream; dark plum #2a0c1a video player. Bricolage Grotesque for Latin, Noto Sans Tamil for Tamil. Rounded 16–24px cards, soft plum-tinted shadows, floating circle and rounded-square shapes.
 
-STORY: The visitor sees their own Tamil dialogue subtitled in both languages inside a real-looking editor, understands the four steps from upload to timeline, sees honest formats and prices, and starts the free trial.
+STORY: In one screen the visitor sees Tamil + English subtitle cards moving and a single "Try 15 minutes free" button; scrolling shows three one-line steps, the Premiere/After Effects panel, and four prices, then they start the trial.
 
-FIRST VIEWPORT: Centered, no label above it: the H1 "Tamil and English subtitles. In minutes." at ~5.5rem, one sentence of subcopy, two buttons (blue "Start free" pill, text link "See how it works"), "15 minutes free. No card needed." Below, filling the width and bleeding past the fold: the dark editor shot (video with painting subtitle, Tamil/English cue list, timeline) tilted back in 3D.
+FIRST VIEWPORT: Full-height sunset gradient. Top: logo left, Sign in + plum "Start free" pill right. Left column: H1 "Subtitles, in Tamil and English." (~5rem), one line "Upload a cut. Get both languages, timed.", plum button "Try 15 minutes free", note "No card needed". Right column: the 3D subtitle card stack cycling three real cues, with a pink circle and a plum rounded square drifting behind it.
 
-FORM: Category standard executed at full craft (canon path chosen by the user in words: "Premium tech product, like Apple / Linear / Vercel"); no concept roll. References that set the bar: apple.com product pages, linear.app, vercel.com. Signature interaction: the hero editor straightens from a 3D tilt to flat as you scroll; "How it works" pins the product panel while four steps scroll past and the panel changes state.
+FORM: Sunset colour sample #1 chosen by the user in words ("1 · Sunset gradient") from an eight-palette sample round; no concept roll. Signature interaction: the hero card stack cycles in depth (cards leave toward the viewer, the next rises from behind); step cards flip in on a 3D axis as they scroll in; the plugin panel tilts with scroll; shapes parallax with scroll and pointer.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 ## Unresolved
-Brand name is a placeholder (lib/brand.ts). Real proof and a real sample clip to be supplied by the user; the hero video pane uses a synthetic frame labelled "Sample".
+Brand name is a placeholder (lib/brand.ts). Real proof to be supplied by the user.

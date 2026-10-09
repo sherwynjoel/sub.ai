@@ -66,7 +66,7 @@
   .two-col { grid-template-columns: 1fr; }
 }
 .spaced { margin-top: 16px; }
-.notice-panel { background: var(--blue-soft); border-color: rgba(21, 87, 255, .2); }
+.notice-panel { background: var(--pink-soft); box-shadow: 0 0 0 1.5px rgba(255, 79, 129, .45); }
 .notice-panel ul { margin: 0 0 16px; padding-left: 1.2em; display: grid; gap: 4px; }
 .test-row .result, .action .error { white-space: normal; }
 .plan-form label { min-width: 0; }
