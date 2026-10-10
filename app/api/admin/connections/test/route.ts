@@ -4,6 +4,7 @@ import { openaiApi } from "@/lib/ai";
 import { PAID, PLANS } from "@/lib/plans";
 import { razorpayPlanId, rzp } from "@/lib/razorpay";
 import { getSecret } from "@/lib/secrets";
+import { postJson } from "@/lib/ai/shared";
 
 type Result = { ok: boolean; message: string };
 
@@ -42,6 +43,16 @@ export async function POST(req: Request) {
       const key = await getSecret("GEMINI_API_KEY");
       if (!key) return json({ ok: false, message: "No Gemini key saved yet." });
       return json(await check("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1", { "x-goog-api-key": key }));
+    }
+    if (service === "sarvam") {
+      const key = await getSecret("SARVAM_API_KEY");
+      if (!key) return json({ ok: false, message: "No Sarvam key saved yet." });
+      // Sarvam has no free read-only endpoint; a one-word translation costs next to nothing.
+      await postJson("https://api.sarvam.ai/translate", {
+        headers: { "api-subscription-key": key, "content-type": "application/json" },
+        body: JSON.stringify({ input: "Hello", source_language_code: "en-IN", target_language_code: "ta-IN" }),
+      }, 1);
+      return json({ ok: true, message: "Connected." });
     }
     if (service === "openai" || service === "groq" || service === "custom") {
       const api = await openaiApi(service);

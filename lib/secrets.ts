@@ -13,6 +13,7 @@ import { STORAGE } from "@/lib/media";
 export const CONNECTIONS = {
   GEMINI_API_KEY: { group: "ai", label: "Google Gemini API key", secret: true, help: "aistudio.google.com/apikey" },
   OPENAI_API_KEY: { group: "ai", label: "OpenAI API key", secret: true, help: "platform.openai.com/api-keys" },
+  SARVAM_API_KEY: { group: "ai", label: "Sarvam AI API key", secret: true, help: "dashboard.sarvam.ai → API keys" },
   GROQ_API_KEY: { group: "ai", label: "Groq API key", secret: true, help: "console.groq.com/keys" },
   AI_BASE_URL: { group: "ai", label: "Custom AI base URL", secret: false, help: "Any OpenAI-compatible API, e.g. https://openrouter.ai/api/v1" },
   AI_API_KEY: { group: "ai", label: "Custom AI API key", secret: true, help: "Key for the custom base URL" },

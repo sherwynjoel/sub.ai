@@ -120,7 +120,7 @@
     $("openBtn").hidden = true;
     say("");
     progress(0, "Uploading " + picked.name + "…");
-    api("POST", "/api/upload?name=" + encodeURIComponent(picked.name), { file: picked.file }, function (f) { progress(f * 40, "Uploading… " + Math.round(f * 100) + "%"); })
+    api("POST", "/api/upload?name=" + encodeURIComponent(picked.name) + "&lang=" + $("language").value, { file: picked.file }, function (f) { progress(f * 40, "Uploading… " + Math.round(f * 100) + "%"); })
       .then(function (r) {
         if (r.status !== 201) throw new Error(r.data.error || "Upload failed (" + r.status + ").");
         lastJob = r.data.id;

@@ -15,7 +15,7 @@ export default async function Overview() {
       .where(eq(jobs.status, "failed")).orderBy(desc(jobs.createdAt)).limit(5),
   ]);
   const has = (n: string) => conns.some((c) => c.name === n && c.source);
-  const aiKey = { gemini: "GEMINI_API_KEY", openai: "OPENAI_API_KEY", groq: "GROQ_API_KEY", custom: "AI_API_KEY" }[cfg.provider] ?? "";
+  const aiKey = { gemini: "GEMINI_API_KEY", sarvam: "SARVAM_API_KEY", openai: "OPENAI_API_KEY", groq: "GROQ_API_KEY", custom: "AI_API_KEY" }[cfg.provider] ?? "";
   const todo = [
     !has(aiKey) && `Add the ${cfg.provider} API key so videos can be subtitled.`,
     !has("RAZORPAY_KEY_ID") || !has("RAZORPAY_KEY_SECRET") ? "Add your Razorpay keys so users can subscribe." : null,

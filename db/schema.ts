@@ -1,5 +1,6 @@
 import { pgTable, text, uuid, integer, real, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 
+/** `ta` is the line in the project's language (see lib/languages.ts); `en` is English. */
 export type Cue = { start: number; end: number; ta: string; en: string };
 
 export const users = pgTable("users", {
@@ -30,6 +31,7 @@ export const jobs = pgTable("jobs", {
   filename: text("filename").notNull(),
   filePath: text("file_path"), // null once purged
   mime: text("mime").notNull().default("video/mp4"),
+  language: text("language").notNull().default("ta-IN"), // subtitle language code, paired with English
   durationSec: real("duration_sec").notNull(),
   status: text("status").notNull().default("queued"), // queued | processing | done | failed
   progress: integer("progress").notNull().default(0),

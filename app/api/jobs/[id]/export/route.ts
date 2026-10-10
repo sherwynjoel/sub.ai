@@ -1,5 +1,6 @@
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { ownJob } from "@/lib/jobs";
+import { shortCode } from "@/lib/languages";
 import { toSrt, toTxt, toVtt, type Lang } from "@/lib/subtitles";
 
 const FORMATS = { srt: [toSrt, "application/x-subrip"], vtt: [toVtt, "text/vtt"], txt: [toTxt, "text/plain"] } as const;
@@ -19,7 +20,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   return new Response("\uFEFF" + fn(j.cues, lang), {
     headers: {
       "content-type": `${type}; charset=utf-8`,
-      "content-disposition": `attachment; filename="${base}.${lang}.${fmt}"`,
+      "content-disposition": `attachment; filename="${base}.${lang === "ta" ? shortCode(j.language) : lang}.${fmt}"`,
     },
   });
 }

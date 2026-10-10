@@ -19,6 +19,7 @@ Built specifically for Tamil dialogue, including colloquial Tamil and Tanglish, 
 Editors work on desktop in Premiere Pro or After Effects, often late, against client deadlines. Deliverables are SRT/VTT/TXT files or caption tracks on a sequence. Payment is monthly in INR through Razorpay (UPI and cards).
 
 ## Capabilities and Constraints
+- Subtitles in any of 22 Indian languages (Sarvam's list in `lib/languages.ts`), each paired with English; Tamil is the lead language in marketing.
 - Upload video/audio up to 4 GB; AI transcription + translation (provider switchable by admin: Gemini default, OpenAI, Groq, custom OpenAI-compatible).
 - Side-by-side Tamil/English cue editor with video preview; export SRT, VTT, TXT per language or both stacked.
 - CEP panel for Premiere Pro (caption track) and After Effects (text layers), connected by an API key.
@@ -28,8 +29,8 @@ Editors work on desktop in Premiere Pro or After Effects, often late, against cl
 
 ## Brand Commitments
 - Name "Vasanam" (Tamil for dialogue) is a working name, not final; keep it in `lib/brand.ts` so it can change.
-- Standing preference (2026-10-09, latest): short pages with only the needed information; some animation, 3D and scroll effects; a colourful, non-standard palette. The user picked the "Sunset gradient" sample (orange #ff7e5f to peach #ffd29d, plum #3a1020 ink/buttons, hot pink #ff4f81 accent, cream cards) and the landing sections Hero + 3D subtitle cards, 3 quick steps, Plugin teaser, Pricing.
-- Rejected so far: (1) dark violet glass with aurora/gradient text; (2) themed "release-night banner street" (green/yellow enamel boards, condensed lettering); (3) premium white/near-black/blue product page (too long, too normal). Do not bring back long pages, FAQ walls, white/black schemes, or themed costumes.
+- Standing preference (2026-10-10, latest): Gen Z, attractive, cool and clean, with liquid-glass (glassmorphism) panels over soft drifting pastel colour; black pill buttons, lime highlighter accent; site copy in English only, with Tamil in dialogue samples (no language toggle, 2026-10-10); a multilingual greeting strip (all 22 Indian languages live, each with English). Calm 3D: hero editor straightens on scroll, Premiere window tilts, glass cube.
+- Rejected so far: (1) dark violet glass; (2) "release-night banner street"; (3) white/near-black/blue long page; (4) "Sunset"; (5) "Ocean" navy/aqua/coral (AI-looking); (6) "Mono" white/black only (not attractive enough).
 
 ## Evidence on Hand
 The user has some real proof (testimonials, sample clips, client logos) to share later; none is in the repo yet. Until provided, the site must not invent testimonials, customer names, logos, usage numbers or accuracy figures. Reserve a place for proof without filling it with fabrications.

@@ -2,36 +2,56 @@
 import { useEffect } from "react";
 
 /**
- * Page motion:
- *  - `.flip` elements flip up into place in 3D when they scroll into view
- *  - `--p` (0→1 over the first screen of scrolling) and `--sy` (px scrolled) drive parallax and tilts
- *  - `--mx` / `--my` (−0.5…0.5) follow the pointer for the floating shapes
- * Content is visible without JS: hidden pre-states only apply once `.js` is on <html>.
+ * Page interactions:
+ *  - `.rise` elements rise into place when they scroll into view
+ *  - `.tilt` panels lean toward the pointer; `.tilt` and `.shine` glass gets a light spot at the cursor (--x/--y)
+ *  - `[data-scroll]` elements get --p (0 to 1) as they travel up the viewport, for scroll-driven 3D
+ * Content is visible without JS; reduced motion turns tilt and scroll motion off.
  */
 export default function Effects() {
   useEffect(() => {
-    const root = document.documentElement;
-    root.classList.add("js");
+    document.documentElement.classList.add("js");
     const io = new IntersectionObserver(
       (entries) => entries.forEach((e) => e.isIntersecting && (e.target.classList.add("in"), io.unobserve(e.target))),
-      { rootMargin: "0px 0px -12% 0px" },
+      { rootMargin: "0px 0px -10% 0px" },
     );
-    document.querySelectorAll(".flip").forEach((el) => io.observe(el));
+    document.querySelectorAll(".rise").forEach((el) => io.observe(el));
 
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches || !matchMedia("(pointer: fine)").matches;
+    const move = (e: PointerEvent) => {
+      const t = (e.target as Element).closest<HTMLElement>(".tilt, .shine");
+      if (!t) return;
+      const r = t.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+      t.style.setProperty("--x", `${x * 100}%`);
+      t.style.setProperty("--y", `${y * 100}%`);
+      if (!still && t.matches(".tilt")) t.style.transform = `perspective(1000px) rotateX(${(0.5 - y) * 6}deg) rotateY(${(x - 0.5) * 8}deg)`;
+    };
+    const leave = (e: PointerEvent) => {
+      const t = (e.target as Element).closest?.<HTMLElement>(".tilt");
+      if (t && !t.contains(e.relatedTarget as Node)) t.style.transform = "";
+    };
+    const scrolled = [...document.querySelectorAll<HTMLElement>("[data-scroll]")];
     let raf = 0;
-    const set = (k: string, v: number) => root.style.setProperty(k, v.toFixed(3));
     const onScroll = () => {
       cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => { set("--p", Math.min(1, scrollY / innerHeight)); set("--sy", scrollY); });
+      raf = requestAnimationFrame(() => scrolled.forEach((el) => {
+        const top = el.getBoundingClientRect().top / innerHeight;
+        el.style.setProperty("--p", String(Math.min(1, Math.max(0, (0.62 - top) / 0.5))));
+      }));
     };
-    const onMove = (e: PointerEvent) => { set("--mx", e.clientX / innerWidth - 0.5); set("--my", e.clientY / innerHeight - 0.5); };
-    onScroll();
-    addEventListener("scroll", onScroll, { passive: true });
-    if (matchMedia("(pointer: fine)").matches) addEventListener("pointermove", onMove, { passive: true });
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) scrolled.forEach((el) => el.style.setProperty("--p", "1"));
+    else { onScroll(); addEventListener("scroll", onScroll, { passive: true }); addEventListener("resize", onScroll); }
+
+    document.addEventListener("pointermove", move, { passive: true });
+    document.addEventListener("pointerout", leave);
     return () => {
       io.disconnect();
+      cancelAnimationFrame(raf);
       removeEventListener("scroll", onScroll);
-      removeEventListener("pointermove", onMove);
+      removeEventListener("resize", onScroll);
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerout", leave);
     };
   }, []);
   return null;

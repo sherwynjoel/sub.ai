@@ -8,18 +8,22 @@ import { and, eq, sql } from "drizzle-orm";
 import { db, jobs, users } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { probe, STORAGE } from "@/lib/media";
+import { DEFAULT_LANGUAGE, isLanguage } from "@/lib/languages";
 import { effectivePlan, PLANS, secondsLeft } from "@/lib/plans";
 
 const MAX_BYTES = 4 * 1024 ** 3; // 4 GB
 
-/** Raw-body upload: `POST /api/upload?name=clip.mp4` with the file as the body (streamed to disk). */
+/** Raw-body upload: `POST /api/upload?name=clip.mp4&lang=ta-IN` with the file as the body (streamed to disk). */
 export async function POST(req: Request) {
   const u = await currentUser();
   if (!u) return unauthorized();
   if (secondsLeft(u) <= 0) return json({ error: "You've used all your minutes. Upgrade your plan to continue." }, 402);
   if (!req.body) return json({ error: "No file received." }, 400);
 
-  const name = (new URL(req.url).searchParams.get("name") || "video").slice(0, 200);
+  const q = new URL(req.url).searchParams;
+  const name = (q.get("name") || "video").slice(0, 200);
+  const lang = q.get("lang") ?? DEFAULT_LANGUAGE;
+  if (!isLanguage(lang)) return json({ error: "Unsupported subtitle language." }, 400);
   const dir = join(STORAGE, "uploads", u.id);
   await mkdir(dir, { recursive: true });
   const path = join(dir, randomUUID() + (extname(name).toLowerCase().replace(/[^.a-z0-9]/g, "") || ".mp4"));
@@ -56,6 +60,6 @@ export async function POST(req: Request) {
     return json({ error: `This video is ${Math.ceil(duration / 60)} min but you have ${Math.floor(secondsLeft(u) / 60)} min left. Upgrade to continue.` }, 402);
   }
   const mime = req.headers.get("content-type")?.startsWith("video/") || req.headers.get("content-type")?.startsWith("audio/") ? req.headers.get("content-type")! : "video/mp4";
-  const [job] = await db.insert(jobs).values({ userId: u.id, filename: name, filePath: path, durationSec: duration, mime }).returning();
+  const [job] = await db.insert(jobs).values({ userId: u.id, filename: name, filePath: path, durationSec: duration, mime, language: lang }).returning();
   return json({ id: job.id, durationSec: duration }, 201);
 }

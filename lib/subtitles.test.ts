@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toSrt, toVtt, mergeChunks } from "./subtitles";
+import { toSrt, toVtt, mergeChunks, splitLine, divide } from "./subtitles";
 import { secondsLeft, effectivePlan } from "./plans";
 
 const cue = (start: number, end: number, ta = "வணக்கம்", en = "Hello") => ({ start, end, ta, en });
@@ -24,4 +24,20 @@ test("quota falls back to trial after period ends", () => {
   assert.equal(secondsLeft(paid, now), 1200 * 60 - 600);
   assert.equal(effectivePlan({ ...paid, periodEnd: new Date("2026-10-01") }, now), "free");
   assert.equal(secondsLeft({ plan: "free", secondsUsed: 99999, periodEnd: null }, now), 0);
+});
+
+test("splitLine breaks long lines at sentences then words and shares the time by length", () => {
+  const parts = splitLine("Starting from 499. So comment Stree, or check the link in the bio for every material.", 30, 37);
+  assert.ok(parts.every((p) => p.text.length <= 42), JSON.stringify(parts));
+  assert.equal(parts[0].text, "Starting from 499.");
+  assert.equal(parts[0].start, 30);
+  assert.ok(Math.abs(parts.at(-1)!.end - 37) < 1e-9);
+  assert.deepEqual(splitLine("Short line.", 1, 2), [{ start: 1, end: 2, text: "Short line." }]);
+});
+
+test("divide shares a translation across pieces by weight, never leaving a piece empty", () => {
+  assert.deepEqual(divide("one two three four", [1, 1]), ["one two", "three four"]);
+  assert.deepEqual(divide("one two three four", [3, 1]), ["one two three", "four"]);
+  assert.deepEqual(divide("hello", [1]), ["hello"]);
+  assert.ok(divide("a b c", [1, 1, 1]).every((p) => p.length > 0));
 });

@@ -4,6 +4,7 @@ import { useState } from "react";
 type Cfg = { provider: string; model: string; sttModel: string };
 const LABELS: Record<string, string> = {
   gemini: "Google Gemini (hears audio directly)",
+  sarvam: "Sarvam AI (Indian-language speech + translate)",
   openai: "OpenAI (Whisper + GPT)",
   groq: "Groq (fast Whisper + Llama)",
   custom: "Custom OpenAI-compatible (AI_BASE_URL)",

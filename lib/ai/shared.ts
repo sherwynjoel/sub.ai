@@ -2,8 +2,8 @@ import type { Cue } from "@/db";
 
 export type AiConfig = { provider: string; model: string; sttModel: string };
 
-/** Each provider turns one audio chunk (mp3) into chunk-relative Tamil + English cues. */
-export type Provider = (audio: Buffer, durationSec: number, cfg: AiConfig) => Promise<Cue[]>;
+/** Each provider turns one audio chunk (mp3) into chunk-relative cues: `ta` in `lang` (a lib/languages code), `en` in English. */
+export type Provider = (audio: Buffer, durationSec: number, cfg: AiConfig, lang: string) => Promise<Cue[]>;
 
 /** fetch with retries on rate limits / server errors. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped vendor JSON
@@ -21,8 +21,8 @@ export async function postJson(url: string, init: RequestInit, tries = 4): Promi
   }
 }
 
-export const SUBTITLE_RULES = `You are a professional subtitler for Tamil films, YouTube and ads.
+export const subtitleRules = (language: string) => `You are a professional subtitler for ${language} films, YouTube and ads.
 - One cue = one short spoken phrase, 1–7 seconds, at most ~42 characters per language.
-- "ta": Tamil script. If the speaker used Tamil, transcribe it exactly as spoken (colloquial Tamil stays colloquial; common English loanwords may stay in English). If they spoke another language, translate naturally into Tamil.
+- "ta": ${language} in its native script. If the speaker used ${language}, transcribe it exactly as spoken (colloquial speech stays colloquial; common English loanwords may stay in English). If they spoke another language, translate naturally into ${language}.
 - "en": a natural English subtitle, not word-for-word. If they spoke English, transcribe it exactly.
 - Ignore music, silence and noise. Never invent dialogue.`;

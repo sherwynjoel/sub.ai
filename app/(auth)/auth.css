@@ -1,7 +1,7 @@
-.auth-page { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 32px; padding: 48px 20px; background: var(--sunset); }
+.auth-page { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 32px; padding: 48px 20px; position: relative; overflow: hidden; perspective: 1000px; }
 .auth {
   width: min(400px, calc(100vw - 40px)); display: grid; gap: 18px; padding: 40px 36px 32px;
-  background: var(--surface); border-radius: 28px; box-shadow: var(--shadow);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow); position: relative; z-index: 1;
   animation: authIn .7s var(--ease) both;
 }
 @keyframes authIn { from { opacity: 0; translate: 0 12px; } }

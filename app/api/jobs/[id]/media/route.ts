@@ -1,6 +1,5 @@
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
-import { Readable } from "node:stream";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { ownJob } from "@/lib/jobs";
 
@@ -15,7 +14,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const start = m?.[1] ? +m[1] : 0;
   const end = m?.[2] ? Math.min(+m[2], size - 1) : size - 1;
   if (start >= size || start > end) return new Response(null, { status: 416, headers: { "content-range": `bytes */${size}` } });
-  const body = Readable.toWeb(createReadStream(j.filePath, { start, end })) as ReadableStream;
+  // Pull-based so it respects backpressure, and cancel() closes the file when the player seeks or the page closes.
+  // (Readable.toWeb throws an uncaught "Controller is already closed" on client aborts.)
+  const file = createReadStream(j.filePath, { start, end });
+  const chunks = file[Symbol.asyncIterator]();
+  const body = new ReadableStream<Uint8Array>({
+    async pull(c) {
+      const { value, done } = await chunks.next();
+      if (done) c.close();
+      else c.enqueue(new Uint8Array(value));
+    },
+    cancel() { file.destroy(); },
+  });
   return new Response(body, {
     status: m ? 206 : 200,
     headers: {

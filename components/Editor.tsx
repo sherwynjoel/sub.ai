@@ -2,10 +2,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { languageOf, shortCode } from "@/lib/languages";
 
 type Cue = { start: number; end: number; ta: string; en: string };
 type Job = {
-  id: string; filename: string; status: string; progress: number; error: string | null;
+  id: string; filename: string; language: string; status: string; progress: number; error: string | null;
   hasMedia: boolean; provider: string | null; model: string | null; cues: Cue[];
 };
 type View = "ta" | "en" | "both";
@@ -32,6 +33,8 @@ export default function Editor({ initial }: { initial: Job }) {
   const [now, setNow] = useState(0);
   const [lang, setLang] = useState<View>("ta");
   const [fmt, setFmt] = useState("srt");
+  const language = languageOf(job.language);
+  const short = shortCode(job.language);
   const video = useRef<HTMLVideoElement>(null);
   const list = useRef<HTMLOListElement>(null);
 
@@ -142,7 +145,7 @@ export default function Editor({ initial }: { initial: Job }) {
               <video ref={video} src={`/api/jobs/${job.id}/media`} controls preload="metadata" onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)} />
               {active && (
                 <div className="subtitle overlay">
-                  {view !== "en" && <div lang="ta">{active.ta}</div>}
+                  {view !== "en" && <div lang={short}>{active.ta}</div>}
                   {view !== "ta" && <div className="en">{active.en}</div>}
                 </div>
               )}
@@ -152,7 +155,7 @@ export default function Editor({ initial }: { initial: Job }) {
           )}
           <div className="seg" role="group" aria-label="Preview language">
             {(["ta", "en", "both"] as View[]).map((v) => (
-              <button key={v} aria-pressed={view === v} onClick={() => setView(v)}>{v === "ta" ? "தமிழ்" : v === "en" ? "English" : "Both"}</button>
+              <button key={v} aria-pressed={view === v} onClick={() => setView(v)}>{v === "ta" ? language.native : v === "en" ? "English" : "Both"}</button>
             ))}
           </div>
 
@@ -161,7 +164,7 @@ export default function Editor({ initial }: { initial: Job }) {
             <div className="export-row">
               <label>Language
                 <select value={lang} onChange={(e) => setLang(e.target.value as View)}>
-                  <option value="ta">Tamil</option><option value="en">English</option><option value="both">Tamil + English</option>
+                  <option value="ta">{language.name}</option><option value="en">English</option><option value="both">{language.name} + English</option>
                 </select>
               </label>
               <label>Format
@@ -194,7 +197,7 @@ export default function Editor({ initial }: { initial: Job }) {
                   <button onClick={() => remove(i)} title="Remove this subtitle">Remove</button>
                 </span>
               </div>
-              <textarea lang="ta" rows={1} value={c.ta} onChange={(e) => edit(i, { ta: e.target.value })} aria-label={`Tamil subtitle ${i + 1}`} />
+              <textarea lang={short} rows={1} value={c.ta} onChange={(e) => edit(i, { ta: e.target.value })} aria-label={`${language.name} subtitle ${i + 1}`} />
               <textarea rows={1} value={c.en} onChange={(e) => edit(i, { en: e.target.value })} aria-label={`English subtitle ${i + 1}`} />
             </li>
           ))}

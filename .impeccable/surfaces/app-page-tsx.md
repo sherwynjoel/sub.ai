@@ -6,23 +6,24 @@ related_targets: ["app/app/page.tsx","app/admin/page.tsx"]
 ---
 
 ## Scope
-Landing page (/) in Persuade mode; the same Sunset system carries auth, app (dashboard, editor, billing, plugin) and admin in Operate mode, and the Adobe panel.
+Landing page (/) in Persuade mode; the same Mono system carries auth, app (dashboard, editor, billing, plugin), admin and the Adobe panel.
 
 ## Audience and action
-Freelance Tamil video editors. Primary action: start the free trial (15 minutes, no card). Proof: user has real testimonials to supply later; the PROOF array in app/page.tsx stays empty and its section hidden until then.
+Freelance Tamil video editors. Primary action: start the free trial (15 minutes, no card). Proof stays hidden (PROOF array empty) until the user supplies real testimonials.
 
 ## Direction contract
-THESIS: A short, warm, colourful page where subtitles themselves are the hero: real Tamil and English lines arrive as a 3D stack of cards over a sunset gradient. Only what an editor needs to decide: what it does, three steps, the plugin, the price. Refuses long pages, FAQ walls, white/black schemes and themed costumes.
+THESIS: A rich, playful-but-professional product page where everything responds: the editor window follows your mouse, tiles lean into the cursor, plans flip, cards bounce, a cube of formats spins. It must read as a real paid tool, not a template.
 
-OWN-WORLD: Sunset gradient ground (#ff7e5f → #feb47b → #ffd29d, 160°) on landing and auth; soft peach #fff1e6 ground in the app and admin. Deep plum #3a1020 ink and pill buttons with peach text; hot pink #ff4f81 for shapes and selected states (never as text); cream #fff7ef cards; deep coral #c8314f for Tamil subtitle lines on cream; dark plum #2a0c1a video player. Bricolage Grotesque for Latin, Noto Sans Tamil for Tamil. Rounded 16–24px cards, soft plum-tinted shadows, floating circle and rounded-square shapes.
+OWN-WORLD: Mono. White #fff ground, black #0a0a0a ink and primary, greys only as black at lower strength (#f5f5f5, #e5e5e5, #ccc, #666). Instrument Sans 600 headlines + Noto Sans Tamil. Black pill buttons, hairline borders, 8/14px radii, one soft neutral shadow on product windows. Product shots are black windows on white. State by word and shape, never hue.
 
-STORY: In one screen the visitor sees Tamil + English subtitle cards moving and a single "Try 15 minutes free" button; scrolling shows three one-line steps, the Premiere/After Effects panel, and four prices, then they start the trial.
+STORY: The visitor sees a live editor with Tamil and English subtitles, plays with the 3D pieces, understands features, steps and prices in a few scrolls, and starts the free trial.
 
-FIRST VIEWPORT: Full-height sunset gradient. Top: logo left, Sign in + plum "Start free" pill right. Left column: H1 "Subtitles, in Tamil and English." (~5rem), one line "Upload a cut. Get both languages, timed.", plum button "Try 15 minutes free", note "No card needed". Right column: the 3D subtitle card stack cycling three real cues, with a pink circle and a plum rounded square drifting behind it.
+FIRST VIEWPORT: Nav (logo, Features, How it works, Pricing, Sign in, aqua Start free). Left: H1 "Your dialogue, subtitled in two languages." (~4.6rem, "subtitled" in aqua), one line, aqua "Try 15 minutes free", ghost "See how it works". Right: the 3D editor window (video + subtitle, cue list, timeline) tilting with the mouse, with floating chips ".SRT ready", "தமிழ் ✓", "English ✓" at 3D depth.
 
-FORM: Sunset colour sample #1 chosen by the user in words ("1 · Sunset gradient") from an eight-palette sample round; no concept roll. Signature interaction: the hero card stack cycles in depth (cards leave toward the viewer, the next rises from behind); step cards flip in on a 3D axis as they scroll in; the plugin panel tilts with scroll; shapes parallax with scroll and pointer.
+FORM: User brief (2026-10-10): "light and normal", "only white and black", normal landing page with 3D animations and scrolling effects, not AI-looking. Signature motion: hero editor tipped back that straightens on scroll; Premiere window swings in and leans to the pointer; slow cube; step line fills on scroll. Authority: the user's direct instruction.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 ## Unresolved
-Brand name is a placeholder (lib/brand.ts). Real proof to be supplied by the user.
+- Hero video frame is an illustrated two-shot placeholder labelled "Sample clip"; swap in a real frame from the user's sample clip when provided.
+Brand name is a placeholder (lib/brand.ts). Real proof and a real sample clip to be supplied by the user.

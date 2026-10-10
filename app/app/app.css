@@ -1,10 +1,11 @@
-.app-head { background: var(--sunset); border-radius: 0 0 28px 28px; box-shadow: 0 10px 24px -18px rgba(58, 16, 32, .5); position: sticky; top: 0; z-index: 10; }
-.app-head .site-head { padding: 12px 0; }
+.app-head { position: sticky; top: 12px; z-index: 10; width: min(1180px, 100% - 40px); margin: 12px auto 0; border-radius: 999px; padding: 0 8px 0 18px; }
+.app-head .site-head { padding: 0; width: auto; }
 .app-head nav { flex: 1; justify-content: center; }
-.app-main { padding: 36px 0 80px; display: grid; gap: 24px; }
+.app-main { padding: 40px 0 80px; display: grid; gap: 24px; }
 .page-title { font-size: clamp(2.2rem, 4vw, 3.2rem); margin: 0; overflow-wrap: anywhere; }
+.panel h2 { font-size: clamp(1.4rem, 2.2vw, 1.8rem); }
 .small { font-size: .85rem; }
-.notice { background: var(--pink-soft); border: 1px solid rgba(255, 79, 129, .4); color: var(--ink); padding: 10px 14px; border-radius: var(--r-sm); }
+.notice { background: var(--accent-soft); border: 1px solid var(--line-hi); color: var(--ink); padding: 10px 14px; border-radius: var(--r-sm); }
 button.link { background: none; border: 0; padding: 0; font: inherit; color: var(--primary); text-decoration: underline; cursor: pointer; }
 
 .minutes { display: grid; gap: 4px; text-decoration: none; font-size: .85rem; font-weight: 600; min-width: 120px; }
@@ -17,7 +18,7 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
   border: 1.5px dashed var(--line-hi); border-radius: var(--r-lg); background: var(--card);
   padding: 56px 24px; text-align: center; transition: border-color .2s, background .2s, box-shadow .3s;
 }
-.drop.over { border-color: var(--primary); background: var(--pink-soft); }
+.drop.over { border-color: var(--primary); background: var(--accent-soft); }
 .drop-inner { display: grid; gap: 10px; justify-items: center; max-width: 420px; margin: auto; }
 .drop-inner .bar { width: 100%; }
 
@@ -59,11 +60,11 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 
 .cues { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .cues li { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; display: grid; gap: 6px; }
-.cues li.on { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(255, 79, 129, .25); }
+.cues li.on { border-color: var(--black); box-shadow: 0 0 0 1px var(--black); }
 .cues .times { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .cues .time { width: 124px; padding: .3em .5em; font-size: .85rem; font-variant-numeric: tabular-nums; }
 .cues .seek { display: grid; place-items: center; border: 1px solid var(--line-hi); background: none; border-radius: var(--r-sm); width: 30px; height: 30px; cursor: pointer; color: var(--ink); font-size: .7rem; }
-.cues .seek:hover { background: var(--plum); border-color: var(--plum); color: var(--peach); }
+.cues .seek:hover { background: var(--black); border-color: var(--black); color: #fff; }
 .row-tools { margin-left: auto; display: flex; gap: 4px; }
 .row-tools button { font: inherit; font-size: .8rem; border: 0; background: none; color: var(--muted); cursor: pointer; padding: .3em .5em; border-radius: 4px; }
 .row-tools button:hover { background: var(--bg-2); color: var(--ink); }
@@ -82,7 +83,7 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .plan p { margin: 0 0 8px; }
 .plan .amt { font: 500 2rem var(--font-head); }
 .plan .amt small { font: 400 .9rem var(--font-body); color: var(--muted); }
-.plan.picked { box-shadow: 0 0 0 2px var(--pink), 0 0 0 6px rgba(255, 79, 129, .2); }
+.plan.picked { box-shadow: 0 0 0 2px var(--black); }
 .plan.mine { box-shadow: 0 0 0 2px var(--ok); }
 .plan .current { color: var(--ok); font-weight: 600; }
 
@@ -124,7 +125,7 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .app-main > :nth-child(3), .admin-main > :nth-child(3) { animation-delay: .12s; }
 .app-main > :nth-child(n + 4), .admin-main > :nth-child(n + 4) { animation-delay: .18s; }
 @keyframes appRise { from { opacity: 0; transform: translateY(18px); } }
-.drop-inner strong { font-weight: 800; font-size: 1.6rem; letter-spacing: -.03em; line-height: 1.2; }
+.drop-inner strong { font-weight: 600; font-size: 1.5rem; letter-spacing: -.03em; line-height: 1.2; }
 .drop:not(.uploading) .drop-inner::before {
   content: ""; width: 56px; height: 56px; border-radius: var(--r-lg); margin-bottom: 6px;
   background: var(--primary);
@@ -143,3 +144,35 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .signout:hover { color: var(--ink); }
 .minutes { font-weight: 500; }
 .spaced { margin-top: 14px; }
+
+/* Calm hover on the working surfaces */
+.plan, .plugin-grid .panel { transition: border-color .2s; }
+.plan:hover, .plugin-grid .panel:hover { border-color: var(--line-hi); }
+.cues li.on [lang="ta"], .cues li.on textarea:first-of-type { font-weight: 600; }
+.drop:hover { border-color: var(--black); }
+
+/* Glass extras */
+.job { border-radius: 18px; }
+.job:hover { transform: translateY(-2px); }
+.drop { border-style: dashed; border-color: var(--line-hi); }
+.drop.over { background: var(--accent-soft); border-color: var(--black); }
+.drop:not(.uploading) .drop-inner::before { background: var(--black); border-radius: 18px; }
+.cues li.on { border-color: var(--black); box-shadow: 0 0 0 1px var(--black), var(--glass-shadow); background: var(--glass-strong); }
+.meter i, .bar i { background: var(--black); }
+.plan.mine { box-shadow: 0 0 0 2px var(--ok), var(--glass-shadow); }
+.plan.picked { box-shadow: 0 0 0 2px var(--black), var(--glass-shadow); }
+.seg { border-radius: 999px; }
+.seg button { border-radius: 999px; }
+.seg button[aria-pressed="true"] { background: var(--black); color: #fff; }
+.notice { background: var(--accent-soft); border-color: transparent; }
+@media (max-width: 720px) {
+  .app-head { border-radius: 24px; padding: 8px 12px; }
+  .app-head .site-head { height: auto; gap: 8px 12px; }
+  .app-head .site-head > .muted.small { display: none; }
+}
+.app-main > * { min-width: 0; }
+
+/* Subtitle language picker above the upload area */
+.lang-pick { justify-self: start; }
+.lang-row { display: flex; align-items: center; gap: 10px; }
+.lang-row select { width: auto; min-width: 220px; }

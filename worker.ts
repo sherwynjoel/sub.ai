@@ -41,7 +41,7 @@ async function processJob(job: typeof jobs.$inferSelect) {
     const queue = [...plan];
     await Promise.all(Array.from({ length: PARALLEL_CHUNKS }, async () => {
       for (let c; (c = queue.shift()); ) {
-        const cues = await transcribe(await readFile(c.f), c.duration, cfg).catch((e) => {
+        const cues = await transcribe(await readFile(c.f), c.duration, cfg, job.language).catch((e) => {
           queue.length = 0; // stop the other lanes too
           throw e;
         });

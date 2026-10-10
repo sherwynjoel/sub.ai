@@ -11,7 +11,7 @@ export async function ownJob(id: string, u: User) {
 /** What the client may see (no server paths). */
 export function publicJob(j: typeof jobs.$inferSelect, withCues = false) {
   return {
-    id: j.id, filename: j.filename, durationSec: j.durationSec, status: j.status, progress: j.progress,
+    id: j.id, filename: j.filename, language: j.language, durationSec: j.durationSec, status: j.status, progress: j.progress,
     provider: j.provider, model: j.model, error: j.error, createdAt: j.createdAt, hasMedia: !!j.filePath,
     cueCount: j.cues?.length ?? 0, ...(withCues ? { cues: j.cues ?? [] } : {}),
   };

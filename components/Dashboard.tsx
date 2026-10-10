@@ -2,10 +2,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DEFAULT_LANGUAGE, LANGUAGES, languageOf } from "@/lib/languages";
 
 type Job = {
   id: string; filename: string; durationSec: number; status: string; progress: number;
-  error: string | null; createdAt: string; cueCount: number;
+  error: string | null; createdAt: string; cueCount: number; language: string;
 };
 
 const mins = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
@@ -17,6 +18,7 @@ export default function Dashboard() {
   const [upload, setUpload] = useState<{ name: string; pct: number } | null>(null);
   const [error, setError] = useState("");
   const [drag, setDrag] = useState(false);
+  const [language, setLanguage] = useState<string>(DEFAULT_LANGUAGE);
   const input = useRef<HTMLInputElement>(null);
 
   const load = useCallback(() => {
@@ -35,7 +37,7 @@ export default function Dashboard() {
     setError("");
     setUpload({ name: file.name, pct: 0 });
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `/api/upload?name=${encodeURIComponent(file.name)}`);
+    xhr.open("POST", `/api/upload?name=${encodeURIComponent(file.name)}&lang=${language}`);
     xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
     xhr.upload.onprogress = (e) => e.lengthComputable && setUpload({ name: file.name, pct: Math.round((e.loaded / e.total) * 100) });
     xhr.onload = () => {
@@ -51,6 +53,14 @@ export default function Dashboard() {
 
   return (
     <>
+      <label className="lang-pick">Subtitles in
+        <span className="lang-row">
+          <select value={language} onChange={(e) => setLanguage(e.target.value)} disabled={!!upload}>
+            {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name} · {l.native}</option>)}
+          </select>
+          <span className="muted">+ English</span>
+        </span>
+      </label>
       <div
         className={`drop${drag ? " over" : ""}${upload ? " uploading" : ""}`}
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
@@ -78,12 +88,12 @@ export default function Dashboard() {
         {jobs === null ? (
           <p className="muted">Loading your projects…</p>
         ) : jobs.length === 0 ? (
-          <p className="muted empty">Your projects will appear here. Upload your first video to get Tamil and English subtitles.</p>
+          <p className="muted empty">Your projects will appear here. Upload your first video to get subtitles in your language and English.</p>
         ) : (
           jobs.map((j) => (
             <Link key={j.id} href={`/app/jobs/${j.id}`} className={`job ${j.status}`}>
               <span className="name">{j.filename}</span>
-              <span className="meta muted">{mins(j.durationSec)} · {new Date(j.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+              <span className="meta muted">{languageOf(j.language).name} · {mins(j.durationSec)} · {new Date(j.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
               <span className="state">
                 {j.status === "processing" || j.status === "queued" ? (
                   <>

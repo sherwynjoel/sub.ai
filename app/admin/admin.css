@@ -1,8 +1,8 @@
 .admin-shell { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 32px; padding: 32px 0 80px; align-items: start; }
-.admin-nav { position: sticky; top: 84px; display: grid; gap: 2px; }
-.admin-nav a { text-decoration: none; padding: .55em .8em; border-radius: var(--r-sm); font-weight: 500; color: var(--ink-2); }
-.admin-nav a:hover { background: var(--surface); color: var(--ink); }
-.admin-nav a[aria-current="page"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: var(--shadow-sm), 0 0 0 1px var(--line-2); }
+.admin-nav { position: sticky; top: 96px; display: grid; gap: 2px; padding: 8px; border-radius: var(--r-lg); }
+.admin-nav a { text-decoration: none; padding: .6em .9em; border-radius: 999px; font-weight: 500; color: var(--ink-2); }
+.admin-nav a:hover { background: rgba(255, 255, 255, .7); color: var(--ink); }
+.admin-nav a[aria-current="page"] { background: var(--black); color: #fff; font-weight: 600; }
 .admin-main { display: grid; gap: 24px; min-width: 0; }
 .admin-main h1 { font-size: clamp(1.7rem, 3vw, 2.2rem); margin: 0; }
 .admin-main h2 { font-size: 1.35rem; margin: 0 0 .6em; }
@@ -13,10 +13,10 @@
 .stat-group h2 { font-size: 1rem; letter-spacing: -.01em; color: var(--muted); font-weight: 500; margin: 0; }
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0; }
 @media (max-width: 1000px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px 20px; display: grid; gap: 2px; transition: border-color .2s, transform .3s var(--ease); }
-.stat:hover { border-color: var(--line-hi); transform: translateY(-2px); }
+.stat { border-radius: var(--r-lg); padding: 18px 20px; display: grid; gap: 2px; transition: border-color .2s, transform .3s var(--ease); }
+.stat:hover { transform: translateY(-3px); }
 .stat dt { font-size: .88rem; color: var(--muted); }
-.stat dd { margin: 0; font-weight: 600; font-size: 1.9rem; letter-spacing: -.035em; line-height: 1.2; }
+.stat dd { margin: 0; font: 700 2rem var(--font-head); letter-spacing: -.035em; line-height: 1.2; }
 .stat .sub { font-size: .85rem; color: var(--muted); }
 
 /* Status with icon + word, never colour alone */
@@ -26,6 +26,9 @@
 .status.bad { color: var(--bad); }
 .status.wait { color: var(--warn); }
 .status.neutral { color: var(--muted); }
+/* Shape tells the state apart without colour: filled dot good, square bad, ring waiting */
+.status.bad::before { border-radius: 1px; }
+.status.wait::before, .status.neutral::before { background: none; box-shadow: inset 0 0 0 1.5px currentColor; }
 
 .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
 .filters label { min-width: 160px; }
@@ -66,7 +69,17 @@
   .two-col { grid-template-columns: 1fr; }
 }
 .spaced { margin-top: 16px; }
-.notice-panel { background: var(--pink-soft); box-shadow: 0 0 0 1.5px rgba(255, 79, 129, .45); }
+.notice-panel { background: var(--accent-soft); box-shadow: 0 0 0 1px var(--black); }
 .notice-panel ul { margin: 0 0 16px; padding-left: 1.2em; display: grid; gap: 4px; }
 .test-row .result, .action .error { white-space: normal; }
 .plan-form label { min-width: 0; }
+
+/* Status as a glass pill: word + shape + colour */
+.status { padding: .2em .7em .2em .55em; border-radius: 999px; background: rgba(255, 255, 255, .6); border: 1px solid var(--glass-edge); }
+.status.good { background: rgba(212, 255, 63, .45); color: var(--black); }
+.notice-panel { background: var(--accent-soft); box-shadow: var(--glass-shadow); border-color: var(--glass-edge); }
+.table-wrap tr:hover td { background: rgba(255, 255, 255, .45); }
+
+/* Grid children default to min-width:auto; long unbroken text (error paths) must not widen the page */
+.admin-main > * { min-width: 0; }
+.table-wrap td { overflow-wrap: anywhere; }
