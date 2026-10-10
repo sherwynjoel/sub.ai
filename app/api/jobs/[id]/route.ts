@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, jobs, type Cue } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { ownJob, publicJob } from "@/lib/jobs";
+import { CAPTION_STYLES, sanitizeCustom } from "@/lib/captionStyles";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -19,7 +20,15 @@ export async function PATCH(req: Request, { params }: Ctx) {
   if (!u) return unauthorized();
   const j = await ownJob((await params).id, u);
   if (!j) return json({ error: "Not found" }, 404);
-  const { cues } = await req.json().catch(() => ({}));
+  const { cues, captionStyle, captionCustom } = await req.json().catch(() => ({}));
+  if (cues === undefined && (captionStyle !== undefined || captionCustom !== undefined)) {
+    if (captionStyle !== undefined && !CAPTION_STYLES.some((s) => s.id === captionStyle)) return json({ error: "Unknown style." }, 400);
+    await db.update(jobs).set({
+      ...(captionStyle !== undefined ? { captionStyle } : {}),
+      ...(captionCustom !== undefined ? { captionCustom: sanitizeCustom(captionCustom) } : {}),
+    }).where(eq(jobs.id, j.id));
+    return json({ ok: true });
+  }
   const valid =
     Array.isArray(cues) && cues.length <= 20000 &&
     cues.every((c: Cue) => Number.isFinite(c.start) && Number.isFinite(c.end) && c.end >= c.start && typeof c.ta === "string" && typeof c.en === "string");

@@ -1,3 +1,4 @@
+import type { CaptionCustom } from "@/lib/captionStyles";
 import { pgTable, text, uuid, integer, real, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 
 /** `ta` is the line in the project's language (see lib/languages.ts); `en` is English. */
@@ -39,6 +40,13 @@ export const jobs = pgTable("jobs", {
   model: text("model"),
   error: text("error"),
   cues: jsonb("cues").$type<Cue[]>(),
+  captionStyle: text("caption_style").notNull().default("minimal"), // lib/captionStyles.ts id
+  captionCustom: jsonb("caption_custom").$type<CaptionCustom>().notNull().default({}), // user edits on top of the style
+  renderStatus: text("render_status"), // null | queued | rendering | done | failed (styled MP4)
+  renderLang: text("render_lang").notNull().default("both"), // ta | en | both
+  renderProgress: integer("render_progress").notNull().default(0),
+  renderPath: text("render_path"),
+  renderError: text("render_error"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

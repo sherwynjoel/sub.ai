@@ -15,6 +15,20 @@
       "when": 1791614776900,
       "tag": "0001_job_language",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791616811148,
+      "tag": "0002_caption_render",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791621628042,
+      "tag": "0003_caption_custom",
+      "breakpoints": true
     }
   ]
 }

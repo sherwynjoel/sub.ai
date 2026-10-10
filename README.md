@@ -77,6 +77,14 @@ pm2 save && pm2 startup
 nginx in front with TLS (certbot) and **`client_max_body_size 4g; proxy_request_buffering off;`** so large uploads stream.
 Uploaded videos are deleted automatically after 7 days.
 
+## Caption styles and styled MP4
+
+21 styles live in `lib/captionStyles.ts` (one definition drives the editor preview and the burned-in render).
+"Render styled MP4" in the editor queues a render; the worker burns the captions in with ffmpeg + libass
+(`lib/render.ts`) using the fonts in `public/caption-fonts`, and writes `storage/renders/<job>.mp4`.
+Indian scripts fall back to system fonts: on Windows that's Nirmala UI; on a Linux server install them first
+(`sudo apt install fonts-noto-core fonts-noto-extra`), or Tamil/Hindi/… text will render as boxes.
+
 ## Known limits (deliberate, upgrade when needed)
 
 - One worker process (`worker.ts` notes how to scale).

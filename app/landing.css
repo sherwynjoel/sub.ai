@@ -166,6 +166,22 @@ main { overflow-x: clip; }
 .hot.shine::after { background: radial-gradient(260px circle at var(--x, 50%) var(--y, 50%), rgba(255, 255, 255, .14), transparent 65%); }
 .badge { position: absolute; top: 18px; right: 18px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: var(--lime); color: var(--black); font-size: .9rem; }
 
+/* Caption style showcase */
+.style-tabs { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin: -8px 0 28px; }
+.style-tabs button { font: 600 .9rem var(--font-body); padding: .55em 1em; border-radius: 999px; border: 1px solid var(--glass-edge); background: var(--glass); cursor: pointer; color: var(--ink-2); }
+.style-tabs button small { color: var(--muted); font-weight: 500; }
+.style-tabs button[aria-selected="true"] { background: var(--black); color: #fff; border-color: var(--black); }
+.style-tabs button[aria-selected="true"] small { color: var(--lime); }
+.style-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.style-card { border-radius: var(--r-lg); padding: 10px 10px 18px; transition: transform .4s var(--ease); }
+.style-card:hover { transform: translateY(-4px); }
+.style-stage { container-type: size; height: 150px; border-radius: 16px; display: grid; place-items: center; padding: 0 6%; overflow: hidden; background: radial-gradient(120% 120% at 25% 15%, #3b3366, #14121f 70%); }
+.style-stage .cap-main { font-size: calc(var(--s, 1) * 20cqh) !important; }
+.style-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 14px 8px 0; }
+.style-meta h3 { margin: 0; }
+.style-group-tag { font-size: .72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.style-card p { margin: 4px 8px 0; color: var(--ink-2); font-size: .92rem; }
+
 /* FAQ */
 .faq { display: grid; grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); gap: 40px; align-items: start; }
 .faq-list { border-radius: var(--r-lg); padding: 6px 26px; }
@@ -189,6 +205,7 @@ main { overflow-x: clip; }
   .steps { grid-template-columns: 1fr; }
   .split, .faq { grid-template-columns: 1fr; gap: 40px; }
   .plans { grid-template-columns: 1fr 1fr; }
+  .style-cards { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 600px) {
   .site-head .hide-xs { display: none; }
@@ -197,6 +214,12 @@ main { overflow-x: clip; }
   .site-head .btn.small { padding: .55em .8em; font-size: .8rem; }
     .hero { padding-top: 48px; }
   .bento, .plans { grid-template-columns: 1fr; }
+  .style-cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .style-card { padding: 6px 6px 12px; }
+  .style-stage { height: 96px; border-radius: 12px; }
+  .style-meta { flex-direction: column; gap: 0; padding: 8px 4px 0; }
+  .style-meta h3 { font-size: .95rem; }
+  .style-card p { display: none; }
   .tile.big, .tile.wide { grid-column: auto; grid-row: auto; }
   .tile.wide { grid-template-columns: 1fr; justify-items: center; }
   .ebody, .pr-body { grid-template-columns: 1fr; }

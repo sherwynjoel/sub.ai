@@ -1,0 +1,39 @@
+/* Caption styles: fonts and effects for <StyledCaption> (looks are defined in lib/captionStyles.ts). */
+@font-face { font-family: "Bebas Neue"; src: url("/caption-fonts/BebasNeue-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Anton"; src: url("/caption-fonts/Anton-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Bangers"; src: url("/caption-fonts/Bangers-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Caveat"; src: url("/caption-fonts/Caveat.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Permanent Marker"; src: url("/caption-fonts/PermanentMarker-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Special Elite"; src: url("/caption-fonts/SpecialElite-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Press Start 2P"; src: url("/caption-fonts/PressStart2P-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Archivo Black"; src: url("/caption-fonts/ArchivoBlack-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Instrument Sans"; src: url("/caption-fonts/InstrumentSans.ttf") format("truetype"); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "DM Serif Display"; src: url("/caption-fonts/DMSerifDisplay-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "DM Serif Display"; src: url("/caption-fonts/DMSerifDisplay-Italic.ttf") format("truetype"); font-style: italic; font-display: swap; }
+@font-face { font-family: "Fraunces"; src: url("/caption-fonts/Fraunces.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Fraunces"; src: url("/caption-fonts/Fraunces-Italic.ttf") format("truetype"); font-weight: 100 900; font-style: italic; font-display: swap; }
+
+.cap { display: grid; justify-items: center; gap: .25em; text-align: center; line-height: 1.25; pointer-events: none; }
+.cap-main { display: inline-block; max-width: 100%; paint-order: stroke fill; overflow-wrap: anywhere; }
+.cap-sub { font: 500 calc(4.1cqmin) var(--font-sans), sans-serif; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, .9); }
+.cw { display: inline-block; transition: transform .18s var(--ease), color .15s; }
+
+.punch-a, .punch-b { display: block; }
+.punch-a { font-size: .55em; }
+.punch-b { font-size: 1.4em; line-height: 1.05; }
+.solo-prev { display: block; font-size: .45em; opacity: .62; }
+.solo-now { display: block; animation: soloIn .14s var(--ease) both; }
+@keyframes soloIn { from { transform: scale(.92); } }
+.caret { animation: capBlink .8s steps(1) infinite; }
+@keyframes capBlink { 50% { opacity: 0; } }
+
+/* Retro VHS: red and cyan copies nudged apart, with a little jitter */
+.fx-vhs .cap-main { position: relative; text-shadow: none !important; }
+.fx-vhs .cap-main::before, .fx-vhs .cap-main::after { content: attr(data-text); position: absolute; inset: 0; opacity: .62; padding: inherit; }
+.fx-vhs .cap-main::before { color: #ff3c3c; transform: translateX(.05em); animation: vhs 1s steps(4) infinite; z-index: -1; }
+.fx-vhs .cap-main::after { color: #00e6ff; transform: translateX(-.05em); animation: vhs 1s steps(4) infinite reverse; z-index: -1; }
+@keyframes vhs { 25% { translate: .02em 0; } 50% { translate: -.015em 0; } 75% { translate: .01em 0; } }
+
+/* Crawl: tilts away and rolls up as the line plays (--p 0 to 1) */
+.fx-crawl { perspective: 30cqmin; }
+.fx-crawl .cap-main { transform: rotateX(50deg) translateY(calc(var(--p) * -28cqmin)); transform-origin: 50% 100%; opacity: calc(1.7 - var(--p)); }

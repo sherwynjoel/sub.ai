@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Cube from "@/components/Cube";
 import Effects from "@/components/Effects";
 import HeroEditor from "@/components/HeroEditor";
+import StyleShowcase from "@/components/StyleShowcase";
+import { CAPTION_STYLES } from "@/lib/captionStyles";
 import { BRAND } from "@/lib/brand";
 import { LANGUAGES } from "@/lib/languages";
 import { PLANS, type PlanId } from "@/lib/plans";
@@ -49,7 +51,7 @@ const t = {
   free: "Free", perMonth: "/month",
   blurb: { free: PLANS.free.blurb, creator: PLANS.creator.blurb, pro: PLANS.pro.blurb, studio: PLANS.studio.blurb } as Record<PlanId, string>,
   mins: (n: string, once: boolean) => `${n} minutes${once ? ", once" : " a month"}`,
-  perks: [`${LANGUAGES.length} Indian languages + English`, "SRT, VTT and text export", "Premiere & After Effects panel"],
+  perks: [`${LANGUAGES.length} Indian languages + English`, `${CAPTION_STYLES.length} caption styles, styled MP4 export`, "SRT, VTT and text export", "Premiere & After Effects panel"],
   choose: (name: string) => `Choose ${name}`,
   faqH: "Quick answers",
   faq: [
@@ -86,6 +88,7 @@ export default function Landing() {
             <Link href="/" className="logo"><i />{BRAND.name}</Link>
             <nav aria-label="Main">
               <a href="#features" className="hide-sm">{t.nav[0]}</a>
+              <a href="#styles" className="hide-sm">Styles</a>
               <a href="#how" className="hide-sm">{t.nav[1]}</a>
               <a href="#pricing" className="hide-sm">{t.nav[2]}</a>
               <Link href="/login" className="hide-xs">{t.signIn}</Link>
@@ -163,6 +166,12 @@ export default function Landing() {
               <Cube />
             </article>
           </div>
+        </section>
+
+        <section className="wrap sec" id="styles">
+          <h2 className="rise">{CAPTION_STYLES.length} looks. <span className="mark">One tap.</span></h2>
+          <p className="sec-lede rise">Pick a style in the editor, watch it on your clip, then download a finished MP4 with the captions burned in. Every style works in every language.</p>
+          <StyleShowcase />
         </section>
 
         <section className="wrap sec split" id="plugin">

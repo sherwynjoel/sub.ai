@@ -1,0 +1,4 @@
+Caption style fonts, from https://github.com/google/fonts (unmodified).
+SIL Open Font License 1.1 (https://openfontlicense.org): Bebas Neue, Anton, Bangers, DM Serif Display,
+Caveat, Press Start 2P, Archivo Black, Instrument Sans, Fraunces.
+Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0): Permanent Marker, Special Elite.

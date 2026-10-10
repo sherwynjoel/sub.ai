@@ -12,7 +12,7 @@ const run = (async (...a: Parameters<typeof exec>) => {
     }
   }
 }) as typeof exec;
-const bin = (name: string) => (process.env.FFMPEG_DIR ? join(process.env.FFMPEG_DIR, name) : name);
+export const bin = (name: string) => (process.env.FFMPEG_DIR ? join(process.env.FFMPEG_DIR, name) : name);
 
 export const STORAGE = resolve(/*turbopackIgnore: true*/ process.env.STORAGE_DIR || "./storage");
 export const CHUNK_SECONDS = 300; // shorter chunks = tighter AI timestamps
@@ -81,4 +81,15 @@ export async function findSpeech(file: string, duration: number) {
 export async function cutAudio(file: string, start: number, end: number) {
   const { stdout } = await run(bin("ffmpeg"), ["-v", "error", "-ss", String(start), "-t", String(end - start), "-i", file, "-ac", "1", "-ar", "16000", "-f", "wav", "-"], { encoding: "buffer", maxBuffer: 1 << 26 });
   return stdout;
+}
+
+/** Width and height of the first video stream, or null for audio-only files. */
+export async function videoSize(file: string) {
+  try {
+    const { stdout } = await run(bin("ffprobe"), ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0", file]);
+    const [width, height] = stdout.trim().split(",").map(Number);
+    return width > 0 && height > 0 ? { width, height } : null;
+  } catch {
+    return null;
+  }
 }

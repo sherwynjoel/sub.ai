@@ -1,0 +1,1 @@
+ALTER TABLE "jobs" ADD COLUMN "caption_custom" jsonb DEFAULT '{}'::jsonb NOT NULL;
