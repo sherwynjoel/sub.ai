@@ -1,5 +1,6 @@
 "use client";
 import { caseOf, keywordIndex, resolveStyle, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { breakLines, lineBreaks } from "@/lib/subtitles";
 
 type Props = { styleId: string; custom?: CaptionCustom; text: string; sub?: string; start: number; end: number; time: number };
 
@@ -13,12 +14,13 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   const s = resolveStyle(styleId, custom);
   const words = wordTimes(caseOf(s, text), start, end);
   const kw = keywordIndex(words.map((w) => w.w));
+  const brk = lineBreaks(words.map((w) => w.w), s.lines);
   let i = words.findIndex((w) => time < w.e);
   if (i < 0) i = words.length - 1;
   const p = Math.min(1, Math.max(0, (time - start) / Math.max(0.01, end - start)));
 
   const base: React.CSSProperties = {
-    fontFamily: stack(s.font), fontSize: `calc(${s.size ?? 1} * 7.5cqmin)`, fontWeight: s.bold ? 700 : 400, fontStyle: s.italic ? "italic" : undefined,
+    whiteSpace: s.lines === 1 ? "nowrap" : "pre-line", fontFamily: stack(s.font), fontSize: `calc(${s.size ?? 1} * 7.5cqmin)`, fontWeight: s.bold ? 700 : 400, fontStyle: s.italic ? "italic" : undefined,
     color: s.color,
     textShadow: s.shadow ? `0 ${s.shadow}em ${s.shadow * 2}em rgba(0,0,0,.6)` : undefined,
     WebkitTextStroke: s.outline ? `${s.outline[1] * 2}em ${s.outline[0]}` : undefined,
@@ -46,11 +48,11 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     if (s.effect === "wobble") st.transform = `${st.transform ?? ""} rotate(${j % 2 ? -4 : 3}deg)`;
     return <span key={j} className="cw" style={st}>{words[j].w}</span>;
   };
-  const join = (from: number, to: number) => words.slice(from, to).flatMap((_, k) => [k ? " " : null, word(from + k)]);
+  const join = (from: number, to: number) => words.slice(from, to).flatMap((_, k) => [k ? (brk.has(from + k - 1) ? <br key={`br${from + k}`} /> : " ") : null, word(from + k)]);
 
   let body: React.ReactNode;
   if (s.effect === "typewriter") {
-    const chars = [...caseOf(s, text)];
+    const chars = [...breakLines(caseOf(s, text), s.lines)];
     body = <>{chars.slice(0, Math.max(1, Math.ceil(chars.length * Math.min(1, p / 0.8)))).join("")}<span className="caret">_</span></>;
   } else if (s.effect === "solo") {
     body = <>{i > 0 && <span className="solo-prev">{words[i - 1].w}</span>}<span key={i} className="solo-now">{words[i].w}</span></>;
@@ -58,14 +60,14 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     const cut = words.length - Math.min(2, words.length - 1);
     body = <><span className="punch-a">{join(0, cut)}</span><span className="punch-b">{join(cut, words.length)}</span></>;
   } else if (s.effect === "vhs" || s.effect === "crawl") {
-    body = caseOf(s, text);
+    body = breakLines(caseOf(s, text), s.lines);
   } else {
     body = join(0, words.length);
   }
 
   return (
     <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}`} style={{ "--p": p } as React.CSSProperties}>
-      <span className="cap-main" style={base} data-text={s.effect === "vhs" ? caseOf(s, text) : undefined}>{body}</span>
+      <span className="cap-main" style={base} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>{body}</span>
       {sub && <span className="cap-sub">{sub}</span>}
     </div>
   );

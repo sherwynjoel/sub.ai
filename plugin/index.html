@@ -74,6 +74,43 @@
     </div>
     <p id="msg" role="status"></p>
     <button id="openBtn" class="link" hidden>Open in the web editor</button>
+
+    <!-- Edit: shown once a job has subtitles -->
+    <section id="editor" hidden>
+      <h1>Edit subtitles</h1>
+      <div id="cues"></div>
+
+      <h1>Look</h1>
+      <label>Style<select id="style"></select></label>
+      <label>Font<select id="font"></select></label>
+      <label>Size<input id="size" type="range" min="0.4" max="2.6" step="0.05" /></label>
+      <div class="row">
+        <label>Text colour<input id="color" type="color" /></label>
+        <label>Highlight<input id="accent" type="color" /></label>
+      </div>
+      <div class="row">
+        <label>Position
+          <select id="position">
+            <option value="bottom">Bottom</option>
+            <option value="middle">Middle</option>
+            <option value="top">Top</option>
+          </select>
+        </label>
+        <label>Lines
+          <select id="lines">
+            <option value="">Auto</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+          </select>
+        </label>
+      </div>
+      <p id="lookNote" class="muted"></p>
+      <div class="row">
+        <button id="saveBtn" class="btn">Save</button>
+        <button id="placeBtn" class="btn ghost">Place on timeline again</button>
+      </div>
+    </section>
   </section>
 
   <script src="subs.js"></script>

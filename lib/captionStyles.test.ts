@@ -43,3 +43,19 @@ test("custom edits layer on a style and reach the MP4 subtitles", () => {
   assert.match(ass, /Style: Main,Fraunces,/);
   assert.match(ass, /,8,\d+,\d+,108,1\n/); // top alignment, 10% margin
 });
+
+test("the lines setting reaches the MP4 subtitles", () => {
+  const cues = [{ start: 0, end: 2, ta: "one two three four", en: "" }];
+  const two = buildAss(cues, { styleId: "minimal", custom: { lines: 2 }, lang: "ta", width: 1920, height: 1080 });
+  assert.match(two, /two\\N\{/); // break after "two"
+  const one = buildAss(cues, { styleId: "minimal", custom: { lines: 1 }, lang: "ta", width: 1920, height: 1080 });
+  assert.match(one, /\{\\q2\}/); // no auto-wrap
+  assert.deepEqual(sanitizeCustom({ lines: 2 }), { lines: 2 });
+  assert.deepEqual(sanitizeCustom({ lines: 7 }), {});
+});
+
+test("a dragged placement is clamped and reaches the MP4 as \\pos", () => {
+  assert.deepEqual(sanitizeCustom({ x: 0.25, y: 1.7 }), { x: 0.25, y: 1 });
+  const ass = buildAss([{ start: 0, end: 1, ta: "hi there", en: "" }], { styleId: "minimal", custom: { x: 0.25, y: 0.5 }, lang: "ta", width: 1920, height: 1080 });
+  assert.match(ass, /\{\\an5\\pos\(480,540\)\}/);
+});

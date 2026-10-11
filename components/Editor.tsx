@@ -17,7 +17,7 @@ type View = "ta" | "en" | "both";
 const GROUPS = ["Trending", "Aesthetic", "Clean", "Fun"] as const;
 
 /** The styled caption over the player, redrawn every frame while the video plays so word timing is smooth. */
-function LiveCaption({ video, cues, styleId, custom, portrait, view }: { video: React.RefObject<HTMLVideoElement | null>; cues: Cue[]; styleId: string; custom: CaptionCustom; portrait: boolean; view: View }) {
+function LiveCaption({ video, cues, styleId, custom, portrait, view, onMove }: { video: React.RefObject<HTMLVideoElement | null>; cues: Cue[]; styleId: string; custom: CaptionCustom; portrait: boolean; view: View; onMove: (x: number, y: number) => void }) {
   const [t, setT] = useState(0);
   useEffect(() => {
     const v = video.current;
@@ -26,21 +26,43 @@ function LiveCaption({ video, cues, styleId, custom, portrait, view }: { video: 
     const tick = () => { setT(v.currentTime); if (!v.paused) raf = requestAnimationFrame(tick); };
     const kick = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); };
     v.addEventListener("play", kick);
+    v.addEventListener("pause", kick);
     v.addEventListener("seeked", kick);
     v.addEventListener("timeupdate", kick);
-    return () => { cancelAnimationFrame(raf); v.removeEventListener("play", kick); v.removeEventListener("seeked", kick); v.removeEventListener("timeupdate", kick); };
+    return () => { cancelAnimationFrame(raf); v.removeEventListener("play", kick); v.removeEventListener("pause", kick); v.removeEventListener("seeked", kick); v.removeEventListener("timeupdate", kick); };
   }, [video]);
-  const c = cues.find((x) => t >= x.start && t < x.end);
+  const live = cues.find((x) => t >= x.start && t < x.end);
+  // Paused between lines: show the first line as a stand-in so the caption can still be dragged and styled.
+  const ghost = !live && !!video.current?.paused;
+  const c = live ?? (ghost ? cues[0] : undefined);
   if (!c) return null;
   const main = view === "en" ? c.en : c.ta;
   if (!main.trim()) return null;
-  const { position, offset } = resolveStyle(styleId, custom, portrait);
-  const place: React.CSSProperties = position === "top" ? { top: `${offset * 100}%`, bottom: "auto" }
+  const { position, offset, x, y } = resolveStyle(styleId, custom, portrait);
+  const free = x !== undefined && y !== undefined;
+  // A dragged caption wraps within the frame: its box can be at most twice the distance to the nearer edge.
+  const place: React.CSSProperties = free ? { left: `${x * 100}%`, top: `${y * 100}%`, maxWidth: `${Math.min(92, 200 * Math.min(x, 1 - x))}%` }
+    : position === "top" ? { top: `${offset * 100}%`, bottom: "auto" }
     : position === "middle" ? { top: "50%", bottom: "auto", transform: "translateY(-50%)" }
     : { bottom: `${offset * 100}%` };
+  const drag = (e: React.PointerEvent<HTMLDivElement>) => {
+    const frame = video.current?.parentElement?.getBoundingClientRect();
+    if (!frame) return;
+    video.current?.pause();
+    e.preventDefault();
+    const at = (ev: PointerEvent) => onMove(
+      Math.min(0.95, Math.max(0.05, (ev.clientX - frame.left) / frame.width)),
+      Math.min(0.95, Math.max(0.05, (ev.clientY - frame.top) / frame.height)),
+    );
+    const stop = () => { removeEventListener("pointermove", at); removeEventListener("pointerup", stop); };
+    addEventListener("pointermove", at);
+    addEventListener("pointerup", stop);
+  };
   return (
-    <div className="overlay styled" style={place}>
-      <StyledCaption styleId={styleId} custom={custom} text={main} sub={view === "both" ? c.en : undefined} start={c.start} end={c.end} time={t} />
+    <div className={`overlay styled${free ? " free" : ""}${ghost ? " ghost" : ""}`} style={place}>
+      <div className="drag-handle" onPointerDown={drag} title="Drag to move the subtitle">
+        <StyledCaption styleId={styleId} custom={custom} text={main} sub={view === "both" ? c.en : undefined} start={c.start} end={c.end} time={ghost ? c.end - 0.01 : t} />
+      </div>
     </div>
   );
 }
@@ -215,11 +237,25 @@ export default function Editor({ initial }: { initial: Job }) {
       <div className="editor-grid">
         <div className="viewer">
           {job.hasMedia ? (
+            <>
+              <div className="canvas-bar" role="toolbar" aria-label="Caption look">
+                <select value={look.font} onChange={(e) => tweak({ font: e.target.value })} aria-label="Font">
+                  {CAPTION_FONTS.map((f) => <option key={f} value={f}>{f}</option>)}
+                </select>
+                <button onClick={() => tweak({ size: Math.max(0.4, +((look.size ?? 1) - 0.1).toFixed(2)) })} aria-label="Smaller text">A−</button>
+                <button onClick={() => tweak({ size: Math.min(2.6, +((look.size ?? 1) + 0.1).toFixed(2)) })} aria-label="Larger text">A+</button>
+                <label title="Text colour">Text<input type="color" value={hex(look.color, "#ffffff")} onChange={(e) => tweak({ color: e.target.value })} /></label>
+                <label title="Highlight colour">Mark<input type="color" value={hex(look.mark ?? look.keyword?.color ?? look.active, "#ffe14d")} onChange={(e) => tweak({ accent: e.target.value })} /></label>
+                <label title="Outline"><input type="checkbox" checked={!!look.outline} onChange={(e) => tweak({ outline: e.target.checked ? hex(look.outline?.[0], "#000000") : null })} />Outline{look.outline && <input type="color" value={hex(look.outline[0], "#000000")} onChange={(e) => tweak({ outline: e.target.value })} />}</label>
+                <label title="Background"><input type="checkbox" checked={!!look.box} onChange={(e) => tweak({ box: e.target.checked ? hex(look.box, "#0b0b0b") : null })} />Box{look.box && <input type="color" value={hex(look.box, "#0b0b0b")} onChange={(e) => tweak({ box: e.target.value })} />}</label>
+                <span className="canvas-hint">Drag the subtitle to move it</span>
+              </div>
             <div className="player">
               <video ref={video} src={`/api/jobs/${job.id}/media`} controls preload="metadata" onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)}
                 onLoadedMetadata={(e) => setPortrait(e.currentTarget.videoHeight > e.currentTarget.videoWidth)} />
-              <LiveCaption video={video} cues={cues} styleId={styleId} custom={custom} portrait={portrait} view={view} />
+              <LiveCaption video={video} cues={cues} styleId={styleId} custom={custom} portrait={portrait} view={view} onMove={(x, y) => tweak({ x, y })} />
             </div>
+            </>
           ) : (
             <div className="player gone"><p>The video was removed after 7 days. Your subtitles are still here.</p></div>
           )}
@@ -291,7 +327,15 @@ export default function Editor({ initial }: { initial: Job }) {
                   <span>Position</span>
                   <div className="seg" role="group" aria-label="Position">
                     {(["top", "middle", "bottom"] as const).map((v) => (
-                      <button key={v} aria-pressed={look.position === v} onClick={() => tweak({ position: v })}>{v[0].toUpperCase() + v.slice(1)}</button>
+                      <button key={v} aria-pressed={look.position === v} onClick={() => tweak({ position: v, x: undefined, y: undefined })}>{v[0].toUpperCase() + v.slice(1)}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="cz-field">
+                  <span>Lines</span>
+                  <div className="seg" role="group" aria-label="Lines per subtitle">
+                    {([["", "Auto"], ["1", "1"], ["2", "2"], ["3", "3"]] as const).map(([v, l]) => (
+                      <button key={l} aria-pressed={String(look.lines ?? "") === v} onClick={() => tweak({ lines: v ? (+v as 1 | 2 | 3) : undefined })}>{l}</button>
                     ))}
                   </div>
                 </div>

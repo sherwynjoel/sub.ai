@@ -11,6 +11,8 @@ $stage = Join-Path $tools "stage"
 $out = Join-Path $root "public\downloads\vasanam-panel.zxp"
 
 New-Item -ItemType Directory -Force $tools, (Split-Path $out) | Out-Null
+# Caption fonts for After Effects users (the panel applies them to text layers)
+Compress-Archive -Path (Join-Path $root "public\caption-fonts\*.ttf"), (Join-Path $root "public\caption-fonts\LICENSES.txt") -DestinationPath (Join-Path $root "public\downloads\vasanam-fonts.zip") -Force
 if (-not (Test-Path $sign)) {
   # Adobe's official signing tool
   Invoke-WebRequest "https://github.com/Adobe-CEP/CEP-Resources/raw/master/ZXPSignCMD/4.1.103/win64/ZXPSignCmd.exe" -OutFile $sign

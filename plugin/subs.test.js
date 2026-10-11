@@ -13,4 +13,5 @@ const placed = placeCues(cues, 90, 10, 21);
 assert.deepEqual(placed.map((c) => [c.start, c.end]), [[100, 102], [110, 111]]);
 
 assert.equal(toSrt([cues[0]], "both"), "1\n00:00:01,000 --> 00:00:03,000\nஒன்று\none\n");
+assert.deepEqual(toSrt([{ start: 0, end: 1, ta: "one two three four", en: "a b" }], "both", 2).split("\n").slice(2, 6), ["one two", "three four", "a", "b"]);
 console.log("plugin subs ok");

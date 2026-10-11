@@ -1,11 +1,11 @@
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { ownJob } from "@/lib/jobs";
 import { shortCode } from "@/lib/languages";
-import { toSrt, toTxt, toVtt, type Lang } from "@/lib/subtitles";
+import { shiftCues, toSrt, toTxt, toVtt, type Lang } from "@/lib/subtitles";
 
 const FORMATS = { srt: [toSrt, "application/x-subrip"], vtt: [toVtt, "text/vtt"], txt: [toTxt, "text/plain"] } as const;
 
-/** GET /api/jobs/:id/export?lang=ta|en|both&fmt=srt|vtt|txt */
+/** GET /api/jobs/:id/export?lang=ta|en|both&fmt=srt|vtt|txt[&shift=seconds] (shift lines up a clip placed later on an NLE timeline) */
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const u = await currentUser();
   if (!u) return unauthorized();
@@ -16,8 +16,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const fmt = (q.get("fmt") ?? "srt") as keyof typeof FORMATS;
   if (!FORMATS[fmt]) return json({ error: "Unknown format" }, 400);
   const [fn, type] = FORMATS[fmt];
+  const shift = Number(q.get("shift") ?? 0);
+  if (!Number.isFinite(shift) || Math.abs(shift) > 86400) return json({ error: "Bad shift" }, 400);
+  const cues = shift ? shiftCues(j.cues, shift) : j.cues;
   const base = j.filename.replace(/\.[^.]+$/, "").replace(/[^\w\- ]+/g, "_") || "subtitles";
-  return new Response("\uFEFF" + fn(j.cues, lang), {
+  return new Response("\uFEFF" + fn(cues, lang, j.captionCustom?.lines), {
     headers: {
       "content-type": `${type}; charset=utf-8`,
       "content-disposition": `attachment; filename="${base}.${lang === "ta" ? shortCode(j.language) : lang}.${fmt}"`,

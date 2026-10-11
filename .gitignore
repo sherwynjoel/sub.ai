@@ -52,3 +52,6 @@ next-env.d.ts
 # design review captures (regenerated)
 /.impeccable/review
 /.impeccable/questions
+
+# built plugin + fonts zip (rebuilt per deployment by plugin/build.ps1)
+/public/downloads/

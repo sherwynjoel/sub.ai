@@ -9,18 +9,41 @@ function stamp(sec: number, sep: "," | ".") {
   return `${p(h)}:${p(m)}:${p(s)}${sep}${p(ms % 1000, 3)}`;
 }
 
-const text = (c: Cue, lang: Lang) => (lang === "both" ? `${c.ta}\n${c.en}` : c[lang]).trim();
-
-export function toSrt(cues: Cue[], lang: Lang) {
-  return cues.map((c, i) => `${i + 1}\n${stamp(c.start, ",")} --> ${stamp(c.end, ",")}\n${text(c, lang)}\n`).join("\n");
+/** Word indexes after which a line break goes, splitting `words` into up to `n` lines of similar length. */
+export function lineBreaks(words: string[], n: number | undefined) {
+  const breaks = new Set<number>();
+  const lines = Math.min(Math.max(1, Math.round(n ?? 1)), words.length);
+  if (lines <= 1) return breaks;
+  const target = words.reduce((a, w) => a + w.length + 1, 0) / lines;
+  let len = 0, line = 1;
+  for (let i = 0; i < words.length - 1 && line < lines; i++) {
+    len += words[i].length + 1;
+    if (len + (words[i + 1].length + 1) / 2 >= target * line || words.length - 1 - i === lines - line) { breaks.add(i); line++; }
+  }
+  return breaks;
 }
 
-export function toVtt(cues: Cue[], lang: Lang) {
-  return "WEBVTT\n\n" + cues.map((c) => `${stamp(c.start, ".")} --> ${stamp(c.end, ".")}\n${text(c, lang)}\n`).join("\n");
+/** `text` laid out on up to `n` lines (newline-separated); no `n` leaves it as is. */
+export function breakLines(text: string, n: number | undefined) {
+  if (!n) return text;
+  const words = text.split(/\s+/).filter(Boolean);
+  const brk = lineBreaks(words, n);
+  return words.map((w, i) => w + (brk.has(i) ? "\n" : " ")).join("").trim();
 }
 
-export function toTxt(cues: Cue[], lang: Lang) {
-  return cues.map((c) => text(c, lang)).join("\n");
+const text = (c: Cue, lang: Lang, lines?: number) =>
+  (lang === "both" ? `${breakLines(c.ta, lines)}\n${breakLines(c.en, lines)}` : breakLines(c[lang], lines)).trim();
+
+export function toSrt(cues: Cue[], lang: Lang, lines?: number) {
+  return cues.map((c, i) => `${i + 1}\n${stamp(c.start, ",")} --> ${stamp(c.end, ",")}\n${text(c, lang, lines)}\n`).join("\n");
+}
+
+export function toVtt(cues: Cue[], lang: Lang, lines?: number) {
+  return "WEBVTT\n\n" + cues.map((c) => `${stamp(c.start, ".")} --> ${stamp(c.end, ".")}\n${text(c, lang, lines)}\n`).join("\n");
+}
+
+export function toTxt(cues: Cue[], lang: Lang, lines?: number) {
+  return cues.map((c) => text(c, lang, lines)).join("\n");
 }
 
 /** Shift chunk-relative cues to absolute time, clamp them inside the chunk, drop empties, sort. */
@@ -75,4 +98,9 @@ export function divide(text: string, weights: number[]) {
     from = to;
   });
   return out;
+}
+
+/** Move every cue by `by` seconds; cues pushed before 0 are cut at 0 or dropped (a trimmed clip's head). */
+export function shiftCues(cues: Cue[], by: number): Cue[] {
+  return cues.map((c) => ({ ...c, start: Math.max(0, c.start + by), end: c.end + by })).filter((c) => c.end > 0.05);
 }

@@ -5,6 +5,7 @@
  * Fonts live in public/caption-fonts (family names below must match the files).
  */
 import type { Cue } from "@/db";
+import { breakLines, lineBreaks } from "@/lib/subtitles";
 
 export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble";
 export type CaptionStyle = {
@@ -61,8 +62,10 @@ export type CaptionCustom = {
   font?: string; size?: number; color?: string; accent?: string;
   outline?: string | null; outlineWidth?: number; box?: string | null; shadow?: boolean;
   case?: "none" | "upper" | "lower"; position?: "top" | "middle" | "bottom"; offset?: number;
+  lines?: 1 | 2 | 3;             // lay each caption out on this many lines; unset = wrap by width
+  x?: number; y?: number;        // free placement: caption centre as fractions of the frame; overrides position/offset
 };
-export type Placement = { position: "top" | "middle" | "bottom"; offset: number };
+export type Placement = { position: "top" | "middle" | "bottom"; offset: number; lines?: 1 | 2 | 3; x?: number; y?: number };
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const clamp = (n: unknown, lo: number, hi: number) => (typeof n === "number" && Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : undefined);
@@ -82,6 +85,9 @@ export function sanitizeCustom(input: unknown): CaptionCustom {
   if (i.case === "none" || i.case === "upper" || i.case === "lower") out.case = i.case;
   if (i.position === "top" || i.position === "middle" || i.position === "bottom") out.position = i.position;
   const off = clamp(i.offset, 0.02, 0.45); if (off !== undefined) out.offset = off;
+  if (i.lines === 1 || i.lines === 2 || i.lines === 3) out.lines = i.lines;
+  const x = clamp(i.x, 0, 1); if (x !== undefined) out.x = x;
+  const y = clamp(i.y, 0, 1); if (y !== undefined) out.y = y;
   return out;
 }
 
@@ -108,7 +114,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   if (c.shadow === false) s.shadow = 0;
   else if (c.shadow === true && !s.shadow) s.shadow = 0.05;
   if (c.case) { s.caps = c.case === "upper"; s.lower = c.case === "lower"; }
-  return { ...s, position: c.position ?? "bottom", offset: c.offset ?? (portrait ? 0.2 : 0.09) };
+  return { ...s, position: c.position ?? "bottom", offset: c.offset ?? (portrait ? 0.2 : 0.09), lines: c.lines, x: c.x, y: c.y };
 }
 export const styleOf = (id: string | null | undefined) => CAPTION_STYLES.find((s) => s.id === id) ?? CAPTION_STYLES.find((s) => s.id === DEFAULT_STYLE)!;
 
@@ -148,7 +154,7 @@ const assTime = (t: number) => {
   const cs = Math.max(0, Math.round(t * 100));
   return `${Math.floor(cs / 360000)}:${String(Math.floor(cs / 6000) % 60).padStart(2, "0")}:${String(Math.floor(cs / 100) % 60).padStart(2, "0")}.${String(cs % 100).padStart(2, "0")}`;
 };
-const esc = (t: string) => t.replace(/[{}]/g, (c) => (c === "{" ? "(" : ")")).replace(/\\/g, "/").replace(/\n/g, " ");
+const esc = (t: string) => t.replace(/[{}]/g, (c) => (c === "{" ? "(" : ")")).replace(/\\/g, "/").replace(/\n/g, "\\N");
 
 type Opts = { styleId: string; custom?: CaptionCustom; lang: "ta" | "en" | "both"; width: number; height: number };
 
@@ -160,7 +166,11 @@ export function buildAss(cues: Cue[], o: Opts) {
   const px = (f = 0) => Math.round(f * fs * 10) / 10;
   const marginV = Math.round(o.height * s.offset);
   const align = s.position === "top" ? 8 : s.position === "middle" ? 5 : 2;
+  // Dragged placement: centre every line on the point (dx nudges the VHS colour copies apart).
+  const posAt = (dx: number) => (s.x !== undefined && s.y !== undefined ? `{\\an5\\pos(${Math.round(s.x * o.width + dx)},${Math.round(s.y * o.height)})}` : "");
+  const pos = posAt(0);
   const marginH = Math.round(o.width * 0.07);
+  const wrapM = s.x !== undefined ? Math.max(marginH, Math.round(o.width * (0.5 - Math.min(s.x, 1 - s.x)))) : 0;
   const box = !!s.box;
   const style = [
     "Main", s.font, fs, assColor(s.color), assColor(s.color),
@@ -178,9 +188,12 @@ export function buildAss(cues: Cue[], o: Opts) {
     const main = (o.lang === "en" ? c.en : c.ta).trim();
     if (!main) continue;
     const sub = o.lang === "both" ? c.en.trim() : "";
-    const tail = sub ? `\\N{\\rSecond}${esc(sub)}` : "";
+    const tail = sub ? `\\N{\\rSecond}${esc(breakLines(sub, s.lines))}` : "";
     const words = wordTimes(caseOf(s, main), c.start, c.end);
     const kw = keywordIndex(words.map((w) => w.w));
+    const brk = lineBreaks(words.map((w) => w.w), s.lines);
+    const glue = (j: number) => (j ? (brk.has(j - 1) ? "\\N" : " ") : "");
+    const q = s.lines === 1 ? "{\\q2}" : ""; // one line: no auto-wrap
 
     // One word, in a given state, with its override tags.
     const word = (j: number, i: number) => {
@@ -208,27 +221,27 @@ export function buildAss(cues: Cue[], o: Opts) {
 
     if (s.effect === "crawl") {
       const H = o.height, cx = Math.round(o.width / 2);
-      add(c.start, c.end, `{\\an8\\fad(200,300)\\org(${cx},${H})\\frx55\\move(${cx},${Math.round(H * 0.66)},${cx},${Math.round(H * 0.42)})}${esc(caseOf(s, main))}${tail}`);
+      add(c.start, c.end, `{\\an8\\fad(200,300)\\org(${cx},${H})\\frx55\\move(${cx},${Math.round(H * 0.66)},${cx},${Math.round(H * 0.42)})}${esc(breakLines(caseOf(s, main), s.lines))}${tail}`);
       continue;
     }
     if (s.effect === "vhs") {
-      const text = esc(caseOf(s, main)) + tail;
+      const text = esc(breakLines(caseOf(s, main), s.lines)) + tail;
       const nudge = [0, 2, -1, 1, -2];
       for (let t = c.start, k = 0; t < c.end; t += 0.25, k++) {
         const e = Math.min(c.end, t + 0.25), d = Math.round(px(0.05) + nudge[k % nudge.length]);
-        add(t, e, `{\\1c&H3C3CFF&\\1a&H60&\\bord0\\shad0}${text}`, 0, marginH + 2 * d + 4, marginH); // red, nudged right
-        add(t, e, `{\\1c&HFFE600&\\1a&H60&\\bord0\\shad0}${text}`, 1, marginH, marginH + 2 * d + 4); // cyan, nudged left
-        add(t, e, `{\\bord0\\shad0}${text}`, 2);
+        add(t, e, posAt(d + 2) + `{\\1c&H3C3CFF&\\1a&H60&\\bord0\\shad0}${text}`, 0, marginH + 2 * d + 4, marginH); // red, nudged right
+        add(t, e, posAt(-d - 2) + `{\\1c&HFFE600&\\1a&H60&\\bord0\\shad0}${text}`, 1, marginH, marginH + 2 * d + 4); // cyan, nudged left
+        add(t, e, pos + `{\\bord0\\shad0}${text}`, 2);
       }
       continue;
     }
     if (s.effect === "typewriter") {
-      const chars = [...caseOf(s, main)];
+      const chars = [...breakLines(caseOf(s, main), s.lines)];
       const step = (c.end - c.start) * 0.8 / chars.length;
       for (let n = 1; n <= chars.length; n++) {
         const t0 = c.start + (n - 1) * step;
         const t1 = n === chars.length ? c.end : t0 + step;
-        add(t0, t1, `${esc(chars.slice(0, n).join(""))}{\\alpha&H00&}_${tail}`);
+        add(t0, t1, pos + `${esc(chars.slice(0, n).join(""))}{\\alpha&H00&}_${tail}`, 0, wrapM, wrapM);
       }
       continue;
     }
@@ -243,9 +256,9 @@ export function buildAss(cues: Cue[], o: Opts) {
         const punch = words.slice(cut).map((_, k) => word(cut + k, i)).join(" ");
         text = `{\\fscx55\\fscy55}${setup.replace(/\{\\r/g, "{\\r\\fscx55\\fscy55")}\\N{\\r\\fscx140\\fscy140}${punch.replace(/\{\\r/g, "{\\r\\fscx140\\fscy140")}`;
       } else {
-        text = words.map((_, j) => word(j, i)).join(" ");
+        text = words.map((_, j) => glue(j) + word(j, i)).join("");
       }
-      add(wt.s, end, text + tail);
+      add(wt.s, end, pos + q + text + tail, 0, wrapM, wrapM);
     });
   }
 

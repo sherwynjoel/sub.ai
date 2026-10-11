@@ -212,3 +212,17 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .cz-field { display: grid; gap: .4em; font-size: .85rem; font-weight: 500; color: var(--ink-2); }
 .cz-field .seg button { font-size: .8rem; padding: .4em .8em; }
 @media (max-width: 600px) { .cz-grid { grid-template-columns: 1fr; } }
+
+/* Editing on the video: draggable caption and a floating toolbar */
+.overlay.styled { pointer-events: none; }
+.overlay.styled.free { right: auto; bottom: auto; width: max-content; transform: translate(-50%, -50%); }
+.overlay.ghost { opacity: .72; }
+.drag-handle { display: inline-block; max-width: 100%; pointer-events: auto; cursor: move; touch-action: none; border-radius: 8px; outline: 1px dashed transparent; transition: outline-color .2s; }
+.drag-handle:hover { outline-color: rgba(255, 255, 255, .55); }
+.canvas-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 12px; border-radius: 16px; background: rgba(14, 14, 24, .72); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); color: #fff; font-size: .78rem; }
+.canvas-bar select { width: auto; max-width: 150px; padding: .3em .5em; font-size: .78rem; color: #fff; background: rgba(255, 255, 255, .12); border-color: transparent; }
+.canvas-bar button { font: 600 .78rem var(--font-body); border: 0; border-radius: 999px; padding: .35em .6em; background: rgba(255, 255, 255, .12); color: #fff; cursor: pointer; }
+.canvas-bar label { display: inline-flex; align-items: center; gap: 4px; font-size: .74rem; font-weight: 500; color: #ddd; }
+.canvas-bar input[type="color"] { width: 24px; height: 24px; padding: 1px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .45); background: none; cursor: pointer; }
+.canvas-bar input[type="checkbox"] { width: auto; accent-color: var(--lime); }
+.canvas-hint { color: #aaa; font-size: .72rem; }
