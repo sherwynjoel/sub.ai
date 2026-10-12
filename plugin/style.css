@@ -9,6 +9,7 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 h1 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
 p { margin: 0 0 10px; }
 section { display: grid; gap: 12px; }
+[hidden] { display: none !important; } /* the display rules above would otherwise override the hidden attribute */
 label, .field { display: grid; gap: 5px; color: var(--muted); }
 .label { color: var(--muted); }
 input, select { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; width: 100%; }

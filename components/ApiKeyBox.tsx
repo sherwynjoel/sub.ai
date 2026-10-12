@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { copyText } from "@/lib/copy";
 
 export default function ApiKeyBox({ hint }: { hint: string | null }) {
   const [key, setKey] = useState("");
@@ -21,7 +22,7 @@ export default function ApiKeyBox({ hint }: { hint: string | null }) {
         <>
           <code>{key}</code>
           <div className="row">
-            <button className="btn small" onClick={() => navigator.clipboard.writeText(key).then(() => setCopied(true))}>{copied ? "Copied" : "Copy key"}</button>
+            <button className="btn small" onClick={() => copyText(key).then(() => setCopied(true))}>{copied ? "Copied" : "Copy key"}</button>
             <span className="muted small">Shown once. Copy it now.</span>
           </div>
         </>

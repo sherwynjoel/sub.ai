@@ -2,6 +2,8 @@
 (function () {
   var req = typeof require === "function" ? require : window.cep_node.require;
   var fs = req("fs"), path = req("path"), os = req("os"), http = req("http"), https = req("https");
+  // CEF's window.URL is not Node's URL class, so http.request would misread it as the options object.
+  var NodeURL = req("url").URL, Buffer = req("buffer").Buffer;
 
   var DEFAULT_SERVER = "http://localhost:3000"; // set to your live domain before packaging
   var cep = window.__adobe_cep__;
@@ -22,7 +24,7 @@
   /** Minimal HTTP client on Node. body may be a string or a file path ({file}). */
   function api(method, p, body, onProgress) {
     return new Promise(function (resolve, reject) {
-      var url = new URL(server() + p);
+      var url = new NodeURL(server() + p);
       var lib = url.protocol === "https:" ? https : http;
       var headers = { authorization: "Bearer " + store("vs_key") };
       var size = 0;
