@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { languageOf, shortCode } from "@/lib/languages";
-import { CAPTION_FONTS, CAPTION_STYLES, resolveStyle, styleOf, type CaptionCustom } from "@/lib/captionStyles";
+import { CAPTION_FONTS, CAPTION_STYLES, resolveStyle, SAFE_ZONES, styleOf, type CaptionCustom, type SafeZoneId } from "@/lib/captionStyles";
 import StyledCaption from "@/components/StyledCaption";
 import "@/app/caption-styles.css";
 
@@ -38,13 +38,15 @@ function LiveCaption({ video, cues, styleId, custom, portrait, view, onMove }: {
   if (!c) return null;
   const main = view === "en" ? c.en : c.ta;
   if (!main.trim()) return null;
-  const { position, offset, x, y } = resolveStyle(styleId, custom, portrait);
+  const { position, offset, x, y, safe } = resolveStyle(styleId, custom, portrait);
   const free = x !== undefined && y !== undefined;
-  // A dragged caption wraps within the frame: its box can be at most twice the distance to the nearer edge.
-  const place: React.CSSProperties = free ? { left: `${x * 100}%`, top: `${y * 100}%`, maxWidth: `${Math.min(92, 200 * Math.min(x, 1 - x))}%` }
-    : position === "top" ? { top: `${offset * 100}%`, bottom: "auto" }
-    : position === "middle" ? { top: "50%", bottom: "auto", transform: "translateY(-50%)" }
-    : { bottom: `${offset * 100}%` };
+  // Captions wrap inside the safe zone; a dragged one at most twice its distance to the nearer zone edge.
+  const pct = (n: number) => `${n * 100}%`;
+  const sides = { left: pct(safe.left), right: pct(safe.right) };
+  const place: React.CSSProperties = free ? { left: pct(x), top: pct(y), maxWidth: pct(Math.min(0.92, 2 * Math.min(x - safe.left, 1 - safe.right - x))) }
+    : position === "top" ? { ...sides, top: pct(offset), bottom: "auto" }
+    : position === "middle" ? { ...sides, top: pct((safe.top + 1 - safe.bottom) / 2), bottom: "auto", transform: "translateY(-50%)" }
+    : { ...sides, bottom: pct(offset) };
   const drag = (e: React.PointerEvent<HTMLDivElement>) => {
     const frame = video.current?.parentElement?.getBoundingClientRect();
     if (!frame) return;
@@ -93,6 +95,8 @@ export default function Editor({ initial }: { initial: Job }) {
   const [styleId, setStyleId] = useState(initial.captionStyle || "minimal");
   const [custom, setCustom] = useState<CaptionCustom>(initial.captionCustom ?? {});
   const [portrait, setPortrait] = useState(false);
+  const [ratio, setRatio] = useState(16 / 9); // the video's own shape, so preview positions match the MP4
+  const [showZones, setShowZones] = useState(false);
   const language = languageOf(job.language);
   const short = shortCode(job.language);
   const video = useRef<HTMLVideoElement>(null);
@@ -251,9 +255,10 @@ export default function Editor({ initial }: { initial: Job }) {
                 <label title="Background"><input type="checkbox" checked={!!look.box} onChange={(e) => tweak({ box: e.target.checked ? hex(look.box, "#0b0b0b") : null })} />Box{look.box && <input type="color" value={hex(look.box, "#0b0b0b")} onChange={(e) => tweak({ box: e.target.value })} />}</label>
                 <span className="canvas-hint">Drag the subtitle to move it</span>
               </div>
-            <div className="player">
+            <div className="player" style={{ aspectRatio: ratio, width: `min(100%, ${(72 * ratio).toFixed(2)}vh)` }}>
               <video ref={video} src={`/api/jobs/${job.id}/media`} controls preload="metadata" onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)}
-                onLoadedMetadata={(e) => setPortrait(e.currentTarget.videoHeight > e.currentTarget.videoWidth)} />
+                onLoadedMetadata={(e) => { const v = e.currentTarget; setPortrait(v.videoHeight > v.videoWidth); if (v.videoWidth && v.videoHeight) setRatio(v.videoWidth / v.videoHeight); }} />
+              {showZones && (["top", "right", "bottom", "left"] as const).map((k) => <i key={k} className={`zone zone-${k}`} style={{ [k === "top" || k === "bottom" ? "height" : "width"]: `${look.safe[k] * 100}%` }} />)}
               <LiveCaption video={video} cues={cues} styleId={styleId} custom={custom} portrait={portrait} view={view} onMove={(x, y) => tweak({ x, y })} />
             </div>
             </>
@@ -340,6 +345,17 @@ export default function Editor({ initial }: { initial: Job }) {
                     ))}
                   </div>
                 </div>
+                <label>Safe zone
+                  <select value={custom.safe ?? "none"} onChange={(e) => tweak({ safe: e.target.value as SafeZoneId, safeCustom: e.target.value === "custom" ? custom.safeCustom ?? { ...SAFE_ZONES.custom.m } : undefined })}>
+                    {Object.entries(SAFE_ZONES).map(([id, z]) => <option key={id} value={id}>{z.name}</option>)}
+                  </select>
+                </label>
+                <label className="cz-check"><input type="checkbox" checked={showZones} onChange={(e) => setShowZones(e.target.checked)} /> Show safe zones on the video</label>
+                {custom.safe === "custom" && (["top", "bottom", "left", "right"] as const).map((k) => (
+                  <label key={k}>Keep clear: {k} <span className="cz-val">{Math.round(look.safe[k] * 100)}%</span>
+                    <input type="range" min={0} max={0.4} step={0.01} value={look.safe[k]} onChange={(e) => tweak({ safeCustom: { ...look.safe, [k]: +e.target.value } })} />
+                  </label>
+                ))}
                 {look.position !== "middle" && (
                   <label>Distance from {look.position} <span className="cz-val">{Math.round(look.offset * 100)}%</span>
                     <input type="range" min={0.02} max={0.45} step={0.01} value={look.offset} onChange={(e) => tweak({ offset: +e.target.value })} />

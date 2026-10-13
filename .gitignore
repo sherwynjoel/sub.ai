@@ -55,3 +55,7 @@ next-env.d.ts
 
 # built plugin + fonts zip (rebuilt per deployment by plugin/build.ps1)
 /public/downloads/
+
+# Third-party Motion Graphics Templates: licensed designs, kept out of this public repo (build.ps1 needs plugin/templates locally)
+/templates/
+/plugin/templates/

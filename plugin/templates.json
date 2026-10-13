@@ -1,0 +1,275 @@
+[
+ {
+  "id": "butter-up",
+  "name": "Butter Up",
+  "file": "butter-up.mogrt",
+  "text": "Butter Up",
+  "color": null,
+  "fonts": [
+   "Satisfy-Regular"
+  ],
+  "credit": "",
+  "w": 1920,
+  "h": 1080
+ },
+ {
+  "id": "cracked",
+  "name": "Cracked",
+  "file": "cracked.mogrt",
+  "text": "TXT",
+  "color": null,
+  "fonts": [
+   "Coolvetica-Regular"
+  ],
+  "credit": "",
+  "w": 1920,
+  "h": 1080
+ },
+ {
+  "id": "energetic-1-by-creative-sparrow-graphics",
+  "name": "Energetic 1",
+  "file": "energetic-1-by-creative-sparrow-graphics.mogrt",
+  "text": "Text",
+  "color": "Text Color",
+  "fonts": [
+   "Poppins-ExtraBold"
+  ],
+  "credit": "Creative Sparrow Graphics",
+  "w": 2560,
+  "h": 1440
+ },
+ {
+  "id": "energetic-2-by-creative-sparrow-graphics",
+  "name": "Energetic 2",
+  "file": "energetic-2-by-creative-sparrow-graphics.mogrt",
+  "text": "Text",
+  "color": "Text Color",
+  "fonts": [
+   "Poppins-ExtraBold"
+  ],
+  "credit": "Creative Sparrow Graphics",
+  "w": 2560,
+  "h": 1440
+ },
+ {
+  "id": "energetic-3-by-creative-sparrow-graphics",
+  "name": "Energetic 3",
+  "file": "energetic-3-by-creative-sparrow-graphics.mogrt",
+  "text": "Text",
+  "color": "Text Color",
+  "fonts": [
+   "Poppins-ExtraBold"
+  ],
+  "credit": "Creative Sparrow Graphics",
+  "w": 2560,
+  "h": 1440
+ },
+ {
+  "id": "god-rays-text-effect-by-creative-sparrow-graphics",
+  "name": "God Rays Text Effect",
+  "file": "god-rays-text-effect-by-creative-sparrow-graphics.mogrt",
+  "text": "Text",
+  "color": "Text Color",
+  "fonts": [
+   "HagridTrial-Regular"
+  ],
+  "credit": "Creative Sparrow Graphics",
+  "w": 2560,
+  "h": 1440
+ },
+ {
+  "id": "santhosham",
+  "name": "Santhosham",
+  "file": "santhosham.mogrt",
+  "text": "Santhosham",
+  "color": null,
+  "fonts": [
+   "Coolvetica-Regular"
+  ],
+  "credit": "",
+  "w": 1920,
+  "h": 1080
+ },
+ {
+  "id": "text-break",
+  "name": "Text Break",
+  "file": "text-break.mogrt",
+  "text": "break Glass Effect",
+  "color": null,
+  "fonts": [
+   "Impact"
+  ],
+  "credit": "Creative Sparrow Graphics",
+  "w": 3840,
+  "h": 2160
+ },
+ {
+  "id": "typewriter-01",
+  "name": "Typewriter 01",
+  "file": "typewriter-01.mogrt",
+  "text": "Text 01",
+  "color": "Color",
+  "fonts": [
+   "Roboto-Black"
+  ],
+  "credit": "",
+  "w": 1920,
+  "h": 1080
+ },
+ {
+  "id": "typewriter-03",
+  "name": "Typewriter 03",
+  "file": "typewriter-03.mogrt",
+  "text": "Text 01",
+  "color": "Color",
+  "fonts": [
+   "Roboto-Black"
+  ],
+  "credit": "",
+  "w": 1920,
+  "h": 1080
+ },
+ {
+  "id": "typewriter-04",
+  "name": "Typewriter 04",
+  "file": "typewriter-04.mogrt",
+  "text": "Text 01",
+  "color": "Color",
+  "fonts": [
+   "Roboto-Black"
+  ],
+  "credit": "",
+  "w": 1920,
+  "h": 1080
+ },
+ {
+  "id": "typewriter-06",
+  "name": "Typewriter 06",
+  "file": "typewriter-06.mogrt",
+  "text": "Text 01",
+  "color": "Color",
+  "fonts": [
+   "Roboto-Black"
+  ],
+  "credit": "",
+  "w": 1920,
+  "h": 1080
+ },
+ {
+  "id": "typewriter-07",
+  "name": "Typewriter 07",
+  "file": "typewriter-07.mogrt",
+  "text": "Text 01",
+  "color": "Color",
+  "fonts": [
+   "Roboto-Black"
+  ],
+  "credit": "",
+  "w": 1920,
+  "h": 1080
+ },
+ {
+  "id": "typewriter-08",
+  "name": "Typewriter 08",
+  "file": "typewriter-08.mogrt",
+  "text": "Text 01",
+  "color": "Color",
+  "fonts": [
+   "Roboto-Black"
+  ],
+  "credit": "",
+  "w": 1920,
+  "h": 1080
+ },
+ {
+  "id": "typewriter-09",
+  "name": "Typewriter 09",
+  "file": "typewriter-09.mogrt",
+  "text": "Text 01",
+  "color": "Color",
+  "fonts": [
+   "Roboto-Black"
+  ],
+  "credit": "",
+  "w": 1920,
+  "h": 1080
+ },
+ {
+  "id": "typewriter-10",
+  "name": "Typewriter 10",
+  "file": "typewriter-10.mogrt",
+  "text": "Text 01",
+  "color": "Color",
+  "fonts": [
+   "Roboto-Black"
+  ],
+  "credit": "",
+  "w": 1920,
+  "h": 1080
+ },
+ {
+  "id": "typewriter-11",
+  "name": "Typewriter 11",
+  "file": "typewriter-11.mogrt",
+  "text": "Text 01",
+  "color": "Color",
+  "fonts": [
+   "Roboto-Black"
+  ],
+  "credit": "",
+  "w": 1920,
+  "h": 1080
+ },
+ {
+  "id": "typewriter-12",
+  "name": "Typewriter 12",
+  "file": "typewriter-12.mogrt",
+  "text": "Text 01",
+  "color": "Color",
+  "fonts": [
+   "Roboto-Black"
+  ],
+  "credit": "",
+  "w": 1920,
+  "h": 1080
+ },
+ {
+  "id": "typewriter-13",
+  "name": "Typewriter 13",
+  "file": "typewriter-13.mogrt",
+  "text": "Text 01",
+  "color": "Color",
+  "fonts": [
+   "Roboto-Black"
+  ],
+  "credit": "",
+  "w": 1920,
+  "h": 1080
+ },
+ {
+  "id": "typewriter-14",
+  "name": "Typewriter 14",
+  "file": "typewriter-14.mogrt",
+  "text": "Text 01",
+  "color": "Color",
+  "fonts": [
+   "Roboto-Black"
+  ],
+  "credit": "",
+  "w": 1920,
+  "h": 1080
+ },
+ {
+  "id": "zoom-in",
+  "name": "Zoom In",
+  "file": "zoom-in.mogrt",
+  "text": "Zoomin",
+  "color": null,
+  "fonts": [
+   "Poppins-ExtraBold"
+  ],
+  "credit": "",
+  "w": 1920,
+  "h": 1080
+ }
+]

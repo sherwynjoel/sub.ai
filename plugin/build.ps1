@@ -25,7 +25,8 @@ if (-not (Test-Path $cert)) {
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
 New-Item -ItemType Directory $stage, (Join-Path $stage "CSXS") | Out-Null
 Copy-Item (Join-Path $PSScriptRoot "CSXS\manifest.xml") (Join-Path $stage "CSXS")
-foreach ($f in "index.html", "style.css", "subs.js", "main.js", "host.jsx") { Copy-Item (Join-Path $PSScriptRoot $f) $stage }
+foreach ($f in "index.html", "style.css", "subs.js", "main.js", "host.jsx", "templates.json") { Copy-Item (Join-Path $PSScriptRoot $f) $stage }
+Copy-Item -Recurse (Join-Path $PSScriptRoot "templates") (Join-Path $stage "templates") # Motion Graphics Templates for Premiere
 $main = Join-Path $stage "main.js"
 [IO.File]::WriteAllText($main, ([IO.File]::ReadAllText($main) -replace 'var DEFAULT_SERVER = "[^"]*"', "var DEFAULT_SERVER = `"$Server`""))
 

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { assColor, buildAss, CAPTION_STYLES, keywordIndex, resolveStyle, sanitizeCustom, styleOf, wordTimes } from "./captionStyles";
+import { assColor, buildAss, CAPTION_STYLES, keywordIndex, resolveStyle, SAFE_ZONES, sanitizeCustom, styleOf, wordTimes } from "./captionStyles";
 
 test("assColor converts #RRGGBB[AA] to ASS &HAABBGGRR with inverted alpha", () => {
   assert.equal(assColor("#FFC83D"), "&H003DC8FF&");
@@ -58,4 +58,28 @@ test("a dragged placement is clamped and reaches the MP4 as \\pos", () => {
   assert.deepEqual(sanitizeCustom({ x: 0.25, y: 1.7 }), { x: 0.25, y: 1 });
   const ass = buildAss([{ start: 0, end: 1, ta: "hi there", en: "" }], { styleId: "minimal", custom: { x: 0.25, y: 0.5 }, lang: "ta", width: 1920, height: 1080 });
   assert.match(ass, /\{\\an5\\pos\(480,540\)\}/);
+});
+
+test("safe zones keep captions inside the platform's clear area", () => {
+  // TikTok: bottom band and right-side buttons are excluded.
+  const s = resolveStyle("minimal", { safe: "tiktok" }, true);
+  assert.deepEqual(s.safe, SAFE_ZONES.tiktok.m);
+  assert.ok(s.offset >= SAFE_ZONES.tiktok.m.bottom, "bottom caption sits above the bottom band");
+  assert.ok(resolveStyle("minimal", { safe: "tiktok", position: "top" }, true).offset >= SAFE_ZONES.tiktok.m.top);
+  // A dragged caption is pulled back inside the zone.
+  const d = resolveStyle("minimal", { safe: "tiktok", x: 0.99, y: 0.99 }, true);
+  assert.ok(d.x! <= 1 - SAFE_ZONES.tiktok.m.right && d.y! <= 1 - SAFE_ZONES.tiktok.m.bottom);
+  // No zone: today's behaviour (7% side margins).
+  assert.deepEqual(resolveStyle("minimal", {}).safe, SAFE_ZONES.none.m);
+  // Custom margins are clamped; unknown presets dropped.
+  assert.deepEqual(sanitizeCustom({ safe: "custom", safeCustom: { top: 0.1, right: 0.9, bottom: -1, left: 0.05 } }), { safe: "custom", safeCustom: { top: 0.1, right: 0.4, bottom: 0, left: 0.05 } });
+  assert.deepEqual(sanitizeCustom({ safe: "myspace" }), {});
+  assert.deepEqual(resolveStyle("minimal", { safe: "custom", safeCustom: { top: 0.1, right: 0.2, bottom: 0.3, left: 0.05 } }).safe, { top: 0.1, right: 0.2, bottom: 0.3, left: 0.05 });
+  // The MP4 subtitles wrap inside the zone and sit above its bottom band.
+  const ass = buildAss([{ start: 0, end: 2, ta: "வணக்கம்", en: "Hello" }], { styleId: "minimal", custom: { safe: "tiktok" }, lang: "ta", width: 1080, height: 1920 });
+  const main = ass.split("\n").find((l) => l.startsWith("Style: Main"))!.split(",");
+  const [ml, mr, mv] = main.slice(-4, -1).map(Number);
+  assert.equal(ml, Math.round(1080 * SAFE_ZONES.tiktok.m.left));
+  assert.equal(mr, Math.round(1080 * SAFE_ZONES.tiktok.m.right));
+  assert.ok(mv >= Math.round(1920 * SAFE_ZONES.tiktok.m.bottom));
 });

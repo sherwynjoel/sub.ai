@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_LANGUAGE, LANGUAGES, languageOf } from "@/lib/languages";
+import { SAFE_ZONES } from "@/lib/captionStyles";
 
 type Job = {
   id: string; filename: string; durationSec: number; status: string; progress: number;
@@ -21,6 +22,7 @@ export default function Dashboard() {
   const [language, setLanguage] = useState<string>(DEFAULT_LANGUAGE);
   const [script, setScript] = useState("mixed");
   const [english, setEnglish] = useState(true);
+  const [safe, setSafe] = useState("none");
   const input = useRef<HTMLInputElement>(null);
 
   const load = useCallback(() => {
@@ -39,7 +41,7 @@ export default function Dashboard() {
     setError("");
     setUpload({ name: file.name, pct: 0 });
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `/api/upload?name=${encodeURIComponent(file.name)}&lang=${language}&script=${script}&english=${english ? 1 : 0}`);
+    xhr.open("POST", `/api/upload?name=${encodeURIComponent(file.name)}&lang=${language}&script=${script}&english=${english ? 1 : 0}&safe=${safe}`);
     xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
     xhr.upload.onprogress = (e) => e.lengthComputable && setUpload({ name: file.name, pct: Math.round((e.loaded / e.total) * 100) });
     xhr.onload = () => {
@@ -64,6 +66,9 @@ export default function Dashboard() {
             <option value="mixed">{languageOf(language).name} script, English words as English</option>
             <option value="roman">Roman letters{language === "ta-IN" ? " (Tanglish)" : ""}</option>
             <option value="native">{languageOf(language).name} script only</option>
+          </select>
+          <select value={safe} onChange={(e) => setSafe(e.target.value)} disabled={!!upload} aria-label="Safe zone">
+            {Object.entries(SAFE_ZONES).filter(([id]) => id !== "custom").map(([id, z]) => <option key={id} value={id}>{id === "none" ? "No safe zone" : `Safe zone: ${z.name}`}</option>)}
           </select>
           <span className="muted"><input type="checkbox" checked={english} onChange={(e) => setEnglish(e.target.checked)} disabled={!!upload} aria-label="Also English" /> + English</span>
         </span>

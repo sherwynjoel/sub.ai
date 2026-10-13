@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   serverExternalPackages: ["postgres"],
   // LAN testing: dev assets are blocked for non-localhost origins otherwise
-  allowedDevOrigins: ["192.168.1.2"],
+  allowedDevOrigins: ["192.168.1.2", "*.trycloudflare.com"], // LAN Mac and a Cloudflare quick tunnel for off-site testing
 };
 
 export default nextConfig;

@@ -17,7 +17,7 @@
 
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k) || ""; localStorage.setItem(k, v); } catch (e) { return ""; } }
   function server() { return (store("vs_server") || DEFAULT_SERVER).replace(/\/+$/, ""); }
-  function evalHost(script) { return new Promise(function (r) { cep.evalScript(script, r); }); }
+  var evalHost = function (script) { return new Promise(function (r) { cep.evalScript(script, r); }); };
   function show(id) { ["connect", "main"].forEach(function (s) { $(s).hidden = s !== id; }); $("settingsBtn").hidden = id !== "main"; }
   function say(text, cls) { $("msg").textContent = text; $("msg").className = cls || ""; }
 
@@ -41,6 +41,7 @@
         });
       });
       r.on("error", function (e) { reject(new Error("Can't reach " + url.host + ": " + e.message)); });
+      r.setTimeout(body && body.file ? 30 * 60e3 : 30e3, function () { r.destroy(new Error("no answer in time")); }); // a wrong address otherwise hangs silently
       if (body && body.file) {
         var sent = 0;
         fs.createReadStream(body.file)
@@ -54,7 +55,7 @@
   // ---------- account ----------
   function refreshAccount() {
     return api("GET", "/api/me").then(function (r) {
-      if (r.status !== 200) { show("connect"); $("key").value = ""; return false; }
+      if (r.status !== 200) { show("connect"); return false; }
       $("account").textContent = r.data.name + " · " + r.data.planName + " plan · " + Math.floor(r.data.secondsLeft / 60) + " min left";
       show("main");
       return true;
@@ -65,7 +66,8 @@
     store("vs_key", $("key").value.trim());
     if ($("server").value.trim()) store("vs_server", $("server").value.trim());
     $("connectMsg").textContent = "";
-    refreshAccount().then(function (ok) { if (!ok) $("connectMsg").textContent = "That key didn't work. Create a new one on the website and paste it again."; })
+    $("connectMsg").textContent = "Connecting to " + server() + "…";
+    refreshAccount().then(function (ok) { if (!ok) $("connectMsg").textContent = "That key was not accepted by " + server() + ". Check the website address matches the site where you created the key."; })
       .catch(function (e) { $("connectMsg").textContent = e.message; });
   };
   $("settingsBtn").onclick = function () { $("server").value = server(); show("connect"); };
@@ -105,10 +107,31 @@
     });
   }
 
+  // Motion Graphics Templates shipped with the panel (templates.json lists each one's text and colour control).
+  // CEP gives the folder as a file:// URL with %20 escapes; Node needs a plain path (and no leading slash before a Windows drive letter).
+  var EXT = decodeURI(cep.getSystemPath("extension")).replace(/^file:\/\//, "").replace(/^\/([A-Za-z]:)/, "$1");
+  var TEMPLATES = [];
+  try { TEMPLATES = JSON.parse(fs.readFileSync(path.join(EXT, "templates.json"), "utf8")); } catch (e) {}
+  function template() { var id = $("styleMain").value; for (var i = 0; i < TEMPLATES.length; i++) if (TEMPLATES[i].id === id) return TEMPLATES[i]; return null; }
+
   function placeOnTimeline(job, lang) {
     var lines = editing ? editing.custom.lines : undefined;
     var cues = window.Subs.placeCues(job.cues, picked.offset, picked.inS, picked.outS);
     if (!cues.length) return Promise.resolve("OK|No speech was found in this clip.");
+    var tpl = HOST === "PPRO" ? template() : null;
+    if (tpl) {
+      return loadLook(job.id).then(function (d) {
+        var l = d.look;
+        l.customColor = d.custom && d.custom.color; // only a colour the user picked overrides the template's own
+        var items = cues.map(function (c) {
+          var text = window.Subs.textOf(c, lang, "\r", lines);
+          return { start: c.start, end: c.end, text: l.caps ? text.toUpperCase() : l.lower ? text.toLowerCase() : text };
+        });
+        var arg = JSON.stringify(items).split("\u2028").join("\\u2028").split("\u2029").join("\\u2029");
+        var t = { path: path.join(EXT, "templates", tpl.file), text: tpl.text, color: tpl.color, w: tpl.w, h: tpl.h };
+        return evalHost("vs_pproAddGraphics(" + arg + ", " + JSON.stringify(l) + ", " + JSON.stringify(t) + ", " + JSON.stringify(picked.file) + ")");
+      });
+    }
     if (HOST === "PPRO") {
       var dir = path.join(os.tmpdir(), "vasanam");
       fs.mkdirSync(dir, { recursive: true });
@@ -131,7 +154,9 @@
     editing = null;
     say("");
     progress(0, "Uploading " + picked.name + "…");
-    api("POST", "/api/upload?name=" + encodeURIComponent(picked.name) + "&lang=" + $("language").value + "&script=" + $("script").value + "&english=" + ($("english").checked ? 1 : 0), { file: picked.file }, function (f) { progress(f * 40, "Uploading… " + Math.round(f * 100) + "%"); })
+    store("vs_style", $("styleMain").value);
+    store("vs_safe", $("safeMain").value);
+    api("POST", "/api/upload?name=" + encodeURIComponent(picked.name) + "&lang=" + $("language").value + "&script=" + $("script").value + "&english=" + ($("english").checked ? 1 : 0) + (HOST === "PPRO" ? "" : "&style=" + $("styleMain").value) + "&safe=" + $("safeMain").value, { file: picked.file }, function (f) { progress(f * 40, "Uploading… " + Math.round(f * 100) + "%"); })
       .then(function (r) {
         if (r.status !== 201) throw new Error(r.data.error || "Upload failed (" + r.status + ").");
         lastJob = r.data.id;
@@ -157,12 +182,13 @@
       .then(function (r) { if (r.status !== 200) throw new Error(r.data.error || "Couldn't load the caption look."); return r.data; });
   }
   function aeLook(l) {
-    return { font: PS_FONTS[l.font] || l.font, size: l.size, color: rgb(l.color), stroke: l.outline ? rgb(l.outline[0]) : null, strokeWidth: l.outline ? l.outline[1] : 0, position: l.position, offset: l.offset, x: l.x, y: l.y };
+    return { font: PS_FONTS[l.font] || l.font, size: l.size, color: rgb(l.color), stroke: l.outline ? rgb(l.outline[0]) : null, strokeWidth: l.outline ? l.outline[1] : 0, position: l.position, offset: l.offset, x: l.x, y: l.y, safe: l.safe };
   }
   function fill(sel, items, value) {
     sel.innerHTML = "";
     items.forEach(function (it) { var o = document.createElement("option"); o.value = it[0]; o.textContent = it[1]; sel.appendChild(o); });
     sel.value = value;
+    if (sel.selectedIndex < 0) sel.selectedIndex = 0; // a remembered choice that no longer exists must not leave the list blank
   }
   function showLook(d) {
     editing.styleId = d.styleId;
@@ -173,10 +199,13 @@
     $("color").value = d.look.color.slice(0, 7);
     $("accent").value = (d.look.accent || "#ffe14d").slice(0, 7);
     $("position").value = d.look.position;
+    fill($("safe"), (d.safeZones || []).map(function (z) { return [z.id, z.name]; }), d.look.safeId || "none");
     $("lines").value = d.look.lines || "";
-    $("lookNote").textContent = HOST === "PPRO"
-      ? "Text, timing and lines go onto the caption track. Font, colour and position for captions are set in Premiere's Essential Graphics panel."
-      : "After Effects text layers get this font, size, colours, outline and position. Install the caption fonts (website → Plugin) to see the exact font.";
+    $("lookNote").textContent = HOST !== "PPRO"
+      ? "After Effects text layers get this font, size, colours, outline and position. Install the caption fonts (website → Plugin) to see the exact font."
+      : template()
+        ? "Premiere gets one animated text graphic per caption from the chosen template; Size and Position here move and scale them, Text colour overrides the template's colour when you change it. Style, font and highlight apply to the web editor and MP4."
+        : "Text, timing and lines go onto the caption track. Font, colour and position for captions are set in Premiere's Essential Graphics panel.";
   }
   function openEditor(job) {
     editing = { job: job, cues: job.cues.map(function (c) { return { start: c.start, end: c.end, ta: c.ta, en: c.en }; }), dirty: false, styleId: "", custom: {} };
@@ -221,6 +250,7 @@
   $("color").oninput = function () { tweak({ color: $("color").value }); };
   $("accent").oninput = function () { tweak({ accent: $("accent").value }); };
   $("position").onchange = function () { tweak({ position: $("position").value }); };
+  $("safe").onchange = function () { tweak({ safe: $("safe").value === "none" ? undefined : $("safe").value }); };
   $("lines").onchange = function () { tweak({ lines: $("lines").value ? +$("lines").value : undefined }); };
   $("saveBtn").onclick = function () {
     say("");
@@ -248,6 +278,51 @@
     Array.prototype.forEach.call($("lang").options, function (o) { o.disabled = !on && o.value !== "ta"; });
     if (!on) $("lang").value = "ta";
   };
+
+  // Style list for the main screen: Premiere picks a shipped template (or a plain caption track), After Effects the website looks. The last choice is remembered.
+  if (HOST === "PPRO") {
+    fill($("styleMain"), [["", "Plain captions (Premiere caption track)"]].concat(TEMPLATES.map(function (t) { return [t.id, t.name]; })), store("vs_style")); // plain captions until the user picks a template
+  } else {
+    api("GET", "/api/styles").then(function (r) {
+      if (r.status === 200) fill($("styleMain"), r.data.styles.map(function (x) { return [x.id, x.name + " · " + x.group]; }), store("vs_style") || r.data.defaultStyle);
+    }).catch(function () {});
+  }
+
+  // Premiere swallows Cmd/Ctrl+V/C/X/A inside panels unless the panel claims them (Mac virtual key codes, then Windows ones).
+  try {
+    cep.registerKeyEventsInterest(JSON.stringify([
+      { keyCode: 9, metaKey: true }, { keyCode: 8, metaKey: true }, { keyCode: 7, metaKey: true }, { keyCode: 0, metaKey: true },
+      { keyCode: 86, ctrlKey: true }, { keyCode: 67, ctrlKey: true }, { keyCode: 88, ctrlKey: true }, { keyCode: 65, ctrlKey: true },
+    ]));
+  } catch (e) {}
+
+  // Safe zone for new projects, chosen before generating (list in index.html, same ids as lib/captionStyles.ts); the last choice is remembered.
+  if (store("vs_safe")) $("safeMain").value = store("vs_safe");
+
+  // ---------- developer test mode ----------
+  // Only when <tmp>/vasanam-dev/ exists (never on customer machines): the panel runs commands written to
+  // cmd.json there and appends what happened, including every Premiere call and its answer, to log.txt.
+  var DEV = path.join(os.tmpdir(), "vasanam-dev");
+  if (fs.existsSync(DEV)) {
+    var log = function (line) { fs.appendFileSync(path.join(DEV, "log.txt"), new Date().toISOString().slice(11, 19) + " " + line + "\n"); };
+    var host = evalHost;
+    evalHost = function (script) { return host(script).then(function (r) { log("host " + script.slice(0, 60).replace(/\s+/g, " ") + " -> " + String(r).slice(0, 600)); return r; }); };
+    var watch = new MutationObserver(function () { if ($("msg").textContent) log("msg " + $("msg").textContent); });
+    watch.observe($("msg"), { childList: true, characterData: true, subtree: true });
+    log("dev mode on, " + HOST + ", v" + (document.querySelector(".logo small") || {}).textContent);
+    setInterval(function () {
+      var f = path.join(DEV, "cmd.json");
+      if (!fs.existsSync(f)) return;
+      var c; try { c = JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return; }
+      fs.unlinkSync(f);
+      log("cmd " + JSON.stringify(c));
+      if (c.server) store("vs_server", c.server);
+      if (c.key) store("vs_key", c.key);
+      if (c.connect) refreshAccount().then(function (ok) { log("connected " + ok + " " + $("account").textContent); });
+      Object.keys(c.set || {}).forEach(function (id) { var el = $(id); if (el.type === "checkbox") el.checked = !!c.set[id]; else el.value = c.set[id]; if (el.onchange) el.onchange(); });
+      ["pick", "go", "place"].forEach(function (a) { if (c[a]) $(a === "pick" ? "pickBtn" : a === "go" ? "goBtn" : "placeBtn").onclick(); });
+    }, 1500);
+  }
 
   // ---------- start ----------
   $("server").value = server();
