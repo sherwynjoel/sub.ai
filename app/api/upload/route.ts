@@ -9,6 +9,7 @@ import { db, jobs, users } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { probe, STORAGE } from "@/lib/media";
 import { DEFAULT_LANGUAGE, isLanguage } from "@/lib/languages";
+import { SCRIPTS, type Script } from "@/lib/ai/shared";
 import { effectivePlan, PLANS, secondsLeft } from "@/lib/plans";
 
 const MAX_BYTES = 4 * 1024 ** 3; // 4 GB
@@ -24,6 +25,8 @@ export async function POST(req: Request) {
   const name = (q.get("name") || "video").slice(0, 200);
   const lang = q.get("lang") ?? DEFAULT_LANGUAGE;
   if (!isLanguage(lang)) return json({ error: "Unsupported subtitle language." }, 400);
+  const script = (SCRIPTS as readonly string[]).includes(q.get("script") ?? "") ? (q.get("script") as Script) : "mixed";
+  const withEnglish = q.get("english") !== "0";
   const dir = join(STORAGE, "uploads", u.id);
   await mkdir(dir, { recursive: true });
   const path = join(dir, randomUUID() + (extname(name).toLowerCase().replace(/[^.a-z0-9]/g, "") || ".mp4"));
@@ -60,6 +63,6 @@ export async function POST(req: Request) {
     return json({ error: `This video is ${Math.ceil(duration / 60)} min but you have ${Math.floor(secondsLeft(u) / 60)} min left. Upgrade to continue.` }, 402);
   }
   const mime = req.headers.get("content-type")?.startsWith("video/") || req.headers.get("content-type")?.startsWith("audio/") ? req.headers.get("content-type")! : "video/mp4";
-  const [job] = await db.insert(jobs).values({ userId: u.id, filename: name, filePath: path, durationSec: duration, mime, language: lang }).returning();
+  const [job] = await db.insert(jobs).values({ userId: u.id, filename: name, filePath: path, durationSec: duration, mime, language: lang, script, withEnglish }).returning();
   return json({ id: job.id, durationSec: duration }, 201);
 }

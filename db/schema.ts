@@ -32,7 +32,9 @@ export const jobs = pgTable("jobs", {
   filename: text("filename").notNull(),
   filePath: text("file_path"), // null once purged
   mime: text("mime").notNull().default("video/mp4"),
-  language: text("language").notNull().default("ta-IN"), // subtitle language code, paired with English
+  language: text("language").notNull().default("ta-IN"), // subtitle language code
+  script: text("script").notNull().default("mixed"), // how the main line is written: mixed | roman | native (lib/ai/shared.ts)
+  withEnglish: boolean("with_english").notNull().default(true), // add an English line
   durationSec: real("duration_sec").notNull(),
   status: text("status").notNull().default("queued"), // queued | processing | done | failed
   progress: integer("progress").notNull().default(0),

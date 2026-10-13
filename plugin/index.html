@@ -7,7 +7,7 @@
 </head>
 <body>
   <header>
-    <span class="logo"><i></i>Vasanam <small class="muted">v1.0.2</small></span> <!-- shortcut: keep in step with CSXS/manifest.xml by hand, automate in build.ps1 if it drifts -->
+    <span class="logo"><i></i>Vasanam <small class="muted">v1.0.3</small></span> <!-- shortcut: keep in step with CSXS/manifest.xml by hand, automate in build.ps1 if it drifts -->
     <button id="settingsBtn" class="link" hidden>Account</button>
   </header>
 
@@ -60,6 +60,14 @@
         <option value="sat-IN">Santali</option>
       </select>
     </label>
+    <label>Write it as
+      <select id="script">
+        <option value="mixed">Native script, English words as English</option>
+        <option value="roman">Roman letters (Tanglish)</option>
+        <option value="native">Native script only</option>
+      </select>
+    </label>
+    <label class="row"><input type="checkbox" id="english" checked> Also an English line</label>
     <label>Put on the timeline
       <select id="lang">
         <option value="ta">That language</option>

@@ -13,10 +13,10 @@ const schema = {
 };
 
 /** Gemini hears the audio directly and returns timed <language> + English cues in a single call. */
-export const gemini: Provider = async (audio, dur, cfg, lang) => {
+export const gemini: Provider = async (audio, dur, cfg, lang, want) => {
   const key = await getSecret("GEMINI_API_KEY");
   if (!key) throw new Error("Gemini API key is not set. Add it in Admin → Connections.");
-  const prompt = `${subtitleRules(languageOf(lang).name)}
+  const prompt = `${subtitleRules(languageOf(lang).name, want.script)}
 Listen to this ${dur.toFixed(1)}-second audio clip and return subtitle cues for ALL speech, in order.
 "start"/"end" are seconds from the start of this clip (decimals allowed, between 0 and ${dur.toFixed(1)}), aligned tightly to when the words are spoken. Return [] if there is no speech.`;
   const data = await postJson(

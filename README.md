@@ -39,9 +39,12 @@ Keys saved in the admin panel override `.env.local`. The encryption key is `SETT
 | Provider | How it works | Keys | Notes |
 |---|---|---|---|
 | `gemini` (default) | One call: hears the audio, returns Tamil + English cues | `GEMINI_API_KEY` | Best value. `gemini-2.5-flash`; try `gemini-2.5-pro` for hard audio |
+| `sarvam` | Saaras v4 via the Batch STT API, twice per chunk: code-mix (Tamil as spoken) and translate (English), paired by timestamp | `SARVAM_API_KEY` | Built for Indian languages. Whole chunks are sent, nothing is cut at silences; no per-character translation billing. Saaras timestamps are 10–30 s windows, so cue times inside a window are spread by text length (about ±1 s). If Sarvam was selected before, re-save AI settings in `/admin` so the model becomes `saaras:v4` |
 | `openai` | Whisper timings → GPT writes Tamil + English | `OPENAI_API_KEY` | `whisper-1` + `gpt-4.1-mini` |
 | `groq` | Fast Whisper → Llama translation | `GROQ_API_KEY` | Cheapest STT; Tamil translation weaker |
 | `custom` | Any OpenAI-compatible API (OpenRouter, Together, local) | `AI_BASE_URL`, `AI_API_KEY` | |
+
+Each project picks how its main line is written — mixed script (English words stay English), Roman letters (Tanglish), or native script only — and whether to add an English line (`script` and `english` on `/api/upload`, same controls in the panel). Sarvam runs one Saaras pass per line, so a project without English costs half.
 
 Adding a provider = one file in `lib/ai/` exporting a `Provider`, plus one line in `transcribe()` (`lib/ai/index.ts`).
 Each project stores which provider/model made it, so you can compare quality in `/admin`.

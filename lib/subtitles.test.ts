@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toSrt, toVtt, mergeChunks, splitLine, divide, shiftCues, breakLines } from "./subtitles";
+import { toSrt, toVtt, mergeChunks, pairChunks, splitLine, layoutCue, divide, shiftCues, breakLines } from "./subtitles";
 import { secondsLeft, effectivePlan } from "./plans";
 
 const cue = (start: number, end: number, ta = "வணக்கம்", en = "Hello") => ({ start, end, ta, en });
@@ -26,6 +26,29 @@ test("quota falls back to trial after period ends", () => {
   assert.equal(secondsLeft({ plan: "free", secondsUsed: 99999, periodEnd: null }, now), 0);
 });
 
+test("pairChunks matches the two Saaras passes by time and never leaves a cue with one language", () => {
+  const p = (start: number, end: number, text: string) => ({ start, end, text });
+  // Same cuts: paired one to one, native timing kept.
+  assert.deepEqual(pairChunks([p(0, 2, "வணக்கம்"), p(2, 4, "நன்றி")], [p(0, 2.1, "Hello"), p(2.1, 4, "Thanks")]),
+    [{ start: 0, end: 2, ta: "வணக்கம்", en: "Hello" }, { start: 2, end: 4, ta: "நன்றி", en: "Thanks" }]);
+  // English came back as one phrase over two native ones: its words are shared by duration.
+  assert.deepEqual(pairChunks([p(0, 1, "அ"), p(1, 4, "ஆ")], [p(0, 4, "one two three four")]),
+    [{ start: 0, end: 1, ta: "அ", en: "one" }, { start: 1, end: 4, ta: "ஆ", en: "two three four" }]);
+  // Native has fewer phrases: English timing leads and the native words are shared.
+  assert.deepEqual(pairChunks([p(0, 4, "அ ஆ")], [p(0, 2, "a"), p(2, 4, "b")]),
+    [{ start: 0, end: 2, ta: "அ", en: "a" }, { start: 2, end: 4, ta: "ஆ", en: "b" }]);
+  // Fewer words than phrases: the short cue folds into its neighbour instead of showing one language.
+  const folded = pairChunks([p(0, 1, "அ"), p(1, 2, "ஆ"), p(2, 3, "இ")], [p(0, 3, "x y")]);
+  assert.ok(folded.every((c) => c.ta && c.en), JSON.stringify(folded));
+  assert.equal(folded.map((c) => c.ta).join(" "), "அ ஆ இ");
+  assert.equal(folded.map((c) => c.en).join(" "), "x y");
+  // One side empty (music): nothing to pair, nothing invented.
+  assert.deepEqual(pairChunks([], []), []);
+  // No English pass was run: every phrase stays its own cue with an empty English line, nothing folds together.
+  assert.deepEqual(pairChunks([p(0, 2, "அ"), p(2, 4, "ஆ")], []), [{ start: 0, end: 2, ta: "அ", en: "" }, { start: 2, end: 4, ta: "ஆ", en: "" }]);
+  assert.deepEqual(layoutCue({ start: 0, end: 4, ta: "அ ஆ. இ ஈ.", en: "" }).map((c) => [c.ta, c.en]), [["அ ஆ.", ""], ["இ ஈ.", ""]]);
+});
+
 test("splitLine breaks long lines at sentences then words and shares the time by length", () => {
   const parts = splitLine("Starting from 499. So comment Stree, or check the link in the bio for every material.", 30, 37);
   assert.ok(parts.every((p) => p.text.length <= 42), JSON.stringify(parts));
@@ -33,6 +56,17 @@ test("splitLine breaks long lines at sentences then words and shares the time by
   assert.equal(parts[0].start, 30);
   assert.ok(Math.abs(parts.at(-1)!.end - 37) < 1e-9);
   assert.deepEqual(splitLine("Short line.", 1, 2), [{ start: 1, end: 2, text: "Short line." }]);
+});
+
+test("layoutCue pairs sentences, shares words where the passes punctuate differently, and keeps the window's time", () => {
+  const out = layoutCue({ start: 10, end: 20, ta: "நான் சொல்லட்டுமா? மறக்காம page-ஐ follow பண்ணிக்கோங்க.", en: "Shall I tell you? Don't forget to follow our page." });
+  assert.deepEqual(out.map((c) => [c.ta, c.en]), [["நான் சொல்லட்டுமா?", "Shall I tell you?"], ["மறக்காம page-ஐ follow பண்ணிக்கோங்க.", "Don't forget to follow our page."]]);
+  assert.equal(out[0].start, 10);
+  assert.ok(Math.abs(out.at(-1)!.end - 20) < 1e-9);
+  // One Tamil sentence came back as two English ones: the words are shared, nothing dropped, both languages everywhere.
+  const mixed = layoutCue({ start: 0, end: 4, ta: "ஒன்று இரண்டு மூன்று நான்கு.", en: "One two. Three four." });
+  assert.equal(mixed.map((c) => c.en).join(" "), "One two. Three four.");
+  assert.ok(mixed.every((c) => c.ta && c.en), JSON.stringify(mixed));
 });
 
 test("divide shares a translation across pieces by weight, never leaving a piece empty", () => {

@@ -62,6 +62,41 @@ export function mergeChunks(chunks: { offset: number; duration: number; cues: Cu
     .sort((a, b) => a.start - b.start);
 }
 
+/** A timestamped phrase from a speech model. */
+export type Piece = { start: number; end: number; text: string };
+
+/**
+ * Pair the native-script phrases with the English phrases of the same audio by time. Where the two runs cut
+ * differently, the side with more phrases keeps its timing and the other side's words are shared across them by duration.
+ */
+export function pairChunks(native: Piece[], english: Piece[], tolerance = 0.5): Cue[] {
+  // Only one pass was run (or one side heard nothing): nothing to pair.
+  if (!english.length) return native.map((p) => ({ start: p.start, end: p.end, ta: p.text, en: "" }));
+  if (!native.length) return english.map((p) => ({ start: p.start, end: p.end, ta: "", en: p.text }));
+  const cues: Cue[] = [];
+  for (let i = 0, j = 0; i < native.length || j < english.length; ) {
+    const n: Piece[] = [], e: Piece[] = [];
+    // Grow the group until both sides end at the same moment (within the tolerance) or run out.
+    do {
+      if (j >= english.length || (i < native.length && native[i].end <= english[j].end)) n.push(native[i++]);
+      else e.push(english[j++]);
+    } while ((i < native.length || j < english.length) && !(n.length && e.length && Math.abs(n.at(-1)!.end - e.at(-1)!.end) < tolerance));
+    const [lead, other, nativeLeads] = n.length >= e.length ? [n, e, true] : [e, n, false];
+    const shares = divide(other.map((p) => p.text).join(" "), lead.map((p) => p.end - p.start));
+    const group = lead.map((p, k) => ({ start: p.start, end: p.end, ta: nativeLeads ? p.text : shares[k], en: nativeLeads ? shares[k] : p.text }));
+    // Fewer words than phrases leaves a share empty: fold that cue into its neighbour so every cue has both languages.
+    for (let k = 0; k < group.length; k++) {
+      const c = group[k], next = group[k + 1], prev = cues.at(-1);
+      const join = (a: string, b: string) => [a, b].filter(Boolean).join(" ");
+      if (c.ta && c.en) cues.push(c);
+      else if (next) { next.start = c.start; next.ta = join(c.ta, next.ta); next.en = join(c.en, next.en); }
+      else if (prev) { prev.end = c.end; prev.ta = join(prev.ta, c.ta); prev.en = join(prev.en, c.en); }
+      else cues.push(c);
+    }
+  }
+  return cues;
+}
+
 /**
  * Split one long transcribed line into subtitle-sized pieces (≤ max chars), breaking at sentence and comma
  * boundaries first, then between words; each piece gets a share of [start, end] by its length.
@@ -80,6 +115,28 @@ export function splitLine(text: string, start: number, end: number, max = 42) {
     const s = t;
     t += ((end - start) * p.length) / total;
     return { start: s, end: t, text: p };
+  });
+}
+
+/**
+ * Readable cues from one native/English pair spanning [start, end] (a speech model's 10–30 s window).
+ * Both texts are laid out by length, their sentences paired like windows are, each native sentence cut into
+ * ≤ max-char pieces with the English words shared across them, and the pieces timed by length on one clock.
+ * shortcut: time inside a window is spread by text length (±1–2 s on slow passages); upgrade to word timestamps if Sarvam adds them.
+ */
+export function layoutCue(c: Cue, max = 42): Cue[] {
+  const sentences = (t: string) => splitLine(t, c.start, c.end, 2000).filter((p) => p.text); // breaks only at sentence ends
+  const pieces = pairChunks(sentences(c.ta), sentences(c.en), (c.end - c.start) * 0.15).flatMap((s) => {
+    const ps = splitLine(s.ta, 0, 1, max);
+    const shares = divide(s.en, ps.map((p) => p.text.length));
+    return ps.map((p, k) => ({ ta: p.text, en: shares[k] }));
+  });
+  const total = pieces.reduce((n, p) => n + p.ta.length, 0) || 1;
+  let t = c.start;
+  return pieces.map((p) => {
+    const s = t;
+    t += ((c.end - c.start) * p.ta.length) / total;
+    return { start: s, end: t, ta: p.ta, en: p.en };
   });
 }
 

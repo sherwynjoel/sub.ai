@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { and, eq, lt, isNotNull, sql } from "drizzle-orm";
 import { db, jobs, settings, users, type Cue } from "./db";
-import { getAiConfig, transcribe } from "./lib/ai";
+import { getAiConfig, transcribe, type Script } from "./lib/ai";
 import { extractChunks, probe } from "./lib/media";
 import { renderStyled } from "./lib/render";
 import { mergeChunks } from "./lib/subtitles";
@@ -42,7 +42,7 @@ async function processJob(job: typeof jobs.$inferSelect) {
     const queue = [...plan];
     await Promise.all(Array.from({ length: PARALLEL_CHUNKS }, async () => {
       for (let c; (c = queue.shift()); ) {
-        const cues = await transcribe(await readFile(c.f), c.duration, cfg, job.language).catch((e) => {
+        const cues = await transcribe(await readFile(c.f), c.duration, cfg, job.language, { script: job.script as Script, english: job.withEnglish }).catch((e) => {
           queue.length = 0; // stop the other lanes too
           throw e;
         });

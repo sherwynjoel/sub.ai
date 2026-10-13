@@ -1,4 +1,4 @@
-import { postJson, subtitleRules, type AiConfig } from "./shared";
+import { postJson, subtitleRules, type AiConfig, type Want } from "./shared";
 import { languageOf } from "@/lib/languages";
 import type { Cue } from "@/db";
 
@@ -6,7 +6,7 @@ import type { Cue } from "@/db";
  * Any OpenAI-compatible API (OpenAI, Groq, OpenRouter, local servers):
  * 1) Whisper-style transcription gives timed segments, 2) a chat model writes <language> + English for each.
  */
-export async function openaiCompatible(audio: Buffer, _dur: number, cfg: AiConfig, api: { baseUrl: string; apiKey: string }, lang: string): Promise<Cue[]> {
+export async function openaiCompatible(audio: Buffer, _dur: number, cfg: AiConfig, api: { baseUrl: string; apiKey: string }, lang: string, want: Want): Promise<Cue[]> {
   if (!api.baseUrl || !api.apiKey) throw new Error(`API key or URL for "${cfg.provider}" is not set. Add it in Admin → Connections.`);
   const auth = { authorization: `Bearer ${api.apiKey}` };
 
@@ -26,7 +26,7 @@ export async function openaiCompatible(audio: Buffer, _dur: number, cfg: AiConfi
       temperature: 0.2,
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: `${subtitleRules(languageOf(lang).name)}\nYou receive transcript segments (speech-to-text, may contain errors — fix obvious ones). Reply with JSON {"cues":[{"i":number,"ta":string,"en":string}]} with exactly one entry per input segment.` },
+        { role: "system", content: `${subtitleRules(languageOf(lang).name, want.script)}\nYou receive transcript segments (speech-to-text, may contain errors — fix obvious ones). Reply with JSON {"cues":[{"i":number,"ta":string,"en":string}]} with exactly one entry per input segment.` },
         { role: "user", content: JSON.stringify(segs.map((s, i) => ({ i, text: s.text.trim() }))) },
       ],
     }),

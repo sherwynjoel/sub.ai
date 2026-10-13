@@ -1,66 +1,58 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
-import type { Cue } from "@/db";
-import { cutAudio, findSpeech } from "@/lib/media";
 import { getSecret } from "@/lib/secrets";
-import { divide, splitLine } from "@/lib/subtitles";
-import { postJson, type Provider } from "./shared";
+import { layoutCue, pairChunks, type Piece } from "@/lib/subtitles";
+import { postJson, type Provider, type Script } from "./shared";
 
-const API = "https://api.sarvam.ai";
-const LANES = 4; // speech lines in flight per chunk
+const API = "https://api.sarvam.ai/speech-to-text/job/v1";
 
 /**
- * Sarvam AI (built for Indian languages). Its REST speech-to-text takes at most 30 s and returns coarse timing,
- * so the chunk is cut at pauses into subtitle lines; each line is transcribed in code-mix mode (Tanglish, Hinglish and the like stay as spoken)
- * and translated into the other language.
+ * Sarvam AI (built for Indian languages). Saaras is run twice on the whole chunk through the Batch API, which
+ * takes up to 2 h of audio and returns phrase-level timestamps, so nothing is cut at silences: once in code-mix
+ * mode (Tanglish, Hinglish and the like stay as spoken) and once in translate mode (English). The two are paired by time.
  */
-export const sarvam: Provider = async (audio, dur, cfg, lang) => {
+export const sarvam: Provider = async (audio, _dur, cfg, lang, want) => {
   const key = await getSecret("SARVAM_API_KEY");
   if (!key) throw new Error("No Sarvam API key saved. Add it in /admin → Connections.");
-  const headers = { "api-subscription-key": key };
-  const dir = await mkdtemp(join(tmpdir(), "sarvam-"));
-  try {
-    const src = join(dir, "chunk.mp3");
-    await writeFile(src, audio);
-    const lines = await findSpeech(src, dur);
-    const cues: Cue[][] = lines.map(() => []);
-    let next = 0;
-    await Promise.all(Array.from({ length: LANES }, async () => {
-      for (let i; (i = next++) < lines.length; ) {
-        const [start, end] = lines[i];
-        const form = new FormData();
-        form.append("file", new Blob([new Uint8Array(await cutAudio(src, start, end))], { type: "audio/wav" }), "line.wav");
-        form.append("model", cfg.sttModel);
-        form.append("mode", "codemix");
-        form.append("language_code", lang);
-        const stt = await postJson(`${API}/speech-to-text`, { headers, body: form });
-        const text = String(stt.transcript ?? "").trim();
-        if (!text) continue; // music or noise
-        // A line with no Indian-script letters is English speech: translate it into the project language instead.
-        const english = !/[^\x00-\x7F]/.test(text);
-        // A line can hold several sentences (no pauses under music). Translate whole sentences for context,
-        // then cut each into readable cues and share the translation across them.
-        const sentences = splitLine(text, start, end, 2000); // max 2000 = break only at sentence ends
-        const per = await Promise.all(sentences.map(async (s) => {
-          const tr = await postJson(`${API}/translate`, {
-            headers: { ...headers, "content-type": "application/json" },
-            body: JSON.stringify({
-              input: s.text,
-              source_language_code: english ? "en-IN" : lang,
-              target_language_code: english ? lang : "en-IN",
-              model: cfg.model,
-            }),
-          });
-          const pieces = splitLine(s.text, s.start, s.end);
-          const other = divide(String(tr.translated_text ?? "").trim(), pieces.map((p) => p.text.length));
-          return pieces.map((p, k) => ({ start: p.start, end: p.end, ta: english ? other[k] : p.text, en: english ? p.text : other[k] }));
-        }));
-        cues[i] = per.flat();
-      }
-    }));
-    return cues.flat();
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
+  const [native, english = []] = await Promise.all(passesFor(want.script, want.english).map((mode) => batch(audio, key, cfg.model, mode, lang)));
+  // Saaras windows are 10–30 s, so each paired window is cut into readable cues by sentence.
+  return pairChunks(native, english).flatMap((c) => layoutCue(c));
 };
+
+const MODE = { mixed: "codemix", roman: "translit", native: "transcribe" } as const;
+type Mode = (typeof MODE)[Script] | "translate";
+
+/** Saaras modes to run: one for the main line's script, plus translate when an English line is wanted. */
+export const passesFor = (script: Script, english: boolean): Mode[] => [MODE[script], ...(english ? ["translate" as const] : [])];
+
+/** One Batch STT job: create → upload → start → poll → download. Returns the timestamped phrases. */
+async function batch(audio: Buffer, key: string, model: string, mode: Mode, lang: string): Promise<Piece[]> {
+  const headers = { "api-subscription-key": key, "content-type": "application/json" };
+  const { job_id } = await postJson(API, { headers, body: JSON.stringify({ job_parameters: { model, mode, language_code: lang, with_timestamps: true, input_audio_codec: "mp3" } }) });
+  const up = await postJson(`${API}/upload-files`, { headers, body: JSON.stringify({ job_id, files: ["chunk.mp3"] }) });
+  // Sarvam's presigned URLs are Azure blobs; the blob-type header is what their own SDK sends.
+  const put = await fetch(up.upload_urls["chunk.mp3"].file_url, { method: "PUT", body: new Uint8Array(audio), headers: { "x-ms-blob-type": "BlockBlob", "content-type": "audio/mpeg" } });
+  if (!put.ok) throw new Error(`AI service error ${put.status}: upload to Sarvam failed`);
+  await postJson(`${API}/${job_id}/start`, { headers });
+  let status;
+  for (const t0 = Date.now(); ; ) {
+    await new Promise((r) => setTimeout(r, 3000));
+    status = await fetch(`${API}/${job_id}/status`, { headers }).then((r) => r.json()).catch(() => ({}));
+    if (status.job_state === "Completed") break;
+    if (status.job_state === "Failed" || Date.now() - t0 > 20 * 60e3) throw new Error(`AI service error: Sarvam job ${status.job_state ?? "timed out"}: ${status.error_message ?? ""}`);
+  }
+  const detail = status.job_details?.[0];
+  if (detail?.state !== "Success") throw new Error(`AI service error: Sarvam could not process the audio: ${detail?.error_message ?? detail?.state ?? "no result"}`);
+  const name = detail.outputs[0].file_name;
+  let dl;
+  for (let i = 1; ; i++) {
+    try { dl = await postJson(`${API}/download-files`, { headers, body: JSON.stringify({ job_id, files: [name] }) }); break; }
+    catch (e) { // the status endpoint says Completed a moment before the download endpoint agrees
+      if (i >= 5 || !/not in COMPLETED/.test(String(e))) throw e;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
+  const out = await fetch(dl.download_urls[name].file_url).then((r) => r.json());
+  const ts = out.timestamps ?? {};
+  return (ts.words ?? ts.chunks ?? []) // the phrases arrive under "words" (10–30 s windows), docs say "chunks"
+    .map((text: string, i: number): Piece => ({ start: ts.start_time_seconds[i], end: ts.end_time_seconds[i], text: String(text).trim() }))
+    .filter((p: Piece) => p.text);
+}

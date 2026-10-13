@@ -131,7 +131,7 @@
     editing = null;
     say("");
     progress(0, "Uploading " + picked.name + "…");
-    api("POST", "/api/upload?name=" + encodeURIComponent(picked.name) + "&lang=" + $("language").value, { file: picked.file }, function (f) { progress(f * 40, "Uploading… " + Math.round(f * 100) + "%"); })
+    api("POST", "/api/upload?name=" + encodeURIComponent(picked.name) + "&lang=" + $("language").value + "&script=" + $("script").value + "&english=" + ($("english").checked ? 1 : 0), { file: picked.file }, function (f) { progress(f * 40, "Uploading… " + Math.round(f * 100) + "%"); })
       .then(function (r) {
         if (r.status !== 201) throw new Error(r.data.error || "Upload failed (" + r.status + ").");
         lastJob = r.data.id;
@@ -240,6 +240,13 @@
       })
       .catch(function (e) { say(e.message, "error"); })
       .then(function () { $("placeBtn").disabled = false; });
+  };
+
+  // Without an English line, only "That language" can go on the timeline.
+  $("english").onchange = function () {
+    var on = $("english").checked;
+    Array.prototype.forEach.call($("lang").options, function (o) { o.disabled = !on && o.value !== "ta"; });
+    if (!on) $("lang").value = "ta";
   };
 
   // ---------- start ----------

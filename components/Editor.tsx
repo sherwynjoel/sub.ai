@@ -85,7 +85,8 @@ export default function Editor({ initial }: { initial: Job }) {
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
-  const [view, setView] = useState<View>("both");
+  const hasEnglish = initial.cues.some((c) => c.en); // projects made without an English line
+  const [view, setView] = useState<View>(hasEnglish ? "both" : "ta");
   const [now, setNow] = useState(0);
   const [lang, setLang] = useState<View>("ta");
   const [fmt, setFmt] = useState("srt");
@@ -260,7 +261,7 @@ export default function Editor({ initial }: { initial: Job }) {
             <div className="player gone"><p>The video was removed after 7 days. Your subtitles are still here.</p></div>
           )}
           <div className="seg" role="group" aria-label="Preview language">
-            {(["ta", "en", "both"] as View[]).map((v) => (
+            {((hasEnglish ? ["ta", "en", "both"] : ["ta"]) as View[]).map((v) => (
               <button key={v} aria-pressed={view === v} onClick={() => setView(v)}>{v === "ta" ? language.native : v === "en" ? "English" : "Both"}</button>
             ))}
           </div>
@@ -369,7 +370,8 @@ export default function Editor({ initial }: { initial: Job }) {
             <div className="export-row">
               <label>Language
                 <select value={lang} onChange={(e) => setLang(e.target.value as View)}>
-                  <option value="ta">{language.name}</option><option value="en">English</option><option value="both">{language.name} + English</option>
+                  <option value="ta">{language.name}</option>
+                  {hasEnglish && <><option value="en">English</option><option value="both">{language.name} + English</option></>}
                 </select>
               </label>
               <label>Format

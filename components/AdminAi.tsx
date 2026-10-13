@@ -4,7 +4,7 @@ import { useState } from "react";
 type Cfg = { provider: string; model: string; sttModel: string };
 const LABELS: Record<string, string> = {
   gemini: "Google Gemini (hears audio directly)",
-  sarvam: "Sarvam AI (Indian-language speech + translate)",
+  sarvam: "Sarvam AI (Saaras v4 batch speech-to-text, code-mix + English)",
   openai: "OpenAI (Whisper + GPT)",
   groq: "Groq (fast Whisper + Llama)",
   custom: "Custom OpenAI-compatible (AI_BASE_URL)",
@@ -27,10 +27,10 @@ export default function AdminAi({ current, providers, defaults }: { current: Cfg
           {providers.map((p) => <option key={p} value={p}>{LABELS[p] ?? p}</option>)}
         </select>
       </label>
-      <label>{cfg.provider === "gemini" ? "Model" : "Translation model"}
+      <label>{defaults[cfg.provider]?.sttModel ? "Translation model" : "Model"}
         <input value={cfg.model} onChange={(e) => setCfg({ ...cfg, model: e.target.value })} required />
       </label>
-      {cfg.provider !== "gemini" && (
+      {defaults[cfg.provider]?.sttModel && (
         <label>Speech-to-text model
           <input value={cfg.sttModel} onChange={(e) => setCfg({ ...cfg, sttModel: e.target.value })} required />
         </label>

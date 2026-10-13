@@ -19,6 +19,8 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [drag, setDrag] = useState(false);
   const [language, setLanguage] = useState<string>(DEFAULT_LANGUAGE);
+  const [script, setScript] = useState("mixed");
+  const [english, setEnglish] = useState(true);
   const input = useRef<HTMLInputElement>(null);
 
   const load = useCallback(() => {
@@ -37,7 +39,7 @@ export default function Dashboard() {
     setError("");
     setUpload({ name: file.name, pct: 0 });
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `/api/upload?name=${encodeURIComponent(file.name)}&lang=${language}`);
+    xhr.open("POST", `/api/upload?name=${encodeURIComponent(file.name)}&lang=${language}&script=${script}&english=${english ? 1 : 0}`);
     xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
     xhr.upload.onprogress = (e) => e.lengthComputable && setUpload({ name: file.name, pct: Math.round((e.loaded / e.total) * 100) });
     xhr.onload = () => {
@@ -58,7 +60,12 @@ export default function Dashboard() {
           <select value={language} onChange={(e) => setLanguage(e.target.value)} disabled={!!upload}>
             {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name} · {l.native}</option>)}
           </select>
-          <span className="muted">+ English</span>
+          <select value={script} onChange={(e) => setScript(e.target.value)} disabled={!!upload} aria-label="Script">
+            <option value="mixed">{languageOf(language).name} script, English words as English</option>
+            <option value="roman">Roman letters{language === "ta-IN" ? " (Tanglish)" : ""}</option>
+            <option value="native">{languageOf(language).name} script only</option>
+          </select>
+          <span className="muted"><input type="checkbox" checked={english} onChange={(e) => setEnglish(e.target.checked)} disabled={!!upload} aria-label="Also English" /> + English</span>
         </span>
       </label>
       <div

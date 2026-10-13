@@ -19,7 +19,7 @@ Built specifically for Tamil dialogue, including colloquial Tamil and Tanglish, 
 Editors work on desktop in Premiere Pro or After Effects, often late, against client deadlines. Deliverables are SRT/VTT/TXT files or caption tracks on a sequence. Payment is monthly in INR through Razorpay (UPI and cards).
 
 ## Capabilities and Constraints
-- Subtitles in any of 22 Indian languages (Sarvam's list in `lib/languages.ts`), each paired with English; Tamil is the lead language in marketing.
+- Subtitles in any of 22 Indian languages (Sarvam's list in `lib/languages.ts`), written as mixed script (English words kept in English), Roman letters (Tanglish) or native script only, with an optional English line; Tamil is the lead language in marketing.
 - Upload video/audio up to 4 GB; AI transcription + translation (provider switchable by admin: Gemini default, OpenAI, Groq, custom OpenAI-compatible).
 - Side-by-side Tamil/English cue editor with video preview; export SRT, VTT, TXT per language or both stacked.
 - CEP panel for Premiere Pro (caption track) and After Effects (text layers), connected by an API key.
