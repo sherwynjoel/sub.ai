@@ -7,8 +7,11 @@
 </head>
 <body>
   <header>
-    <span class="logo"><i></i>Vasanam <small class="muted">v1.0.18</small></span> <!-- shortcut: keep in step with CSXS/manifest.xml by hand, automate in build.ps1 if it drifts -->
-    <button id="settingsBtn" class="link" hidden>Account</button>
+    <span class="logo"><i></i>Vasanam <small class="muted">v1.0.19</small></span> <!-- shortcut: keep in step with CSXS/manifest.xml by hand, automate in build.ps1 if it drifts -->
+    <span class="head-right">
+      <span id="account" class="chip" hidden></span>
+      <button id="settingsBtn" class="link" hidden>Account</button>
+    </span>
   </header>
 
   <!-- Connect: shown until a key works -->
@@ -30,111 +33,142 @@
     <p id="connectMsg" class="error" role="alert"></p>
   </section>
 
-  <!-- Main -->
+  <!-- Main: Generate (setup) and, once a project exists, Edit subtitles -->
   <section id="main" hidden>
-    <p id="account" class="muted"></p>
-    <div class="field">
-      <span class="label">Clip</span>
-      <div class="row">
-        <span id="clip" class="pill">Nothing selected</span>
-        <button id="pickBtn" class="btn ghost small">Use selection</button>
+    <nav id="tabs" class="tabs" hidden>
+      <button type="button" data-view="setup" class="on">Generate</button>
+      <button type="button" data-view="editor">Edit subtitles</button>
+    </nav>
+
+    <div id="setup" class="view">
+      <div class="card">
+        <h2><b>1</b>Clip</h2>
+        <div class="row">
+          <span id="clip" class="pill">Nothing selected</span>
+          <button id="pickBtn" class="btn ghost small">Use selection</button>
+        </div>
+        <p class="hint muted">Select a clip on the timeline (or in the Project panel), then click Use selection.</p>
+      </div>
+
+      <div class="card">
+        <h2><b>2</b>Subtitles</h2>
+        <div class="pair roomy">
+          <label>Spoken language
+            <select id="language">
+              <option value="ta-IN">Tamil</option>
+              <option value="hi-IN">Hindi</option>
+              <option value="te-IN">Telugu</option>
+              <option value="ml-IN">Malayalam</option>
+              <option value="kn-IN">Kannada</option>
+              <option value="bn-IN">Bengali</option>
+              <option value="mr-IN">Marathi</option>
+              <option value="gu-IN">Gujarati</option>
+              <option value="pa-IN">Punjabi</option>
+              <option value="od-IN">Odia</option>
+              <option value="ur-IN">Urdu</option>
+              <option value="as-IN">Assamese</option>
+              <option value="ne-IN">Nepali</option>
+              <option value="kok-IN">Konkani</option>
+              <option value="mai-IN">Maithili</option>
+              <option value="sa-IN">Sanskrit</option>
+              <option value="ks-IN">Kashmiri</option>
+              <option value="sd-IN">Sindhi</option>
+              <option value="doi-IN">Dogri</option>
+              <option value="brx-IN">Bodo</option>
+              <option value="mni-IN">Manipuri</option>
+              <option value="sat-IN">Santali</option>
+            </select>
+          </label>
+          <label>Write it as
+            <select id="script">
+              <option value="mixed">Native script, English words as English</option>
+              <option value="roman">Roman letters (Tanglish)</option>
+              <option value="native">Native script only</option>
+            </select>
+          </label>
+        </div>
+        <label class="check"><input type="checkbox" id="english" checked> Also an English line</label>
+      </div>
+
+      <div class="card">
+        <h2><b>3</b>Style</h2>
+        <label id="styleSelectRow">Style<select id="styleMain"></select></label>
+        <div id="styleCurrent" class="current" hidden></div>
+        <div id="styleGallery" class="gallery" role="listbox" aria-label="Style" hidden></div>
+      </div>
+
+      <div class="card">
+        <h2><b>4</b>On the timeline</h2>
+        <div class="pair">
+          <label>Put on the timeline
+            <select id="lang">
+              <option value="ta">That language</option>
+              <option value="en">English</option>
+              <option value="both">Both, stacked</option>
+            </select>
+          </label>
+          <label>Lines per caption<select id="linesMain">
+            <option value="">Auto</option><option value="1">1 line</option><option value="2">2 lines</option><option value="3">3 lines</option>
+          </select></label>
+        </div>
+        <label>Safe zone<select id="safeMain">
+          <option value="none">None</option><option value="tiktok">TikTok</option><option value="reels">Instagram Reels</option>
+          <option value="story">Instagram Story</option><option value="shorts">YouTube Shorts</option><option value="x">X / Twitter</option><option value="linkedin">LinkedIn</option>
+        </select></label>
       </div>
     </div>
-    <label>Spoken language
-      <select id="language">
-        <option value="ta-IN">Tamil</option>
-        <option value="hi-IN">Hindi</option>
-        <option value="te-IN">Telugu</option>
-        <option value="ml-IN">Malayalam</option>
-        <option value="kn-IN">Kannada</option>
-        <option value="bn-IN">Bengali</option>
-        <option value="mr-IN">Marathi</option>
-        <option value="gu-IN">Gujarati</option>
-        <option value="pa-IN">Punjabi</option>
-        <option value="od-IN">Odia</option>
-        <option value="ur-IN">Urdu</option>
-        <option value="as-IN">Assamese</option>
-        <option value="ne-IN">Nepali</option>
-        <option value="kok-IN">Konkani</option>
-        <option value="mai-IN">Maithili</option>
-        <option value="sa-IN">Sanskrit</option>
-        <option value="ks-IN">Kashmiri</option>
-        <option value="sd-IN">Sindhi</option>
-        <option value="doi-IN">Dogri</option>
-        <option value="brx-IN">Bodo</option>
-        <option value="mni-IN">Manipuri</option>
-        <option value="sat-IN">Santali</option>
-      </select>
-    </label>
-    <label>Write it as
-      <select id="script">
-        <option value="mixed">Native script, English words as English</option>
-        <option value="roman">Roman letters (Tanglish)</option>
-        <option value="native">Native script only</option>
-      </select>
-    </label>
-    <label class="row"><input type="checkbox" id="english" checked> Also an English line</label>
-    <label>Style<select id="styleMain"></select></label>
-    <div id="styleGallery" class="gallery" role="listbox" aria-label="Style" hidden></div>
-    <label>Lines per caption<select id="linesMain">
-      <option value="">Auto</option><option value="1">1 line</option><option value="2">2 lines</option><option value="3">3 lines</option>
-    </select></label>
-    <label>Safe zone<select id="safeMain">
-      <option value="none">None</option><option value="tiktok">TikTok</option><option value="reels">Instagram Reels</option>
-      <option value="story">Instagram Story</option><option value="shorts">YouTube Shorts</option><option value="x">X / Twitter</option><option value="linkedin">LinkedIn</option>
-    </select></label>
-    <label>Put on the timeline
-      <select id="lang">
-        <option value="ta">That language</option>
-        <option value="en">English</option>
-        <option value="both">Both, stacked</option>
-      </select>
-    </label>
-    <button id="goBtn" class="btn" disabled>Generate subtitles</button>
-    <div id="progress" hidden>
-      <div class="meter"><i id="bar"></i></div>
-      <p id="status" class="muted"></p>
-    </div>
-    <p id="msg" role="status"></p>
-    <button id="openBtn" class="link" hidden>Open in the web editor</button>
 
     <!-- Edit: shown once a job has subtitles -->
-    <section id="editor" hidden>
-      <h1>Edit subtitles</h1>
-      <div id="cues"></div>
+    <div id="editor" class="view" hidden>
+      <div class="card">
+        <h2>Look</h2>
+        <label id="lkStyle">Style<select id="style"></select></label>
+        <label id="lkFont">Font<select id="font"></select></label>
+        <label id="lkSize"><span class="lab">Size <span id="sizeVal"></span></span><input id="size" type="range" min="0.4" max="2.6" step="0.05" /></label>
+        <div class="pair" id="lkColors">
+          <label id="lkColor">Text colour<input id="color" type="color" /></label>
+          <label id="lkAccent">Highlight<input id="accent" type="color" /></label>
+        </div>
+        <div class="pair">
+          <label id="lkPosition">Position
+            <select id="position">
+              <option value="bottom">Bottom</option>
+              <option value="middle">Middle</option>
+              <option value="top">Top</option>
+            </select>
+          </label>
+          <label id="lkLines">Lines
+            <select id="lines">
+              <option value="">Auto</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+            </select>
+          </label>
+        </div>
+        <label id="lkSafe">Safe zone<select id="safe"></select></label>
+        <p id="lookNote" class="hint muted"></p>
+      </div>
+      <div class="card">
+        <h2>Subtitles</h2>
+        <div id="cues"></div>
+      </div>
+    </div>
 
-      <h1>Look</h1>
-      <label>Style<select id="style"></select></label>
-      <label>Font<select id="font"></select></label>
-      <label>Size<input id="size" type="range" min="0.4" max="2.6" step="0.05" /></label>
-      <div class="row">
-        <label>Text colour<input id="color" type="color" /></label>
-        <label>Highlight<input id="accent" type="color" /></label>
+    <!-- Always-visible action bar -->
+    <footer class="dock">
+      <div id="progress" hidden>
+        <div class="meter"><i id="bar"></i></div>
+        <p id="status" class="muted"></p>
       </div>
-      <div class="row">
-        <label>Position
-          <select id="position">
-            <option value="bottom">Bottom</option>
-            <option value="middle">Middle</option>
-            <option value="top">Top</option>
-          </select>
-        </label>
-        <label>Lines
-          <select id="lines">
-            <option value="">Auto</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-          </select>
-        </label>
+      <p id="msg" role="status"></p>
+      <div class="actions" data-for="setup"><button id="goBtn" class="btn wide" disabled>Generate subtitles</button></div>
+      <div class="actions" data-for="editor" hidden>
+        <button id="placeBtn" class="btn">Place on timeline again</button>
+        <button id="saveBtn" class="btn ghost">Save</button>
+        <button id="openBtn" class="link" hidden>Open in the web editor</button>
       </div>
-      <label>Safe zone<select id="safe"></select></label>
-      <p id="lookNote" class="muted"></p>
-      <div class="row">
-        <button id="saveBtn" class="btn">Save</button>
-        <button id="placeBtn" class="btn ghost">Place on timeline again</button>
-      </div>
-    </section>
+    </footer>
   </section>
 
   <script src="subs.js"></script>

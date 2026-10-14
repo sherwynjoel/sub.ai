@@ -136,8 +136,9 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
     }
     var done = [];
     for (var s in set) done.push(s);
+    // "OK|message|details": the panel shows the message; the details (for checking a new template) go in its tooltip.
     return "OK|Added " + n + " styled captions on V" + (target + 1) + "." + (most ? " This template fits at most " + most + (most === 1 ? " line" : " lines") + ", so longer captions use " + most + "." : "") +
-      " Set: " + (done.join(", ") || "nothing") + ". Template controls: " + names.join(", ");
+      "|Set: " + (done.join(", ") || "nothing") + ". Template controls: " + names.join(", ");
   } catch (e) {
     return "ERR|" + e.toString();
   }

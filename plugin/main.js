@@ -18,8 +18,27 @@
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k) || ""; localStorage.setItem(k, v); } catch (e) { return ""; } }
   function server() { return (store("vs_server") || DEFAULT_SERVER).replace(/\/+$/, ""); }
   var evalHost = function (script) { return new Promise(function (r) { cep.evalScript(script, r); }); };
-  function show(id) { ["connect", "main"].forEach(function (s) { $(s).hidden = s !== id; }); $("settingsBtn").hidden = id !== "main"; }
-  function say(text, cls) { $("msg").textContent = text; $("msg").className = cls || ""; }
+  function show(id) { ["connect", "main"].forEach(function (s) { $(s).hidden = s !== id; }); $("settingsBtn").hidden = $("account").hidden = id !== "main"; }
+  // details: technical text for the tooltip (which template controls were set), not for the message itself.
+  function say(text, cls, details) { $("msg").textContent = text; $("msg").className = cls || ""; $("msg").title = details || ""; }
+  // Host replies are "OK|message|details" or "ERR|message".
+  function reply(res) { var p = String(res).split("|"); return { ok: p[0] === "OK", text: p[1] || String(res), details: p.slice(2).join(" ") }; }
+  var minutesLeft = null; // from /api/me; 0 = nothing left to generate with
+  function updateGo() {
+    $("goBtn").disabled = !picked || minutesLeft === 0;
+    $("goBtn").title = minutesLeft === 0 ? "No minutes left on your plan" : !picked ? "Select a clip first" : "";
+  }
+
+  // Generate | Edit subtitles: one screen at a time, the action bar follows.
+  function view(name) {
+    ["setup", "editor"].forEach(function (v) { $(v).hidden = v !== name; });
+    Array.prototype.forEach.call(document.querySelectorAll ? document.querySelectorAll("#tabs button, .dock .actions") : [], function (el) {
+      var v = el.getAttribute("data-view") || el.getAttribute("data-for");
+      if (el.tagName === "BUTTON") el.className = v === name ? "on" : ""; else el.hidden = v !== name;
+    });
+    if (typeof scrollTo === "function") scrollTo(0, 0);
+  }
+  if (document.querySelectorAll) Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) { b.onclick = function () { view(b.getAttribute("data-view")); }; });
 
   /** Minimal HTTP client on Node. body may be a string or a file path ({file}). */
   function api(method, p, body, onProgress) {
@@ -56,8 +75,13 @@
   function refreshAccount() {
     return api("GET", "/api/me").then(function (r) {
       if (r.status !== 200) { show("connect"); return false; }
-      $("account").textContent = r.data.name + " · " + r.data.planName + " plan · " + Math.floor(r.data.secondsLeft / 60) + " min left";
+      minutesLeft = Math.floor(r.data.secondsLeft / 60);
+      $("account").textContent = minutesLeft + " min left";
+      $("account").title = r.data.name + " · " + r.data.planName + " plan · " + minutesLeft + " min left";
+      $("account").className = "chip" + (minutesLeft === 0 ? " warn" : "");
       show("main");
+      updateGo();
+      if (minutesLeft === 0 && !$("msg").textContent) say("No minutes left on your " + r.data.planName + " plan. Upgrade on the website to generate more.", "error");
       return true;
     });
   }
@@ -91,11 +115,11 @@
   $("pickBtn").onclick = function () {
     evalHost(HOST === "PPRO" ? "vs_pproPickMedia()" : "vs_aePickMedia()").then(function (res) {
       var parts = String(res).split("|");
-      if (parts[0] !== "OK") { picked = null; $("goBtn").disabled = true; $("clip").textContent = "Nothing selected"; return say(parts[1] || String(res), "error"); }
+      if (parts[0] !== "OK") { picked = null; updateGo(); $("clip").textContent = "Nothing selected"; return say(parts[1] || String(res), "error"); }
       picked = { file: parts[1], offset: +parts[2], inS: +parts[3], outS: +parts[4], name: parts.slice(5).join("|") };
       $("clip").textContent = picked.name;
       $("clip").title = picked.file;
-      $("goBtn").disabled = false;
+      updateGo();
       say("");
     });
   };
@@ -167,7 +191,8 @@
     var lang = $("lang").value, jobData = null;
     $("goBtn").disabled = true;
     $("openBtn").hidden = true;
-    $("editor").hidden = true;
+    $("tabs").hidden = true;
+    view("setup");
     editing = null;
     say("");
     progress(0, "Uploading " + picked.name + "…");
@@ -185,13 +210,15 @@
       })
       .then(function (job) { jobData = job; progress(97, "Placing subtitles…"); return placeOnTimeline(job, lang); })
       .then(function (res) {
-        var parts = String(res).split("|");
+        var r = reply(res);
         $("progress").hidden = true;
-        say(parts[0] === "OK" ? parts[1] : "Subtitles are ready, but " + (parts[1] || res), parts[0] === "OK" ? "ok" : "error");
+        say(r.ok ? r.text : "Subtitles are ready, but " + r.text, r.ok ? "ok" : "error", r.details);
         if (jobData) return openEditor(jobData);
       })
       .catch(function (e) { $("progress").hidden = true; say(e.message, "error"); })
-      .then(function () { $("goBtn").disabled = false; $("openBtn").hidden = !lastJob; refreshAccount(); });
+      .then(function () { $("openBtn").hidden = !lastJob; return refreshAccount(); })
+      .catch(function () {})
+      .then(updateGo);
   };
 
   $("openBtn").onclick = function () { window.cep.util.openURLInDefaultBrowser(server() + "/app/jobs/" + lastJob); };
@@ -222,11 +249,21 @@
     $("position").value = d.look.position;
     fill($("safe"), (d.safeZones || []).map(function (z) { return [z.id, z.name]; }), d.look.safeId || "none");
     $("lines").value = d.look.lines || "";
-    $("lookNote").textContent = HOST !== "PPRO"
-      ? "After Effects text layers get this font, size, colours, outline and position. Install the caption fonts (website → Plugin) to see the exact font."
-      : template()
-        ? "Premiere gets one animated text graphic per caption from the chosen template; Size and Position here move and scale them, Text colour overrides the template's colour when you change it. Style, font and highlight apply to the web editor and MP4."
-        : "Text, timing and lines go onto the caption track. Font, colour and position for captions are set in Premiere's Essential Graphics panel.";
+    showSize();
+    lookControls();
+  }
+  function showSize() { $("sizeVal").textContent = Math.round(+$("size").value * 100) + "%"; }
+  // Only the controls that change what lands on the timeline: all of them for After Effects text layers; size,
+  // colour, position, lines and safe zone for Premiere templates; lines for the plain caption track.
+  function lookControls() {
+    var ae = HOST !== "PPRO", tpl = !ae && !!template();
+    var on = ae ? ["lkStyle", "lkFont", "lkSize", "lkColors", "lkColor", "lkAccent", "lkPosition", "lkLines", "lkSafe"]
+      : tpl ? ["lkSize", "lkColors", "lkColor", "lkPosition", "lkLines", "lkSafe"] : ["lkLines"];
+    ["lkStyle", "lkFont", "lkSize", "lkColors", "lkColor", "lkAccent", "lkPosition", "lkLines", "lkSafe"].forEach(function (id) { $(id).hidden = on.indexOf(id) < 0; });
+    $("lookNote").textContent = ae
+      ? "Text layers get this font, size, colours and position. Install the caption fonts (website → Plugin) to see the exact font."
+      : tpl ? "Changes apply when you place on the timeline again. The rest of the look comes from the template."
+        : "Font, colour and position of the caption track are set in Premiere's Essential Graphics panel.";
   }
   function openEditor(job) {
     editing = { job: job, cues: job.cues.map(function (c) { return { start: c.start, end: c.end, ta: c.ta, en: c.en }; }), dirty: false, styleId: "", custom: {} };
@@ -247,7 +284,7 @@
       });
       box.appendChild(row);
     });
-    return loadLook(job.id).then(function (d) { showLook(d); $("editor").hidden = false; });
+    return loadLook(job.id).then(function (d) { showLook(d); $("tabs").hidden = false; view("editor"); });
   }
   function tweak(patch) {
     for (var k in patch) { if (patch[k] === undefined || patch[k] === "") delete editing.custom[k]; else editing.custom[k] = patch[k]; }
@@ -267,7 +304,7 @@
     saveLook().then(function () { return loadLook(editing.job.id); }).then(showLook).catch(function (e) { say(e.message, "error"); });
   };
   $("font").onchange = function () { tweak({ font: $("font").value }); };
-  $("size").oninput = function () { tweak({ size: +$("size").value }); };
+  $("size").oninput = function () { tweak({ size: +$("size").value }); showSize(); };
   $("color").oninput = function () { tweak({ color: $("color").value }); };
   $("accent").oninput = function () { tweak({ accent: $("accent").value }); };
   $("position").onchange = function () { tweak({ position: $("position").value }); };
@@ -290,8 +327,9 @@
     Promise.all([saveCues(), saveLook()])
       .then(function () { return placeOnTimeline(editing.job, $("lang").value); })
       .then(function (res) {
-        var parts = String(res).split("|");
-        say(parts[0] === "OK" ? parts[1] + (HOST === "PPRO" ? " Delete the older caption track if you placed one before." : "") : (parts[1] || res), parts[0] === "OK" ? "ok" : "error");
+        var r = reply(res);
+        // Template graphics replace the earlier ones; a caption track is added alongside the old one.
+        say(r.text + (r.ok && HOST === "PPRO" && !template() ? " Delete the older caption track if you placed one before." : ""), r.ok ? "ok" : "error", r.details);
       })
       .catch(function (e) { say(e.message, "error"); })
       .then(function () { $("placeBtn").disabled = false; });
@@ -330,38 +368,59 @@
   }
   function fileUrl(p) { p = p.replace(/\\/g, "/"); return "file://" + (p.charAt(0) === "/" ? "" : "/") + encodeURI(p); }
 
-  // The Style setting as picture tiles; the (hidden) <select> keeps the value, so the rest of the panel is unchanged.
+  // The Style setting as pictures: the chosen style with a Change button; Change opens every style as a grid in the
+  // page (no box scrolling inside the panel) and picking one closes it. The hidden <select> keeps the value.
+  function styleTile(o, i, sel) {
+    var t = TEMPLATES.filter(function (x) { return x.id === o.value; })[0];
+    var tile = document.createElement("button");
+    tile.type = "button";
+    tile.className = "tile" + (i === sel.selectedIndex ? " on" : "");
+    tile.title = o.textContent;
+    var pic = document.createElement("span"), src = t ? preview(t) : null;
+    pic.className = "pic" + (src ? "" : " plain");
+    if (src) { var img = document.createElement("img"); img.src = fileUrl(src); img.alt = ""; pic.appendChild(img); }
+    else pic.textContent = t ? t.name : "Caption track";
+    var label = document.createElement("span");
+    label.className = "name";
+    label.textContent = t ? t.name : "Plain captions";
+    tile.appendChild(pic);
+    tile.appendChild(label);
+    return tile;
+  }
+  function renderCurrent() {
+    var c = $("styleCurrent"), sel = $("styleMain"), open = !$("styleGallery").hidden;
+    c.innerHTML = "";
+    var tile = styleTile(sel.options[sel.selectedIndex], sel.selectedIndex, sel);
+    tile.tabIndex = -1;
+    tile.onclick = function () { toggleGallery(true); };
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn ghost small";
+    btn.textContent = open ? "Done" : "Change";
+    btn.onclick = function () { toggleGallery(!open); };
+    c.appendChild(tile);
+    c.appendChild(btn);
+  }
+  function toggleGallery(open) {
+    $("styleGallery").hidden = !open;
+    if (open) renderGallery();
+    renderCurrent();
+  }
   function renderGallery() {
     var g = $("styleGallery"), sel = $("styleMain");
     g.innerHTML = "";
     Array.prototype.forEach.call(sel.options, function (o, i) {
-      var t = TEMPLATES.filter(function (x) { return x.id === o.value; })[0];
-      var tile = document.createElement("button");
-      tile.type = "button";
-      tile.className = "tile" + (i === sel.selectedIndex ? " on" : "");
+      var tile = styleTile(o, i, sel), t = TEMPLATES.filter(function (x) { return x.id === o.value; })[0];
       tile.disabled = o.disabled;
-      tile.title = o.textContent;
       tile.setAttribute("role", "option");
       tile.setAttribute("aria-selected", i === sel.selectedIndex ? "true" : "false");
-      var pic = document.createElement("span"), src = t ? preview(t) : null;
-      pic.className = "pic" + (src ? "" : " plain");
-      if (src) { var img = document.createElement("img"); img.src = fileUrl(src); img.alt = ""; pic.appendChild(img); }
-      else pic.textContent = t ? t.name : "Caption track";
-      var label = document.createElement("span");
-      label.className = "name";
-      label.textContent = t ? t.name : "Plain captions";
-      tile.appendChild(pic);
-      tile.appendChild(label);
       if (o.disabled) { var badge = document.createElement("span"); badge.className = "badge"; badge.textContent = "Premiere " + (2000 + t.minPremiere); tile.appendChild(badge); }
       tile.onclick = function () {
-        if (sel.selectedIndex === i) return;
-        sel.selectedIndex = i;
-        sel.dispatchEvent(new Event("change", { bubbles: true }));
+        if (sel.selectedIndex !== i) { sel.selectedIndex = i; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+        toggleGallery(false);
       };
       g.appendChild(tile);
     });
-    var on = g.querySelector(".tile.on");
-    if (on) on.scrollIntoView({ block: "nearest" });
   }
 
   // Style list for the main screen: Premiere picks a shipped template (or a plain caption track), After Effects the website looks. The last choice is remembered.
@@ -376,10 +435,10 @@
     })), remembered); // plain captions until the user picks a template
     Array.prototype.forEach.call($("styleMain").options, function (o) { o.disabled = newer.some(function (t) { return t.id === o.value; }); });
     if (typeof document.addEventListener === "function") { // not in the Node test's fake DOM
-      $("styleMain").hidden = true;
-      $("styleGallery").hidden = false;
-      $("styleMain").addEventListener("change", renderGallery);
-      renderGallery();
+      $("styleSelectRow").hidden = true;
+      $("styleCurrent").hidden = false;
+      $("styleMain").addEventListener("change", function () { renderCurrent(); if (editing) lookControls(); });
+      renderCurrent();
     }
   } else {
     api("GET", "/api/styles").then(function (r) {
@@ -448,6 +507,7 @@
   // Safe zone for new projects, chosen before generating (list in index.html, same ids as lib/captionStyles.ts); the last choice is remembered.
   if (store("vs_safe")) $("safeMain").value = store("vs_safe");
   $("linesMain").value = store("vs_lines"); // lines per caption, Auto until the user picks
+  $("english").onchange();
 
   // ---------- developer test mode ----------
   // Only when <tmp>/vasanam-dev/ exists (never on customer machines): the panel runs commands written to
