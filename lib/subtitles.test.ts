@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toSrt, toVtt, mergeChunks, pairChunks, splitLine, layoutCue, divide, shiftCues, breakLines } from "./subtitles";
+import { toSrt, toVtt, mergeChunks, pairChunks, splitLine, layoutCue, divide, naturalBreak, shiftCues, breakLines } from "./subtitles";
 import { secondsLeft, effectivePlan } from "./plans";
 
 const cue = (start: number, end: number, ta = "வணக்கம்", en = "Hello") => ({ start, end, ta, en });
@@ -89,4 +89,13 @@ test("breakLines lays text out on balanced lines, never more lines than words", 
   assert.equal(breakLines("one two three four", undefined), "one two three four");
   const srt = toSrt([{ start: 0, end: 1, ta: "one two three four", en: "a b" }], "both", 2).split("\n");
   assert.deepEqual(srt.slice(2, 6), ["one two", "three four", "a", "b"]);
+});
+
+test("divide cuts a translation at a phrase edge near the length-based point, never mid-phrase when one is close", () => {
+  assert.deepEqual(divide("They would say that I always prefer cotton materials", [1, 1]), ["They would say", "that I always prefer cotton materials"]);
+  assert.deepEqual(divide("But if you ask what cotton, they won't have an awareness", [1, 1]), ["But if you ask what cotton,", "they won't have an awareness"]);
+  assert.deepEqual(divide("one two three four", [1, 1]), ["one two", "three four"], "no phrase edge nearby: unchanged");
+  // Punctuation wins over a clause word; nothing more than 2 words from the length-based point.
+  assert.equal(naturalBreak("a b c, d and e f g".split(" "), 4, 1, 7), 3);
+  assert.equal(naturalBreak("a b c d e f g h, i".split(" "), 3, 1, 9), 3, "the comma is too far away");
 });

@@ -20,7 +20,7 @@ npm run worker                  # second terminal: processes uploads
 npm test                        # unit checks; plus: node plugin/subs.test.js
 ```
 
-Needs **ffmpeg/ffprobe** on PATH (or `FFMPEG_DIR`). The account whose email equals `ADMIN_EMAIL` becomes admin at sign-up.
+Needs **ffmpeg/ffprobe** on PATH (or `FFMPEG_DIR`). To make yourself admin, sign up on the site, then run `npm run make-admin -- you@example.com` on the server (sign-ups never create admins).
 
 ## Admin panel (`/admin`)
 

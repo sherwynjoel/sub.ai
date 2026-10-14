@@ -149,12 +149,30 @@ export function divide(text: string, weights: number[]) {
   weights.forEach((w, k) => {
     cum += w;
     const left = weights.length - 1 - k; // pieces still to fill after this one
-    const to = k === weights.length - 1 ? words.length
-      : Math.max(from, Math.min(Math.max(Math.round((words.length * cum) / total), from + 1), words.length - left));
+    const lo = from + 1, hi = words.length - left;
+    let to = k === weights.length - 1 ? words.length : Math.max(from, Math.min(Math.max(Math.round((words.length * cum) / total), lo), hi));
+    if (k < weights.length - 1) to = naturalBreak(words, to, lo, hi);
     out.push(words.slice(from, to).join(" "));
     from = to;
   });
   return out;
+}
+
+const CLAUSE = /^(and|but|so|because|that|which|who|when|where|if|or|then|while|though|although)$/i;
+
+/**
+ * A cut point near `at` (at most 2 words away, inside [lo, hi]) where the English reads naturally: after
+ * punctuation first, else before a word that starts a clause. Tamil puts the verb last, so the words of a
+ * translation can't follow the Tamil pieces exactly; a cut at a phrase edge reads far better than one mid-phrase.
+ */
+export function naturalBreak(words: string[], at: number, lo: number, hi: number) {
+  let best = at, bestScore = 0;
+  for (let d = 0; d <= 2; d++) for (const i of d ? [at - d, at + d] : [at]) {
+    if (i < lo || i > hi || i <= 0 || i >= words.length) continue;
+    const score = /[,;:.!?]$/.test(words[i - 1]) ? 2 : CLAUSE.test(words[i].replace(/^[("']+/, "")) ? 1 : 0;
+    if (score > bestScore) { best = i; bestScore = score; }
+  }
+  return best;
 }
 
 /** Move every cue by `by` seconds; cues pushed before 0 are cut at 0 or dropped (a trimmed clip's head). */

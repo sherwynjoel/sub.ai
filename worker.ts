@@ -2,13 +2,13 @@
  * Background worker: picks queued jobs, extracts audio, sends chunks to the configured AI, stores cues.
  * Run alongside the web app:  npm run worker
  */
-import { mkdtemp, readFile, rm, unlink } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { and, eq, lt, isNotNull, sql } from "drizzle-orm";
 import { db, jobs, settings, users, type Cue } from "./db";
 import { getAiConfig, transcribe, type Script } from "./lib/ai";
-import { extractChunks, probe } from "./lib/media";
+import { extractChunks, probe, STORAGE } from "./lib/media";
 import { renderStyled } from "./lib/render";
 import { mergeChunks } from "./lib/subtitles";
 
@@ -77,7 +77,8 @@ async function processRender(job: typeof jobs.$inferSelect) {
       last = pct;
       db.update(jobs).set({ renderProgress: pct }).where(eq(jobs.id, job.id)).catch(console.error);
     });
-    await db.update(jobs).set({ renderStatus: "done", renderProgress: 100, renderPath: out }).where(eq(jobs.id, job.id));
+    const kept = await db.update(jobs).set({ renderStatus: "done", renderProgress: 100, renderPath: out }).where(eq(jobs.id, job.id)).returning({ id: jobs.id });
+    if (!kept.length) { await unlink(out).catch(() => {}); return; } // the project was deleted while it rendered
     console.log(`render ${job.id} done (${job.captionStyle})`);
   } catch (e) {
     console.error(`render ${job.id} failed`, e);
@@ -99,6 +100,10 @@ async function purgeOld() {
     if (j.renderPath) await unlink(j.renderPath).catch(() => {});
     await db.update(jobs).set({ filePath: null, renderPath: null, renderStatus: null }).where(eq(jobs.id, j.id));
   }
+  // Styled MP4s whose project no longer exists (deleted before deletes removed them too). Safe only because
+  // this runs between renders in the same loop: a render in progress has no renderPath yet.
+  const dir = join(STORAGE, "renders"), live = new Set((await db.select({ p: jobs.renderPath }).from(jobs).where(isNotNull(jobs.renderPath))).map((r) => r.p));
+  for (const f of await readdir(dir).catch(() => [] as string[])) if (!live.has(join(dir, f))) await unlink(join(dir, f)).catch(() => {});
 }
 
 /** Lets /admin show whether the worker is alive. */
