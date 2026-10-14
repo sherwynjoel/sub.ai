@@ -204,6 +204,9 @@ test("host: template captions stay inside the template frame and the safe zone",
   assert.equal(ctx.vs_templateFit("Hi I am Saranya from Sri Cotton Boutique, single saree", tw, 1080, 1920, zones.none, 1, 0.5, 0.8, true).text.split(CR).length, 1, "1 line stays 1 line");
   const crackedThree = ctx.vs_templateFit(three, templates.find((t) => t.id === "cracked"), 1080, 1920, zones.none, 1, 0.5, 0.8, true);
   assert.equal(crackedThree.fewer, 1); assert.ok(crackedThree.place.fits);
+  // Santhosham only shows one line: two languages share it.
+  const santhosham = templates.find((t) => t.id === "santhosham");
+  assert.equal(ctx.vs_templateFit(captions[2], santhosham, 1080, 1920, zones.none, 1, 0.5, 0.8).text, captions[2].replace(CR, "  ·  "));
   // Fixed line spacing (Butter Up): a long line stays one line.
   const butter = templates.find((t) => t.id === "butter-up");
   assert.ok(butter.layout.fixedLeading);

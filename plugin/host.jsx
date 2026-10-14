@@ -147,7 +147,14 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
 // are kept; a single long line that would need a much smaller font is split into two balanced lines instead.
 // chosen: the user picked the number of lines (Lines = 1, 2 or 3), so the lines are only ever sized, never re-split.
 function vs_templateFit(text, tpl, W, H, z, size, xf, yf, chosen) {
-  var CR = String.fromCharCode(13), lines = text.split(CR);
+  var CR = String.fromCharCode(13), lines = text.split(CR), asked = lines.length;
+  // Some templates only ever show one line (Santhosham's reveal covers the first line): everything goes on it.
+  var most = tpl.layout && tpl.layout.maxLines;
+  if (most && lines.length > most) {
+    var joined = vs_layout(lines.join("  ·  "), Math.ceil(lines.join("  ·  ").length / most), most).text;
+    var pm = vs_templatePlace(joined.split(CR), tpl, W, H, z, size, xf, yf);
+    return { text: joined, place: pm, fewer: chosen ? most : 0 };
+  }
   var place = vs_templatePlace(lines, tpl, W, H, z, size, xf, yf), own = tpl.layout ? tpl.layout.size : 0;
   if (chosen) {
     // A fixed line spacing can be too wide for the template's frame (Cracked fits one line): as many lines as fit.
@@ -178,7 +185,7 @@ function vs_templateFit(text, tpl, W, H, z, size, xf, yf, chosen) {
 // outside it) and inside the safe zone. tpl.layout is where the template's text sits in that frame, measured in
 // After Effects: align (left | center), x (left edge or centre), top/bottom of one line, pitch (line to line),
 // charW (average character width) and size (font size), all in template pixels; fixedLeading = the line spacing
-// stays the same when the font shrinks.
+// stays the same when the font shrinks; maxLines = the most lines the template shows.
 // lines: the caption's lines; W, H: sequence frame; z: safe zone margins; xf, yf: where the caption's centre goes.
 // Returns {scale: Motion scale %, font: font size for the text, x, y: Motion position in frame pixels,
 // fits: every line is inside the template's frame top to bottom}.
@@ -194,13 +201,15 @@ function vs_templatePlace(lines, tpl, W, H, z, size, xf, yf) {
   var s = Math.min(W, H) * 0.075 * (size || 1) / L.size;
   var safe = W * 2 * Math.min(xf - z.left, 1 - z.right - xf);
   var f = Math.min(1, room / wide, safe / (wide * s)); // font shrink so the longest line fits both
+  var font = Math.floor(L.size * f * 10) / 10; // rounded down (never wider than what fits); placed from this size
+  f = font / L.size;
   // Text grows right from a left-aligned x, both ways from a centred one; a smaller font keeps its baseline (≈ bottom).
   var tx = L.align === "left" ? L.x + wide * f / 2 : L.x;
   var top = L.bottom - (L.bottom - L.top) * f, bottom = L.bottom + (lines.length - 1) * L.pitch * (L.fixedLeading ? 1 : f);
   var ty = (top + bottom) / 2;
   return {
     scale: Math.round(s * 1000) / 10,
-    font: Math.round(L.size * f * 10) / 10,
+    font: font,
     x: Math.round(xf * W - (tx - tw / 2) * s),
     y: Math.round(yf * H - (ty - th / 2) * s),
     fits: top >= 0 && bottom <= th
