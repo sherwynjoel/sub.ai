@@ -77,6 +77,10 @@ pm2 start "npm run worker" --name vasanam-worker
 pm2 save && pm2 startup
 ```
 
+Later updates, from a clean checkout on your computer: `scripts/deploy.sh ubuntu@<host> <ssh-key>`. It ships the
+committed code only (storage/, .env.local and public/downloads/ stay as they are), installs, migrates, builds, restarts,
+and records the commit in `/opt/vasanam/DEPLOYED_COMMIT`.
+
 nginx in front with TLS (certbot) and **`client_max_body_size 4g; proxy_request_buffering off;`** so large uploads stream.
 Uploaded videos are deleted automatically after 7 days.
 
