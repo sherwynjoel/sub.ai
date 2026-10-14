@@ -7,7 +7,7 @@
 </head>
 <body>
   <header>
-    <span class="logo"><i></i>Vasanam <small class="muted">v1.0.16</small></span> <!-- shortcut: keep in step with CSXS/manifest.xml by hand, automate in build.ps1 if it drifts -->
+    <span class="logo"><i></i>Vasanam <small class="muted">v1.0.17</small></span> <!-- shortcut: keep in step with CSXS/manifest.xml by hand, automate in build.ps1 if it drifts -->
     <button id="settingsBtn" class="link" hidden>Account</button>
   </header>
 
@@ -75,6 +75,7 @@
     </label>
     <label class="row"><input type="checkbox" id="english" checked> Also an English line</label>
     <label>Style<select id="styleMain"></select></label>
+    <div id="styleGallery" class="gallery" role="listbox" aria-label="Style" hidden></div>
     <label>Lines per caption<select id="linesMain">
       <option value="">Auto</option><option value="1">1 line</option><option value="2">2 lines</option><option value="3">3 lines</option>
     </select></label>

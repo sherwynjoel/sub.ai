@@ -44,3 +44,16 @@ input[type="color"] { padding: 2px; height: 32px; }
 .pick:hover { background: #fff; color: var(--bg); }
 .pick.on { font-weight: 600; }
 .pick.off { color: var(--muted); }
+/* Style picker (Premiere): picture tiles, two per row, scrolling inside the panel. */
+.gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 330px; overflow-y: auto; padding: 2px; margin-top: -4px; }
+.tile { position: relative; display: grid; gap: 4px; padding: 4px; font: inherit; text-align: left; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.tile:hover { border-color: var(--muted); }
+.tile.on { border-color: #fff; box-shadow: 0 0 0 1px #fff; }
+.tile[disabled] { cursor: default; opacity: .45; }
+.tile[disabled]:hover { border-color: var(--line); }
+.tile .pic { display: block; aspect-ratio: 16 / 6; border-radius: 5px; overflow: hidden; background: #000; }
+.tile .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tile .pic.plain { display: grid; place-items: end center; padding-bottom: 6px; font-size: 11px; font-weight: 600; color: #fff; }
+.tile .name { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
+.tile.on .name { color: var(--text); font-weight: 600; }
+.tile .badge { position: absolute; top: 8px; right: 8px; font-size: 10px; padding: 1px 6px; border-radius: 999px; background: #fff; color: var(--bg); }

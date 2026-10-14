@@ -304,6 +304,66 @@
     if (!on) $("lang").value = "ta";
   };
 
+  // ---------- style previews (Premiere) ----------
+  // A template's picture: templates/previews/<id>.png (cropped to the text, shipped with the templates), else the
+  // thumbnail inside the .mogrt itself (a zip), unpacked once into a temp folder.
+  function preview(t) {
+    var own = path.join(EXT, "templates", "previews", t.id + ".png");
+    if (fs.existsSync(own)) return own;
+    var file = path.join(EXT, "templates", t.file), dir = path.join(os.tmpdir(), "vasanam-thumbs"), out = path.join(dir, t.id + ".png");
+    try {
+      if (fs.existsSync(out) && fs.statSync(out).mtimeMs >= fs.statSync(file).mtimeMs) return out;
+      var zip = fs.readFileSync(file), end = zip.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06])); // end of central directory
+      for (var i = 0, n = zip.readUInt16LE(end + 10), p = zip.readUInt32LE(end + 16); i < n; i++) {
+        var nameLen = zip.readUInt16LE(p + 28), name = zip.toString("utf8", p + 46, p + 46 + nameLen);
+        if (name === "thumb.png") {
+          var at = zip.readUInt32LE(p + 42), start = at + 30 + zip.readUInt16LE(at + 26) + zip.readUInt16LE(at + 28);
+          var data = zip.slice(start, start + zip.readUInt32LE(p + 20));
+          fs.mkdirSync(dir, { recursive: true });
+          fs.writeFileSync(out, zip.readUInt16LE(p + 10) === 8 ? req("zlib").inflateRawSync(data) : data);
+          return out;
+        }
+        p += 46 + nameLen + zip.readUInt16LE(p + 30) + zip.readUInt16LE(p + 32);
+      }
+    } catch (e) {}
+    return null;
+  }
+  function fileUrl(p) { p = p.replace(/\\/g, "/"); return "file://" + (p.charAt(0) === "/" ? "" : "/") + encodeURI(p); }
+
+  // The Style setting as picture tiles; the (hidden) <select> keeps the value, so the rest of the panel is unchanged.
+  function renderGallery() {
+    var g = $("styleGallery"), sel = $("styleMain");
+    g.innerHTML = "";
+    Array.prototype.forEach.call(sel.options, function (o, i) {
+      var t = TEMPLATES.filter(function (x) { return x.id === o.value; })[0];
+      var tile = document.createElement("button");
+      tile.type = "button";
+      tile.className = "tile" + (i === sel.selectedIndex ? " on" : "");
+      tile.disabled = o.disabled;
+      tile.title = o.textContent;
+      tile.setAttribute("role", "option");
+      tile.setAttribute("aria-selected", i === sel.selectedIndex ? "true" : "false");
+      var pic = document.createElement("span"), src = t ? preview(t) : null;
+      pic.className = "pic" + (src ? "" : " plain");
+      if (src) { var img = document.createElement("img"); img.src = fileUrl(src); img.alt = ""; pic.appendChild(img); }
+      else pic.textContent = t ? t.name : "Caption track";
+      var label = document.createElement("span");
+      label.className = "name";
+      label.textContent = t ? t.name : "Plain captions";
+      tile.appendChild(pic);
+      tile.appendChild(label);
+      if (o.disabled) { var badge = document.createElement("span"); badge.className = "badge"; badge.textContent = "Premiere " + (2000 + t.minPremiere); tile.appendChild(badge); }
+      tile.onclick = function () {
+        if (sel.selectedIndex === i) return;
+        sel.selectedIndex = i;
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+      g.appendChild(tile);
+    });
+    var on = g.querySelector(".tile.on");
+    if (on) on.scrollIntoView({ block: "nearest" });
+  }
+
   // Style list for the main screen: Premiere picks a shipped template (or a plain caption track), After Effects the website looks. The last choice is remembered.
   if (HOST === "PPRO") {
     // Templates exported from a newer After Effects (minPremiere in templates.json) don't import into an older Premiere:
@@ -315,6 +375,12 @@
       return [t.id, t.name + (t.minPremiere > major ? " · needs Premiere " + (2000 + t.minPremiere) : "")];
     })), remembered); // plain captions until the user picks a template
     Array.prototype.forEach.call($("styleMain").options, function (o) { o.disabled = newer.some(function (t) { return t.id === o.value; }); });
+    if (typeof document.addEventListener === "function") { // not in the Node test's fake DOM
+      $("styleMain").hidden = true;
+      $("styleGallery").hidden = false;
+      $("styleMain").addEventListener("change", renderGallery);
+      renderGallery();
+    }
   } else {
     api("GET", "/api/styles").then(function (r) {
       if (r.status === 200) fill($("styleMain"), r.data.styles.map(function (x) { return [x.id, x.name + " · " + x.group]; }), store("vs_style") || r.data.defaultStyle);
