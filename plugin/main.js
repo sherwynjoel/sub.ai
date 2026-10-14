@@ -70,6 +70,21 @@
     refreshAccount().then(function (ok) { if (!ok) $("connectMsg").textContent = "That key was not accepted by " + server() + ". Check the website address matches the site where you created the key."; })
       .catch(function (e) { $("connectMsg").textContent = e.message; });
   };
+  // Premiere can keep Cmd/Ctrl+V for its own Edit menu and panels have no right-click menu, so the key box has a
+  // Paste button that reads the system clipboard directly.
+  function readClipboard() {
+    var cp = req("child_process");
+    return os.platform() === "win32"
+      ? cp.execSync("powershell -NoProfile -Command Get-Clipboard", { encoding: "utf8", timeout: 5000, windowsHide: true })
+      : cp.execSync("pbpaste", { encoding: "utf8", timeout: 5000 });
+  }
+  $("pasteKeyBtn").onclick = function () {
+    var text = "";
+    try { text = String(readClipboard()).replace(/\s+/g, ""); } catch (e) { $("connectMsg").textContent = "Couldn't read the clipboard. Type the key instead."; return; }
+    if (!text) { $("connectMsg").textContent = "The clipboard is empty. Copy the key on the website first."; return; }
+    $("key").value = text;
+    $("connectMsg").textContent = /^vsn_/.test(text) ? "" : "That doesn't look like a Vasanam key (they start with vsn_). Copy it again from the website's Plugin page.";
+  };
   $("settingsBtn").onclick = function () { $("server").value = server(); show("connect"); };
 
   // ---------- pick media ----------
@@ -115,7 +130,8 @@
   function template() { var id = $("styleMain").value; for (var i = 0; i < TEMPLATES.length; i++) if (TEMPLATES[i].id === id) return TEMPLATES[i]; return null; }
 
   function placeOnTimeline(job, lang) {
-    var lines = editing ? editing.custom.lines : undefined;
+    // The user's line count: the editor's Lines once a project is open, else the main screen's (empty = Auto).
+    var lines = editing ? editing.custom.lines : (+$("linesMain").value || undefined);
     var cues = window.Subs.placeCues(job.cues, picked.offset, picked.inS, picked.outS);
     if (!cues.length) return Promise.resolve("OK|No speech was found in this clip.");
     var tpl = HOST === "PPRO" ? template() : null;
@@ -123,12 +139,13 @@
       return loadLook(job.id).then(function (d) {
         var l = d.look;
         l.customColor = d.custom && d.custom.color; // only a colour the user picked overrides the template's own
+        l.lines = lines || 0; // a chosen line count is kept exactly; 0 lets the template split long lines
         var items = cues.map(function (c) {
           var text = window.Subs.textOf(c, lang, "\r", lines);
           return { start: c.start, end: c.end, text: l.caps ? text.toUpperCase() : l.lower ? text.toLowerCase() : text };
         });
         var arg = JSON.stringify(items).split("\u2028").join("\\u2028").split("\u2029").join("\\u2029");
-        var t = { path: path.join(EXT, "templates", tpl.file), text: tpl.text, color: tpl.color, w: tpl.w, h: tpl.h };
+        var t = { path: path.join(EXT, "templates", tpl.file), text: tpl.text, color: tpl.color, w: tpl.w, h: tpl.h, layout: tpl.layout };
         return evalHost("vs_pproAddGraphics(" + arg + ", " + JSON.stringify(l) + ", " + JSON.stringify(t) + ", " + JSON.stringify(picked.file) + ")");
       });
     }
@@ -156,11 +173,15 @@
     progress(0, "Uploading " + picked.name + "…");
     store("vs_style", $("styleMain").value);
     store("vs_safe", $("safeMain").value);
+    store("vs_lines", $("linesMain").value);
     api("POST", "/api/upload?name=" + encodeURIComponent(picked.name) + "&lang=" + $("language").value + "&script=" + $("script").value + "&english=" + ($("english").checked ? 1 : 0) + (HOST === "PPRO" ? "" : "&style=" + $("styleMain").value) + "&safe=" + $("safeMain").value, { file: picked.file }, function (f) { progress(f * 40, "Uploading… " + Math.round(f * 100) + "%"); })
       .then(function (r) {
         if (r.status !== 201) throw new Error(r.data.error || "Upload failed (" + r.status + ").");
         lastJob = r.data.id;
-        return wait(r.data.id);
+        // Save a chosen line count with the project so the web editor and exports use it too.
+        var n = +$("linesMain").value, safe = $("safeMain").value;
+        var saved = n ? api("PATCH", "/api/jobs/" + r.data.id, { json: { captionCustom: Object.assign(safe !== "none" ? { safe: safe } : {}, { lines: n }) } }) : Promise.resolve();
+        return saved.then(function () { return wait(r.data.id); });
       })
       .then(function (job) { jobData = job; progress(97, "Placing subtitles…"); return placeOnTimeline(job, lang); })
       .then(function (res) {
@@ -251,7 +272,11 @@
   $("accent").oninput = function () { tweak({ accent: $("accent").value }); };
   $("position").onchange = function () { tweak({ position: $("position").value }); };
   $("safe").onchange = function () { tweak({ safe: $("safe").value === "none" ? undefined : $("safe").value }); };
-  $("lines").onchange = function () { tweak({ lines: $("lines").value ? +$("lines").value : undefined }); };
+  $("lines").onchange = function () {
+    tweak({ lines: $("lines").value ? +$("lines").value : undefined });
+    $("linesMain").value = $("lines").value; // the next project starts with the same choice
+    store("vs_lines", $("lines").value);
+  };
   $("saveBtn").onclick = function () {
     say("");
     Promise.all([saveCues(), saveLook()]).then(function (rs) {
@@ -281,7 +306,15 @@
 
   // Style list for the main screen: Premiere picks a shipped template (or a plain caption track), After Effects the website looks. The last choice is remembered.
   if (HOST === "PPRO") {
-    fill($("styleMain"), [["", "Plain captions (Premiere caption track)"]].concat(TEMPLATES.map(function (t) { return [t.id, t.name]; })), store("vs_style")); // plain captions until the user picks a template
+    // Templates exported from a newer After Effects (minPremiere in templates.json) don't import into an older Premiere:
+    // they stay in the list, greyed out, at the end.
+    var major = parseInt(JSON.parse(cep.getHostEnvironment()).appVersion, 10) || 0;
+    var fits = TEMPLATES.filter(function (t) { return !(t.minPremiere > major); }), newer = TEMPLATES.filter(function (t) { return t.minPremiere > major; });
+    var remembered = newer.some(function (t) { return t.id === store("vs_style"); }) ? "" : store("vs_style");
+    fill($("styleMain"), [["", "Plain captions (Premiere caption track)"]].concat(fits.concat(newer).map(function (t) {
+      return [t.id, t.name + (t.minPremiere > major ? " · needs Premiere " + (2000 + t.minPremiere) : "")];
+    })), remembered); // plain captions until the user picks a template
+    Array.prototype.forEach.call($("styleMain").options, function (o) { o.disabled = newer.some(function (t) { return t.id === o.value; }); });
   } else {
     api("GET", "/api/styles").then(function (r) {
       if (r.status === 200) fill($("styleMain"), r.data.styles.map(function (x) { return [x.id, x.name + " · " + x.group]; }), store("vs_style") || r.data.defaultStyle);
@@ -296,8 +329,59 @@
     ]));
   } catch (e) {}
 
+  // ---------- dropdowns ----------
+  // Premiere 2025's panel browser (CEP 12, Chromium 99) on macOS gets the click on a <select> but never shows its
+  // menu. Every select opens this list instead; the <select> keeps the value, so .value and onchange work as before.
+  (function () {
+    if (typeof document.addEventListener !== "function") return; // the Node test's fake DOM
+    var open = null;
+    function close() { if (open) { open.parentNode.removeChild(open); open = null; } }
+    function show(sel) {
+      var list = document.createElement("div");
+      list.className = "picker";
+      list.setAttribute("role", "listbox");
+      Array.prototype.forEach.call(sel.options, function (o, i) {
+        var item = document.createElement("div");
+        item.className = "pick" + (i === sel.selectedIndex ? " on" : "") + (o.disabled ? " off" : "");
+        item.setAttribute("role", "option");
+        item.textContent = o.textContent;
+        if (!o.disabled) item.addEventListener("mousedown", function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          close();
+          if (sel.selectedIndex !== i) { sel.selectedIndex = i; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+        });
+        list.appendChild(item);
+      });
+      // Open below the field, or above it when there is more room there.
+      var r = sel.getBoundingClientRect(), below = innerHeight - r.bottom - 8, above = r.top - 8;
+      list.style.left = r.left + "px";
+      list.style.width = r.width + "px";
+      if (below >= 160 || below >= above) { list.style.top = r.bottom + 2 + "px"; list.style.maxHeight = below + "px"; }
+      else { list.style.bottom = innerHeight - r.top + 2 + "px"; list.style.maxHeight = above + "px"; }
+      document.body.appendChild(list);
+      open = list;
+      var on = list.querySelector(".on");
+      if (on) on.scrollIntoView({ block: "nearest" });
+    }
+    document.addEventListener("mousedown", function (ev) {
+      if (open && open.contains(ev.target)) return;
+      var sel = ev.target && ev.target.closest && ev.target.closest("select"), was = open;
+      close();
+      if (!sel || sel.disabled) return;
+      ev.preventDefault();
+      sel.focus();
+      if (!was || was.dataset.for !== sel.id) { show(sel); open.dataset.for = sel.id; } // a second click closes it
+    }, true);
+    document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") close(); }, true);
+    document.addEventListener("scroll", function (ev) { if (open && !open.contains(ev.target)) close(); }, true);
+    addEventListener("blur", close);
+    addEventListener("resize", close);
+  })();
+
   // Safe zone for new projects, chosen before generating (list in index.html, same ids as lib/captionStyles.ts); the last choice is remembered.
   if (store("vs_safe")) $("safeMain").value = store("vs_safe");
+  $("linesMain").value = store("vs_lines"); // lines per caption, Auto until the user picks
 
   // ---------- developer test mode ----------
   // Only when <tmp>/vasanam-dev/ exists (never on customer machines): the panel runs commands written to

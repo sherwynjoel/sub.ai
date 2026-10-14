@@ -38,3 +38,9 @@ details label { margin-top: 8px; }
 input[type="range"] { padding: 0; }
 input[type="checkbox"] { width: auto; margin: 0; }
 input[type="color"] { padding: 2px; height: 32px; }
+/* Dropdown lists drawn by the panel (main.js): Premiere 2025 on macOS never shows a <select>'s own menu. */
+.picker { position: fixed; z-index: 100; overflow-y: auto; padding: 4px 0; background: var(--panel); border: 1px solid #fff; border-radius: 6px; box-shadow: 0 10px 28px rgba(0, 0, 0, .6); }
+.pick { padding: 6px 10px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; }
+.pick:hover { background: #fff; color: var(--bg); }
+.pick.on { font-weight: 600; }
+.pick.off { color: var(--muted); }

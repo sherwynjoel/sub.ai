@@ -15,7 +15,13 @@
   <section id="connect" hidden>
     <h1>Connect your account</h1>
     <p class="muted">Create a key on the website under <strong>Plugin</strong>, then paste it here.</p>
-    <label>Your key<input id="key" type="password" placeholder="vsn_…" autocomplete="off" /></label>
+    <div class="field">
+      <span class="label">Your key</span>
+      <div class="row">
+        <input id="key" type="password" placeholder="vsn_…" autocomplete="off" aria-label="Your key" />
+        <button id="pasteKeyBtn" class="btn ghost small" type="button">Paste</button>
+      </div>
+    </div>
     <details>
       <summary>Server</summary>
       <label>Website address<input id="server" /></label>
@@ -69,6 +75,9 @@
     </label>
     <label class="row"><input type="checkbox" id="english" checked> Also an English line</label>
     <label>Style<select id="styleMain"></select></label>
+    <label>Lines per caption<select id="linesMain">
+      <option value="">Auto</option><option value="1">1 line</option><option value="2">2 lines</option><option value="3">3 lines</option>
+    </select></label>
     <label>Safe zone<select id="safeMain">
       <option value="none">None</option><option value="tiktok">TikTok</option><option value="reels">Instagram Reels</option>
       <option value="story">Instagram Story</option><option value="shorts">YouTube Shorts</option><option value="x">X / Twitter</option><option value="linkedin">LinkedIn</option>

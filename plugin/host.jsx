@@ -52,8 +52,10 @@ function vs_pproImportSrt(srtPath) {
   }
 }
 
-// cues: [{start, end, text}] in sequence seconds; look: {size, color, customColor, position, offset, x, y};
-// tpl: {path, text, color} = a Motion Graphics Template and the names of its text and colour controls.
+// cues: [{start, end, text}] in sequence seconds; look: {size, color, customColor, position, offset, x, y, lines};
+// lines > 0 = the user chose that many lines per caption (the text already holds the breaks).
+// tpl: {path, text, color, w, h, layout} = a Motion Graphics Template, the names of its text and colour controls,
+// its frame size and where its text sits in that frame (templates.json).
 // One graphic per cue on the track above the clip (mediaPath); graphics from an earlier run are replaced.
 // Reports which controls it could set, so a new template can be checked from the panel message.
 function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
@@ -66,10 +68,6 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
     var yf = look.y != null ? look.y : look.position === "top" ? offset + 0.04 : look.position === "middle" ? (z.top + 1 - z.bottom) / 2 : 1 - offset - 0.04;
     var xf = look.x != null ? look.x : (z.left + 1 - z.right) / 2;
     var W = seq.frameSizeHorizontal || 1920, H = seq.frameSizeVertical || 1080;
-    // Template text is clipped to the template's own frame: lines are sized against that frame (title text ≈ 12% of its height).
-    var budget = Math.max(8, Math.floor((tpl.w || 1920) / ((tpl.h || 1080) * 0.12 * 0.6)));
-    // Templates are drawn in their own (landscape) frame and placed at that size: scale the frame to the safe zone's width.
-    var scale = vs_templateScale(tpl.w || 1920, W, z, look.size);
     // Clear our earlier graphics and find the clip's track.
     var clipTrack = -1, t, k;
     for (t = 0; t < seq.videoTracks.numTracks; t++) {
@@ -91,15 +89,18 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
       try { app.enableQE(); qe.project.getActiveSequence().addTracks(1, seq.videoTracks.numTracks, 0, 0, 0, 0); target = seq.videoTracks.numTracks - 1; }
       catch (e) { return "ERR|Add an empty video track above the clip, then place again."; }
     }
-    var set = {}, names = [], n = 0;
+    var set = {}, names = [], n = 0, most = 0; // most: the fewest lines a caption had to drop to
     for (var i = 0; i < cues.length; i++) {
       var c = cues[i];
       if (c.end <= c.start) continue;
       var at = new Time(); at.seconds = c.start;
-      var item = seq.importMGT(tpl.path, at.ticks, target, 0);
+      var item;
+      try { item = seq.importMGT(tpl.path, at.ticks, target, 0); }
+      catch (e) { return "ERR|This Premiere Pro (" + app.version + ") can't load the caption template. It may need a newer Premiere Pro; pick another style."; }
       if (!item) return "ERR|Premiere could not import the caption template.";
       item.name = "Vasanam " + (i + 1);
-      var lay = vs_layout(c.text, budget, 3); // at most 3 lines; a caption still too long is shrunk, never clipped
+      var fit = vs_templateFit(String(c.text), tpl, W, H, z, look.size, xf, yf, look.lines > 0), place = fit.place;
+      if (fit.fewer) most = most ? Math.min(most, fit.fewer) : fit.fewer;
       try { var end = new Time(); end.seconds = c.end; item.end = end; set.duration = 1; } catch (e) {
         try { var out = new Time(); out.seconds = c.end - c.start; item.outPoint = out; set.duration = 1; } catch (e2) {}
       }
@@ -109,7 +110,10 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
         var prm = props[p], name = prm.displayName;
         if (i === 0) names.push(name);
         try {
-          if (name === tpl.text || (!tpl.text && name === "Source Text")) { vs_setText(prm, lay.text); set.text = 1; }
+          if (name === tpl.text || (!tpl.text && name === "Source Text")) {
+            set.text = 1;
+            if (vs_setText(prm, fit.text, place.font)) set.font = 1;
+          }
           else if (name === tpl.color && look.customColor && prm.setColorValue) { vs_setColor(prm, look.customColor); set.color = 1; }
         } catch (e) {}
       }
@@ -122,9 +126,9 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
             var mp = mc.properties[q];
             if (mp.displayName === "Position") {
               var cur = mp.getValue(), frac = cur[0] <= 1 && cur[1] <= 1;
-              mp.setValue(frac ? [xf, yf] : [xf * (seq.frameSizeHorizontal || 1920), yf * (seq.frameSizeVertical || 1080)], true);
+              mp.setValue(frac ? [place.x / W, place.y / H] : [place.x, place.y], true);
               set.position = 1;
-            } else if (mp.displayName === "Scale") { mp.setValue(Math.round(scale * lay.fit * 10) / 10, true); set.scale = 1; }
+            } else if (mp.displayName === "Scale") { mp.setValue(place.scale, true); set.scale = 1; }
           }
         }
       } catch (e) {}
@@ -132,15 +136,75 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
     }
     var done = [];
     for (var s in set) done.push(s);
-    return "OK|Added " + n + " styled captions on V" + (target + 1) + ". Set: " + (done.join(", ") || "nothing") + ". Template controls: " + names.join(", ");
+    return "OK|Added " + n + " styled captions on V" + (target + 1) + "." + (most ? " This template fits at most " + most + (most === 1 ? " line" : " lines") + ", so longer captions use " + most + "." : "") +
+      " Set: " + (done.join(", ") || "nothing") + ". Template controls: " + names.join(", ");
   } catch (e) {
     return "ERR|" + e.toString();
   }
 }
 
-// Percent scale that makes a template's frame as wide as the safe zone (never enlarged past 100% × size).
-function vs_templateScale(tplWidth, frameWidth, z, size) {
-  return Math.round(Math.min(100, 100 * frameWidth * (1 - z.left - z.right) / tplWidth) * (size || 1) * 10) / 10;
+// A template caption's text and placement. Lines the caption already has (one per language, or the Lines setting)
+// are kept; a single long line that would need a much smaller font is split into two balanced lines instead.
+// chosen: the user picked the number of lines (Lines = 1, 2 or 3), so the lines are only ever sized, never re-split.
+function vs_templateFit(text, tpl, W, H, z, size, xf, yf, chosen) {
+  var CR = String.fromCharCode(13), lines = text.split(CR);
+  var place = vs_templatePlace(lines, tpl, W, H, z, size, xf, yf), own = tpl.layout ? tpl.layout.size : 0;
+  if (chosen) {
+    // A fixed line spacing can be too wide for the template's frame (Cracked fits one line): as many lines as fit.
+    var k = lines.length;
+    while (!place.fits && k > 1) {
+      k--;
+      var flat = lines.join(" ");
+      lines = vs_layout(flat, Math.ceil(flat.length / k), k).text.split(CR);
+      place = vs_templatePlace(lines, tpl, W, H, z, size, xf, yf);
+    }
+    return { text: lines.join(CR), place: place, fewer: k < text.split(CR).length ? k : 0 };
+  }
+  // Not on templates with a fixed line spacing: their second line would sit far below the first.
+  if (lines.length === 1 && own && place.font < own * 0.7 && !tpl.layout.fixedLeading) {
+    var two = vs_layout(text, Math.ceil(text.length / 2), 2).text.split(CR);
+    var p2 = vs_templatePlace(two, tpl, W, H, z, size, xf, yf);
+    if (two.length === 2 && p2.font > place.font) return { text: two.join(CR), place: p2 };
+  }
+  // Lines a fixed line spacing pushes out of the template's frame (Cracked: 455 px apart) go on one line instead.
+  if (lines.length > 1 && !place.fits) {
+    var one = lines.join("  ·  ");
+    return { text: one, place: vs_templatePlace([one], tpl, W, H, z, size, xf, yf) };
+  }
+  return { text: text, place: place };
+}
+
+// How to place a template caption so every line stays inside the template's own frame (Premiere clips anything
+// outside it) and inside the safe zone. tpl.layout is where the template's text sits in that frame, measured in
+// After Effects: align (left | center), x (left edge or centre), top/bottom of one line, pitch (line to line),
+// charW (average character width) and size (font size), all in template pixels; fixedLeading = the line spacing
+// stays the same when the font shrinks.
+// lines: the caption's lines; W, H: sequence frame; z: safe zone margins; xf, yf: where the caption's centre goes.
+// Returns {scale: Motion scale %, font: font size for the text, x, y: Motion position in frame pixels,
+// fits: every line is inside the template's frame top to bottom}.
+function vs_templatePlace(lines, tpl, W, H, z, size, xf, yf) {
+  var tw = tpl.w || 1920, th = tpl.h || 1080;
+  var L = tpl.layout || { align: "center", x: tw / 2, top: th * 0.44, bottom: th * 0.56, pitch: th * 0.14, charW: th * 0.072, size: th * 0.12 };
+  var n = 1;
+  for (var i = 0; i < lines.length; i++) n = Math.max(n, String(lines[i]).length);
+  var wide = n * L.charW; // longest line at the template's own font size
+  var m = tw * 0.03; // keep clear of the template frame's edge
+  var room = L.align === "left" ? tw - m - L.x : 2 * Math.min(L.x - m, tw - m - L.x);
+  // Same caption size as the burned-in MP4 (7.5% of the short side); a dragged caption gets the room around its point.
+  var s = Math.min(W, H) * 0.075 * (size || 1) / L.size;
+  var safe = W * 2 * Math.min(xf - z.left, 1 - z.right - xf);
+  var f = Math.min(1, room / wide, safe / (wide * s)); // font shrink so the longest line fits both
+  // Text grows right from a left-aligned x, both ways from a centred one; a smaller font keeps its baseline (≈ bottom).
+  var tx = L.align === "left" ? L.x + wide * f / 2 : L.x;
+  var top = L.bottom - (L.bottom - L.top) * f, bottom = L.bottom + (lines.length - 1) * L.pitch * (L.fixedLeading ? 1 : f);
+  var ty = (top + bottom) / 2;
+  return {
+    scale: Math.round(s * 1000) / 10,
+    font: Math.round(L.size * f * 10) / 10,
+    x: Math.round(xf * W - (tx - tw / 2) * s),
+    y: Math.round(yf * H - (ty - th / 2) * s),
+    fits: top >= 0 && bottom <= th
+  };
 }
 
 // Characters that fit on one line inside the safe zone (caption font ≈ 7.5% of the short side, glyph ≈ 0.6 em).
@@ -169,15 +233,51 @@ function vs_layout(text, budget, maxLines) {
 }
 
 // Source Text arrives as an object, a JSON string or a plain string depending on the Premiere version.
-function vs_setText(prm, text) {
-  var val = prm.getValue();
-  if (val && typeof val === "object") { val.textEditValue = text; prm.setValue(val, true); return; }
+// size (optional) also sets the font size; returns true when it could.
+// The style is stored per text run, and a template's runs only cover its default text ("Santhosham" = 10 characters):
+// the last run is stretched over the new text so the whole caption gets the size, not just its first characters.
+function vs_setText(prm, text, size) {
+  var val = prm.getValue(), sized = false;
+  if (val && typeof val === "object") {
+    val.textEditValue = text;
+    if (val.fontTextRunLength instanceof Array) val.fontTextRunLength = vs_runLengths(val.fontTextRunLength, text.length);
+    if (size && val.fontSizeEditValue !== undefined) { val.fontSizeEditValue = val.fontSizeEditValue instanceof Array ? vs_fill(val.fontSizeEditValue, size) : size; sized = true; }
+    prm.setValue(val, true);
+    return sized;
+  }
   if (typeof val === "string" && /"textEditValue"/.test(val)) {
     var esc = text.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r/g, "\\r").replace(/\n/g, "\\n");
-    prm.setValue(val.replace(/"textEditValue"\s*:\s*"(?:[^"\\]|\\.)*"/, '"textEditValue":"' + esc + '"'), true);
-    return;
+    val = val.replace(/"textEditValue"\s*:\s*"(?:[^"\\]|\\.)*"/, '"textEditValue":"' + esc + '"');
+    val = val.replace(/("fontTextRunLength"\s*:\s*)\[([^\]]*)\]/, function (all, key, v) {
+      var runs = v.split(","), n = [];
+      for (var i = 0; i < runs.length; i++) n.push(parseInt(runs[i], 10) || 0);
+      return key + "[" + vs_runLengths(n, text.length).join(",") + "]";
+    });
+    // One value per text run: every run gets the new size.
+    if (size && /"fontSizeEditValue"/.test(val)) {
+      val = val.replace(/("fontSizeEditValue"\s*:\s*)(\[[^\]]*\]|[\d.]+)/, function (all, key, v) { return key + v.replace(/[\d.]+/g, String(size)); });
+      sized = true;
+    }
+    prm.setValue(val, true);
+    return sized;
   }
   prm.setValue(text, true);
+  return false;
+}
+
+// Run lengths with the last run stretched to the end of a `len`-character text. Runs are never dropped: every other
+// per-run value (font, caps, ...) keeps one entry per run. A text shorter than the earlier runs is left as it was.
+function vs_runLengths(runs, len) {
+  var out = [], before = 0;
+  for (var i = 0; i < runs.length - 1; i++) { out.push(runs[i]); before += runs[i]; }
+  out.push(len > before ? len - before : runs[runs.length - 1]);
+  return out;
+}
+
+function vs_fill(arr, v) {
+  var out = [];
+  for (var i = 0; i < arr.length; i++) out.push(v);
+  return out;
 }
 
 function vs_setColor(prm, hex) {

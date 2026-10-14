@@ -10,7 +10,18 @@
   ],
   "credit": "",
   "w": 1920,
-  "h": 1080
+  "h": 1080,
+  "minPremiere": 26,
+  "layout": {
+   "align": "center",
+   "x": 947,
+   "top": 406,
+   "bottom": 647,
+   "pitch": 390,
+   "charW": 114.6,
+   "size": 115,
+   "fixedLeading": true
+  }
  },
  {
   "id": "cracked",
@@ -23,7 +34,18 @@
   ],
   "credit": "",
   "w": 1920,
-  "h": 1080
+  "h": 1080,
+  "minPremiere": 26,
+  "layout": {
+   "align": "center",
+   "x": 958,
+   "top": 394,
+   "bottom": 674,
+   "pitch": 455,
+   "charW": 133.3,
+   "size": 115,
+   "fixedLeading": true
+  }
  },
  {
   "id": "energetic-1-by-creative-sparrow-graphics",
@@ -36,7 +58,17 @@
   ],
   "credit": "Creative Sparrow Graphics",
   "w": 2560,
-  "h": 1440
+  "h": 1440,
+  "minPremiere": 26,
+  "layout": {
+   "align": "center",
+   "x": 1280,
+   "top": 680,
+   "bottom": 792,
+   "pitch": 178,
+   "charW": 83.1,
+   "size": 148
+  }
  },
  {
   "id": "energetic-2-by-creative-sparrow-graphics",
@@ -49,7 +81,17 @@
   ],
   "credit": "Creative Sparrow Graphics",
   "w": 2560,
-  "h": 1440
+  "h": 1440,
+  "minPremiere": 26,
+  "layout": {
+   "align": "center",
+   "x": 1280,
+   "top": 680,
+   "bottom": 792,
+   "pitch": 178,
+   "charW": 83.1,
+   "size": 148
+  }
  },
  {
   "id": "energetic-3-by-creative-sparrow-graphics",
@@ -62,7 +104,17 @@
   ],
   "credit": "Creative Sparrow Graphics",
   "w": 2560,
-  "h": 1440
+  "h": 1440,
+  "minPremiere": 26,
+  "layout": {
+   "align": "center",
+   "x": 1280,
+   "top": 680,
+   "bottom": 792,
+   "pitch": 178,
+   "charW": 83.1,
+   "size": 148
+  }
  },
  {
   "id": "god-rays-text-effect-by-creative-sparrow-graphics",
@@ -75,7 +127,18 @@
   ],
   "credit": "Creative Sparrow Graphics",
   "w": 2560,
-  "h": 1440
+  "h": 1440,
+  "minPremiere": 26,
+  "layout": {
+   "align": "center",
+   "x": 1282,
+   "top": 854,
+   "bottom": 997,
+   "pitch": 214,
+   "charW": 107.9,
+   "size": 189,
+   "fixedLeading": true
+  }
  },
  {
   "id": "santhosham",
@@ -88,7 +151,18 @@
   ],
   "credit": "",
   "w": 1920,
-  "h": 1080
+  "h": 1080,
+  "minPremiere": 26,
+  "layout": {
+   "align": "left",
+   "x": 512,
+   "top": 458,
+   "bottom": 638,
+   "pitch": 102,
+   "charW": 76.4,
+   "size": 91,
+   "fixedLeading": true
+  }
  },
  {
   "id": "text-break",
@@ -101,7 +175,17 @@
   ],
   "credit": "Creative Sparrow Graphics",
   "w": 3840,
-  "h": 2160
+  "h": 2160,
+  "minPremiere": 26,
+  "layout": {
+   "align": "center",
+   "x": 1911,
+   "top": 1031,
+   "bottom": 1230,
+   "pitch": 291,
+   "charW": 105.6,
+   "size": 242
+  }
  },
  {
   "id": "typewriter-01",
@@ -114,7 +198,16 @@
   ],
   "credit": "",
   "w": 1920,
-  "h": 1080
+  "h": 1080,
+  "layout": {
+   "align": "left",
+   "x": 610,
+   "top": 492,
+   "bottom": 587,
+   "pitch": 120,
+   "charW": 45.3,
+   "size": 100
+  }
  },
  {
   "id": "typewriter-03",
@@ -127,7 +220,16 @@
   ],
   "credit": "",
   "w": 1920,
-  "h": 1080
+  "h": 1080,
+  "layout": {
+   "align": "left",
+   "x": 638,
+   "top": 492,
+   "bottom": 587,
+   "pitch": 120,
+   "charW": 45.3,
+   "size": 100
+  }
  },
  {
   "id": "typewriter-04",
@@ -140,7 +242,16 @@
   ],
   "credit": "",
   "w": 1920,
-  "h": 1080
+  "h": 1080,
+  "layout": {
+   "align": "left",
+   "x": 645,
+   "top": 492,
+   "bottom": 587,
+   "pitch": 120,
+   "charW": 45.3,
+   "size": 100
+  }
  },
  {
   "id": "typewriter-06",
@@ -153,7 +264,16 @@
   ],
   "credit": "",
   "w": 1920,
-  "h": 1080
+  "h": 1080,
+  "layout": {
+   "align": "center",
+   "x": 960,
+   "top": 492,
+   "bottom": 587,
+   "pitch": 120,
+   "charW": 45.3,
+   "size": 100
+  }
  },
  {
   "id": "typewriter-07",
@@ -166,7 +286,16 @@
   ],
   "credit": "",
   "w": 1920,
-  "h": 1080
+  "h": 1080,
+  "layout": {
+   "align": "center",
+   "x": 961,
+   "top": 492,
+   "bottom": 587,
+   "pitch": 120,
+   "charW": 45.3,
+   "size": 100
+  }
  },
  {
   "id": "typewriter-08",
@@ -179,7 +308,16 @@
   ],
   "credit": "",
   "w": 1920,
-  "h": 1080
+  "h": 1080,
+  "layout": {
+   "align": "left",
+   "x": 517,
+   "top": 500,
+   "bottom": 586,
+   "pitch": 108,
+   "charW": 40.7,
+   "size": 90
+  }
  },
  {
   "id": "typewriter-09",
@@ -192,7 +330,16 @@
   ],
   "credit": "",
   "w": 1920,
-  "h": 1080
+  "h": 1080,
+  "layout": {
+   "align": "left",
+   "x": 499,
+   "top": 492,
+   "bottom": 587,
+   "pitch": 120,
+   "charW": 45.3,
+   "size": 100
+  }
  },
  {
   "id": "typewriter-10",
@@ -205,7 +352,16 @@
   ],
   "credit": "",
   "w": 1920,
-  "h": 1080
+  "h": 1080,
+  "layout": {
+   "align": "left",
+   "x": 499,
+   "top": 492,
+   "bottom": 587,
+   "pitch": 120,
+   "charW": 45.3,
+   "size": 100
+  }
  },
  {
   "id": "typewriter-11",
@@ -218,7 +374,16 @@
   ],
   "credit": "",
   "w": 1920,
-  "h": 1080
+  "h": 1080,
+  "layout": {
+   "align": "left",
+   "x": 638,
+   "top": 492,
+   "bottom": 587,
+   "pitch": 120,
+   "charW": 45.3,
+   "size": 100
+  }
  },
  {
   "id": "typewriter-12",
@@ -231,7 +396,16 @@
   ],
   "credit": "",
   "w": 1920,
-  "h": 1080
+  "h": 1080,
+  "layout": {
+   "align": "left",
+   "x": 602,
+   "top": 492,
+   "bottom": 587,
+   "pitch": 120,
+   "charW": 45.3,
+   "size": 100
+  }
  },
  {
   "id": "typewriter-13",
@@ -244,7 +418,16 @@
   ],
   "credit": "",
   "w": 1920,
-  "h": 1080
+  "h": 1080,
+  "layout": {
+   "align": "center",
+   "x": 961,
+   "top": 492,
+   "bottom": 587,
+   "pitch": 120,
+   "charW": 45.3,
+   "size": 100
+  }
  },
  {
   "id": "typewriter-14",
@@ -257,7 +440,16 @@
   ],
   "credit": "",
   "w": 1920,
-  "h": 1080
+  "h": 1080,
+  "layout": {
+   "align": "center",
+   "x": 962,
+   "top": 497,
+   "bottom": 583,
+   "pitch": 108,
+   "charW": 40.7,
+   "size": 90
+  }
  },
  {
   "id": "zoom-in",
@@ -270,6 +462,16 @@
   ],
   "credit": "",
   "w": 1920,
-  "h": 1080
+  "h": 1080,
+  "minPremiere": 26,
+  "layout": {
+   "align": "center",
+   "x": 970,
+   "top": 452,
+   "bottom": 630,
+   "pitch": 224,
+   "charW": 84.6,
+   "size": 211
+  }
  }
 ]

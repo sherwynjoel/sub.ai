@@ -35,7 +35,7 @@ const localStorage = { getItem: (k) => storage.get(k) ?? null, setItem: (k, v) =
 // ---------- fake Premiere ----------
 const calls = [];
 const cep = {
-  getHostEnvironment: () => JSON.stringify({ appName: "PPRO" }),
+  getHostEnvironment: () => JSON.stringify({ appName: "PPRO", appVersion: "25.6.6" }),
   getSystemPath: () => "file:///" + encodeURI(path.resolve(__dirname).replace(/\\/g, "/")), // the file:// form CEP really returns
   registerKeyEventsInterest: () => {},
   evalScript: (script, cb) => {
@@ -62,6 +62,11 @@ test("panel: templates list, connect, pick, generate, place, edit against the li
   assert.equal(els.styleMain.options.length, templates.length + 1, "style list = plain + templates");
   assert.equal(els.styleMain.options[0].value, "");
   assert.equal(els.styleMain.selectedIndex, 0, "nothing saved yet → first entry selected");
+  // Premiere 25 can't import templates exported from After Effects 2026: listed last, greyed out.
+  const newer = templates.filter((t) => t.minPremiere > 25).map((t) => t.id);
+  assert.ok(newer.length > 0);
+  assert.deepEqual(els.styleMain.options.filter((o) => o.disabled).map((o) => o.value).sort(), [...newer].sort());
+  assert.ok(els.styleMain.options.slice(-newer.length).every((o) => o.disabled && /needs Premiere 2026/.test(o.textContent)));
   assert.ok(els.connect.hidden === false, "connect screen shown without a key");
 
   // Mint a key through the website API, as a user would from the Plugin page.
@@ -142,15 +147,68 @@ test("host: captions wrap to fit the safe zone width", () => {
   assert.ok(ctx.vs_layout("ஒன்று இரண்டு மூன்று நான்கு ஐந்து" + CR + "one two three four five six", 12, 3).lines <= 3);
 });
 
-test("host: landscape templates are scaled down to fit a vertical safe zone", () => {
+test("host: a template's text size covers the whole caption, not just its default word's length", () => {
   const ctx = {};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "host.jsx"), "utf8"), ctx);
-  const tiktok = { top: 0.1, right: 0.16, bottom: 0.25, left: 0.04 }, none = { top: 0, right: 0.07, bottom: 0, left: 0.07 };
-  assert.equal(ctx.vs_templateScale(1920, 1080, tiktok, 1), 45, "1920-wide template in a 1080-wide TikTok frame");
-  assert.equal(ctx.vs_templateScale(3840, 1080, none, 1), 24.2);
-  assert.equal(ctx.vs_templateScale(1920, 1920, none, 1), 86);
-  assert.equal(ctx.vs_templateScale(1280, 3840, none, 1), 100, "never enlarged");
-  assert.equal(ctx.vs_templateScale(1920, 1080, tiktok, 0.5), 22.5, "Size slider multiplies");
+  // What Premiere 2026 returns for Santhosham's Source Text (its default word is 10 characters long).
+  const premiere = '{"capPropFontEdit":true,"capPropFontFauxStyleEdit":true,"capPropFontSizeEdit":true,"capPropTextRunCount":1,"fontEditValue":["Coolvetica-Regular"],"fontFSAllCapsValue":[false],"fontFSBoldValue":[false],"fontFSItalicValue":[false],"fontFSSmallCapsValue":[false],"fontSizeEditValue":[91],"fontTextRunLength":[10],"textEditValue":"Santhosham"}';
+  let saved;
+  const prm = { getValue: () => premiere, setValue: (v) => { saved = v; } };
+  const text = "Hi I am Saranya from\rSri Cotton Boutique";
+  assert.equal(ctx.vs_setText(prm, text, 59.2), true);
+  const v = JSON.parse(saved);
+  assert.deepEqual([v.textEditValue, v.fontSizeEditValue, v.fontTextRunLength], [text, [59.2], [text.length]]);
+  assert.equal(v.fontEditValue[0], "Coolvetica-Regular", "the rest of the style is untouched");
+  // Several runs: earlier runs kept, the last one stretched; never fewer runs than per-run values.
+  assert.deepEqual([...ctx.vs_runLengths([3, 7], 40)], [3, 37]);
+  assert.deepEqual([...ctx.vs_runLengths([10], 4)], [4]);
+  assert.deepEqual([...ctx.vs_runLengths([3, 7], 2)], [3, 7]);
+});
+
+test("host: template captions stay inside the template frame and the safe zone", () => {
+  const CR = String.fromCharCode(13);
+  const ctx = {};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "host.jsx"), "utf8"), ctx);
   const templates = JSON.parse(fs.readFileSync(path.join(__dirname, "templates.json"), "utf8"));
-  assert.ok(templates.every((t) => t.w > 0 && t.h > 0), "every template has its frame size");
+  assert.ok(templates.every((t) => t.w > 0 && t.h > 0 && t.layout && t.layout.charW > 0), "every template has its frame size and measured layout");
+  const zones = { none: { top: 0, right: 0.07, bottom: 0, left: 0.07 }, tiktok: { top: 0.1, right: 0.16, bottom: 0.25, left: 0.04 } };
+  const frames = [[1080, 1920], [1920, 1080]];
+  const captions = ["Hi", "Hi I am Saranya from Sri Cotton Boutique, single saree", "நான் எப்பவுமே cotton materials தான் prefer" + CR + "They would say that I always prefer cotton"];
+  for (const t of templates) for (const [W, H] of frames) for (const [zn, z] of Object.entries(zones)) for (const text of captions) {
+    const xf = (z.left + 1 - z.right) / 2, yf = 0.8;
+    const fit = ctx.vs_templateFit(text, t, W, H, z, 1, xf, yf), p = fit.place, lines = fit.text.split(CR);
+    const L = t.layout, s = p.scale / 100, f = p.font / L.size;
+    const w = Math.max(...lines.map((l) => l.length)) * L.charW * f; // longest line, template pixels
+    const left = L.align === "left" ? L.x : L.x - w / 2, right = left + w;
+    const at = `${t.id} ${W}x${H} ${zn} "${lines[0].slice(0, 12)}"`;
+    assert.ok(left >= 0 && right <= t.w, `${at}: inside the template frame (${Math.round(left)}..${Math.round(right)} of ${t.w})`);
+    const sl = p.x + (left - t.w / 2) * s, sr = p.x + (right - t.w / 2) * s; // on screen
+    assert.ok(sl >= z.left * W - 1 && sr <= (1 - z.right) * W + 1, `${at}: inside the safe zone (${Math.round(sl)}..${Math.round(sr)} of ${W})`);
+    assert.ok(Math.abs((sl + sr) / 2 - xf * W) <= 2, `${at}: centred on the safe zone`);
+    assert.ok(p.font <= L.size && p.font > 0, `${at}: font only ever shrinks (${p.font})`);
+    assert.equal(lines.join(" ").replace(/  ·  /g, " ").replace(/\s+/g, " "), text.split(CR).join(" ").replace(/\s+/g, " "), `${at}: no words lost`);
+    const top = L.bottom - (L.bottom - L.top) * f, bottom = L.bottom + (lines.length - 1) * L.pitch * (L.fixedLeading ? 1 : f);
+    const st = p.y + (top - t.h / 2) * s, sb = p.y + (bottom - t.h / 2) * s;
+    assert.ok(top >= 0 && bottom <= t.h && st >= 0 && sb <= H, `${at}: inside the frame top to bottom`);
+  }
+  // Short captions keep the template's own font size; long ones shrink.
+  const tw = templates.find((t) => t.id === "typewriter-01");
+  assert.equal(ctx.vs_templatePlace(["Hi"], tw, 1080, 1920, zones.none, 1, 0.5, 0.8).font, 100);
+  assert.ok(ctx.vs_templatePlace([captions[1]], tw, 1080, 1920, zones.none, 1, 0.5, 0.8).font < 100);
+  // A long single line becomes two lines rather than tiny type; a caption with its own lines keeps them.
+  assert.equal(ctx.vs_templateFit(captions[1], tw, 1080, 1920, zones.none, 1, 0.5, 0.8).text.split(CR).length, 2);
+  assert.equal(ctx.vs_templateFit(captions[2], tw, 1080, 1920, zones.none, 1, 0.5, 0.8).text, captions[2]);
+  // A chosen line count is kept exactly, except where a fixed line spacing leaves room for fewer (Cracked: one).
+  const three = "Hi I am Saranya" + CR + "from Sri Cotton" + CR + "Boutique, single saree";
+  assert.equal(ctx.vs_templateFit(three, tw, 1080, 1920, zones.none, 1, 0.5, 0.8, true).text, three);
+  assert.equal(ctx.vs_templateFit("Hi I am Saranya from Sri Cotton Boutique, single saree", tw, 1080, 1920, zones.none, 1, 0.5, 0.8, true).text.split(CR).length, 1, "1 line stays 1 line");
+  const crackedThree = ctx.vs_templateFit(three, templates.find((t) => t.id === "cracked"), 1080, 1920, zones.none, 1, 0.5, 0.8, true);
+  assert.equal(crackedThree.fewer, 1); assert.ok(crackedThree.place.fits);
+  // Fixed line spacing (Butter Up): a long line stays one line.
+  const butter = templates.find((t) => t.id === "butter-up");
+  assert.ok(butter.layout.fixedLeading);
+  assert.equal(ctx.vs_templateFit(captions[1], butter, 1080, 1920, zones.none, 1, 0.5, 0.8).text, captions[1]);
+  // Two languages that a fixed line spacing would push out of the frame (Cracked) share one line.
+  const cracked = templates.find((t) => t.id === "cracked");
+  assert.equal(ctx.vs_templateFit(captions[2], cracked, 1080, 1920, zones.none, 1, 0.5, 0.8).text, captions[2].replace(CR, "  ·  "));
 });
