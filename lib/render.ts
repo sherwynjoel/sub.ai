@@ -31,7 +31,9 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
       : ["-f", "lavfi", "-i", `color=c=0x0c0c14:s=${width}x${height}:r=30`, "-i", job.filePath, "-shortest"];
     const args = [
       "-y", "-v", "error", "-nostats", "-progress", "pipe:1", ...input,
-      "-vf", "subtitles=subs.ass:fontsdir=fonts",
+      // The ass filter with complex shaping: Tamil and other Indic scripts need it (otherwise vowel signs like ே land
+      // after the consonant instead of before it). The server also needs a font with the script (fonts-noto-core).
+      "-vf", "ass=subs.ass:fontsdir=fonts:shaping=complex",
       "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
       "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out,
     ];
