@@ -87,7 +87,8 @@
   }
 
   $("connectBtn").onclick = function () {
-    store("vs_key", $("key").value.trim());
+    // An empty box keeps the saved key (Account → Connect used to sign people out).
+    if ($("key").value.trim()) store("vs_key", $("key").value.trim());
     if ($("server").value.trim()) store("vs_server", $("server").value.trim());
     $("connectMsg").textContent = "";
     $("connectMsg").textContent = "Connecting to " + server() + "…";
@@ -109,7 +110,15 @@
     $("key").value = text;
     $("connectMsg").textContent = /^vsn_/.test(text) ? "" : "That doesn't look like a Vasanam key (they start with vsn_). Copy it again from the website's Plugin page.";
   };
-  $("settingsBtn").onclick = function () { $("server").value = server(); show("connect"); };
+  $("settingsBtn").onclick = function () {
+    $("server").value = server();
+    $("key").value = "";
+    $("key").placeholder = store("vs_key") ? "Leave empty to keep your current key" : "vsn_…";
+    $("connectMsg").textContent = "";
+    $("backBtn").hidden = !store("vs_key");
+    show("connect");
+  };
+  $("backBtn").onclick = function () { show("main"); };
 
   // ---------- pick media ----------
   $("pickBtn").onclick = function () {
@@ -265,29 +274,41 @@
       : tpl ? "Changes apply when you place on the timeline again. The rest of the look comes from the template."
         : "Font, colour and position of the caption track are set in Premiere's Essential Graphics panel.";
   }
+  // Edits wait for "Update timeline"; say so, so nobody wonders why the timeline didn't change.
+  var pending = false;
+  function changed() { pending = true; say("Not on the timeline yet — click Update timeline.", ""); }
+  function grow(t) { t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px"; } // whole line visible, any panel width
   function openEditor(job) {
     editing = { job: job, cues: job.cues.map(function (c) { return { start: c.start, end: c.end, ta: c.ta, en: c.en }; }), dirty: false, styleId: "", custom: {} };
-    var box = $("cues");
+    pending = false;
+    var box = $("cues"), hasEnglish = editing.cues.some(function (c) { return c.en; });
     box.innerHTML = "";
     editing.cues.forEach(function (c) {
       var row = document.createElement("div");
       row.className = "cue";
-      var t = document.createElement("span");
-      t.className = "muted";
+      var t = document.createElement("button");
+      t.type = "button";
+      t.className = "time";
+      t.title = "Jump to this line in " + (HOST === "PPRO" ? "Premiere" : "After Effects");
       t.textContent = window.Subs.stamp(c.start).slice(0, 8) + " → " + window.Subs.stamp(c.end).slice(0, 8);
+      t.onclick = function () { if (picked) evalHost("vs_seek(" + Math.max(0, c.start + picked.offset) + ")"); };
       row.appendChild(t);
-      ["ta", "en"].forEach(function (k) {
-        var inp = document.createElement("input");
+      (hasEnglish ? ["ta", "en"] : ["ta"]).forEach(function (k) {
+        var inp = document.createElement("textarea");
+        inp.rows = 1;
         inp.value = c[k];
-        inp.oninput = function () { c[k] = inp.value; editing.dirty = true; };
+        inp.setAttribute("aria-label", k === "en" ? "English" : "Subtitle");
+        inp.oninput = function () { c[k] = inp.value.replace(/\n/g, " "); editing.dirty = true; grow(inp); changed(); };
         row.appendChild(inp);
       });
       box.appendChild(row);
     });
+    setTimeout(function () { Array.prototype.forEach.call(box.querySelectorAll ? box.querySelectorAll("textarea") : [], grow); }, 0);
     return loadLook(job.id).then(function (d) { showLook(d); $("tabs").hidden = false; view("editor"); });
   }
   function tweak(patch) {
     for (var k in patch) { if (patch[k] === undefined || patch[k] === "") delete editing.custom[k]; else editing.custom[k] = patch[k]; }
+    changed();
   }
   function saveLook() { return api("PATCH", "/api/jobs/" + editing.job.id, { json: { captionStyle: editing.styleId, captionCustom: editing.custom } }); }
   function saveCues() {
@@ -318,7 +339,7 @@
     say("");
     Promise.all([saveCues(), saveLook()]).then(function (rs) {
       var bad = rs.filter(function (r) { return r.status !== 200; })[0];
-      say(bad ? (bad.data.error || "Couldn't save.") : "Saved.", bad ? "error" : "ok");
+      say(bad ? (bad.data.error || "Couldn't save.") : pending ? "Saved. Click Update timeline to put the changes on your timeline." : "Saved.", bad ? "error" : "ok");
     }).catch(function (e) { say(e.message, "error"); });
   };
   $("placeBtn").onclick = function () {
@@ -328,6 +349,7 @@
       .then(function () { return placeOnTimeline(editing.job, $("lang").value); })
       .then(function (res) {
         var r = reply(res);
+        if (r.ok) pending = false;
         // Template graphics replace the earlier ones; a caption track is added alongside the old one.
         say(r.text + (r.ok && HOST === "PPRO" && !template() ? " Delete the older caption track if you placed one before." : ""), r.ok ? "ok" : "error", r.details);
       })
@@ -340,7 +362,10 @@
     var on = $("english").checked;
     Array.prototype.forEach.call($("lang").options, function (o) { o.disabled = !on && o.value !== "ta"; });
     if (!on) $("lang").value = "ta";
+    $("lang").onchange();
   };
+  // Lines count per language: with both stacked, the caption has twice as many.
+  $("lang").onchange = function () { $("linesHint").hidden = $("lang").value !== "both"; };
 
   // ---------- style previews (Premiere) ----------
   // A template's picture: templates/previews/<id>.png (cropped to the text, shipped with the templates), else the
@@ -460,7 +485,7 @@
   (function () {
     if (typeof document.addEventListener !== "function") return; // the Node test's fake DOM
     var open = null;
-    function close() { if (open) { open.parentNode.removeChild(open); open = null; } }
+    function close() { if (open && open.parentNode) open.parentNode.removeChild(open); open = null; } // also if already gone
     function show(sel) {
       var list = document.createElement("div");
       list.className = "picker";
@@ -493,9 +518,10 @@
       if (open && open.contains(ev.target)) return;
       var sel = ev.target && ev.target.closest && ev.target.closest("select"), was = open;
       close();
-      if (!sel || sel.disabled) return;
+      if (!sel || sel.disabled || !sel.offsetParent) return; // hidden selects can't be clicked
       ev.preventDefault();
-      sel.focus();
+      // Without preventScroll, focusing a select half under the action bar scrolls the page, and the scroll closes the list.
+      sel.focus({ preventScroll: true });
       if (!was || was.dataset.for !== sel.id) { show(sel); open.dataset.for = sel.id; } // a second click closes it
     }, true);
     document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") close(); }, true);
@@ -507,7 +533,7 @@
   // Safe zone for new projects, chosen before generating (list in index.html, same ids as lib/captionStyles.ts); the last choice is remembered.
   if (store("vs_safe")) $("safeMain").value = store("vs_safe");
   $("linesMain").value = store("vs_lines"); // lines per caption, Auto until the user picks
-  $("english").onchange();
+  $("english").onchange(); // also sets the Lines hint
 
   // ---------- developer test mode ----------
   // Only when <tmp>/vasanam-dev/ exists (never on customer machines): the panel runs commands written to

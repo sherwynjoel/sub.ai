@@ -65,7 +65,11 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
     look = look || {};
     var offset = look.offset || 0.09, z = look.safe || { top: 0, right: 0.07, bottom: 0, left: 0.07 };
     // Where the graphic's centre goes, as a fraction of the frame: inside the safe zone.
-    var yf = look.y != null ? look.y : look.position === "top" ? offset + 0.04 : look.position === "middle" ? (z.top + 1 - z.bottom) / 2 : 1 - offset - 0.04;
+    // No chained a ? b : c ? d : e here: ExtendScript groups it as (a ? b : c) ? d : e, which put "top" in the middle.
+    var yf = 1 - offset - 0.04; // bottom
+    if (look.y != null) yf = look.y;
+    else if (look.position === "top") yf = offset + 0.04;
+    else if (look.position === "middle") yf = (z.top + 1 - z.bottom) / 2;
     var xf = look.x != null ? look.x : (z.left + 1 - z.right) / 2;
     var W = seq.frameSizeHorizontal || 1920, H = seq.frameSizeVertical || 1080;
     // Clear our earlier graphics and find the clip's track.
@@ -144,6 +148,14 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
   }
 }
 
+// Width of one line in template pixels at the template's own font size. Tamil characters are counted at their own
+// (wider) width: one average width for both let a short word of wide letters (அண்ணா) overflow the frame.
+function vs_textWidth(line, L) {
+  var w = L.pad || 0, ta = L.charWTa || L.charW;
+  for (var i = 0; i < line.length; i++) { var c = line.charCodeAt(i); w += c >= 0x0B80 && c <= 0x0BFF ? ta : L.charW; }
+  return w;
+}
+
 // A template caption's text and placement. Lines the caption already has (one per language, or the Lines setting)
 // are kept; a single long line that would need a much smaller font is split into two balanced lines instead.
 // chosen: the user picked the number of lines (Lines = 1, 2 or 3), so the lines are only ever sized, never re-split.
@@ -185,7 +197,8 @@ function vs_templateFit(text, tpl, W, H, z, size, xf, yf, chosen) {
 // How to place a template caption so every line stays inside the template's own frame (Premiere clips anything
 // outside it) and inside the safe zone. tpl.layout is where the template's text sits in that frame, measured in
 // After Effects: align (left | center), x (left edge or centre), top/bottom of one line, pitch (line to line),
-// charW (average character width) and size (font size), all in template pixels; fixedLeading = the line spacing
+// charW / charWTa (width of a Latin / Tamil character), pad (fixed extra on any line) and size (font size), all in
+// template pixels; fixedLeading = the line spacing
 // stays the same when the font shrinks; maxLines = the most lines the template shows.
 // lines: the caption's lines; W, H: sequence frame; z: safe zone margins; xf, yf: where the caption's centre goes.
 // Returns {scale: Motion scale %, font: font size for the text, x, y: Motion position in frame pixels,
@@ -193,9 +206,8 @@ function vs_templateFit(text, tpl, W, H, z, size, xf, yf, chosen) {
 function vs_templatePlace(lines, tpl, W, H, z, size, xf, yf) {
   var tw = tpl.w || 1920, th = tpl.h || 1080;
   var L = tpl.layout || { align: "center", x: tw / 2, top: th * 0.44, bottom: th * 0.56, pitch: th * 0.14, charW: th * 0.072, size: th * 0.12 };
-  var n = 1;
-  for (var i = 0; i < lines.length; i++) n = Math.max(n, String(lines[i]).length);
-  var wide = n * L.charW; // longest line at the template's own font size
+  var wide = 1;
+  for (var i = 0; i < lines.length; i++) wide = Math.max(wide, vs_textWidth(lines[i], L)); // longest line, template font size
   var m = tw * 0.03; // keep clear of the template frame's edge
   var room = L.align === "left" ? tw - m - L.x : 2 * Math.min(L.x - m, tw - m - L.x);
   // Same caption size as the burned-in MP4 (7.5% of the short side); a dragged caption gets the room around its point.
@@ -208,11 +220,18 @@ function vs_templatePlace(lines, tpl, W, H, z, size, xf, yf) {
   var tx = L.align === "left" ? L.x + wide * f / 2 : L.x;
   var top = L.bottom - (L.bottom - L.top) * f, bottom = L.bottom + (lines.length - 1) * L.pitch * (L.fixedLeading ? 1 : f);
   var ty = (top + bottom) / 2;
+  // Top to bottom: lines taller than the safe area shrink the graphic; then the block is moved inside the frame
+  // (wide line spacing at a big size pushed a second line off the bottom).
+  var lo = H * z.top, hi = H * (1 - z.bottom);
+  if ((bottom - top) * s > hi - lo) s = (hi - lo) / (bottom - top);
+  var y = yf * H - (ty - th / 2) * s, yTop = y + (top - th / 2) * s, yBottom = y + (bottom - th / 2) * s;
+  if (yBottom > hi) y -= yBottom - hi;
+  if (yTop < lo) y += lo - yTop;
   return {
-    scale: Math.round(s * 1000) / 10,
+    scale: Math.floor(s * 1000) / 10,
     font: font,
-    x: Math.round(xf * W - (tx - tw / 2) * s),
-    y: Math.round(yf * H - (ty - th / 2) * s),
+    x: Math.round(xf * W - (tx - tw / 2) * Math.floor(s * 1000) / 1000),
+    y: Math.round(y),
     fits: top >= 0 && bottom <= th
   };
 }
@@ -295,6 +314,19 @@ function vs_setColor(prm, hex) {
   prm.setColorValue(255, parseInt(hex.substr(0, 2), 16), parseInt(hex.substr(2, 2), 16), parseInt(hex.substr(4, 2), 16), true);
 }
 
+// Moves the playhead (Premiere) or the comp's current time (After Effects) to `seconds`, to find a caption.
+function vs_seek(seconds) {
+  try {
+    var seq = app.project.activeSequence;
+    if (seq) { var t = new Time(); t.seconds = seconds; seq.setPlayerPosition(t.ticks); return "OK|"; }
+    var comp = app.project.activeItem;
+    if (comp && comp instanceof CompItem) { comp.time = seconds; return "OK|"; }
+    return "ERR|Open a sequence first.";
+  } catch (e) {
+    return "ERR|" + e.toString();
+  }
+}
+
 // ---------- After Effects ----------
 
 // Returns "OK|<path>|<offsetSeconds>|<inSeconds>|<outSeconds>|<name>" for the selected footage layer.
@@ -341,10 +373,11 @@ function vs_aeAddTextLayers(cues, look) {
     var z = look.safe || { top: 0, right: 0.07, bottom: 0, left: 0.07 };
     var budget = vs_charBudget(comp.width, comp.height, z, look.size);
     var x = look.x != null ? comp.width * look.x : comp.width * (z.left + 1 - z.right) / 2;
-    var y = look.y != null ? comp.height * look.y + fontSize / 2 // dragged on the website
-      : look.position === "top" ? comp.height * offset + fontSize
-      : look.position === "middle" ? comp.height * (z.top + 1 - z.bottom) / 2 + fontSize / 2
-      : comp.height * (1 - offset);
+    // if/else, not a ternary chain: ExtendScript groups a ? b : c ? d : e as (a ? b : c) ? d : e.
+    var y = comp.height * (1 - offset); // bottom
+    if (look.y != null) y = comp.height * look.y + fontSize / 2; // dragged on the website
+    else if (look.position === "top") y = comp.height * offset + fontSize;
+    else if (look.position === "middle") y = comp.height * (z.top + 1 - z.bottom) / 2 + fontSize / 2;
     for (var i = cues.length - 1; i >= 0; i--) {
       var c = cues[i];
       if (c.end <= 0 || c.start >= comp.duration) continue;

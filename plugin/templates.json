@@ -18,9 +18,11 @@
    "top": 406,
    "bottom": 647,
    "pitch": 390,
-   "charW": 135.1,
+   "charW": 157.1,
    "size": 115,
-   "fixedLeading": true
+   "fixedLeading": true,
+   "charWTa": 171.2,
+   "pad": 77
   }
  },
  {
@@ -42,9 +44,11 @@
    "top": 394,
    "bottom": 674,
    "pitch": 455,
-   "charW": 157.3,
+   "charW": 182.8,
    "size": 115,
-   "fixedLeading": true
+   "fixedLeading": true,
+   "charWTa": 199.2,
+   "pad": 90
   }
  },
  {
@@ -66,8 +70,10 @@
    "top": 680,
    "bottom": 792,
    "pitch": 178,
-   "charW": 83.1,
-   "size": 148
+   "charW": 99.2,
+   "size": 148,
+   "charWTa": 99.0,
+   "pad": 37
   }
  },
  {
@@ -89,8 +95,10 @@
    "top": 680,
    "bottom": 792,
    "pitch": 178,
-   "charW": 83.1,
-   "size": 148
+   "charW": 99.2,
+   "size": 148,
+   "charWTa": 99.0,
+   "pad": 37
   }
  },
  {
@@ -112,8 +120,10 @@
    "top": 680,
    "bottom": 792,
    "pitch": 178,
-   "charW": 83.1,
-   "size": 148
+   "charW": 99.2,
+   "size": 148,
+   "charWTa": 99.0,
+   "pad": 37
   }
  },
  {
@@ -135,9 +145,11 @@
    "top": 854,
    "bottom": 997,
    "pitch": 214,
-   "charW": 107.9,
+   "charW": 128.5,
    "size": 189,
-   "fixedLeading": true
+   "fixedLeading": true,
+   "charWTa": 127.8,
+   "pad": 46
   }
  },
  {
@@ -159,10 +171,12 @@
    "top": 458,
    "bottom": 638,
    "pitch": 102,
-   "charW": 90.7,
+   "charW": 105.4,
    "size": 91,
    "fixedLeading": true,
-   "maxLines": 1
+   "maxLines": 1,
+   "charWTa": 115.1,
+   "pad": 53
   }
  },
  {
@@ -184,8 +198,10 @@
    "top": 1031,
    "bottom": 1230,
    "pitch": 291,
-   "charW": 126.7,
-   "size": 242
+   "charW": 148.2,
+   "size": 242,
+   "charWTa": 163.6,
+   "pad": 71
   }
  },
  {
@@ -206,8 +222,10 @@
    "top": 492,
    "bottom": 587,
    "pitch": 120,
-   "charW": 54.1,
-   "size": 100
+   "charW": 64.4,
+   "size": 100,
+   "charWTa": 68.5,
+   "pad": 50
   }
  },
  {
@@ -228,8 +246,10 @@
    "top": 492,
    "bottom": 587,
    "pitch": 120,
-   "charW": 55.3,
-   "size": 100
+   "charW": 62.3,
+   "size": 100,
+   "charWTa": 67.6,
+   "pad": 31
   }
  },
  {
@@ -250,8 +270,10 @@
    "top": 492,
    "bottom": 587,
    "pitch": 120,
-   "charW": 53.4,
-   "size": 100
+   "charW": 62.3,
+   "size": 100,
+   "charWTa": 67.6,
+   "pad": 31
   }
  },
  {
@@ -272,8 +294,10 @@
    "top": 492,
    "bottom": 587,
    "pitch": 120,
-   "charW": 58.9,
-   "size": 100
+   "charW": 76.9,
+   "size": 100,
+   "charWTa": 75.6,
+   "pad": 148
   }
  },
  {
@@ -294,8 +318,10 @@
    "top": 492,
    "bottom": 587,
    "pitch": 120,
-   "charW": 53.4,
-   "size": 100
+   "charW": 62.3,
+   "size": 100,
+   "charWTa": 67.6,
+   "pad": 30
   }
  },
  {
@@ -316,8 +342,10 @@
    "top": 500,
    "bottom": 586,
    "pitch": 108,
-   "charW": 48.7,
-   "size": 90
+   "charW": 57.6,
+   "size": 90,
+   "charWTa": 60.9,
+   "pad": 49
   }
  },
  {
@@ -338,8 +366,10 @@
    "top": 492,
    "bottom": 587,
    "pitch": 120,
-   "charW": 55.3,
-   "size": 100
+   "charW": 67.2,
+   "size": 100,
+   "charWTa": 70.0,
+   "pad": 73
   }
  },
  {
@@ -360,8 +390,10 @@
    "top": 492,
    "bottom": 587,
    "pitch": 120,
-   "charW": 53.4,
-   "size": 100
+   "charW": 66.6,
+   "size": 100,
+   "charWTa": 67.6,
+   "pad": 87
   }
  },
  {
@@ -382,8 +414,10 @@
    "top": 492,
    "bottom": 587,
    "pitch": 120,
-   "charW": 53.4,
-   "size": 100
+   "charW": 62.3,
+   "size": 100,
+   "charWTa": 67.6,
+   "pad": 31
   }
  },
  {
@@ -404,8 +438,10 @@
    "top": 492,
    "bottom": 587,
    "pitch": 120,
-   "charW": 53.5,
-   "size": 100
+   "charW": 62.6,
+   "size": 100,
+   "charWTa": 67.8,
+   "pad": 36
   }
  },
  {
@@ -426,8 +462,10 @@
    "top": 492,
    "bottom": 587,
    "pitch": 120,
-   "charW": 59.0,
-   "size": 100
+   "charW": 69.1,
+   "size": 100,
+   "charWTa": 67.6,
+   "pad": 196
   }
  },
  {
@@ -448,8 +486,10 @@
    "top": 497,
    "bottom": 583,
    "pitch": 108,
-   "charW": 48.0,
-   "size": 90
+   "charW": 56.1,
+   "size": 90,
+   "charWTa": 60.9,
+   "pad": 27
   }
  },
  {
@@ -471,8 +511,10 @@
    "top": 427,
    "bottom": 655,
    "pitch": 251,
-   "charW": 128.3,
-   "size": 211
+   "charW": 149.1,
+   "size": 211,
+   "charWTa": 162.5,
+   "pad": 73
   }
  }
 ]

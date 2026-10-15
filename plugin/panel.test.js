@@ -173,14 +173,15 @@ test("host: template captions stay inside the template frame and the safe zone",
   assert.ok(templates.every((t) => t.w > 0 && t.h > 0 && t.layout && t.layout.charW > 0), "every template has its frame size and measured layout");
   const zones = { none: { top: 0, right: 0.07, bottom: 0, left: 0.07 }, tiktok: { top: 0.1, right: 0.16, bottom: 0.25, left: 0.04 } };
   const frames = [[1080, 1920], [1920, 1080]];
-  const captions = ["Hi", "Hi I am Saranya from Sri Cotton Boutique, single saree", "நான் எப்பவுமே cotton materials தான் prefer" + CR + "They would say that I always prefer cotton"];
-  for (const t of templates) for (const [W, H] of frames) for (const [zn, z] of Object.entries(zones)) for (const text of captions) {
+  const captions = ["Hi", "அண்ணா.", "Hi I am Saranya from Sri Cotton Boutique, single saree", "நான் எப்பவுமே cotton materials தான் prefer" + CR + "They would say that I always prefer cotton"];
+  // Size 1.6: the editor's Size slider turned up (a big size used to push a short Tamil word off the frame).
+  for (const t of templates) for (const [W, H] of frames) for (const [zn, z] of Object.entries(zones)) for (const text of captions) for (const size of [1, 1.6]) {
     const xf = (z.left + 1 - z.right) / 2, yf = 0.8;
-    const fit = ctx.vs_templateFit(text, t, W, H, z, 1, xf, yf), p = fit.place, lines = fit.text.split(CR);
+    const fit = ctx.vs_templateFit(text, t, W, H, z, size, xf, yf), p = fit.place, lines = fit.text.split(CR);
     const L = t.layout, s = p.scale / 100, f = p.font / L.size;
-    const w = Math.max(...lines.map((l) => l.length)) * L.charW * f; // longest line, template pixels
+    const w = Math.max(...lines.map((l) => ctx.vs_textWidth(l, L))) * f; // longest line, template pixels
     const left = L.align === "left" ? L.x : L.x - w / 2, right = left + w;
-    const at = `${t.id} ${W}x${H} ${zn} "${lines[0].slice(0, 12)}"`;
+    const at = `${t.id} ${W}x${H} ${zn} size ${size} "${lines[0].slice(0, 12)}"`;
     assert.ok(left >= 0 && right <= t.w, `${at}: inside the template frame (${Math.round(left)}..${Math.round(right)} of ${t.w})`);
     const sl = p.x + (left - t.w / 2) * s, sr = p.x + (right - t.w / 2) * s; // on screen
     assert.ok(sl >= z.left * W - 1 && sr <= (1 - z.right) * W + 1, `${at}: inside the safe zone (${Math.round(sl)}..${Math.round(sr)} of ${W})`);
@@ -194,10 +195,10 @@ test("host: template captions stay inside the template frame and the safe zone",
   // Short captions keep the template's own font size; long ones shrink.
   const tw = templates.find((t) => t.id === "typewriter-01");
   assert.equal(ctx.vs_templatePlace(["Hi"], tw, 1080, 1920, zones.none, 1, 0.5, 0.8).font, 100);
-  assert.ok(ctx.vs_templatePlace([captions[1]], tw, 1080, 1920, zones.none, 1, 0.5, 0.8).font < 100);
+  assert.ok(ctx.vs_templatePlace([captions[2]], tw, 1080, 1920, zones.none, 1, 0.5, 0.8).font < 100);
   // A long single line becomes two lines rather than tiny type; a caption with its own lines keeps them.
-  assert.equal(ctx.vs_templateFit(captions[1], tw, 1080, 1920, zones.none, 1, 0.5, 0.8).text.split(CR).length, 2);
-  assert.equal(ctx.vs_templateFit(captions[2], tw, 1080, 1920, zones.none, 1, 0.5, 0.8).text, captions[2]);
+  assert.equal(ctx.vs_templateFit(captions[2], tw, 1080, 1920, zones.none, 1, 0.5, 0.8).text.split(CR).length, 2);
+  assert.equal(ctx.vs_templateFit(captions[3], tw, 1080, 1920, zones.none, 1, 0.5, 0.8).text, captions[3]);
   // A chosen line count is kept exactly, except where a fixed line spacing leaves room for fewer (Cracked: one).
   const three = "Hi I am Saranya" + CR + "from Sri Cotton" + CR + "Boutique, single saree";
   assert.equal(ctx.vs_templateFit(three, tw, 1080, 1920, zones.none, 1, 0.5, 0.8, true).text, three);
@@ -206,12 +207,19 @@ test("host: template captions stay inside the template frame and the safe zone",
   assert.equal(crackedThree.fewer, 1); assert.ok(crackedThree.place.fits);
   // Santhosham only shows one line: two languages share it.
   const santhosham = templates.find((t) => t.id === "santhosham");
-  assert.equal(ctx.vs_templateFit(captions[2], santhosham, 1080, 1920, zones.none, 1, 0.5, 0.8).text, captions[2].replace(CR, "  ·  "));
+  assert.equal(ctx.vs_templateFit(captions[3], santhosham, 1080, 1920, zones.none, 1, 0.5, 0.8).text, captions[3].replace(CR, "  ·  "));
   // Fixed line spacing (Butter Up): a long line stays one line.
   const butter = templates.find((t) => t.id === "butter-up");
   assert.ok(butter.layout.fixedLeading);
-  assert.equal(ctx.vs_templateFit(captions[1], butter, 1080, 1920, zones.none, 1, 0.5, 0.8).text, captions[1]);
+  assert.equal(ctx.vs_templateFit(captions[2], butter, 1080, 1920, zones.none, 1, 0.5, 0.8).text, captions[2]);
   // Two languages that a fixed line spacing would push out of the frame (Cracked) share one line.
   const cracked = templates.find((t) => t.id === "cracked");
-  assert.equal(ctx.vs_templateFit(captions[2], cracked, 1080, 1920, zones.none, 1, 0.5, 0.8).text, captions[2].replace(CR, "  ·  "));
+  assert.equal(ctx.vs_templateFit(captions[3], cracked, 1080, 1920, zones.none, 1, 0.5, 0.8).text, captions[3].replace(CR, "  ·  "));
+});
+
+test("host: no chained a ? b : c ? d : e (ExtendScript groups it as (a ? b : c) ? d : e)", () => {
+  // Found in Premiere: position "top" landed in the middle. Node evaluates these correctly, so look at the source.
+  const code = fs.readFileSync(path.join(__dirname, "host.jsx"), "utf8").split("\n").map((l) => l.replace(/\/\/.*$/, ""));
+  const chained = code.map((l, i) => [i + 1, l]).filter(([, l]) => /\?[^:;,]*:[^;,]*\?/.test(l) || /^\s*:\s/.test(l));
+  assert.deepEqual(chained.map(([n]) => n), [], "use if/else instead: " + chained.map(([n, l]) => `line ${n}: ${l.trim()}`).join(" | "));
 });

@@ -29,7 +29,10 @@
       <summary>Server</summary>
       <label>Website address<input id="server" /></label>
     </details>
-    <button id="connectBtn" class="btn">Connect</button>
+    <div class="row">
+      <button id="connectBtn" class="btn">Connect</button>
+      <button id="backBtn" class="btn ghost" type="button" hidden>Back</button>
+    </div>
     <p id="connectMsg" class="error" role="alert"></p>
   </section>
 
@@ -107,10 +110,11 @@
               <option value="both">Both, stacked</option>
             </select>
           </label>
-          <label>Lines per caption<select id="linesMain">
+          <label>Lines per language<select id="linesMain">
             <option value="">Auto</option><option value="1">1 line</option><option value="2">2 lines</option><option value="3">3 lines</option>
           </select></label>
         </div>
+        <p id="linesHint" class="hint muted" hidden>With both languages stacked, each language gets this many lines.</p>
         <label>Safe zone<select id="safeMain">
           <option value="none">None</option><option value="tiktok">TikTok</option><option value="reels">Instagram Reels</option>
           <option value="story">Instagram Story</option><option value="shorts">YouTube Shorts</option><option value="x">X / Twitter</option><option value="linkedin">LinkedIn</option>
@@ -137,7 +141,7 @@
               <option value="top">Top</option>
             </select>
           </label>
-          <label id="lkLines">Lines
+          <label id="lkLines">Lines per language
             <select id="lines">
               <option value="">Auto</option>
               <option value="1">1</option>
@@ -151,6 +155,7 @@
       </div>
       <div class="card">
         <h2>Subtitles</h2>
+        <p class="hint muted">Click a time to jump there in Premiere. To change timings or add and remove lines, use the web editor.</p>
         <div id="cues"></div>
       </div>
     </div>
@@ -164,7 +169,7 @@
       <p id="msg" role="status"></p>
       <div class="actions" data-for="setup"><button id="goBtn" class="btn wide" disabled>Generate subtitles</button></div>
       <div class="actions" data-for="editor" hidden>
-        <button id="placeBtn" class="btn">Place on timeline again</button>
+        <button id="placeBtn" class="btn">Update timeline</button>
         <button id="saveBtn" class="btn ghost">Save</button>
         <button id="openBtn" class="link" hidden>Open in the web editor</button>
       </div>
