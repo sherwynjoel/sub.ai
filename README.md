@@ -60,7 +60,7 @@ Usage resets on every `subscription.charged`. Cancelling keeps the plan until th
 ## Adobe panel (Premiere Pro + After Effects, CEP)
 
 - Source: `plugin/`. Build the signed installer (downloads Adobe's ZXPSignCmd on first run):
-  `powershell -File plugin/build.ps1 -Server https://<your-domain>` → `public/downloads/vasanam-panel.zxp` (served at `/downloads/vasanam-panel.zxp`).
+  `powershell -File plugin/build.ps1 -Server https://<your-domain>` → `public/downloads/vasanam-panel.zxp`. The Plugin page downloads it through `/api/plugin/panel`, which names the file `vasanam-panel-v<version>.zxp` from the version in `plugin/CSXS/manifest.xml` (raise it for each release).
 - Users install it with the free ZXP Installer; steps are on `/app/plugin`.
 - Dev without packaging: copy `plugin/` to `%APPDATA%\Adobe\CEP\extensions\vasanam` (mac: `~/Library/Application Support/Adobe/CEP/extensions/vasanam`) and enable unsigned panels:
   `reg add HKCU\Software\Adobe\CSXS.11 /v PlayerDebugMode /t REG_SZ /d 1` (repeat for CSXS.12).
