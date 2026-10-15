@@ -81,6 +81,19 @@ function vs_pproImportSrt(srtPath) {
 // its frame size and where its text sits in that frame (templates.json).
 // One graphic per cue on the track above the clip (mediaPath); graphics from an earlier run are replaced.
 // Reports which controls it could set, so a new template can be checked from the panel message.
+// Remove template sound (an .aegraphic audio clip) that starts where one of our removed captions started.
+function vs_dropTemplateAudio(seq, starts) {
+  for (var t = 0; t < seq.audioTracks.numTracks; t++) {
+    var cs = seq.audioTracks[t].clips;
+    for (var k = cs.numItems - 1; k >= 0; k--) {
+      var c = cs[k];
+      try {
+        if (starts[Math.round(c.start.seconds * 100)] && /\.aegraphic$/i.test(c.projectItem.getMediaPath())) c.remove(false, false);
+      } catch (e) {}
+    }
+  }
+}
+
 function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
   try {
     var seq = app.project.activeSequence;
@@ -96,12 +109,12 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
     var xf = look.x != null ? look.x : (z.left + 1 - z.right) / 2;
     var W = seq.frameSizeHorizontal || 1920, H = seq.frameSizeVertical || 1080;
     // Clear our earlier graphics and find the clip's track.
-    var clipTrack = -1, t, k;
+    var clipTrack = -1, t, k, ours = {};
     for (t = 0; t < seq.videoTracks.numTracks; t++) {
       var tr = seq.videoTracks[t];
       for (k = tr.clips.numItems - 1; k >= 0; k--) {
         var cl = tr.clips[k];
-        if (/^Vasanam \d+$/.test(cl.name)) { try { cl.remove(false, false); } catch (e) {} }
+        if (/^Vasanam \d+$/.test(cl.name)) { ours[Math.round(cl.start.seconds * 100)] = 1; try { cl.remove(false, false); } catch (e) {} }
         else if (mediaPath && cl.projectItem && cl.projectItem.getMediaPath && cl.projectItem.getMediaPath() === mediaPath) clipTrack = t;
       }
     }
@@ -116,13 +129,26 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
       try { app.enableQE(); qe.project.getActiveSequence().addTracks(1, seq.videoTracks.numTracks, 0, 0, 0, 0); target = seq.videoTracks.numTracks - 1; }
       catch (e) { return "ERR|Add an empty video track above the clip, then place again."; }
     }
+    vs_dropTemplateAudio(seq, ours); // sound an earlier placement left (they start where our captions started)
+    // Templates with sound (Text Break) bring an audio clip with each caption. importMGT puts it on the audio track
+    // it's given and overwrites what's there, so give it an empty track (never the clip's own audio), then remove it.
+    var aTarget = -1;
+    for (t = 0; t < seq.audioTracks.numTracks && aTarget < 0; t++) {
+      var aBusy = false, acs = seq.audioTracks[t].clips;
+      for (k = 0; k < acs.numItems; k++) if (acs[k].start.seconds < last + 60 && acs[k].end.seconds > first) aBusy = true;
+      if (!aBusy) aTarget = t;
+    }
+    if (aTarget < 0) {
+      try { app.enableQE(); qe.project.getActiveSequence().addTracks(0, 0, 1, 1, seq.audioTracks.numTracks, 0, 0); aTarget = seq.audioTracks.numTracks - 1; } catch (e) {}
+      if (aTarget < 0 || seq.audioTracks[aTarget].clips.numItems) return "ERR|Add an empty audio track, then place again (so the captions don't replace your audio).";
+    }
     var set = {}, names = [], n = 0, most = 0; // most: the fewest lines a caption had to drop to
     for (var i = 0; i < cues.length; i++) {
       var c = cues[i];
       if (c.end <= c.start) continue;
       var at = new Time(); at.seconds = c.start;
       var item;
-      try { item = seq.importMGT(tpl.path, at.ticks, target, 0); }
+      try { item = seq.importMGT(tpl.path, at.ticks, target, aTarget); }
       catch (e) { return "ERR|This Premiere Pro (" + app.version + ") can't load the caption template. It may need a newer Premiere Pro; pick another style."; }
       if (!item) return "ERR|Premiere could not import the caption template.";
       item.name = "Vasanam " + (i + 1);
@@ -161,6 +187,8 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
       } catch (e) {}
       n++;
     }
+    var mine = seq.audioTracks[aTarget].clips; // our templates' sound on the track picked for it
+    for (k = mine.numItems - 1; k >= 0; k--) { try { if (/\.aegraphic$/i.test(mine[k].projectItem.getMediaPath())) mine[k].remove(false, false); } catch (e) {} }
     var done = [];
     for (var s in set) done.push(s);
     // "OK|message|details": the panel shows the message; the details (for checking a new template) go in its tooltip.
