@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toSrt, toVtt, mergeChunks, pairChunks, splitLine, layoutCue, divide, naturalBreak, shiftCues, breakLines } from "./subtitles";
+import { toSrt, toVtt, mergeChunks, pairChunks, splitLine, layoutCue, divide, naturalBreak, shiftCues, breakLines, snapToPauses } from "./subtitles";
 import { secondsLeft, effectivePlan } from "./plans";
 
 const cue = (start: number, end: number, ta = "வணக்கம்", en = "Hello") => ({ start, end, ta, en });
@@ -98,4 +98,13 @@ test("divide cuts a translation at a phrase edge near the length-based point, ne
   // Punctuation wins over a clause word; nothing more than 2 words from the length-based point.
   assert.equal(naturalBreak("a b c, d and e f g".split(" "), 4, 1, 7), 3);
   assert.equal(naturalBreak("a b c d e f g h, i".split(" "), 3, 1, 9), 3, "the comma is too far away");
+});
+
+test("snapToPauses moves a back-to-back cut to the nearby pause and keeps real gaps", () => {
+  const level = Array.from({ length: 300 }, (_, f) => (f >= 118 && f <= 124 ? -50 : -15)); // 10 ms frames, pause at 1.18-1.24 s
+  const out = snapToPauses([cue(0, 1.5), cue(1.5, 3), cue(3.2, 4)], level, 0.01);
+  assert.ok(Math.abs(out[0].end - 1.21) < 0.03 && out[1].start === out[0].end);
+  assert.deepEqual([out[1].end, out[2].start], [3, 3.2]);
+  // No pause nearby: the cut stays.
+  assert.equal(snapToPauses([cue(0, 1.5), cue(1.5, 3)], new Array(300).fill(-15), 0.01)[0].end, 1.5);
 });

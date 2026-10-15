@@ -179,3 +179,35 @@ export function naturalBreak(words: string[], at: number, lo: number, hi: number
 export function shiftCues(cues: Cue[], by: number): Cue[] {
   return cues.map((c) => ({ ...c, start: Math.max(0, c.start + by), end: c.end + by })).filter((c) => c.end > 0.05);
 }
+
+/**
+ * Move the cut between back-to-back cues to the quietest moment near it. Inside a speech model's window the
+ * cuts are only estimated by text length, so they can land mid-word up to a second or two off; speech pauses
+ * are where a new subtitle should start. `level` is loudness in dB per `frame` seconds (media.loudness).
+ * Cuts with a real gap (the model's own timestamps) are kept.
+ */
+export function snapToPauses(cues: Cue[], level: ArrayLike<number>, frame: number): Cue[] {
+  const out = cues.map((c) => ({ ...c }));
+  const avg = (f: number) => { // 100 ms average, so one quiet sample between syllables doesn't count as a pause
+    let s = 0, n = 0;
+    for (let k = f - 2; k <= f + 2; k++) if (k >= 0 && k < level.length) { s += level[k]; n++; }
+    return n ? s / n : 0;
+  };
+  for (let i = 0; i + 1 < out.length; i++) {
+    const a = out[i], b = out[i + 1];
+    if (b.start - a.end > 0.05 || b.start < a.end - 0.05) continue;
+    const t0 = (a.end + b.start) / 2;
+    const reach = Math.min(1.2, (t0 - a.start) * 0.5, (b.end - t0) * 0.5);
+    if (reach < 2 * frame) continue;
+    const f0 = Math.round(t0 / frame), span = Math.round(reach / frame);
+    if (f0 >= level.length) break;
+    let best = f0, bestCost = avg(f0);
+    for (let f = f0 - span; f <= f0 + span; f++) {
+      if (f < 0 || f >= level.length) continue;
+      const cost = avg(f) + (8 * Math.abs(f - f0)) / span; // up to 8 dB against moving far
+      if (cost < bestCost) { best = f; bestCost = cost; }
+    }
+    a.end = b.start = best * frame;
+  }
+  return out;
+}

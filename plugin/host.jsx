@@ -29,6 +29,29 @@ function vs_pproPickMedia() {
   }
 }
 
+// Where a media file sits on the active sequence now: "OK|offset|in|out" (a selected copy first, else the first
+// one on the timeline), or "NONE". Read again when placing, so a clip moved or trimmed after it was picked still lines up.
+function vs_pproFindClip(mediaPath) {
+  try {
+    var seq = app.project.activeSequence, found = null;
+    if (!seq) return "NONE";
+    var groups = [seq.videoTracks, seq.audioTracks];
+    for (var g = 0; g < 2; g++) for (var t = 0; t < groups[g].numTracks; t++) {
+      var clips = groups[g][t].clips;
+      for (var k = 0; k < clips.numItems; k++) {
+        var c = clips[k];
+        if (!c.projectItem || c.projectItem.getMediaPath() !== mediaPath) continue;
+        if (c.isSelected()) { found = c; g = 2; t = 1e9; break; }
+        if (!found) found = c;
+      }
+    }
+    if (!found) return "NONE";
+    return "OK|" + (found.start.seconds - found.inPoint.seconds) + "|" + found.inPoint.seconds + "|" + found.outPoint.seconds;
+  } catch (e) {
+    return "NONE";
+  }
+}
+
 // Imports an SRT and places it as a caption track on the active sequence.
 // Premiere's scripting API can't style captions; the user styles the track in Essential Graphics.
 function vs_pproImportSrt(srtPath) {

@@ -162,7 +162,20 @@
   try { TEMPLATES = JSON.parse(fs.readFileSync(path.join(EXT, "templates.json"), "utf8")); } catch (e) {}
   function template() { var id = $("styleMain").value; for (var i = 0; i < TEMPLATES.length; i++) if (TEMPLATES[i].id === id) return TEMPLATES[i]; return null; }
 
+  // Premiere: use where the clip is on the timeline now, not where it was when picked (it may have been moved or trimmed since).
+  function refreshPlace() {
+    if (HOST !== "PPRO") return Promise.resolve();
+    return evalHost("vs_pproFindClip(" + JSON.stringify(picked.file) + ")").then(function (res) {
+      var p = String(res).split("|");
+      if (p[0] === "OK" && isFinite(+p[1])) { picked.offset = +p[1]; picked.inS = +p[2]; picked.outS = +p[3]; }
+    });
+  }
+
   function placeOnTimeline(job, lang) {
+    return refreshPlace().then(function () { return placeCuesNow(job, lang); });
+  }
+
+  function placeCuesNow(job, lang) {
     // The user's line count: the editor's Lines once a project is open, else the main screen's (empty = Auto).
     var lines = editing ? editing.custom.lines : (+$("linesMain").value || undefined);
     var cues = window.Subs.placeCues(job.cues, picked.offset, picked.inS, picked.outS);

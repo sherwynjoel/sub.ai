@@ -8,9 +8,9 @@ import { tmpdir } from "node:os";
 import { and, eq, lt, isNotNull, sql } from "drizzle-orm";
 import { db, jobs, settings, users, type Cue } from "./db";
 import { getAiConfig, transcribe, type Script } from "./lib/ai";
-import { extractChunks, probe, STORAGE } from "./lib/media";
+import { extractChunks, LEVEL_FRAME, loudness, probe, STORAGE } from "./lib/media";
 import { renderStyled } from "./lib/render";
-import { mergeChunks } from "./lib/subtitles";
+import { mergeChunks, snapToPauses } from "./lib/subtitles";
 
 const PARALLEL_CHUNKS = 3;
 const KEEP_DAYS = 7;
@@ -51,7 +51,9 @@ async function processJob(job: typeof jobs.$inferSelect) {
         await db.update(jobs).set({ progress: Math.round(5 + (90 * done) / plan.length), updatedAt: new Date() }).where(eq(jobs.id, job.id));
       }
     }));
-    await db.update(jobs).set({ status: "done", progress: 100, error: null, cues: mergeChunks(results), updatedAt: new Date() }).where(eq(jobs.id, job.id));
+    const level = await loudness(job.filePath!); // cuts inside a model's window are guesses: move them to the speech pauses
+    const cues = level ? snapToPauses(mergeChunks(results), level, LEVEL_FRAME) : mergeChunks(results);
+    await db.update(jobs).set({ status: "done", progress: 100, error: null, cues, updatedAt: new Date() }).where(eq(jobs.id, job.id));
     console.log(`job ${job.id} done (${plan.length} chunks, ${cfg.provider}/${cfg.model})`);
   } finally {
     await rm(dir, { recursive: true, force: true });

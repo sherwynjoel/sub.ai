@@ -54,3 +54,28 @@ export async function videoSize(file: string) {
     return null;
   }
 }
+
+export const LEVEL_FRAME = 0.02; // seconds per loudness value
+
+/** Loudness of the whole file in dB, one value per LEVEL_FRAME, or null if it can't be read. Streamed, so hours of audio stay small. */
+export async function loudness(file: string): Promise<Float32Array | null> {
+  const { spawn } = await import("node:child_process");
+  const rate = 8000, per = rate * LEVEL_FRAME;
+  return new Promise((done) => {
+    const p = spawn(bin("ffmpeg"), ["-v", "error", "-i", file, "-vn", "-ac", "1", "-ar", String(rate), "-f", "s16le", "-"]);
+    const out: number[] = [];
+    let sum = 0, n = 0, odd: Buffer | null = null;
+    p.stdout.on("data", (b: Buffer) => {
+      if (odd) { b = Buffer.concat([odd, b]); odd = null; }
+      const even = b.length & ~1;
+      if (even < b.length) odd = b.subarray(even);
+      for (let i = 0; i < even; i += 2) {
+        const s = b.readInt16LE(i) / 32768;
+        sum += s * s;
+        if (++n === per) { out.push(10 * Math.log10(sum / n + 1e-10)); sum = 0; n = 0; }
+      }
+    });
+    p.on("error", () => done(null));
+    p.on("close", (code) => done(code === 0 && out.length ? Float32Array.from(out) : null));
+  });
+}
