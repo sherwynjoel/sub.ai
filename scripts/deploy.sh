@@ -10,6 +10,6 @@ cd "$(dirname "$0")/.."
 [ -z "$(git status --porcelain)" ] || { echo "Commit or stash your changes first: only committed code is deployed."; exit 1; }
 commit=$(git rev-parse --short HEAD)
 git archive --format=tar HEAD | ssh "${ssh_opts[@]}" "$host" "cd /opt/vasanam && tar -xf - && echo $commit > DEPLOYED_COMMIT"
-ssh "${ssh_opts[@]}" "$host" "cd /opt/vasanam && npm ci --no-audit --no-fund > deploy.log 2>&1 && npx drizzle-kit migrate >> deploy.log 2>&1 && npm run build >> deploy.log 2>&1 && pm2 restart vasanam-web vasanam-worker > /dev/null" \
+ssh "${ssh_opts[@]}" "$host" "cd /opt/vasanam && npm ci --no-audit --no-fund > deploy.log 2>&1 && (set -a && . ./.env.local && set +a && npx drizzle-kit migrate) >> deploy.log 2>&1 && npm run build >> deploy.log 2>&1 && pm2 restart vasanam-web vasanam-worker > /dev/null" \
   || { echo "Deploy failed; see /opt/vasanam/deploy.log on the server."; exit 1; }
 echo "Deployed $commit to $host."
