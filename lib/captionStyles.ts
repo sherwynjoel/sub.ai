@@ -8,6 +8,12 @@ import type { Cue } from "@/db";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
 
 export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack";
+/** How a caption comes in. */
+export const ANIMS = { none: "None", fade: "Fade in", pop: "Pop", slide: "Slide up", bounce: "Bounce", zoom: "Zoom in" } as const;
+export type Anim = keyof typeof ANIMS;
+/** How the word being said stands out. */
+export const HIGHLIGHTS = { style: "The style's own", none: "None", color: "Colour", box: "Box", underline: "Underline", grow: "Grow" } as const;
+export type Highlight = keyof typeof HIGHLIGHTS;
 export type CaptionStyle = {
   id: string; name: string; group: "Trending" | "Aesthetic" | "Clean" | "Fun"; blurb: string;
   font: string; size?: number; bold?: boolean; italic?: boolean; caps?: boolean; lower?: boolean;
@@ -23,6 +29,13 @@ export type CaptionStyle = {
   box?: string;                  // solid card behind the line
   effect?: Effect;
   stack?: { big: string; font: string }; // "stack": colour and font of the big middle word
+  spacing?: number;              // letter spacing, em
+  opacity?: number;              // 0-1
+  rotate?: number;               // degrees, clockwise
+  shadowColor?: string;
+  boxPad?: number;               // background padding, em
+  anim?: Anim;                   // entrance
+  activeGrow?: boolean;          // the word being said grows
 };
 
 const GOLD = "#FFC83D", BUTTER = "#FFE58A", CREAM = "#FFF4D6", INK = "#141414", HL = "#FFE14D";
@@ -73,6 +86,10 @@ export type CaptionCustom = {
   x?: number; y?: number;        // free placement: caption centre as fractions of the frame; overrides position/offset
   safe?: SafeZoneId;             // platform safe zone captions must stay inside
   safeCustom?: Margins;          // margins for safe: "custom"
+  bold?: boolean; italic?: boolean;
+  spacing?: number; opacity?: number; rotate?: number;
+  shadowColor?: string; shadowSize?: number; boxPad?: number;
+  anim?: Anim; highlight?: Highlight;
 };
 export type Margins = { top: number; right: number; bottom: number; left: number }; // fractions of the frame
 export type Placement = { position: "top" | "middle" | "bottom"; offset: number; lines?: 1 | 2 | 3; x?: number; y?: number; safe: Margins };
@@ -113,6 +130,16 @@ export function sanitizeCustom(input: unknown): CaptionCustom {
   if (i.lines === 1 || i.lines === 2 || i.lines === 3) out.lines = i.lines;
   const x = clamp(i.x, 0, 1); if (x !== undefined) out.x = x;
   const y = clamp(i.y, 0, 1); if (y !== undefined) out.y = y;
+  if (typeof i.bold === "boolean") out.bold = i.bold;
+  if (typeof i.italic === "boolean") out.italic = i.italic;
+  const sp = clamp(i.spacing, -0.1, 0.5); if (sp !== undefined) out.spacing = sp;
+  const op = clamp(i.opacity, 0.1, 1); if (op !== undefined) out.opacity = op;
+  const rot = clamp(i.rotate, -45, 45); if (rot !== undefined) out.rotate = rot;
+  if (typeof i.shadowColor === "string" && HEX.test(i.shadowColor)) out.shadowColor = i.shadowColor;
+  const ss = clamp(i.shadowSize, 0, 0.4); if (ss !== undefined) out.shadowSize = ss;
+  const bp = clamp(i.boxPad, 0.05, 0.8); if (bp !== undefined) out.boxPad = bp;
+  if (typeof i.anim === "string" && i.anim in ANIMS) out.anim = i.anim as Anim;
+  if (typeof i.highlight === "string" && i.highlight in HIGHLIGHTS) out.highlight = i.highlight as Highlight;
   if (typeof i.safe === "string" && i.safe in SAFE_ZONES) out.safe = i.safe as SafeZoneId;
   const sc = i.safeCustom as Record<string, unknown> | undefined;
   if (sc && typeof sc === "object") out.safeCustom = m(clamp(sc.top, 0, 0.4) ?? 0, clamp(sc.right, 0, 0.4) ?? 0, clamp(sc.bottom, 0, 0.4) ?? 0, clamp(sc.left, 0, 0.4) ?? 0);
@@ -143,6 +170,24 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   if (c.shadow === false) s.shadow = 0;
   else if (c.shadow === true && !s.shadow) s.shadow = 0.05;
   if (c.case) { s.caps = c.case === "upper"; s.lower = c.case === "lower"; }
+  if (c.bold !== undefined) s.bold = c.bold;
+  if (c.italic !== undefined) s.italic = c.italic;
+  if (c.spacing !== undefined) s.spacing = c.spacing;
+  if (c.opacity !== undefined) s.opacity = c.opacity;
+  if (c.rotate !== undefined) s.rotate = c.rotate;
+  if (c.shadowColor) s.shadowColor = c.shadowColor;
+  if (c.shadowSize !== undefined) s.shadow = c.shadowSize;
+  if (c.boxPad !== undefined) s.boxPad = c.boxPad;
+  if (c.anim) s.anim = c.anim;
+  if (c.highlight && c.highlight !== "style") {
+    const acc = c.accent ?? s.mark ?? s.keyword?.color ?? s.active ?? HL;
+    s.mark = undefined; s.underline = false; s.activeGrow = false; s.active = undefined;
+    if (s.keyword) s.keyword = { ...s.keyword, color: undefined, grow: false };
+    if (c.highlight === "color") s.active = acc;
+    else if (c.highlight === "box") { s.mark = acc; s.active = INK; }
+    else if (c.highlight === "underline") { s.underline = true; s.active = c.accent; }
+    else if (c.highlight === "grow") { s.activeGrow = true; s.active = acc; }
+  }
   const safe = c.safe === "custom" && c.safeCustom ? c.safeCustom : SAFE_ZONES[c.safe ?? "none"].m;
   const position = c.position ?? "bottom";
   const offset = Math.max(c.offset ?? (portrait ? 0.2 : 0.09), position === "top" ? safe.top : safe.bottom);
@@ -212,6 +257,13 @@ export function stackChunks(main: string, sub: string, start: number, end: numbe
 /** Scale of a "stack" style's big word: 1.35× the font, less for a word longer than 10 letters. */
 export const stackBig = (word: string) => Math.round(135 * Math.min(1, 10 / Math.max(1, [...word].length))) / 100;
 
+/** #RRGGBB[AA] with its opacity multiplied by o. */
+export function withOpacity(hex: string, o: number) {
+  if (o >= 1) return hex;
+  const a = hex.length === 9 ? parseInt(hex.slice(7, 9), 16) / 255 : 1;
+  return hex.slice(0, 7) + Math.round(a * o * 255).toString(16).padStart(2, "0");
+}
+
 export const caseOf = (s: CaptionStyle, text: string) => (s.caps ? text.toUpperCase() : s.lower ? text.toLowerCase() : text);
 
 /* ---------- ASS (burned-in MP4) ---------- */
@@ -238,18 +290,19 @@ const TAMIL_FONT = "Noto Sans Tamil"; // installed on the server (fonts-noto-cor
  * a style font without Tamil letters picks a font per run, and a word on its own can lose its conjuncts (ப்ப drawn
  * as ப + a dotted circle).
  */
-export function tamilRuns(text: string, fonts: Record<string, string>, style: string, tamil = TAMIL_FONT) {
+export function tamilRuns(text: string, fonts: Record<string, string>, style: string, tamil = TAMIL_FONT, spacing = 0) {
   let font = fonts[style], out = "", inTamil = false;
   for (let i = 0; i < text.length; ) {
     if (text[i] === "{") { // override block: follow \fn and \r[Style]
       const end = text.indexOf("}", i), block = text.slice(i, end + 1);
       for (const m of block.matchAll(/\\(fn|r)([^\\}]*)/g)) font = m[1] === "fn" ? m[2] || fonts[style] : fonts[m[2]] ?? fonts[style];
       out += block; i = end + 1;
-      if (inTamil) out += `{\\fn${tamil}}`; // a block inside a Tamil run may have reset the font
+      if (inTamil) out += `{\\fn${tamil}${spacing ? "\\fsp0" : ""}}`; // a block inside a Tamil run may have reset the font
       continue;
     }
     const ta = /[\u0B80-\u0BFF\u200C\u200D]/.test(text[i]);
-    if (ta !== inTamil && (ta || !/\s/.test(text[i]))) { out += `{\\fn${ta ? tamil : font}}`; inTamil = ta; }
+    // Letter spacing pulls Tamil letters apart in libass (ப்ப drawn as ப ் ப): none inside Tamil.
+    if (ta !== inTamil && (ta || !/\s/.test(text[i]))) { out += `{\\fn${ta ? tamil : font}${spacing ? `\\fsp${ta ? 0 : spacing}` : ""}}`; inTamil = ta; }
     out += text[i++];
   }
   return out;
@@ -274,13 +327,32 @@ export function buildAss(cues: Cue[], o: Opts) {
     const marginH = Math.max(marginL, marginR);
     const wrapM = s.x !== undefined ? Math.max(marginH, Math.round(o.width * (0.5 - Math.min(s.x - s.safe.left, 1 - s.safe.right - s.x)))) : 0;
     const box = !!s.box;
+    const fade = (hex: string) => withOpacity(hex, s.opacity ?? 1);
+    const shadowColor = s.shadowColor ? s.shadowColor + "99" : "#00000099";
     const line = [
-      name, s.font, fs, assColor(s.color), assColor(s.color),
-      assColor(box ? s.box! : s.outline?.[0] ?? "#000000"), assColor(box ? s.box! : "#00000099"),
-      s.bold ? -1 : 0, s.italic ? -1 : 0, 0, 0, 100, 100, 0, 0,
-      box ? 3 : 1, box ? px(0.28) : px(s.outline?.[1]), box ? 0 : px(s.shadow), align, marginL, marginR, marginV, 1,
+      name, s.font, fs, assColor(fade(s.color)), assColor(fade(s.color)),
+      assColor(fade(box ? s.box! : s.outline?.[0] ?? "#000000")), assColor(fade(box ? s.box! : shadowColor)),
+      s.bold ? -1 : 0, s.italic ? -1 : 0, 0, 0, 100, 100, px(s.spacing), -(s.rotate ?? 0),
+      box ? 3 : 1, box ? px(s.boxPad ?? 0.28) : px(s.outline?.[1]), box ? 0 : px(s.shadow), align, marginL, marginR, marginV, 1,
     ].join(",");
-    return { name, s, px, align, posAt, pos: posAt(0), marginL, marginR, wrapM, line };
+    // Where an aligned (not dragged) caption is anchored, for animations that move it.
+    const ax = s.x !== undefined ? s.x * o.width : (marginL + o.width - marginR) / 2;
+    const ay = s.y !== undefined ? s.y * o.height : align === 8 ? marginV : align === 5 ? o.height / 2 : o.height - marginV;
+    /**
+     * Entrance for a caption's first event (its later word-by-word events show it settled): tags for the whole event
+     * (fade, move) and tags for each word's block (scaling; every word block starts with a reset).
+     */
+    const entrance = (dur: number): [string, string] => {
+      const a = s.anim, t = Math.round(Math.min(250, dur * 400));
+      if (!a || a === "none") return ["", ""];
+      if (a === "fade") return [`{\\fad(${t},0)}`, ""];
+      if (a === "pop") return ["", `\\fscx60\\fscy60\\t(0,${t},\\fscx100\\fscy100)`];
+      if (a === "zoom") return ["", `\\fscx0\\fscy0\\t(0,${t},\\fscx100\\fscy100)`];
+      if (a === "bounce") return ["", `\\fscx40\\fscy40\\t(0,${Math.round(t * 0.6)},\\fscx118\\fscy118)\\t(${Math.round(t * 0.6)},${t},\\fscx100\\fscy100)`];
+      const d = Math.round(fs * 0.6), an = s.x !== undefined ? 5 : align; // slide up
+      return [`{\\an${an}\\move(${Math.round(ax)},${Math.round(ay + d)},${Math.round(ax)},${Math.round(ay)},0,${t})\\fad(${Math.round(t * 0.6)},0)}`, ""];
+    };
+    return { name, s, px, align, posAt, pos: posAt(0), marginL, marginR, wrapM, line, entrance };
   };
   const base = lookOf(o.custom, "Main");
   const looks = [base];
@@ -293,22 +365,24 @@ export function buildAss(cues: Cue[], o: Opts) {
   const second = ["Second", "Poppins", Math.round(short * 0.075 * 0.55), "&H00FFFFFF&", "&H00FFFFFF&", "&H00000000&", "&H99000000&", 0, 0, 0, 0, 100, 100, 0, 0, 1, base.px(0.04), base.px(0.04), base.align, base.marginL, base.marginR, Math.round(o.height * base.s.offset), 1].join(",");
 
   const events: string[] = [];
-  const fonts: Record<string, string> = { Second: "Poppins" }, tamil: Record<string, string> = {};
+  const fonts: Record<string, string> = { Second: "Poppins" }, tamil: Record<string, string> = {}, spaced: Record<string, number> = {};
   let cur = "Main";
   const add = (start: number, end: number, text: string, layer = 0, ml = 0, mr = 0, st = cur) =>
-    end > start && events.push(`Dialogue: ${layer},${assTime(start)},${assTime(end)},${st},,${ml},${mr},0,,${tamilRuns(text, fonts, st, tamil[st])}`);
+    end > start && events.push(`Dialogue: ${layer},${assTime(start)},${assTime(end)},${st},,${ml},${mr},0,,${tamilRuns(text, fonts, st, tamil[st], spaced[st])}`);
 
   for (const c of cues) {
     const main = (o.lang === "en" ? c.en : c.ta).trim();
     if (!main) continue;
     const look = lookFor(c);
-    const { s, px, pos, posAt, wrapM, marginL, marginR } = look;
+    const { s, px, pos, posAt, wrapM, marginL, marginR, entrance } = look;
     cur = look.name;
     fonts[cur] = s.font;
     if (s.fontTa) tamil[cur] = s.fontTa;
+    if (s.spacing) spaced[cur] = px(s.spacing);
     const colors = o.lang === "en" ? c.wce : c.wc; // the user's colour for single words
     const sub = o.lang === "both" ? c.en.trim() : "";
-    const tail = sub ? `\\N{\\rSecond\\fn${s.font}}${esc(breakLines(sub, s.lines))}` : ""; // English in the caption's font
+    // English in the caption's font, turned and spaced like it.
+    const tail = sub ? `\\N{\\rSecond\\fn${s.font}${s.rotate ? `\\frz${-s.rotate}` : ""}${s.spacing ? `\\fsp${px(s.spacing * 0.55)}` : ""}}${esc(breakLines(sub, s.lines))}` : "";
     const words = wordTimes(caseOf(s, main), c.start, c.end, o.lang === "en" ? c.we : c.w);
     const kw = keywordIndex(words.map((w) => w.w));
     const brk = lineBreaks(words.map((w) => w.w), s.lines);
@@ -316,10 +390,10 @@ export function buildAss(cues: Cue[], o: Opts) {
     const q = s.lines === 1 ? "{\\q2}" : ""; // one line: no auto-wrap
 
     // One word, in a given state, with its override tags.
-    const word = (j: number, i: number) => {
+    const word = (j: number, i: number, extra = "") => {
       const w = esc(words[j].w);
       const state = j < i ? "past" : j === i ? "active" : "future";
-      let t = "\\r";
+      let t = "\\r" + extra;
       if (state === "future") {
         if (s.future === null) t += "\\alpha&HFF&";
         else if (s.future) t += `\\1c${colorOnly(s.future)}\\1a&H${alphaOf(s.future)}&`;
@@ -336,6 +410,7 @@ export function buildAss(cues: Cue[], o: Opts) {
         if (s.keyword.grow) t += state === "active" ? "\\t(0,180,\\fscx118\\fscy118)" : "\\fscx118\\fscy118";
       }
       if (s.effect === "wobble") t += `\\frz${j % 2 ? -4 : 3}`;
+      if (s.activeGrow && state === "active") t += "\\t(0,120,\\fscx115\\fscy115)";
       if (colors?.[j] && state !== "future") t += `\\1c${colorOnly(colors[j]!)}`;
       return `{${t}}${w}`;
     };
@@ -387,7 +462,12 @@ export function buildAss(cues: Cue[], o: Opts) {
         const punch = words.slice(cut).map((_, k) => word(cut + k, i)).join(" ");
         text = `{\\fscx55\\fscy55}${setup.replace(/\{\\r/g, "{\\r\\fscx55\\fscy55")}\\N{\\r\\fscx140\\fscy140}${punch.replace(/\{\\r/g, "{\\r\\fscx140\\fscy140")}`;
       } else {
-        text = words.map((_, j) => glue(j) + word(j, i)).join("");
+        // The first event brings the caption in (a slide places it itself).
+        const [ev, each] = i === 0 ? entrance(c.end - c.start) : ["", ""];
+        text = words.map((_, j) => glue(j) + word(j, i, each)).join("");
+        const sub = each && tail ? tail.replace("}", each + "}") : tail;
+        add(wt.s, end, (ev.includes("\\move") ? "" : pos) + ev + q + text + sub, 0, wrapM, wrapM);
+        return;
       }
       add(wt.s, end, pos + q + text + tail, 0, wrapM, wrapM);
     });

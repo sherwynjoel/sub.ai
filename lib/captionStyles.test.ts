@@ -101,3 +101,21 @@ test("tamilRuns puts Tamil in the Tamil font and returns to the font in effect",
   assert.equal(tamilRuns("{\\fnBangers}வணக்கம்\\N{\\rSecond}hello", fonts, "Main"), "{\\fnBangers}{\\fnNoto Sans Tamil}வணக்கம்{\\fnBangers}\\N{\\rSecond}hello");
   assert.equal(tamilRuns("plain", fonts, "Main"), "plain");
 });
+
+test("text controls and entrances reach the MP4", () => {
+  const ass = buildAss([{ start: 0, end: 2, ta: "hello world", en: "hi" }], {
+    styleId: "minimal", lang: "both", width: 1080, height: 1920,
+    custom: { bold: true, spacing: 0.1, rotate: 10, opacity: 0.5, shadowColor: "#ff0000", shadowSize: 0.1, anim: "pop", highlight: "grow" },
+  });
+  const style = ass.split("\n").find((l) => l.startsWith("Style: Main"))!.split(",");
+  assert.equal(style[7], "-1", "bold");
+  assert.equal(style[13], String(Math.round(0.1 * 81 * 10) / 10), "letter spacing");
+  assert.equal(style[14], "-10", "rotation");
+  assert.match(style[3], /^&H(7F|80)/, "half opacity");
+  const first = ass.split("\n").find((l) => l.startsWith("Dialogue"))!;
+  assert.match(first, /\\fscx60\\fscy60\\t\(0,\d+,\\fscx100\\fscy100\)/, "pop on the first event");
+  assert.match(first, /\\frz-10/, "the English line turns with it");
+  assert.match(ass, /\\t\(0,120,\\fscx115\\fscy115\)/, "the spoken word grows");
+  const slide = buildAss([{ start: 0, end: 2, ta: "hello", en: "" }], { styleId: "minimal", lang: "ta", width: 1080, height: 1920, custom: { anim: "slide" } });
+  assert.match(slide, /\\move\(540,\d+,540,\d+,0,\d+\)/);
+});

@@ -24,12 +24,28 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   if (i < 0) i = words.length - 1;
   const p = Math.min(1, Math.max(0, (time - start) / Math.max(0.01, end - start)));
 
+  const pad = s.boxPad ?? 0.28;
   const base: React.CSSProperties = {
     whiteSpace: s.lines === 1 ? "nowrap" : "pre-line", fontFamily: stack(s.font, s.fontTa), fontSize: `calc(${s.size ?? 1} * 7.5cqmin)`, fontWeight: s.bold ? 700 : 400, fontStyle: s.italic ? "italic" : undefined,
     color: s.color,
-    textShadow: s.shadow ? `0 ${s.shadow}em ${s.shadow * 2}em rgba(0,0,0,.6)` : undefined,
+    textShadow: s.shadow ? `0 ${s.shadow}em ${s.shadow * 2}em ${s.shadowColor ? s.shadowColor + "99" : "rgba(0,0,0,.6)"}` : undefined,
     WebkitTextStroke: s.outline ? `${s.outline[1] * 2}em ${s.outline[0]}` : undefined,
-    background: s.box, padding: s.box ? ".18em .45em" : undefined, borderRadius: s.box ? ".25em" : undefined,
+    background: s.box, padding: s.box ? `${pad * 0.65}em ${pad * 1.6}em` : undefined, borderRadius: s.box ? ".25em" : undefined,
+    letterSpacing: s.spacing ? `${s.spacing}em` : undefined,
+  };
+  // Entrance, from the playhead (so scrubbing shows what the MP4 will): 0.25 s or less on short captions.
+  const k = Math.min(1, Math.max(0, (time - start) / Math.max(0.05, Math.min(0.25, (end - start) * 0.4))));
+  const ease = 1 - Math.pow(1 - k, 3);
+  const enter: React.CSSProperties = {};
+  if (s.anim === "fade") enter.opacity = k;
+  else if (s.anim === "pop") enter.transform = `scale(${0.6 + 0.4 * ease})`;
+  else if (s.anim === "zoom") enter.transform = `scale(${ease})`;
+  else if (s.anim === "bounce") enter.transform = `scale(${k < 0.6 ? 0.4 + (1.18 - 0.4) * (k / 0.6) : 1.18 - 0.18 * ((k - 0.6) / 0.4)})`;
+  else if (s.anim === "slide") { enter.transform = `translateY(${(1 - ease) * 0.6}em)`; enter.opacity = Math.min(1, k / 0.6); }
+  const wrap: React.CSSProperties = {
+    ...enter,
+    opacity: Number(enter.opacity ?? 1) * (s.opacity ?? 1),
+    transform: [enter.transform, s.rotate ? `rotate(${s.rotate}deg)` : ""].filter(Boolean).join(" ") || undefined,
   };
 
   const word = (j: number) => {
@@ -43,6 +59,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       if (s.active) st.color = s.active;
       if (s.mark) Object.assign(st, { background: s.mark, borderRadius: ".14em", padding: "0 .12em", textShadow: "none" });
       if (s.underline) st.textDecoration = "underline";
+      if (s.activeGrow) st.transform = "scale(1.15)";
     }
     if (j === kw && s.keyword && state !== "future") {
       if (s.keyword.color) st.color = s.keyword.color;
@@ -77,9 +94,9 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   }
 
   return (
-    <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}`} style={{ "--p": p } as React.CSSProperties}>
+    <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}`} style={{ "--p": p, ...wrap } as React.CSSProperties}>
       <span className="cap-main" style={base} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>{body}</span>
-      {sub && !stacked && <span className="cap-sub" style={{ fontFamily: stack(s.font, s.fontTa) }}>{sub}</span>}
+      {sub && !stacked && <span className="cap-sub" style={{ fontFamily: stack(s.font, s.fontTa), letterSpacing: s.spacing ? `${s.spacing}em` : undefined }}>{sub}</span>}
     </div>
   );
 }

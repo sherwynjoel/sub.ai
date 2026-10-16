@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Cue } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
-import { CAPTION_FONTS, CAPTION_STYLES, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, TAMIL_FONTS, type CaptionCustom, type SafeZoneId } from "@/lib/captionStyles";
+import { CAPTION_STYLES, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CaptionCustom, type SafeZoneId } from "@/lib/captionStyles";
 import { insertAt, mergeCues, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
+import LookControls from "@/components/LookControls";
 import StyledCaption from "@/components/StyledCaption";
 import Timeline from "@/components/Timeline";
 import "@/app/caption-styles.css";
@@ -410,48 +411,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 <h3>This caption&apos;s look</h3>
                 <button className="btn ghost small" onClick={() => styleCue(selected, null)} disabled={!sel.style}>Use project style</button>
               </div>
-              <div className="cz-grid">
-                <label>Font
-                  <select value={own.font ?? ""} onChange={(e) => styleCue(selected, { font: e.target.value || undefined })}>
-                    <option value="">Project ({look.font})</option>
-                    {CAPTION_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
-                  </select>
-                </label>
-                {tamil && <label>Tamil font
-                  <select value={own.fontTa ?? ""} onChange={(e) => styleCue(selected, { fontTa: e.target.value || undefined })}>
-                    <option value="">Project ({look.fontTa ?? "Noto Sans Tamil"})</option>
-                    {TAMIL_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f} — தமிழ்</option>)}
-                  </select>
-                </label>}
-                <label>Size <span className="cz-val">{Math.round((selLook.size ?? 1) * 100)}%</span>
-                  <input type="range" min={0.4} max={2.6} step={0.05} value={selLook.size ?? 1} onChange={(e) => styleCue(selected, { size: +e.target.value })} />
-                </label>
-                <label className="cz-color">Text colour<input type="color" value={hex(selLook.color, "#ffffff")} onChange={(e) => styleCue(selected, { color: e.target.value })} /></label>
-                <label className="cz-color">Highlight<input type="color" value={hex(selLook.mark ?? selLook.keyword?.color ?? selLook.active, "#ffe14d")} onChange={(e) => styleCue(selected, { accent: e.target.value })} /></label>
-                <div className="cz-toggle">
-                  <label className="cz-check"><input type="checkbox" checked={!!selLook.outline} onChange={(e) => styleCue(selected, { outline: e.target.checked ? hex(selLook.outline?.[0], "#000000") : null })} /> Outline</label>
-                  {selLook.outline && <input type="color" aria-label="Outline colour" value={hex(selLook.outline[0], "#000000")} onChange={(e) => styleCue(selected, { outline: e.target.value })} />}
-                  <label className="cz-check"><input type="checkbox" checked={!!selLook.box} onChange={(e) => styleCue(selected, { box: e.target.checked ? hex(selLook.box, "#0b0b0b") : null })} /> Background</label>
-                  {selLook.box && <input type="color" aria-label="Background colour" value={hex(selLook.box, "#0b0b0b")} onChange={(e) => styleCue(selected, { box: e.target.value })} />}
-                </div>
-                <div className="cz-field">
-                  <span>Letter case</span>
-                  <div className="seg" role="group" aria-label="Letter case">
-                    {([["none", "As typed"], ["upper", "CAPS"], ["lower", "lower"]] as const).map(([v, l]) => (
-                      <button key={v} aria-pressed={(selLook.caps ? "upper" : selLook.lower ? "lower" : "none") === v} onClick={() => styleCue(selected, { case: v })}>{l}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className="cz-field">
-                  <span>Position {own.x !== undefined && <span className="muted small">(dragged)</span>}</span>
-                  <div className="seg" role="group" aria-label="Position">
-                    {(["top", "middle", "bottom"] as const).map((v) => (
-                      <button key={v} aria-pressed={selLook.position === v && selLook.x === undefined} onClick={() => styleCue(selected, { position: v, x: undefined, y: undefined })}>{v[0].toUpperCase() + v.slice(1)}</button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <p className="muted small">Drag the caption on the video to place just this one.</p>
+              <LookControls look={selLook} own={own} set={(patch) => styleCue(selected, patch)} tamil={tamil} project={look} />
 
               <h3>Words</h3>
               <p className="muted small">Edit a word, its start time (or drag it on the timeline) and its colour.</p>
@@ -495,50 +455,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 <h3>Customize</h3>
                 <button className="btn ghost small" onClick={() => setCustom({})} disabled={!Object.keys(custom).length}>Reset to {styleOf(styleId).name}</button>
               </div>
+              <LookControls look={look} own={custom} set={tweak} tamil={tamil} />
               <div className="cz-grid">
-                <label>Font
-                  <select value={look.font} onChange={(e) => tweak({ font: e.target.value })}>
-                    {CAPTION_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
-                  </select>
-                </label>
-                {tamil && <label>Tamil font
-                  <select value={look.fontTa ?? "Noto Sans Tamil"} onChange={(e) => tweak({ fontTa: e.target.value })}>
-                    {TAMIL_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f} — தமிழ்</option>)}
-                  </select>
-                </label>}
-                <label>Size <span className="cz-val">{Math.round((look.size ?? 1) * 100)}%</span>
-                  <input type="range" min={0.4} max={2.6} step={0.05} value={look.size ?? 1} onChange={(e) => tweak({ size: +e.target.value })} />
-                </label>
-                <label className="cz-color">Text colour<input type="color" value={hex(look.color, "#ffffff")} onChange={(e) => tweak({ color: e.target.value })} /></label>
-                <label className="cz-color">Highlight colour<input type="color" value={hex(look.mark ?? look.keyword?.color ?? look.active, "#ffe14d")} onChange={(e) => tweak({ accent: e.target.value })} /></label>
-                <div className="cz-toggle">
-                  <label className="cz-check"><input type="checkbox" checked={!!look.outline} onChange={(e) => tweak({ outline: e.target.checked ? hex(look.outline?.[0], "#000000") : null })} /> Outline</label>
-                  {look.outline && <>
-                    <input type="color" aria-label="Outline colour" value={hex(look.outline[0], "#000000")} onChange={(e) => tweak({ outline: e.target.value })} />
-                    <input type="range" aria-label="Outline thickness" min={0.01} max={0.2} step={0.01} value={look.outline[1]} onChange={(e) => tweak({ outlineWidth: +e.target.value })} />
-                  </>}
-                </div>
-                <div className="cz-toggle">
-                  <label className="cz-check"><input type="checkbox" checked={!!look.box} onChange={(e) => tweak({ box: e.target.checked ? hex(look.box, "#0b0b0b") : null })} /> Background</label>
-                  {look.box && <input type="color" aria-label="Background colour" value={hex(look.box, "#0b0b0b")} onChange={(e) => tweak({ box: e.target.value })} />}
-                  <label className="cz-check"><input type="checkbox" checked={!!look.shadow} onChange={(e) => tweak({ shadow: e.target.checked })} /> Shadow</label>
-                </div>
-                <div className="cz-field">
-                  <span>Letter case</span>
-                  <div className="seg" role="group" aria-label="Letter case">
-                    {([["none", "As typed"], ["upper", "CAPS"], ["lower", "lower"]] as const).map(([v, l]) => (
-                      <button key={v} aria-pressed={(look.caps ? "upper" : look.lower ? "lower" : "none") === v} onClick={() => tweak({ case: v })}>{l}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className="cz-field">
-                  <span>Position</span>
-                  <div className="seg" role="group" aria-label="Position">
-                    {(["top", "middle", "bottom"] as const).map((v) => (
-                      <button key={v} aria-pressed={look.position === v} onClick={() => tweak({ position: v, x: undefined, y: undefined })}>{v[0].toUpperCase() + v.slice(1)}</button>
-                    ))}
-                  </div>
-                </div>
                 <div className="cz-field">
                   <span>Lines</span>
                   <div className="seg" role="group" aria-label="Lines per subtitle">
