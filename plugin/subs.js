@@ -68,16 +68,18 @@
     groups.forEach(function (g) { first.push(n); n += g.length; });
     return groups.map(function (g, i) {
       var f = first[i], start = i ? wt[f] : c.start, end = i + 1 < groups.length ? wt[first[i + 1]] : c.end;
+      var said = Math.max(start, Math.min(wt[f], end)); // the first word may come after a pause at the cue's start
       var mid = g.length === 2 ? 1 : Math.floor((g.length - 1) / 2), parts, at;
       // Each box starts with its first word, in reading order (top, big, bottom); English comes in after the big word.
       if (en.length) {
         parts = [g.slice(0, -1).join(" "), g[g.length - 1], ens[i].join(" ")];
-        at = [start, g.length > 1 ? wt[f + g.length - 1] : start, Math.min(end, (g.length > 1 ? wt[f + g.length - 1] : start) + 0.3)];
+        var big = g.length > 1 ? wt[f + g.length - 1] : said;
+        at = [said, big, Math.min(end, big + 0.3)];
       } else if (g.length === 1) {
-        parts = ["", g[0], ""]; at = [start, start, start];
+        parts = ["", g[0], ""]; at = [said, said, said];
       } else {
         parts = [g.slice(0, mid).join(" "), g[mid], g.slice(mid + 1).join(" ")];
-        at = [start, wt[f + mid], mid + 1 < g.length ? wt[f + mid + 1] : end];
+        at = [said, wt[f + mid], mid + 1 < g.length ? wt[f + mid + 1] : end];
       }
       return { start: start, end: end, parts: parts, at: at };
     });
