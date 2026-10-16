@@ -3,9 +3,10 @@ import { pgTable, text, uuid, integer, real, boolean, timestamp, jsonb } from "d
 
 /**
  * `ta` is the line in the project's language (see lib/languages.ts); `en` is English. `w` / `we`: when each word of
- * `ta` / `en` starts (seconds, from the audio: lib/subtitles.ts wordStarts), when known.
+ * `ta` / `en` starts (seconds, from the audio: lib/subtitles.ts wordStarts), when known. `anchor` (only while a job
+ * runs): the start is the speech model's own timestamp, not an estimate.
  */
-export type Cue = { start: number; end: number; ta: string; en: string; w?: number[]; we?: number[] };
+export type Cue = { start: number; end: number; ta: string; en: string; w?: number[]; we?: number[]; anchor?: boolean };
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),

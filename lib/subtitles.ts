@@ -56,6 +56,7 @@ export function mergeChunks(chunks: { offset: number; duration: number; cues: Cu
           end: offset + Math.min(Math.max(0, c.end), duration),
           ta: (c.ta ?? "").trim(),
           en: (c.en ?? "").trim(),
+          ...(c.anchor ? { anchor: true } : {}),
         }))
         .filter((c) => c.end > c.start && (c.ta || c.en)),
     )
@@ -133,10 +134,10 @@ export function layoutCue(c: Cue, max = 42): Cue[] {
   });
   const total = pieces.reduce((n, p) => n + p.ta.length, 0) || 1;
   let t = c.start;
-  return pieces.map((p) => {
+  return pieces.map((p, k) => {
     const s = t;
     t += ((c.end - c.start) * p.ta.length) / total;
-    return { start: s, end: t, ta: p.ta, en: p.en };
+    return { start: s, end: t, ta: p.ta, en: p.en, ...(k === 0 ? { anchor: true } : {}) }; // only the first start is the model's
   });
 }
 
@@ -251,8 +252,41 @@ export function wordStarts(text: string, start: number, end: number, level: Arra
 /** Cues with the start of every word (w for the native line, we for English) from the audio's loudness. */
 export function withWordTimes(cues: Cue[], level: ArrayLike<number>, frame: number): Cue[] {
   return cues.map((c) => ({
-    ...c,
+    ...dropAnchor(c),
     w: c.ta ? wordStarts(c.ta, c.start, c.end, level, frame) : undefined,
     we: c.en ? wordStarts(c.en, c.start, c.end, level, frame) : undefined,
   }));
+}
+
+/**
+ * Re-time the cues cut from one speech-model window (an anchor cue and the back-to-back cues after it): the window's
+ * start and end are the model's, the cuts between were shared by text length. Shared over the time with speech in
+ * it instead (wordStarts), a cut lands where its first word is said, so later cues no longer drift after pauses.
+ */
+export function retimeWindows(cues: Cue[], level: ArrayLike<number>, frame: number): Cue[] {
+  const out = cues.map((c) => ({ ...c }));
+  for (let i = 0; i < out.length; ) {
+    let j = i;
+    while (j + 1 < out.length && !out[j + 1].anchor && Math.abs(out[j + 1].start - out[j].end) < 0.05) j++;
+    if (out[i].anchor && j > i) {
+      const lines = out.slice(i, j + 1).map((c) => (c.ta || c.en).split(/\s+/).filter(Boolean));
+      const starts = wordStarts(lines.map((l) => l.join(" ")).join(" "), out[i].start, out[j].end, level, frame);
+      let w = lines[0].length;
+      for (let k = i + 1; k <= j; k++) {
+        const t = starts[w];
+        // Keep every cue at least 0.3 s long.
+        if (t !== undefined && t > out[k - 1].start + 0.3 && t < out[k].end - 0.3) out[k - 1].end = out[k].start = t;
+        w += lines[k - i].length;
+      }
+    }
+    i = j + 1;
+  }
+  return out;
+}
+
+/** A cue without the job-time `anchor` flag (it isn't stored). */
+export function dropAnchor(c: Cue): Cue {
+  const out = { ...c };
+  delete out.anchor;
+  return out;
 }

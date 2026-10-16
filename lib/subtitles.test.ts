@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toSrt, toVtt, mergeChunks, pairChunks, splitLine, layoutCue, divide, naturalBreak, shiftCues, breakLines, snapToPauses, wordStarts } from "./subtitles";
+import { toSrt, toVtt, mergeChunks, pairChunks, splitLine, layoutCue, divide, naturalBreak, shiftCues, breakLines, snapToPauses, wordStarts, retimeWindows } from "./subtitles";
 import { secondsLeft, effectivePlan } from "./plans";
 
 const cue = (start: number, end: number, ta = "வணக்கம்", en = "Hello") => ({ start, end, ta, en });
@@ -118,4 +118,14 @@ test("wordStarts shares the line over the time with speech in it, so words after
   assert.ok(w[2] >= 4.9 && w[2] < 5.4, `third word when speech resumes, not in the pause: ${w[2]}`);
   assert.ok(w[3] > 5.6 && w[3] < 6.4, `${w[3]}`);
   // By length alone the third word would sit at 3.5 s, in the middle of the pause.
+});
+
+test("retimeWindows moves the cuts inside a model window to where their first word is said", () => {
+  // Window 0-7 s: speech 0-2 s and 5-7 s. Two cues of equal length: by length the cut is at 3.5 s, in the pause.
+  const level = Array.from({ length: 400 }, (_, f) => (f * 0.02 < 2 || f * 0.02 >= 5 ? -15 : -50));
+  const cues = [{ ...cue(0, 3.5, "aaaa bbbb", ""), anchor: true }, cue(3.5, 7, "cccc dddd", "")];
+  const out = retimeWindows(cues, level, 0.02);
+  assert.ok(out[1].start >= 4.9 && out[1].start < 5.4 && out[0].end === out[1].start, `cut at ${out[1].start}`);
+  // Not from a window (no anchor): left alone.
+  assert.equal(retimeWindows([cue(0, 3.5, "aaaa bbbb", ""), cue(3.5, 7, "cccc dddd", "")], level, 0.02)[1].start, 3.5);
 });
