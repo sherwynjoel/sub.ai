@@ -15,7 +15,7 @@ export type Anim = keyof typeof ANIMS;
 export const HIGHLIGHTS = { style: "The style's own", none: "None", color: "Colour", box: "Box", underline: "Underline", grow: "Grow" } as const;
 export type Highlight = keyof typeof HIGHLIGHTS;
 export type CaptionStyle = {
-  id: string; name: string; group: "Trending" | "Aesthetic" | "Clean" | "Fun"; blurb: string;
+  id: string; name: string; group: "Premiere" | "Trending" | "Aesthetic" | "Clean" | "Fun"; blurb: string;
   font: string; size?: number; bold?: boolean; italic?: boolean; caps?: boolean; lower?: boolean;
   fontTa?: string;               // font for Tamil letters (the Latin fonts have none); unset = Noto Sans Tamil
   color: string;                 // spoken and already-spoken words
@@ -36,11 +36,27 @@ export type CaptionStyle = {
   boxPad?: number;               // background padding, em
   anim?: Anim;                   // entrance
   activeGrow?: boolean;          // the word being said grows
+  glow?: string;                 // soft coloured glow around the letters
 };
 
 const GOLD = "#FFC83D", BUTTER = "#FFE58A", CREAM = "#FFF4D6", INK = "#141414", HL = "#FFE14D";
 
 export const CAPTION_STYLES: CaptionStyle[] = [
+  // The Premiere Pro panel's templates, made from the web styles' parts (fonts, colours, glow, motion).
+  { id: "pr-butter-up", name: "Butter Up", group: "Premiere", blurb: "Flowing white script that slides up into place.", font: "Satisfy", fontTa: "Kavivanar", size: 1.3, color: "#FFFFFF", shadow: 0.06, anim: "slide" },
+  { id: "pr-cracked", name: "Cracked", group: "Premiere", blurb: "Heavy silver letters with a red glow; the keyword hits red.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.2, caps: true, color: "#E9E9EE", glow: "#FF1E2D", keyword: { color: "#FF2A2A", grow: true }, anim: "pop" },
+  { id: "pr-energetic-1", name: "Energetic 1", group: "Premiere", blurb: "Bold white with a soft glow; each caption bounces in.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFFFFF", glow: "#FFFFFF", anim: "bounce" },
+  { id: "pr-energetic-2", name: "Energetic 2", group: "Premiere", blurb: "Bold white that pops in, the spoken word grows.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFFFFF", shadow: 0.06, anim: "pop", activeGrow: true },
+  { id: "pr-energetic-3", name: "Energetic 3", group: "Premiere", blurb: "Bold white that zooms in with a drop shadow.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFFFFF", shadow: 0.08, anim: "zoom" },
+  { id: "pr-god-rays", name: "God Rays", group: "Premiere", blurb: "Bright green with a green glow, fading in like light.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#3BE04A", glow: "#3BE04A", anim: "fade" },
+  { id: "pr-santhosham", name: "Santhosham", group: "Premiere", blurb: "Big heavy white with a deep shadow, zooming in.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.3, color: "#F2F2F2", shadow: 0.12, anim: "zoom" },
+  { id: "pr-text-break", name: "Text Break", group: "Premiere", blurb: "Red condensed caps that break in and shake.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.2, caps: true, color: "#E8202A", outline: ["#FFFFFF", 0.04], shadow: 0.07, anim: "bounce", effect: "wobble" },
+  { id: "pr-typewriter", name: "Typewriter", group: "Premiere", blurb: "Bold white typed out letter by letter (Typewriter 01–07).", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: "#FFFFFF", shadow: 0.05, effect: "typewriter" },
+  { id: "pr-typewriter-lime", name: "Typewriter Lime", group: "Premiere", blurb: "Typed out in glowing lime (Typewriter 08).", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: "#C6FF1A", glow: "#C6FF1A", effect: "typewriter" },
+  { id: "pr-typewriter-pink", name: "Typewriter Pink", group: "Premiere", blurb: "Typed out in glowing pink (Typewriter 09 and 12).", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: "#FF2E7E", glow: "#FF2E7E", effect: "typewriter" },
+  { id: "pr-typewriter-sky", name: "Typewriter Sky", group: "Premiere", blurb: "Typed out in glowing sky blue (Typewriter 10 and 14).", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: "#5BC8FF", glow: "#2EE6FF", effect: "typewriter" },
+  { id: "pr-typewriter-green", name: "Typewriter Green", group: "Premiere", blurb: "Typed out in glowing green (Typewriter 11 and 13).", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: "#39FF14", glow: "#39FF14", effect: "typewriter" },
+  { id: "pr-zoom-in", name: "Zoom In", group: "Premiere", blurb: "Heavy cyan with a bright glow, zooming in.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.3, color: "#2EE6FF", glow: "#2EE6FF", anim: "zoom" },
   { id: "setup-punch", name: "Setup & Punch", group: "Trending", blurb: "A quiet lead-in, then the last words land big, one by one.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFFFFF", future: null, shadow: 0.05, effect: "punch" },
   { id: "comic-pop", name: "Comic Pop", group: "Trending", blurb: "Comic caps with a black ring; the keyword turns gold and grows.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.2, caps: true, color: "#FFFFFF", outline: ["#000000", 0.09], keyword: { color: GOLD, grow: true } },
   { id: "butter-serif", name: "Butter Script", group: "Trending", blurb: "Soft script with a hairline edge and a butter-yellow keyword.", font: "Satisfy", fontTa: "Kavivanar", color: "#FFFFFF", outline: ["#000000", 0.03], keyword: { color: BUTTER } },
@@ -331,9 +347,9 @@ export function buildAss(cues: Cue[], o: Opts) {
     const shadowColor = s.shadowColor ? s.shadowColor + "99" : "#00000099";
     const line = [
       name, s.font, fs, assColor(fade(s.color)), assColor(fade(s.color)),
-      assColor(fade(box ? s.box! : s.outline?.[0] ?? "#000000")), assColor(fade(box ? s.box! : shadowColor)),
+      assColor(fade(box ? s.box! : s.glow && !s.outline ? s.glow + "B0" : s.outline?.[0] ?? "#000000")), assColor(fade(box ? s.box! : shadowColor)),
       s.bold ? -1 : 0, s.italic ? -1 : 0, 0, 0, 100, 100, px(s.spacing), -(s.rotate ?? 0),
-      box ? 3 : 1, box ? px(s.boxPad ?? 0.28) : px(s.outline?.[1]), box ? 0 : px(s.shadow), align, marginL, marginR, marginV, 1,
+      box ? 3 : 1, box ? px(s.boxPad ?? 0.28) : s.glow && !s.outline ? px(0.12) : px(s.outline?.[1]), box ? 0 : px(s.shadow), align, marginL, marginR, marginV, 1,
     ].join(",");
     // Where an aligned (not dragged) caption is anchored, for animations that move it.
     const ax = s.x !== undefined ? s.x * o.width : (marginL + o.width - marginR) / 2;
@@ -375,6 +391,7 @@ export function buildAss(cues: Cue[], o: Opts) {
     if (!main) continue;
     const look = lookFor(c);
     const { s, px, pos, posAt, wrapM, marginL, marginR, entrance } = look;
+    const glowTag = s.glow ? (s.outline ? `\\3c${colorOnly(s.glow)}\\bord${px(0.1)}\\blur${px(0.12)}` : `\\blur${px(0.12)}`) : ""; // glow: a soft border
     cur = look.name;
     fonts[cur] = s.font;
     if (s.fontTa) tamil[cur] = s.fontTa;
@@ -393,7 +410,7 @@ export function buildAss(cues: Cue[], o: Opts) {
     const word = (j: number, i: number, extra = "") => {
       const w = esc(words[j].w);
       const state = j < i ? "past" : j === i ? "active" : "future";
-      let t = "\\r" + extra;
+      let t = "\\r" + extra + (s.glow && !s.box ? glowTag : "");
       if (state === "future") {
         if (s.future === null) t += "\\alpha&HFF&";
         else if (s.future) t += `\\1c${colorOnly(s.future)}\\1a&H${alphaOf(s.future)}&`;
@@ -447,7 +464,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       for (let n = 1; n <= chars.length; n++) {
         const t0 = c.start + (n - 1) * step;
         const t1 = n === chars.length ? c.end : t0 + step;
-        add(t0, t1, pos + `${esc(chars.slice(0, n).join(""))}{\\alpha&H00&}_${tail}`, 0, wrapM, wrapM);
+        add(t0, t1, pos + (glowTag ? `{${glowTag}}` : "") + `${esc(chars.slice(0, n).join(""))}{\\alpha&H00&}_${tail}`, 0, wrapM, wrapM);
       }
       continue;
     }

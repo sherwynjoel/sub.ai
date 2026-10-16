@@ -28,7 +28,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   const base: React.CSSProperties = {
     whiteSpace: s.lines === 1 ? "nowrap" : "pre-line", fontFamily: stack(s.font, s.fontTa), fontSize: `calc(${s.size ?? 1} * 7.5cqmin)`, fontWeight: s.bold ? 700 : 400, fontStyle: s.italic ? "italic" : undefined,
     color: s.color,
-    textShadow: s.shadow ? `0 ${s.shadow}em ${s.shadow * 2}em ${s.shadowColor ? s.shadowColor + "99" : "rgba(0,0,0,.6)"}` : undefined,
+    textShadow: [s.glow && !s.box ? `0 0 .12em ${s.glow}, 0 0 .35em ${s.glow}b0` : "", s.shadow ? `0 ${s.shadow}em ${s.shadow * 2}em ${s.shadowColor ? s.shadowColor + "99" : "rgba(0,0,0,.6)"}` : ""].filter(Boolean).join(", ") || undefined,
     WebkitTextStroke: s.outline ? `${s.outline[1] * 2}em ${s.outline[0]}` : undefined,
     background: s.box, padding: s.box ? `${pad * 0.65}em ${pad * 1.6}em` : undefined, borderRadius: s.box ? ".25em" : undefined,
     letterSpacing: s.spacing ? `${s.spacing}em` : undefined,

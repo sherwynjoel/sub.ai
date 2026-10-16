@@ -18,7 +18,7 @@ type Job = {
 };
 type View = "ta" | "en" | "both";
 type Tab = "caption" | "style" | "export";
-const GROUPS = ["Trending", "Aesthetic", "Clean", "Fun"] as const;
+const GROUPS = ["Premiere", "Trending", "Aesthetic", "Clean", "Fun"] as const;
 const FRAME = 1 / 30;
 
 /** The styled caption over the player, redrawn every frame while the video plays so word timing is smooth. */
