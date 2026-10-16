@@ -17,7 +17,12 @@
 
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k) || ""; localStorage.setItem(k, v); } catch (e) { return ""; } }
   function server() { return (store("vs_server") || DEFAULT_SERVER).replace(/\/+$/, ""); }
-  var evalHost = function (script) { return new Promise(function (r) { cep.evalScript(script, r); }); };
+  var hostEval = function (script) { return new Promise(function (r) { cep.evalScript(script, r); }); };
+  // Premiere loads host.jsx once, when the panel first opens in a session; after an update it keeps the old copy
+  // until it restarts (an old copy put new templates' captions off screen). Load this version's copy before any call.
+  var hostDir = decodeURI(cep.getSystemPath("extension")).replace(/^file:\/\//, "").replace(/^\/([A-Za-z]:)/, "$1");
+  var hostReady = hostEval("$.evalFile(new File(" + JSON.stringify(hostDir + "/host.jsx") + ")); 'ok'");
+  var evalHost = function (script) { return hostReady.then(function () { return hostEval(script); }); };
   function show(id) { ["connect", "main"].forEach(function (s) { $(s).hidden = s !== id; }); $("settingsBtn").hidden = $("account").hidden = id !== "main"; }
   // details: technical text for the tooltip (which template controls were set), not for the message itself.
   function say(text, cls, details) { $("msg").textContent = text; $("msg").className = cls || ""; $("msg").title = details || ""; }
@@ -157,7 +162,7 @@
 
   // Motion Graphics Templates shipped with the panel (templates.json lists each one's text and colour control).
   // CEP gives the folder as a file:// URL with %20 escapes; Node needs a plain path (and no leading slash before a Windows drive letter).
-  var EXT = decodeURI(cep.getSystemPath("extension")).replace(/^file:\/\//, "").replace(/^\/([A-Za-z]:)/, "$1");
+  var EXT = hostDir;
   var TEMPLATES = [];
   try { TEMPLATES = JSON.parse(fs.readFileSync(path.join(EXT, "templates.json"), "utf8")); } catch (e) {}
   function template() { var id = $("styleMain").value; for (var i = 0; i < TEMPLATES.length; i++) if (TEMPLATES[i].id === id) return TEMPLATES[i]; return null; }

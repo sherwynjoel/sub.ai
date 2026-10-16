@@ -36,12 +36,13 @@ function vs_pproFindClip(mediaPath) {
     var seq = app.project.activeSequence, found = null;
     if (!seq) return "NONE";
     var groups = [seq.videoTracks, seq.audioTracks];
-    for (var g = 0; g < 2; g++) for (var t = 0; t < groups[g].numTracks; t++) {
+    var chosen = false;
+    for (var g = 0; g < 2 && !chosen; g++) for (var t = 0; t < groups[g].numTracks && !chosen; t++) {
       var clips = groups[g][t].clips;
       for (var k = 0; k < clips.numItems; k++) {
         var c = clips[k];
         if (!c.projectItem || c.projectItem.getMediaPath() !== mediaPath) continue;
-        if (c.isSelected()) { found = c; g = 2; t = 1e9; break; }
+        if (c.isSelected()) { found = c; chosen = true; break; }
         if (!found) found = c;
       }
     }
@@ -158,6 +159,10 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
       try { var end = new Time(); end.seconds = c.end; item.end = end; set.duration = 1; } catch (e) {
         try { var out = new Time(); out.seconds = c.end - c.start; item.outPoint = out; set.duration = 1; } catch (e2) {}
       }
+      // A caption shorter than the template's intro (plus a moment to read) would end mid-animation: start the
+      // template that much into its intro, so the words have settled before the caption ends.
+      var intro = tpl.layout && tpl.layout.intro, skip = intro ? Math.min(intro, intro + 0.5 - (c.end - c.start)) : 0;
+      if (skip > 0.05) { try { var ip = new Time(); ip.seconds = skip; item.inPoint = ip; set.intro = 1; } catch (e) {} }
       var comp = item.getMGTComponent();
       var props = comp ? comp.properties : null;
       for (var p = 0; props && p < props.numItems; p++) {
@@ -185,11 +190,11 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
           if (mc.displayName !== "Motion") continue;
           for (var q = 0; q < mc.properties.numItems; q++) {
             var mp = mc.properties[q];
-            if (mp.displayName === "Position") {
+            if (mp.displayName === "Position" && isFinite(place.x) && isFinite(place.y)) { // never off screen
               var cur = mp.getValue(), frac = cur[0] <= 1 && cur[1] <= 1;
               mp.setValue(frac ? [place.x / W, place.y / H] : [place.x, place.y], true);
               set.position = 1;
-            } else if (mp.displayName === "Scale") { mp.setValue(place.scale, true); set.scale = 1; }
+            } else if (mp.displayName === "Scale" && isFinite(place.scale)) { mp.setValue(place.scale, true); set.scale = 1; }
           }
         }
       } catch (e) {}
