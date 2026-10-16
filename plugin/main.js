@@ -186,12 +186,14 @@
         var l = d.look;
         l.customColor = d.custom && d.custom.color; // only a colour the user picked overrides the template's own
         l.lines = lines || 0; // a chosen line count is kept exactly; 0 lets the template split long lines
-        var items = cues.map(function (c) {
-          var text = window.Subs.textOf(c, lang, "\r", lines);
-          return { start: c.start, end: c.end, text: l.caps ? text.toUpperCase() : l.lower ? text.toLowerCase() : text };
-        });
+        var cased = function (text) { return l.caps ? text.toUpperCase() : l.lower ? text.toLowerCase() : text; };
+        var items = tpl.parts
+          ? cues.reduce(function (all, c) {
+            return all.concat(window.Subs.partsChunks(c, lang, (tpl.layout.intro || 1) + 0.5).map(function (p) { return { start: p.start, end: p.end, text: p.parts.join(" ").trim(), parts: p.parts.map(cased) }; }));
+          }, [])
+          : cues.map(function (c) { return { start: c.start, end: c.end, text: cased(window.Subs.textOf(c, lang, "\r", lines)) }; });
         var arg = JSON.stringify(items).split("\u2028").join("\\u2028").split("\u2029").join("\\u2029");
-        var t = { path: path.join(EXT, "templates", tpl.file), text: tpl.text, color: tpl.color, w: tpl.w, h: tpl.h, layout: tpl.layout };
+        var t = { path: path.join(EXT, "templates", tpl.file), text: tpl.text, parts: tpl.parts, color: tpl.color, w: tpl.w, h: tpl.h, layout: tpl.layout };
         return evalHost("vs_pproAddGraphics(" + arg + ", " + JSON.stringify(l) + ", " + JSON.stringify(t) + ", " + JSON.stringify(picked.file) + ")");
       });
     }

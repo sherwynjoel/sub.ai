@@ -24,6 +24,9 @@
 .solo-prev { display: block; font-size: .45em; opacity: .62; }
 .solo-now { display: block; animation: soloIn .14s var(--ease) both; }
 @keyframes soloIn { from { transform: scale(.92); } }
+.stack-small { display: block; font-size: .6em; white-space: nowrap; }
+.stack-big { display: block; line-height: 1.05; white-space: nowrap; animation: stackPop .22s var(--ease) both; }
+@keyframes stackPop { from { transform: scale(.4); opacity: 0; } }
 .caret { animation: capBlink .8s steps(1) infinite; }
 @keyframes capBlink { 50% { opacity: 0; } }
 

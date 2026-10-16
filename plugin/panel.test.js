@@ -169,7 +169,7 @@ test("host: template captions stay inside the template frame and the safe zone",
   const CR = String.fromCharCode(13);
   const ctx = {};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "host.jsx"), "utf8"), ctx);
-  const templates = JSON.parse(fs.readFileSync(path.join(__dirname, "templates.json"), "utf8"));
+  const templates = JSON.parse(fs.readFileSync(path.join(__dirname, "templates.json"), "utf8")).filter((t) => !t.parts); // three-box ones: next test
   assert.ok(templates.every((t) => t.w > 0 && t.h > 0 && t.layout && t.layout.charW > 0), "every template has its frame size and measured layout");
   const zones = { none: { top: 0, right: 0.07, bottom: 0, left: 0.07 }, tiktok: { top: 0.1, right: 0.16, bottom: 0.25, left: 0.04 } };
   const frames = [[1080, 1920], [1920, 1080]];
@@ -215,6 +215,34 @@ test("host: template captions stay inside the template frame and the safe zone",
   // Two languages that a fixed line spacing would push out of the frame (Cracked) share one line.
   const cracked = templates.find((t) => t.id === "cracked");
   assert.equal(ctx.vs_templateFit(captions[3], cracked, 1080, 1920, zones.none, 1, 0.5, 0.8).text, captions[3].replace(CR, "  ·  "));
+});
+
+test("host: three-box templates keep every box inside the template frame and the graphic inside the safe zone", () => {
+  const ctx = {};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "host.jsx"), "utf8"), ctx);
+  const templates = JSON.parse(fs.readFileSync(path.join(__dirname, "templates.json"), "utf8")).filter((t) => t.parts);
+  assert.equal(templates.length, 3);
+  const zones = { none: { top: 0, right: 0.07, bottom: 0, left: 0.07 }, tiktok: { top: 0.1, right: 0.16, bottom: 0.25, left: 0.04 } };
+  const samples = [["", "Hi", ""], ["நான்", "எப்பவுமே", "சூப்பரான"], ["", "பரிந்துரைக்கப்பட்டது", ""], ["எனக்கும் ஒரே", "மாதிரி", "I felt the same way too"]];
+  for (const t of templates) for (const [W, H] of [[1080, 1920], [1920, 1080]]) for (const [zn, z] of Object.entries(zones)) for (const parts of samples) for (const size of [1, 1.6]) {
+    assert.equal(t.layout.parts.length, t.parts.length);
+    const xf = (z.left + 1 - z.right) / 2, p = ctx.vs_partsPlace(parts, t, W, H, z, size, xf, 0.8), s = p.scale / 100;
+    const at = `${t.id} ${W}x${H} ${zn} size ${size} "${parts[1]}"`;
+    let L = 1e9, R = -1e9, top = 1e9, bottom = -1e9;
+    parts.forEach((txt, j) => {
+      if (!txt) return;
+      const P = t.layout.parts[j], n = [...txt].reduce((a, ch) => a + (ch.charCodeAt(0) >= 0x0b80 && ch.charCodeAt(0) <= 0x0bff ? 1.3 : 1), 0);
+      const w = (P.r0 - P.l0 + (P.dr - P.dl) * n) * p.shrink[j], cx = (P.l0 + P.r0 + (P.dl + P.dr) * n) / 2;
+      assert.ok(cx - w / 2 >= 0 && cx + w / 2 <= t.w, `${at}: box ${j} inside the template frame`);
+      L = Math.min(L, cx - w / 2); R = Math.max(R, cx + w / 2); top = Math.min(top, P.top); bottom = Math.max(bottom, P.bottom);
+    });
+    const sl = p.x + (L - t.w / 2) * s, sr = p.x + (R - t.w / 2) * s, st = p.y + (top - t.h / 2) * s, sb = p.y + (bottom - t.h / 2) * s;
+    assert.ok(sl >= z.left * W - 1 && sr <= (1 - z.right) * W + 1, `${at}: inside the safe zone (${Math.round(sl)}..${Math.round(sr)})`);
+    assert.ok(st >= z.top * H - 1 && sb <= (1 - z.bottom) * H + 1, `${at}: inside the safe zone top to bottom`);
+  }
+  // One line: the middle word goes in the big box; two lines: native in the big box, English below.
+  assert.deepEqual([...ctx.vs_splitParts("this is the trending text style")], ["this is", "the", "trending text style"]);
+  assert.deepEqual([...ctx.vs_splitParts("வணக்கம்" + String.fromCharCode(13) + "Hello")], ["", "வணக்கம்", "Hello"]);
 });
 
 test("host: no chained a ? b : c ? d : e (ExtendScript groups it as (a ? b : c) ? d : e)", () => {

@@ -152,7 +152,8 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
       catch (e) { return "ERR|This Premiere Pro (" + app.version + ") can't load the caption template. It may need a newer Premiere Pro; pick another style."; }
       if (!item) return "ERR|Premiere could not import the caption template.";
       item.name = "Vasanam " + (i + 1);
-      var fit = vs_templateFit(String(c.text), tpl, W, H, z, look.size, xf, yf, look.lines > 0), place = fit.place;
+      var parts = c.parts || (tpl.parts ? vs_splitParts(String(c.text)) : null);
+      var fit = parts ? { place: vs_partsPlace(parts, tpl, W, H, z, look.size, xf, yf) } : vs_templateFit(String(c.text), tpl, W, H, z, look.size, xf, yf, look.lines > 0), place = fit.place;
       if (fit.fewer) most = most ? Math.min(most, fit.fewer) : fit.fewer;
       try { var end = new Time(); end.seconds = c.end; item.end = end; set.duration = 1; } catch (e) {
         try { var out = new Time(); out.seconds = c.end - c.start; item.outPoint = out; set.duration = 1; } catch (e2) {}
@@ -163,7 +164,14 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
         var prm = props[p], name = prm.displayName;
         if (i === 0) names.push(name);
         try {
-          if (name === tpl.text || (!tpl.text && name === "Source Text")) {
+          var part = -1;
+          for (var pj = 0; parts && pj < tpl.parts.length; pj++) if (name === tpl.parts[pj]) part = pj;
+          if (part >= 0) {
+            var base = place.shrink[part] < 1 ? vs_fontSize(prm) : 0;
+            vs_setText(prm, parts[part] || " ", base ? Math.floor(base * place.shrink[part] * 10) / 10 : 0);
+            set.text = 1;
+          }
+          else if (!parts && (name === tpl.text || (!tpl.text && name === "Source Text"))) {
             set.text = 1;
             if (vs_setText(prm, fit.text, place.font)) set.font = 1;
           }
@@ -210,6 +218,48 @@ function vs_textWidth(line, L) {
 // A template caption's text and placement. Lines the caption already has (one per language, or the Lines setting)
 // are kept; a single long line that would need a much smaller font is split into two balanced lines instead.
 // chosen: the user picked the number of lines (Lines = 1, 2 or 3), so the lines are only ever sized, never re-split.
+// Templates with three text boxes (Trending Text Animation: small line, big word, small line). One line is split
+// around its middle word, which goes in the big box; two lines (native + English) put the native line in the big box
+// and the English under it.
+function vs_splitParts(text) {
+  var lines = text.split(String.fromCharCode(13));
+  if (lines.length > 1) return ["", lines[0], lines.slice(1).join(" ")];
+  var w = text.split(/\s+/), out = [];
+  for (var i = 0; i < w.length; i++) if (w[i]) out.push(w[i]);
+  if (out.length < 2) return ["", out.join(" "), ""];
+  var c = Math.floor((out.length - 1) / 2) + (out.length === 2 ? 1 : 0);
+  return [out.slice(0, c).join(" "), out[c], out.slice(c + 1).join(" ")];
+}
+
+// Where a three-box template goes: each box is centred on its own point and grows by a measured width per letter
+// (layout.parts, template pixels); the whole graphic is scaled to fit the safe area.
+function vs_partsPlace(texts, tpl, W, H, z, size, xf, yf) {
+  var tw = tpl.w || 1920, th = tpl.h || 1080, P = tpl.layout.parts, L = 1e9, R = -1e9, top = 1e9, bottom = -1e9, shrink = [];
+  var m = tw * 0.02; // the template crops anything outside its own frame: a box too wide for it gets a smaller font
+  for (var j = 0; j < P.length; j++) {
+    var t = texts[j] || "", n = 0;
+    shrink[j] = 1;
+    if (!/\S/.test(t)) continue;
+    for (var i = 0; i < t.length; i++) { var c = t.charCodeAt(i); n += c >= 0x0B80 && c <= 0x0BFF ? 1.3 : 1; } // Tamil letters run wider than the Latin sample measured
+    var w = P[j].r0 - P[j].l0 + (P[j].dr - P[j].dl) * n, cx = (P[j].l0 + P[j].r0 + (P[j].dl + P[j].dr) * n) / 2;
+    var room = 2 * Math.min(cx - m, tw - m - cx);
+    if (w > room) { shrink[j] = room / w; w = room; }
+    L = Math.min(L, cx - w / 2); R = Math.max(R, cx + w / 2);
+    top = Math.min(top, P[j].top); bottom = Math.max(bottom, P[j].bottom);
+  }
+  if (R < L) { L = R = tw / 2; top = bottom = th / 2; }
+  var s = Math.min(W, H) * 0.075 * (size || 1) / (tpl.layout.size || 200);
+  var safe = W * 2 * Math.min(xf - z.left, 1 - z.right - xf), lo = H * z.top, hi = H * (1 - z.bottom);
+  if ((R - L) * s > safe) s = safe / (R - L);
+  if ((bottom - top) * s > hi - lo) s = (hi - lo) / (bottom - top);
+  s = Math.floor(s * 1000) / 1000;
+  var x = xf * W - ((L + R) / 2 - tw / 2) * s, y = yf * H - ((top + bottom) / 2 - th / 2) * s;
+  var yTop = y + (top - th / 2) * s, yBottom = y + (bottom - th / 2) * s;
+  if (yBottom > hi) y -= yBottom - hi;
+  if (yTop < lo) y += lo - yTop;
+  return { scale: s * 100, x: Math.round(x), y: Math.round(y), shrink: shrink };
+}
+
 function vs_templateFit(text, tpl, W, H, z, size, xf, yf, chosen) {
   var CR = String.fromCharCode(13), lines = text.split(CR), asked = lines.length;
   // Some templates only ever show one line (Santhosham's reveal covers the first line): everything goes on it.
@@ -316,6 +366,15 @@ function vs_layout(text, budget, maxLines) {
 // size (optional) also sets the font size; returns true when it could.
 // The style is stored per text run, and a template's runs only cover its default text ("Santhosham" = 10 characters):
 // the last run is stretched over the new text so the whole caption gets the size, not just its first characters.
+// A text control's font size, or 0 if it can't be read.
+function vs_fontSize(prm) {
+  var val = prm.getValue();
+  if (val && typeof val === "object") { var v = val.fontSizeEditValue; return +(v instanceof Array ? v[0] : v) || 0; }
+  if (typeof val !== "string") return 0;
+  var mt = val.match(/"fontSizeEditValue"\s*:\s*\[?\s*([\d.]+)/);
+  return mt ? +mt[1] : 0;
+}
+
 function vs_setText(prm, text, size) {
   var val = prm.getValue(), sized = false;
   if (val && typeof val === "object") {

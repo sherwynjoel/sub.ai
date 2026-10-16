@@ -7,7 +7,7 @@
 import type { Cue } from "@/db";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
 
-export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble";
+export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack";
 export type CaptionStyle = {
   id: string; name: string; group: "Trending" | "Aesthetic" | "Clean" | "Fun"; blurb: string;
   font: string; size?: number; bold?: boolean; italic?: boolean; caps?: boolean; lower?: boolean;
@@ -21,6 +21,7 @@ export type CaptionStyle = {
   shadow?: number;
   box?: string;                  // solid card behind the line
   effect?: Effect;
+  stack?: { big: string; font: string }; // "stack": colour and font of the big middle word
 };
 
 const GOLD = "#FFC83D", BUTTER = "#FFE58A", CREAM = "#FFF4D6", INK = "#141414", HL = "#FFE14D";
@@ -32,6 +33,9 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "word-box", name: "Word Box", group: "Trending", blurb: "One dark box; words fill in left to right, keyword in gold.", font: "Bebas Neue", size: 1.2, caps: true, color: "#FFFFFF", future: null, box: "#0B0B0BE6", keyword: { color: GOLD } },
   { id: "handwritten", name: "Handwritten", group: "Trending", blurb: "Warm handwriting in a single butter tone that brightens as it's said.", font: "Caveat", size: 1.3, bold: true, color: BUTTER, future: "#FFE58A66", shadow: 0.04 },
   { id: "retro-vhs", name: "Retro VHS", group: "Trending", blurb: "RGB-split tape look with a little tracking jitter.", font: "Anton", size: 1.1, caps: true, color: "#FFFFFF", effect: "vhs" },
+  { id: "trending-1", name: "Trending 1", group: "Trending", blurb: "A few words at a time: one big blue word between small orange lines.", font: "Instrument Sans", bold: true, color: "#FF8A1F", shadow: 0.06, effect: "stack", stack: { big: "#2E8BFF", font: "Anton" } },
+  { id: "trending-2", name: "Trending 2", group: "Trending", blurb: "A big blue serif word with heavy orange words above and below.", font: "Archivo Black", color: "#FF7A00", shadow: 0.06, effect: "stack", stack: { big: "#3D7BFF", font: "DM Serif Display" } },
+  { id: "trending-3", name: "Trending 3", group: "Trending", blurb: "Small white lines around one big red word.", font: "Instrument Sans", bold: true, color: "#FFFFFF", shadow: 0.06, effect: "stack", stack: { big: "#FF2D2D", font: "Archivo Black" } },
   { id: "editorial-cut", name: "Editorial Cut", group: "Aesthetic", blurb: "Warm serif, every word set; the spoken one wakes up.", font: "Fraunces", color: "#FFF1E0", future: "#FFF1E073", active: "#FFD9A0", shadow: 0.04 },
   { id: "soft-display", name: "Soft Display", group: "Aesthetic", blurb: "Lowercase display serif. Soft, cinematic, premium.", font: "Fraunces", lower: true, color: "#F6F0E6", shadow: 0.06 },
   { id: "center-stage", name: "Center Stage", group: "Aesthetic", blurb: "One word at a time, tall and heavy, with the last word above.", font: "Anton", size: 1.6, caps: true, color: "#FFFFFF", shadow: 0.05, effect: "solo" },
@@ -161,6 +165,37 @@ export function keywordIndex(words: string[]) {
   return k;
 }
 
+/** Split n items into k runs of near-equal size. */
+function runs<T>(list: T[], k: number) {
+  const out: T[][] = [];
+  for (let i = 0, from = 0; i < k; i++) { const to = Math.round((list.length * (i + 1)) / k); out.push(list.slice(from, to)); from = to; }
+  return out;
+}
+
+/**
+ * "stack" styles (and the panel's Trending templates, plugin/subs.js partsChunks): a caption cut into pieces of up
+ * to 3 words (2 when English takes the bottom line), each shown as small line / big word / small line, timed by
+ * length and at least `minDur` seconds long.
+ */
+export function stackChunks(main: string, sub: string, start: number, end: number, minDur = 1) {
+  const words = main.split(/\s+/).filter(Boolean), en = sub.split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const k = Math.max(1, Math.min(Math.ceil(words.length / (en.length ? 2 : 3)), Math.floor((end - start) / minDur)));
+  const groups = runs(words, k), ens = runs(en, k);
+  const total = groups.reduce((n, g) => n + g.join(" ").length + 1, 0);
+  let t = start;
+  return groups.map((g, i) => {
+    const s = t, mid = g.length === 2 ? 1 : Math.floor((g.length - 1) / 2);
+    t += ((end - start) * (g.join(" ").length + 1)) / total;
+    const parts: [string, string, string] = en.length ? [g.slice(0, -1).join(" "), g[g.length - 1], ens[i].join(" ")]
+      : [g.slice(0, mid).join(" "), g[mid], g.slice(mid + 1).join(" ")];
+    return { s, e: i === groups.length - 1 ? end : t, parts };
+  });
+}
+
+/** Scale of a "stack" style's big word: 1.35× the font, less for a word longer than 10 letters. */
+export const stackBig = (word: string) => Math.round(135 * Math.min(1, 10 / Math.max(1, [...word].length))) / 100;
+
 export const caseOf = (s: CaptionStyle, text: string) => (s.caps ? text.toUpperCase() : s.lower ? text.toLowerCase() : text);
 
 /* ---------- ASS (burned-in MP4) ---------- */
@@ -179,6 +214,30 @@ const assTime = (t: number) => {
   return `${Math.floor(cs / 360000)}:${String(Math.floor(cs / 6000) % 60).padStart(2, "0")}:${String(Math.floor(cs / 100) % 60).padStart(2, "0")}.${String(cs % 100).padStart(2, "0")}`;
 };
 const esc = (t: string) => t.replace(/[{}]/g, (c) => (c === "{" ? "(" : ")")).replace(/\\/g, "/").replace(/\n/g, "\\N");
+
+const TAMIL_FONT = "Noto Sans Tamil"; // installed on the server (fonts-noto-core)
+
+/**
+ * Put Tamil runs of an ASS event in the Tamil font, then back to the font in effect. Left to libass's own fallback,
+ * a style font without Tamil letters picks a font per run, and a word on its own can lose its conjuncts (ப்ப drawn
+ * as ப + a dotted circle).
+ */
+export function tamilRuns(text: string, fonts: Record<string, string>, style: string) {
+  let font = fonts[style], out = "", inTamil = false;
+  for (let i = 0; i < text.length; ) {
+    if (text[i] === "{") { // override block: follow \fn and \r[Style]
+      const end = text.indexOf("}", i), block = text.slice(i, end + 1);
+      for (const m of block.matchAll(/\\(fn|r)([^\\}]*)/g)) font = m[1] === "fn" ? m[2] || fonts[style] : fonts[m[2]] ?? fonts[style];
+      out += block; i = end + 1;
+      if (inTamil) out += `{\\fn${TAMIL_FONT}}`; // a block inside a Tamil run may have reset the font
+      continue;
+    }
+    const ta = /[\u0B80-\u0BFF\u200C\u200D]/.test(text[i]);
+    if (ta !== inTamil && (ta || !/\s/.test(text[i]))) { out += `{\\fn${ta ? TAMIL_FONT : font}}`; inTamil = ta; }
+    out += text[i++];
+  }
+  return out;
+}
 
 type Opts = { styleId: string; custom?: CaptionCustom; lang: "ta" | "en" | "both"; width: number; height: number };
 
@@ -207,8 +266,9 @@ export function buildAss(cues: Cue[], o: Opts) {
   const second = ["Second", "Instrument Sans", Math.round(short * 0.075 * 0.55), "&H00FFFFFF&", "&H00FFFFFF&", "&H00000000&", "&H99000000&", 0, 0, 0, 0, 100, 100, 0, 0, 1, px(0.04), px(0.04), align, marginL, marginR, marginV, 1].join(",");
 
   const events: string[] = [];
+  const fonts = { Main: s.font, Second: "Instrument Sans" };
   const add = (start: number, end: number, text: string, layer = 0, ml = 0, mr = 0, st = "Main") =>
-    end > start && events.push(`Dialogue: ${layer},${assTime(start)},${assTime(end)},${st},,${ml},${mr},0,,${text}`);
+    end > start && events.push(`Dialogue: ${layer},${assTime(start)},${assTime(end)},${st},,${ml},${mr},0,,${tamilRuns(text, fonts, st)}`);
 
   for (const c of cues) {
     const main = (o.lang === "en" ? c.en : c.ta).trim();
@@ -245,6 +305,16 @@ export function buildAss(cues: Cue[], o: Opts) {
       return `{${t}}${w}`;
     };
 
+    if (s.effect === "stack" && s.stack) {
+      const small = "\\fscx60\\fscy60";
+      for (const p of stackChunks(caseOf(s, main), sub, c.start, c.end)) {
+        const [a, b, d] = p.parts.map(esc);
+        const z = stackBig(p.parts[1]); // a long word gets smaller instead of running off the frame
+        const big = `{\\r\\fn${s.stack.font}\\b0\\1c${colorOnly(s.stack.big)}\\fscx${Math.round(z * 40)}\\fscy${Math.round(z * 40)}\\t(0,220,\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)})}${b}`;
+        add(p.s, p.e, pos + `{\\q2\\fad(120,0)}` + (a ? `{${small}}${a}\\N` : "") + big + (d ? `\\N{\\r${small}}${d}` : ""), 0, wrapM, wrapM);
+      }
+      continue;
+    }
     if (s.effect === "crawl") {
       const H = o.height, cx = Math.round(o.width / 2);
       add(c.start, c.end, `{\\an8\\fad(200,300)\\org(${cx},${H})\\frx55\\move(${cx},${Math.round(H * 0.66)},${cx},${Math.round(H * 0.42)})}${esc(breakLines(caseOf(s, main), s.lines))}${tail}`);

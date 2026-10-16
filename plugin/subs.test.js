@@ -1,6 +1,6 @@
 // node plugin/subs.test.js
 const assert = require("node:assert/strict");
-const { placeCues, toSrt } = require("./subs.js");
+const { placeCues, toSrt, partsChunks } = require("./subs.js");
 
 const cues = [
   { start: 1, end: 3, ta: "ஒன்று", en: "one" },
@@ -14,4 +14,12 @@ assert.deepEqual(placed.map((c) => [c.start, c.end]), [[100, 102], [110, 111]]);
 
 assert.equal(toSrt([cues[0]], "both"), "1\n00:00:01,000 --> 00:00:03,000\nஒன்று\none\n");
 assert.deepEqual(toSrt([{ start: 0, end: 1, ta: "one two three four", en: "a b" }], "both", 2).split("\n").slice(2, 6), ["one two", "three four", "a", "b"]);
+// Three-box templates: up to 3 words a piece, timed by length; with English, 2 native words and the English share below.
+const p1 = partsChunks({ start: 0, end: 10, ta: "a bb ccc dddd eeeee", en: "" }, "ta");
+assert.deepEqual(p1.map((c) => c.parts), [["a", "bb", "ccc"], ["dddd", "eeeee", ""]]);
+assert.equal(p1[0].start, 0); assert.equal(p1[1].end, 10); assert.ok(Math.abs(p1[0].end - 10 * 9 / 20) < 1e-9);
+assert.deepEqual(partsChunks({ start: 0, end: 4, ta: "ஒன்று இரண்டு மூன்று", en: "one two three four" }, "both").map((c) => c.parts),
+  [["ஒன்று", "இரண்டு", "one two"], ["", "மூன்று", "three four"]]);
+assert.deepEqual(partsChunks({ start: 0, end: 1, ta: "x", en: "Hello" }, "en").map((c) => c.parts), [["", "Hello", ""]]);
+assert.deepEqual(partsChunks({ start: 0, end: 2, ta: "a bb ccc dddd eeeee", en: "" }, "ta", 1.5).map((c) => c.parts), [["a bb", "ccc", "dddd eeeee"]]);
 console.log("plugin subs ok");

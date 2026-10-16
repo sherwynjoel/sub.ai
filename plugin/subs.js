@@ -39,6 +39,34 @@
     return (lang === "both" ? breakLines(c.ta, lines, newline) + newline + breakLines(c.en, lines, newline) : breakLines(c[lang], lines, newline)).trim();
   }
 
+  // Split n items into k runs of near-equal size.
+  function runs(list, k) {
+    var out = [], from = 0;
+    for (var i = 0; i < k; i++) { var to = Math.round((list.length * (i + 1)) / k); out.push(list.slice(from, to)); from = to; }
+    return out;
+  }
+
+  // Three-box templates (small line, big word, small line) are made for a few words at a time: the cue is cut into
+  // pieces of up to 3 words (2 with English, which takes the bottom box), timed by length across the cue. A piece
+  // lasts at least minDur seconds (the template's intro plus a moment to read), so short cues get fewer, longer pieces.
+  function partsChunks(c, lang, minDur) {
+    var words = String(lang === "en" ? c.en : c.ta || c.en || "").split(/\s+/).filter(Boolean);
+    var en = lang === "both" ? String(c.en || "").split(/\s+/).filter(Boolean) : [];
+    if (!words.length) return [];
+    var size = en.length ? 2 : 3, k = Math.ceil(words.length / size);
+    if (minDur > 0) k = Math.max(1, Math.min(k, Math.floor((c.end - c.start) / minDur)));
+    var groups = runs(words, k), ens = runs(en, k), total = 0;
+    groups.forEach(function (g) { total += g.join(" ").length + 1; });
+    var t = c.start;
+    return groups.map(function (g, i) {
+      var start = t, mid = g.length === 2 ? 1 : Math.floor((g.length - 1) / 2);
+      t += ((c.end - c.start) * (g.join(" ").length + 1)) / total;
+      var parts = en.length ? [g.slice(0, -1).join(" "), g[g.length - 1], ens[i].join(" ")]
+        : g.length === 1 ? ["", g[0], ""] : [g.slice(0, mid).join(" "), g[mid], g.slice(mid + 1).join(" ")];
+      return { start: start, end: i === groups.length - 1 ? c.end : t, parts: parts };
+    });
+  }
+
   function stamp(sec) {
     var ms = Math.round(Math.max(0, sec) * 1000);
     function p(n, w) { n = String(n); while (n.length < (w || 2)) n = "0" + n; return n; }
@@ -54,6 +82,7 @@
   exports.placeCues = placeCues;
   exports.breakLines = breakLines;
   exports.textOf = textOf;
+  exports.partsChunks = partsChunks;
   exports.stamp = stamp;
   exports.toSrt = toSrt;
 })(typeof module !== "undefined" && module.exports && typeof window === "undefined" ? module.exports : (window.Subs = {}));

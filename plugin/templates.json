@@ -516,5 +516,155 @@
    "charWTa": 162.5,
    "pad": 73
   }
+ },
+ {
+  "id": "trending-text-1",
+  "name": "Trending 1",
+  "file": "trending-text-1.mogrt",
+  "text": null,
+  "parts": [
+   "Creative",
+   "Sparrow",
+   "Graphics"
+  ],
+  "color": null,
+  "fonts": [
+   "BirdsofParadise",
+   "Anton-Regular"
+  ],
+  "credit": "Creative Sparrow Graphics",
+  "w": 2560,
+  "h": 1440,
+  "minPremiere": 26,
+  "layout": {
+   "size": 200,
+   "parts": [
+    {
+     "l0": 883,
+     "dl": -32.7,
+     "r0": 910,
+     "dr": 34.0,
+     "top": 507,
+     "bottom": 647
+    },
+    {
+     "l0": 1303,
+     "dl": -74.0,
+     "r0": 1287,
+     "dr": 74.7,
+     "top": 580,
+     "bottom": 847
+    },
+    {
+     "l0": 1587,
+     "dl": -34.7,
+     "r0": 1690,
+     "dr": 27.3,
+     "top": 727,
+     "bottom": 867
+    }
+   ],
+   "intro": 1.0
+  }
+ },
+ {
+  "id": "trending-text-2",
+  "name": "Trending 2",
+  "file": "trending-text-2.mogrt",
+  "text": null,
+  "parts": [
+   "Creative",
+   "Sparrow",
+   "Graphics"
+  ],
+  "color": null,
+  "fonts": [
+   "BrigersRegular",
+   "Arthemis"
+  ],
+  "credit": "Creative Sparrow Graphics",
+  "w": 2560,
+  "h": 1440,
+  "minPremiere": 26,
+  "layout": {
+   "size": 200,
+   "parts": [
+    {
+     "l0": 1303,
+     "dl": -58.0,
+     "r0": 1280,
+     "dr": 58.7,
+     "top": 433,
+     "bottom": 647
+    },
+    {
+     "l0": 1250,
+     "dl": -83.3,
+     "r0": 1443,
+     "dr": 74.0,
+     "top": 513,
+     "bottom": 907
+    },
+    {
+     "l0": 1313,
+     "dl": -58.7,
+     "r0": 1420,
+     "dr": 49.3,
+     "top": 787,
+     "bottom": 1000
+    }
+   ],
+   "intro": 1.0
+  }
+ },
+ {
+  "id": "trending-text-3",
+  "name": "Trending 3",
+  "file": "trending-text-3.mogrt",
+  "text": null,
+  "parts": [
+   "Text 1",
+   "Text 2",
+   "Text 3"
+  ],
+  "color": null,
+  "fonts": [
+   "Poppins-Bold",
+   "GTProelium"
+  ],
+  "credit": "Creative Sparrow Graphics",
+  "w": 2560,
+  "h": 1440,
+  "minPremiere": 26,
+  "layout": {
+   "size": 200,
+   "parts": [
+    {
+     "l0": 913,
+     "dl": -29.3,
+     "r0": 913,
+     "dr": 29.3,
+     "top": 407,
+     "bottom": 527
+    },
+    {
+     "l0": 1343,
+     "dl": -78.0,
+     "r0": 1303,
+     "dr": 78.0,
+     "top": 593,
+     "bottom": 913
+    },
+    {
+     "l0": 1477,
+     "dl": -30.0,
+     "r0": 1470,
+     "dr": 30.0,
+     "top": 860,
+     "bottom": 993
+    }
+   ],
+   "intro": 1.5
+  }
  }
 ]

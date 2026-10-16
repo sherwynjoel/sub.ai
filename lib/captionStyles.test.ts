@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { assColor, buildAss, CAPTION_STYLES, keywordIndex, resolveStyle, SAFE_ZONES, sanitizeCustom, styleOf, wordTimes } from "./captionStyles";
+import { assColor, buildAss, CAPTION_STYLES, keywordIndex, resolveStyle, SAFE_ZONES, sanitizeCustom, stackBig, stackChunks, styleOf, tamilRuns, wordTimes } from "./captionStyles";
 
 test("assColor converts #RRGGBB[AA] to ASS &HAABBGGRR with inverted alpha", () => {
   assert.equal(assColor("#FFC83D"), "&H003DC8FF&");
@@ -82,4 +82,22 @@ test("safe zones keep captions inside the platform's clear area", () => {
   assert.equal(ml, Math.round(1080 * SAFE_ZONES.tiktok.m.left));
   assert.equal(mr, Math.round(1080 * SAFE_ZONES.tiktok.m.right));
   assert.ok(mv >= Math.round(1920 * SAFE_ZONES.tiktok.m.bottom));
+});
+
+test("stack styles: a few words a piece, small / big / small, English on the bottom line", () => {
+  const p = stackChunks("a bb ccc dddd eeeee", "", 0, 10);
+  assert.deepEqual(p.map((c) => c.parts), [["a", "bb", "ccc"], ["dddd", "eeeee", ""]]);
+  assert.deepEqual([p[0].s, p[1].e], [0, 10]);
+  assert.deepEqual(stackChunks("ஒன்று இரண்டு மூன்று", "one two three four", 0, 4).map((c) => c.parts), [["ஒன்று", "இரண்டு", "one two"], ["", "மூன்று", "three four"]]);
+  assert.equal(stackChunks("a b c d e f g h i", "", 0, 1.5).length, 1, "a short cue keeps one piece on screen long enough to read");
+  const ass = buildAss([{ start: 0, end: 3, ta: "நான் எப்பவுமே சூப்பரான", en: "I always" }], { styleId: "trending-1", lang: "both", width: 1080, height: 1920 });
+  assert.match(ass, /\\fnAnton/); assert.match(ass, /எப்பவுமே/); assert.match(ass, /always/);
+  assert.ok(stackBig("பரிந்துரைக்கப்பட்டது") < stackBig("Hi"));
+});
+
+test("tamilRuns puts Tamil in the Tamil font and returns to the font in effect", () => {
+  const fonts = { Main: "Anton", Second: "Instrument Sans" };
+  assert.equal(tamilRuns("Hi வணக்கம் you", fonts, "Main"), "Hi {\\fnNoto Sans Tamil}வணக்கம் {\\fnAnton}you");
+  assert.equal(tamilRuns("{\\fnBangers}வணக்கம்\\N{\\rSecond}hello", fonts, "Main"), "{\\fnBangers}{\\fnNoto Sans Tamil}வணக்கம்{\\fnBangers}\\N{\\rSecond}hello");
+  assert.equal(tamilRuns("plain", fonts, "Main"), "plain");
 });

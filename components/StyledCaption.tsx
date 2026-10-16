@@ -1,5 +1,5 @@
 "use client";
-import { caseOf, keywordIndex, resolveStyle, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { caseOf, keywordIndex, resolveStyle, stackBig, stackChunks, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
 
 type Props = { styleId: string; custom?: CaptionCustom; text: string; sub?: string; start: number; end: number; time: number };
@@ -51,7 +51,12 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   const join = (from: number, to: number) => words.slice(from, to).flatMap((_, k) => [k ? (brk.has(from + k - 1) ? <br key={`br${from + k}`} /> : " ") : null, word(from + k)]);
 
   let body: React.ReactNode;
-  if (s.effect === "typewriter") {
+  const stacked = s.effect === "stack" && s.stack;
+  if (stacked) {
+    const chunks = stackChunks(caseOf(s, text), sub ?? "", start, end);
+    const k = Math.max(0, chunks.findIndex((c) => time < c.e)), [a, b, d] = chunks[k]?.parts ?? ["", "", ""];
+    body = <>{a && <span className="stack-small">{a}</span>}<span key={k} className="stack-big" style={{ color: s.stack!.big, fontFamily: stack(s.stack!.font), fontWeight: 400, fontSize: `${stackBig(b)}em` }}>{b}</span>{d && <span className="stack-small">{d}</span>}</>;
+  } else if (s.effect === "typewriter") {
     const chars = [...breakLines(caseOf(s, text), s.lines)];
     body = <>{chars.slice(0, Math.max(1, Math.ceil(chars.length * Math.min(1, p / 0.8)))).join("")}<span className="caret">_</span></>;
   } else if (s.effect === "solo") {
@@ -68,7 +73,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   return (
     <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}`} style={{ "--p": p } as React.CSSProperties}>
       <span className="cap-main" style={base} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>{body}</span>
-      {sub && <span className="cap-sub">{sub}</span>}
+      {sub && !stacked && <span className="cap-sub">{sub}</span>}
     </div>
   );
 }
