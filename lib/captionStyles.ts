@@ -27,38 +27,37 @@ export type CaptionStyle = {
 const GOLD = "#FFC83D", BUTTER = "#FFE58A", CREAM = "#FFF4D6", INK = "#141414", HL = "#FFE14D";
 
 export const CAPTION_STYLES: CaptionStyle[] = [
-  { id: "setup-punch", name: "Setup & Punch", group: "Trending", blurb: "A quiet lead-in, then the last words land big, one by one.", font: "Instrument Sans", bold: true, color: "#FFFFFF", future: null, shadow: 0.05, effect: "punch" },
-  { id: "comic-pop", name: "Comic Pop", group: "Trending", blurb: "Comic caps with a black ring; the keyword turns gold and grows.", font: "Bangers", size: 1.2, caps: true, color: "#FFFFFF", outline: ["#000000", 0.09], keyword: { color: GOLD, grow: true } },
-  { id: "butter-serif", name: "Butter Serif", group: "Trending", blurb: "Soft serif with a hairline edge and a butter-yellow keyword.", font: "DM Serif Display", color: "#FFFFFF", outline: ["#000000", 0.03], keyword: { color: BUTTER } },
-  { id: "word-box", name: "Word Box", group: "Trending", blurb: "One dark box; words fill in left to right, keyword in gold.", font: "Bebas Neue", size: 1.2, caps: true, color: "#FFFFFF", future: null, box: "#0B0B0BE6", keyword: { color: GOLD } },
-  { id: "handwritten", name: "Handwritten", group: "Trending", blurb: "Warm handwriting in a single butter tone that brightens as it's said.", font: "Caveat", size: 1.3, bold: true, color: BUTTER, future: "#FFE58A66", shadow: 0.04 },
+  { id: "setup-punch", name: "Setup & Punch", group: "Trending", blurb: "A quiet lead-in, then the last words land big, one by one.", font: "Poppins", bold: true, color: "#FFFFFF", future: null, shadow: 0.05, effect: "punch" },
+  { id: "comic-pop", name: "Comic Pop", group: "Trending", blurb: "Comic caps with a black ring; the keyword turns gold and grows.", font: "Poppins ExtraBold", size: 1.2, caps: true, color: "#FFFFFF", outline: ["#000000", 0.09], keyword: { color: GOLD, grow: true } },
+  { id: "butter-serif", name: "Butter Script", group: "Trending", blurb: "Soft script with a hairline edge and a butter-yellow keyword.", font: "Satisfy", color: "#FFFFFF", outline: ["#000000", 0.03], keyword: { color: BUTTER } },
+  { id: "word-box", name: "Word Box", group: "Trending", blurb: "One dark box; words fill in left to right, keyword in gold.", font: "Anton", size: 1.2, caps: true, color: "#FFFFFF", future: null, box: "#0B0B0BE6", keyword: { color: GOLD } },
+  { id: "handwritten", name: "Handwritten", group: "Trending", blurb: "Warm script in a single butter tone that brightens as it's said.", font: "Satisfy", size: 1.3, bold: true, color: BUTTER, future: "#FFE58A66", shadow: 0.04 },
   { id: "retro-vhs", name: "Retro VHS", group: "Trending", blurb: "RGB-split tape look with a little tracking jitter.", font: "Anton", size: 1.1, caps: true, color: "#FFFFFF", effect: "vhs" },
-  { id: "trending-1", name: "Trending 1", group: "Trending", blurb: "A few words at a time: one big blue word between small orange lines.", font: "Instrument Sans", bold: true, color: "#FF8A1F", shadow: 0.06, effect: "stack", stack: { big: "#2E8BFF", font: "Anton" } },
-  { id: "trending-2", name: "Trending 2", group: "Trending", blurb: "A big blue serif word with heavy orange words above and below.", font: "Archivo Black", color: "#FF7A00", shadow: 0.06, effect: "stack", stack: { big: "#3D7BFF", font: "DM Serif Display" } },
-  { id: "trending-3", name: "Trending 3", group: "Trending", blurb: "Small white lines around one big red word.", font: "Instrument Sans", bold: true, color: "#FFFFFF", shadow: 0.06, effect: "stack", stack: { big: "#FF2D2D", font: "Archivo Black" } },
-  { id: "editorial-cut", name: "Editorial Cut", group: "Aesthetic", blurb: "Warm serif, every word set; the spoken one wakes up.", font: "Fraunces", color: "#FFF1E0", future: "#FFF1E073", active: "#FFD9A0", shadow: 0.04 },
-  { id: "soft-display", name: "Soft Display", group: "Aesthetic", blurb: "Lowercase display serif. Soft, cinematic, premium.", font: "Fraunces", lower: true, color: "#F6F0E6", shadow: 0.06 },
+  { id: "trending-1", name: "Trending 1", group: "Trending", blurb: "A few words at a time: one big blue word between small orange lines.", font: "Poppins", bold: true, color: "#FF8A1F", shadow: 0.06, effect: "stack", stack: { big: "#2E8BFF", font: "Anton" } },
+  { id: "trending-2", name: "Trending 2", group: "Trending", blurb: "A big blue script word with heavy orange words above and below.", font: "Poppins ExtraBold", color: "#FF7A00", shadow: 0.06, effect: "stack", stack: { big: "#3D7BFF", font: "Satisfy" } },
+  { id: "trending-3", name: "Trending 3", group: "Trending", blurb: "Small white lines around one big red word.", font: "Poppins", bold: true, color: "#FFFFFF", shadow: 0.06, effect: "stack", stack: { big: "#FF2D2D", font: "Poppins ExtraBold" } },
+  { id: "editorial-cut", name: "Editorial Cut", group: "Aesthetic", blurb: "Warm script, every word set; the spoken one wakes up.", font: "Satisfy", color: "#FFF1E0", future: "#FFF1E073", active: "#FFD9A0", shadow: 0.04 },
+  { id: "soft-display", name: "Soft Display", group: "Aesthetic", blurb: "Lowercase script. Soft, cinematic, premium.", font: "Satisfy", lower: true, color: "#F6F0E6", shadow: 0.06 },
   { id: "center-stage", name: "Center Stage", group: "Aesthetic", blurb: "One word at a time, tall and heavy, with the last word above.", font: "Anton", size: 1.6, caps: true, color: "#FFFFFF", shadow: 0.05, effect: "solo" },
-  { id: "marker-swipe", name: "Marker Swipe", group: "Aesthetic", blurb: "Marker type; the spoken word gets a yellow swipe.", font: "Permanent Marker", caps: true, color: "#FFFFFF", active: INK, mark: HL, shadow: 0.04 },
-  { id: "spotlight", name: "Spotlight", group: "Aesthetic", blurb: "A warm beam sweeps across the line as it's spoken.", font: "Instrument Sans", bold: true, color: "#FFE2B0", future: "#FFFFFF59", shadow: 0.05 },
-  { id: "highlighter-paper", name: "Highlighter Paper", group: "Aesthetic", blurb: "Serif on cream paper, underlined as you go.", font: "DM Serif Display", color: INK, future: "#14141480", underline: true, box: CREAM },
-  { id: "highlighter-clean", name: "Highlighter Clean", group: "Aesthetic", blurb: "Same swipe, no paper: white before, ink after.", font: "Instrument Sans", bold: true, color: "#FFFFFF", active: INK, mark: HL, shadow: 0.04 },
-  { id: "minimal", name: "Minimal", group: "Clean", blurb: "Bold geometric white with a soft shadow. Stays out of the shot.", font: "Archivo Black", color: "#FFFFFF", shadow: 0.06 },
-  { id: "editorial-mix", name: "Editorial Mix", group: "Clean", blurb: "Heavy grotesk; the keyword switches to an italic serif.", font: "Archivo Black", color: "#FFFFFF", shadow: 0.05, keyword: { font: "DM Serif Display", italic: true } },
-  { id: "tall-caps", name: "Tall Caps", group: "Clean", blurb: "Tall condensed caps with a blue bar under the spoken word.", font: "Bebas Neue", size: 1.25, caps: true, color: "#FFFFFF", mark: "#2F6BFF", shadow: 0.04 },
-  { id: "typewriter", name: "Typewriter", group: "Clean", blurb: "Types itself out, cursor and all.", font: "Special Elite", color: "#FFFFFF", shadow: 0.05, effect: "typewriter" },
-  { id: "eight-bit", name: "8-Bit", group: "Fun", blurb: "Pixel type for that arcade energy.", font: "Press Start 2P", size: 0.62, color: "#FFFFFF", outline: ["#000000", 0.12], keyword: { color: HL } },
-  { id: "doodle-card", name: "Doodle Card", group: "Fun", blurb: "Marker on a paper card; words sit at playful angles.", font: "Permanent Marker", color: INK, box: CREAM, effect: "wobble" },
-  { id: "doodle-clean", name: "Doodle Clean", group: "Fun", blurb: "Same marker, sticker edge, no card; keyword in marker yellow.", font: "Permanent Marker", color: "#FFFFFF", outline: ["#000000", 0.07], keyword: { color: HL }, effect: "wobble" },
-  { id: "crawl", name: "Crawl", group: "Fun", blurb: "Opening-crawl lines rolling off into the distance.", font: "Bebas Neue", size: 1.1, caps: true, color: HL, effect: "crawl" },
+  { id: "marker-swipe", name: "Marker Swipe", group: "Aesthetic", blurb: "Marker type; the spoken word gets a yellow swipe.", font: "Roboto Black", caps: true, color: "#FFFFFF", active: INK, mark: HL, shadow: 0.04 },
+  { id: "spotlight", name: "Spotlight", group: "Aesthetic", blurb: "A warm beam sweeps across the line as it's spoken.", font: "Poppins", bold: true, color: "#FFE2B0", future: "#FFFFFF59", shadow: 0.05 },
+  { id: "highlighter-paper", name: "Highlighter Paper", group: "Aesthetic", blurb: "Heavy type on cream paper, underlined as you go.", font: "Satisfy", color: INK, future: "#14141480", underline: true, box: CREAM },
+  { id: "highlighter-clean", name: "Highlighter Clean", group: "Aesthetic", blurb: "Same swipe, no paper: white before, ink after.", font: "Poppins", bold: true, color: "#FFFFFF", active: INK, mark: HL, shadow: 0.04 },
+  { id: "minimal", name: "Minimal", group: "Clean", blurb: "Bold geometric white with a soft shadow. Stays out of the shot.", font: "Poppins ExtraBold", color: "#FFFFFF", shadow: 0.06 },
+  { id: "editorial-mix", name: "Editorial Mix", group: "Clean", blurb: "Heavy sans; the keyword switches to a script.", font: "Poppins ExtraBold", color: "#FFFFFF", shadow: 0.05, keyword: { font: "Satisfy", italic: true } },
+  { id: "tall-caps", name: "Tall Caps", group: "Clean", blurb: "Tall condensed caps with a blue bar under the spoken word.", font: "Anton", size: 1.25, caps: true, color: "#FFFFFF", mark: "#2F6BFF", shadow: 0.04 },
+  { id: "typewriter", name: "Typewriter", group: "Clean", blurb: "Types itself out, cursor and all.", font: "Roboto Black", color: "#FFFFFF", shadow: 0.05, effect: "typewriter" },
+  { id: "eight-bit", name: "8-Bit", group: "Fun", blurb: "Tall arcade caps with a thick outline.", font: "Anton", size: 1.1, color: "#FFFFFF", outline: ["#000000", 0.12], keyword: { color: HL } },
+  { id: "doodle-card", name: "Doodle Card", group: "Fun", blurb: "Marker on a paper card; words sit at playful angles.", font: "Roboto Black", color: INK, box: CREAM, effect: "wobble" },
+  { id: "doodle-clean", name: "Doodle Clean", group: "Fun", blurb: "Same marker, sticker edge, no card; keyword in marker yellow.", font: "Roboto Black", color: "#FFFFFF", outline: ["#000000", 0.07], keyword: { color: HL }, effect: "wobble" },
+  { id: "crawl", name: "Crawl", group: "Fun", blurb: "Opening-crawl lines rolling off into the distance.", font: "Anton", size: 1.1, caps: true, color: HL, effect: "crawl" },
 ];
 
 export const DEFAULT_STYLE = "minimal";
 
-/** Fonts users can pick when customising (all bundled in public/caption-fonts). */
+/** Fonts users can pick (bundled in public/caption-fonts): the Premiere templates' fonts that are free for the web. */
 export const CAPTION_FONTS = [
-  "Instrument Sans", "Archivo Black", "Bebas Neue", "Anton", "Bangers", "DM Serif Display",
-  "Fraunces", "Caveat", "Permanent Marker", "Special Elite", "Press Start 2P",
+  "Poppins", "Poppins ExtraBold", "Anton", "Roboto Black", "Satisfy",
 ] as const;
 
 /** A user's edits on top of a style. Every field is optional; null turns a feature off. */
@@ -144,11 +143,22 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   const inside = (v: number | undefined, lo: number, hi: number) => (v === undefined ? undefined : Math.min(hi, Math.max(lo, v)));
   return { ...s, position, offset, lines: c.lines, x: inside(c.x, safe.left, 1 - safe.right), y: inside(c.y, safe.top, 1 - safe.bottom), safe };
 }
+/** The project's customisation with one caption's own on top (a caption given a position drops the project's drag point). */
+export function mergeCustom(project: CaptionCustom = {}, own?: CaptionCustom): CaptionCustom {
+  if (!own) return project;
+  const out = { ...project, ...own };
+  if (own.position && own.x === undefined) { delete out.x; delete out.y; }
+  return out;
+}
+
 export const styleOf = (id: string | null | undefined) => CAPTION_STYLES.find((s) => s.id === id) ?? CAPTION_STYLES.find((s) => s.id === DEFAULT_STYLE)!;
 
-/** Words of a line with estimated timings (speech has no word timestamps, so time is shared by length). */
-export function wordTimes(text: string, start: number, end: number) {
+/** Words of a line with their timings: the measured starts when there's one per word, else shared by length. */
+export function wordTimes(text: string, start: number, end: number, starts?: number[]) {
   const words = text.split(/\s+/).filter(Boolean);
+  if (starts && starts.length === words.length && words.length) {
+    return words.map((w, i) => ({ w, s: Math.max(start, starts[i]), e: i + 1 < words.length ? Math.max(start, starts[i + 1]) : end }));
+  }
   const total = words.reduce((n, w) => n + w.length, 0) || 1;
   let t = start;
   return words.map((w) => {
@@ -243,39 +253,56 @@ type Opts = { styleId: string; custom?: CaptionCustom; lang: "ta" | "en" | "both
 
 /** A full .ass file for the cues in the chosen style, sized to the video. */
 export function buildAss(cues: Cue[], o: Opts) {
-  const s = resolveStyle(o.styleId, o.custom, o.height > o.width);
   const short = Math.min(o.width, o.height);
-  const fs = Math.round(short * 0.075 * (s.size ?? 1));
-  const px = (f = 0) => Math.round(f * fs * 10) / 10;
-  const marginV = Math.round(o.height * s.offset);
-  const align = s.position === "top" ? 8 : s.position === "middle" ? 5 : 2;
-  // Dragged placement: centre every line on the point (dx nudges the VHS colour copies apart).
-  const posAt = (dx: number) => (s.x !== undefined && s.y !== undefined ? `{\\an5\\pos(${Math.round(s.x * o.width + dx)},${Math.round(s.y * o.height)})}` : "");
-  const pos = posAt(0);
-  // Lines wrap inside the safe zone's side margins.
-  const marginL = Math.round(o.width * s.safe.left), marginR = Math.round(o.width * s.safe.right);
-  const marginH = Math.max(marginL, marginR);
-  const wrapM = s.x !== undefined ? Math.max(marginH, Math.round(o.width * (0.5 - Math.min(s.x - s.safe.left, 1 - s.safe.right - s.x)))) : 0;
-  const box = !!s.box;
-  const style = [
-    "Main", s.font, fs, assColor(s.color), assColor(s.color),
-    assColor(box ? s.box! : s.outline?.[0] ?? "#000000"), assColor(box ? s.box! : "#00000099"),
-    s.bold ? -1 : 0, s.italic ? -1 : 0, 0, 0, 100, 100, 0, 0,
-    box ? 3 : 1, box ? px(0.28) : px(s.outline?.[1]), box ? 0 : px(s.shadow), align, marginL, marginR, marginV, 1,
-  ].join(",");
-  const second = ["Second", "Instrument Sans", Math.round(short * 0.075 * 0.55), "&H00FFFFFF&", "&H00FFFFFF&", "&H00000000&", "&H99000000&", 0, 0, 0, 0, 100, 100, 0, 0, 1, px(0.04), px(0.04), align, marginL, marginR, marginV, 1].join(",");
+  // Everything a look needs, for the project's style ("Main") and for each caption that has its own ("C<n>").
+  const lookOf = (custom: CaptionCustom | undefined, name: string) => {
+    const s = resolveStyle(o.styleId, custom, o.height > o.width);
+    const fs = Math.round(short * 0.075 * (s.size ?? 1));
+    const px = (f = 0) => Math.round(f * fs * 10) / 10;
+    const marginV = Math.round(o.height * s.offset);
+    const align = s.position === "top" ? 8 : s.position === "middle" ? 5 : 2;
+    // Dragged placement: centre every line on the point (dx nudges the VHS colour copies apart).
+    const posAt = (dx: number) => (s.x !== undefined && s.y !== undefined ? `{\\an5\\pos(${Math.round(s.x * o.width + dx)},${Math.round(s.y * o.height)})}` : "");
+    // Lines wrap inside the safe zone's side margins.
+    const marginL = Math.round(o.width * s.safe.left), marginR = Math.round(o.width * s.safe.right);
+    const marginH = Math.max(marginL, marginR);
+    const wrapM = s.x !== undefined ? Math.max(marginH, Math.round(o.width * (0.5 - Math.min(s.x - s.safe.left, 1 - s.safe.right - s.x)))) : 0;
+    const box = !!s.box;
+    const line = [
+      name, s.font, fs, assColor(s.color), assColor(s.color),
+      assColor(box ? s.box! : s.outline?.[0] ?? "#000000"), assColor(box ? s.box! : "#00000099"),
+      s.bold ? -1 : 0, s.italic ? -1 : 0, 0, 0, 100, 100, 0, 0,
+      box ? 3 : 1, box ? px(0.28) : px(s.outline?.[1]), box ? 0 : px(s.shadow), align, marginL, marginR, marginV, 1,
+    ].join(",");
+    return { name, s, px, align, posAt, pos: posAt(0), marginL, marginR, wrapM, line };
+  };
+  const base = lookOf(o.custom, "Main");
+  const looks = [base];
+  const lookFor = (c: Cue) => {
+    if (!c.style || !Object.keys(c.style).length) return base;
+    const l = lookOf(mergeCustom(o.custom, c.style), `C${looks.length}`);
+    looks.push(l);
+    return l;
+  };
+  const second = ["Second", "Poppins", Math.round(short * 0.075 * 0.55), "&H00FFFFFF&", "&H00FFFFFF&", "&H00000000&", "&H99000000&", 0, 0, 0, 0, 100, 100, 0, 0, 1, base.px(0.04), base.px(0.04), base.align, base.marginL, base.marginR, Math.round(o.height * base.s.offset), 1].join(",");
 
   const events: string[] = [];
-  const fonts = { Main: s.font, Second: "Instrument Sans" };
-  const add = (start: number, end: number, text: string, layer = 0, ml = 0, mr = 0, st = "Main") =>
+  const fonts: Record<string, string> = { Second: "Poppins" };
+  let cur = "Main";
+  const add = (start: number, end: number, text: string, layer = 0, ml = 0, mr = 0, st = cur) =>
     end > start && events.push(`Dialogue: ${layer},${assTime(start)},${assTime(end)},${st},,${ml},${mr},0,,${tamilRuns(text, fonts, st)}`);
 
   for (const c of cues) {
     const main = (o.lang === "en" ? c.en : c.ta).trim();
     if (!main) continue;
+    const look = lookFor(c);
+    const { s, px, pos, posAt, wrapM, marginL, marginR } = look;
+    cur = look.name;
+    fonts[cur] = s.font;
+    const colors = o.lang === "en" ? c.wce : c.wc; // the user's colour for single words
     const sub = o.lang === "both" ? c.en.trim() : "";
     const tail = sub ? `\\N{\\rSecond}${esc(breakLines(sub, s.lines))}` : "";
-    const words = wordTimes(caseOf(s, main), c.start, c.end);
+    const words = wordTimes(caseOf(s, main), c.start, c.end, o.lang === "en" ? c.we : c.w);
     const kw = keywordIndex(words.map((w) => w.w));
     const brk = lineBreaks(words.map((w) => w.w), s.lines);
     const glue = (j: number) => (j ? (brk.has(j - 1) ? "\\N" : " ") : "");
@@ -302,6 +329,7 @@ export function buildAss(cues: Cue[], o: Opts) {
         if (s.keyword.grow) t += state === "active" ? "\\t(0,180,\\fscx118\\fscy118)" : "\\fscx118\\fscy118";
       }
       if (s.effect === "wobble") t += `\\frz${j % 2 ? -4 : 3}`;
+      if (colors?.[j] && state !== "future") t += `\\1c${colorOnly(colors[j]!)}`;
       return `{${t}}${w}`;
     };
 
@@ -367,7 +395,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: ${style}
+${looks.map((l) => `Style: ${l.line}`).join("\n")}
 Style: ${second}
 
 [Events]

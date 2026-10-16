@@ -1,17 +1,9 @@
 /* Caption styles: fonts and effects for <StyledCaption> (looks are defined in lib/captionStyles.ts). */
-@font-face { font-family: "Bebas Neue"; src: url("/caption-fonts/BebasNeue-Regular.ttf") format("truetype"); font-display: swap; }
-@font-face { font-family: "Anton"; src: url("/caption-fonts/Anton-Regular.ttf") format("truetype"); font-display: swap; }
-@font-face { font-family: "Bangers"; src: url("/caption-fonts/Bangers-Regular.ttf") format("truetype"); font-display: swap; }
-@font-face { font-family: "Caveat"; src: url("/caption-fonts/Caveat.ttf") format("truetype"); font-display: swap; }
-@font-face { font-family: "Permanent Marker"; src: url("/caption-fonts/PermanentMarker-Regular.ttf") format("truetype"); font-display: swap; }
-@font-face { font-family: "Special Elite"; src: url("/caption-fonts/SpecialElite-Regular.ttf") format("truetype"); font-display: swap; }
-@font-face { font-family: "Press Start 2P"; src: url("/caption-fonts/PressStart2P-Regular.ttf") format("truetype"); font-display: swap; }
-@font-face { font-family: "Archivo Black"; src: url("/caption-fonts/ArchivoBlack-Regular.ttf") format("truetype"); font-display: swap; }
-@font-face { font-family: "Instrument Sans"; src: url("/caption-fonts/InstrumentSans.ttf") format("truetype"); font-weight: 400 700; font-display: swap; }
-@font-face { font-family: "DM Serif Display"; src: url("/caption-fonts/DMSerifDisplay-Regular.ttf") format("truetype"); font-display: swap; }
-@font-face { font-family: "DM Serif Display"; src: url("/caption-fonts/DMSerifDisplay-Italic.ttf") format("truetype"); font-style: italic; font-display: swap; }
-@font-face { font-family: "Fraunces"; src: url("/caption-fonts/Fraunces.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
-@font-face { font-family: "Fraunces"; src: url("/caption-fonts/Fraunces-Italic.ttf") format("truetype"); font-weight: 100 900; font-style: italic; font-display: swap; }
+@font-face { font-family: "Poppins"; src: url("/caption-fonts/Poppins-Bold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Poppins ExtraBold"; src: url("/caption-fonts/Poppins-ExtraBold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Anton"; src: url("/caption-fonts/Anton-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Roboto Black"; src: url("/caption-fonts/Roboto-Black.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Satisfy"; src: url("/caption-fonts/Satisfy-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 
 .cap { display: grid; justify-items: center; gap: .25em; text-align: center; line-height: 1.25; pointer-events: none; }
 .cap-main { display: inline-block; max-width: 100%; paint-order: stroke fill; overflow-wrap: anywhere; }

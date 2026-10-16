@@ -6,7 +6,12 @@ import { pgTable, text, uuid, integer, real, boolean, timestamp, jsonb } from "d
  * `ta` / `en` starts (seconds, from the audio: lib/subtitles.ts wordStarts), when known. `anchor` (only while a job
  * runs): the start is the speech model's own timestamp, not an estimate.
  */
-export type Cue = { start: number; end: number; ta: string; en: string; w?: number[]; we?: number[]; anchor?: boolean };
+export type Cue = {
+  start: number; end: number; ta: string; en: string; w?: number[]; we?: number[]; anchor?: boolean;
+  style?: CaptionCustom;        // this caption's own look, over the project's (font, size, colours, position…)
+  wc?: (string | null)[];       // colour of each word of `ta` (null = the style's own)
+  wce?: (string | null)[];      // colour of each word of `en`
+};
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),

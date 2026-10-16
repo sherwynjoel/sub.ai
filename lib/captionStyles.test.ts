@@ -34,13 +34,13 @@ test("sanitizeCustom keeps valid edits and drops anything unsafe", () => {
 });
 
 test("custom edits layer on a style and reach the MP4 subtitles", () => {
-  const r = resolveStyle("comic-pop", { font: "Fraunces", accent: "#00ff00", outline: null, position: "top", offset: 0.1 });
-  assert.equal(r.font, "Fraunces");
+  const r = resolveStyle("comic-pop", { font: "Satisfy", accent: "#00ff00", outline: null, position: "top", offset: 0.1 });
+  assert.equal(r.font, "Satisfy");
   assert.equal(r.keyword?.color, "#00ff00");
   assert.equal(r.outline, undefined);
   assert.equal(styleOf("comic-pop").keyword?.color, "#FFC83D"); // the preset itself is untouched
-  const ass = buildAss([{ start: 0, end: 2, ta: "hello world", en: "" }], { styleId: "comic-pop", custom: { font: "Fraunces", position: "top", offset: 0.1 }, lang: "ta", width: 1920, height: 1080 });
-  assert.match(ass, /Style: Main,Fraunces,/);
+  const ass = buildAss([{ start: 0, end: 2, ta: "hello world", en: "" }], { styleId: "comic-pop", custom: { font: "Satisfy", position: "top", offset: 0.1 }, lang: "ta", width: 1920, height: 1080 });
+  assert.match(ass, /Style: Main,Satisfy,/);
   assert.match(ass, /,8,\d+,\d+,108,1\n/); // top alignment, 10% margin
 });
 
@@ -96,7 +96,7 @@ test("stack styles: a few words a piece, small / big / small, English on the bot
 });
 
 test("tamilRuns puts Tamil in the Tamil font and returns to the font in effect", () => {
-  const fonts = { Main: "Anton", Second: "Instrument Sans" };
+  const fonts = { Main: "Anton", Second: "Poppins" };
   assert.equal(tamilRuns("Hi வணக்கம் you", fonts, "Main"), "Hi {\\fnNoto Sans Tamil}வணக்கம் {\\fnAnton}you");
   assert.equal(tamilRuns("{\\fnBangers}வணக்கம்\\N{\\rSecond}hello", fonts, "Main"), "{\\fnBangers}{\\fnNoto Sans Tamil}வணக்கம்{\\fnBangers}\\N{\\rSecond}hello");
   assert.equal(tamilRuns("plain", fonts, "Main"), "plain");

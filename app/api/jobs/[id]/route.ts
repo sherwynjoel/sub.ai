@@ -47,11 +47,20 @@ export async function PATCH(req: Request, { params }: Ctx) {
   // Word times stay while their line still has that many words and they sit inside the cue (an edit drops them).
   const times = (t: unknown, line: string, start: number, end: number) =>
     Array.isArray(t) && t.length === line.split(/\s+/).filter(Boolean).length && t.every((x) => Number.isFinite(x) && x >= start - 0.01 && x <= end + 0.01) ? (t as number[]) : undefined;
-  const clean = (cues as Cue[]).map(({ start, end, ta, en, w, we }) => {
+  // A colour per word, while the line still has that many words.
+  const colors = (v: unknown, line: string) =>
+    Array.isArray(v) && v.length === line.split(/\s+/).filter(Boolean).length && v.every((x) => x === null || (typeof x === "string" && /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(x))) && v.some(Boolean) ? (v as (string | null)[]) : undefined;
+  const clean = (cues as Cue[]).map(({ start, end, ta, en, w, we, style, wc, wce }) => {
     const c: Cue = { start, end, ta: ta.slice(0, 500), en: en.slice(0, 500) };
     const wt = times(w, c.ta, start, end), et = times(we, c.en, start, end);
     if (wt) c.w = wt;
     if (et) c.we = et;
+    const own = sanitizeCustom(style); // this caption's own look; safe zones stay project-wide
+    delete own.safe; delete own.safeCustom;
+    if (Object.keys(own).length) c.style = own;
+    const tc = colors(wc, c.ta), ec = colors(wce, c.en);
+    if (tc) c.wc = tc;
+    if (ec) c.wce = ec;
     return c;
   }).sort((a, b) => a.start - b.start);
   await db.update(jobs).set({ cues: clean, updatedAt: new Date() }).where(eq(jobs.id, j.id));

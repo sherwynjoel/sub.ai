@@ -2,7 +2,11 @@
 import { caseOf, keywordIndex, resolveStyle, stackBig, stackChunks, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
 
-type Props = { styleId: string; custom?: CaptionCustom; text: string; sub?: string; start: number; end: number; time: number };
+type Props = {
+  styleId: string; custom?: CaptionCustom; text: string; sub?: string; start: number; end: number; time: number;
+  starts?: number[];             // when each word starts (measured or edited), else shared by length
+  colors?: (string | null)[];    // a colour per word the user picked
+};
 
 const stack = (font: string) => `"${font}", var(--font-tamil), "Nirmala UI", "Noto Sans", sans-serif`;
 
@@ -10,9 +14,9 @@ const stack = (font: string) => `"${font}", var(--font-tamil), "Nirmala UI", "No
  * A caption line drawn in a caption style at a moment in time. Mirrors buildAss() in lib/captionStyles.ts
  * so the editor preview matches the burned-in MP4. Sized in container units: the parent needs container-type: size.
  */
-export default function StyledCaption({ styleId, custom, text, sub, start, end, time }: Props) {
+export default function StyledCaption({ styleId, custom, text, sub, start, end, time, starts, colors }: Props) {
   const s = resolveStyle(styleId, custom);
-  const words = wordTimes(caseOf(s, text), start, end);
+  const words = wordTimes(caseOf(s, text), start, end, starts);
   const kw = keywordIndex(words.map((w) => w.w));
   const brk = lineBreaks(words.map((w) => w.w), s.lines);
   let i = words.findIndex((w) => time < w.e);
@@ -46,6 +50,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       if (s.keyword.grow) st.transform = "scale(1.18)";
     }
     if (s.effect === "wobble") st.transform = `${st.transform ?? ""} rotate(${j % 2 ? -4 : 3}deg)`;
+    if (colors?.[j] && state !== "future") st.color = colors[j]!;
     return <span key={j} className="cw" style={st}>{words[j].w}</span>;
   };
   const join = (from: number, to: number) => words.slice(from, to).flatMap((_, k) => [k ? (brk.has(from + k - 1) ? <br key={`br${from + k}`} /> : " ") : null, word(from + k)]);

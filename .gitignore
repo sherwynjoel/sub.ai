@@ -59,3 +59,6 @@ next-env.d.ts
 # Third-party Motion Graphics Templates: licensed designs, kept out of this public repo (build.ps1 needs plugin/templates locally)
 /templates/
 /plugin/templates/
+
+# development-only editor fixture (app/dev/editor)
+/public/dev-media.mp4

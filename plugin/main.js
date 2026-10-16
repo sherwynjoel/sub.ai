@@ -12,7 +12,7 @@
   var picked = null, lastJob = null;
   var editing = null; // { job, cues, dirty, styleId, custom } once a job has subtitles
   // PostScript names After Effects uses for the bundled caption fonts (website -> Plugin -> caption fonts zip).
-  var PS_FONTS = { "Instrument Sans": "InstrumentSans-Regular", "Archivo Black": "ArchivoBlack-Regular", "Bebas Neue": "BebasNeue-Regular", "Anton": "Anton-Regular", "Bangers": "Bangers-Regular", "DM Serif Display": "DMSerifDisplay-Regular", "Fraunces": "Fraunces-Regular", "Caveat": "Caveat-Regular", "Permanent Marker": "PermanentMarker-Regular", "Special Elite": "SpecialElite-Regular", "Press Start 2P": "PressStart2P-Regular" };
+  var PS_FONTS = { "Poppins": "Poppins-Bold", "Poppins ExtraBold": "Poppins-ExtraBold", "Anton": "Anton-Regular", "Roboto Black": "Roboto-Black", "Satisfy": "Satisfy-Regular" };
   function rgb(hex) { hex = (hex || "#ffffff").slice(1, 7); return [0, 2, 4].map(function (i) { return parseInt(hex.substr(i, 2), 16) / 255; }); }
 
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k) || ""; localStorage.setItem(k, v); } catch (e) { return ""; } }
