@@ -4,6 +4,8 @@ import { db, jobs, type Cue } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { ownJob, publicJob } from "@/lib/jobs";
 import { CAPTION_STYLES, sanitizeCustom } from "@/lib/captionStyles";
+import { LEVEL_FRAME, loudness } from "@/lib/media";
+import { withWordTimes } from "@/lib/subtitles";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -11,7 +13,16 @@ export async function GET(_: Request, { params }: Ctx) {
   const u = await currentUser();
   if (!u) return unauthorized();
   const j = await ownJob((await params).id, u);
-  return j ? json(publicJob(j, true)) : json({ error: "Not found" }, 404);
+  if (!j) return json({ error: "Not found" }, 404);
+  // Jobs from before word timing (or edited since): time the words from the audio once, while the upload is kept.
+  if (j.status === "done" && j.filePath && j.cues?.length && !j.cues.some((c) => c.w || c.we)) {
+    const level = await loudness(j.filePath);
+    if (level) {
+      j.cues = withWordTimes(j.cues, level, LEVEL_FRAME);
+      await db.update(jobs).set({ cues: j.cues }).where(eq(jobs.id, j.id));
+    }
+  }
+  return json(publicJob(j, true));
 }
 
 /** Save edited cues. */
@@ -33,7 +44,16 @@ export async function PATCH(req: Request, { params }: Ctx) {
     Array.isArray(cues) && cues.length <= 20000 &&
     cues.every((c: Cue) => Number.isFinite(c.start) && Number.isFinite(c.end) && c.end >= c.start && typeof c.ta === "string" && typeof c.en === "string");
   if (!valid) return json({ error: "Invalid subtitles." }, 400);
-  const clean = (cues as Cue[]).map(({ start, end, ta, en }) => ({ start, end, ta: ta.slice(0, 500), en: en.slice(0, 500) })).sort((a, b) => a.start - b.start);
+  // Word times stay while their line still has that many words and they sit inside the cue (an edit drops them).
+  const times = (t: unknown, line: string, start: number, end: number) =>
+    Array.isArray(t) && t.length === line.split(/\s+/).filter(Boolean).length && t.every((x) => Number.isFinite(x) && x >= start - 0.01 && x <= end + 0.01) ? (t as number[]) : undefined;
+  const clean = (cues as Cue[]).map(({ start, end, ta, en, w, we }) => {
+    const c: Cue = { start, end, ta: ta.slice(0, 500), en: en.slice(0, 500) };
+    const wt = times(w, c.ta, start, end), et = times(we, c.en, start, end);
+    if (wt) c.w = wt;
+    if (et) c.we = et;
+    return c;
+  }).sort((a, b) => a.start - b.start);
   await db.update(jobs).set({ cues: clean, updatedAt: new Date() }).where(eq(jobs.id, j.id));
   return json({ ok: true });
 }

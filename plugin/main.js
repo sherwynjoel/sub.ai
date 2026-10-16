@@ -300,7 +300,7 @@
   function changed() { pending = true; say("Not on the timeline yet — click Update timeline.", ""); }
   function grow(t) { t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px"; } // whole line visible, any panel width
   function openEditor(job) {
-    editing = { job: job, cues: job.cues.map(function (c) { return { start: c.start, end: c.end, ta: c.ta, en: c.en }; }), dirty: false, styleId: "", custom: {} };
+    editing = { job: job, cues: job.cues.map(function (c) { return { start: c.start, end: c.end, ta: c.ta, en: c.en, w: c.w, we: c.we }; }), dirty: false, styleId: "", custom: {} };
     pending = false;
     var box = $("cues"), hasEnglish = editing.cues.some(function (c) { return c.en; });
     box.innerHTML = "";

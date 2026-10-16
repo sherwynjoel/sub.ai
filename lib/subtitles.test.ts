@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toSrt, toVtt, mergeChunks, pairChunks, splitLine, layoutCue, divide, naturalBreak, shiftCues, breakLines, snapToPauses } from "./subtitles";
+import { toSrt, toVtt, mergeChunks, pairChunks, splitLine, layoutCue, divide, naturalBreak, shiftCues, breakLines, snapToPauses, wordStarts } from "./subtitles";
 import { secondsLeft, effectivePlan } from "./plans";
 
 const cue = (start: number, end: number, ta = "வணக்கம்", en = "Hello") => ({ start, end, ta, en });
@@ -107,4 +107,15 @@ test("snapToPauses moves a back-to-back cut to the nearby pause and keeps real g
   assert.deepEqual([out[1].end, out[2].start], [3, 3.2]);
   // No pause nearby: the cut stays.
   assert.equal(snapToPauses([cue(0, 1.5), cue(1.5, 3)], new Array(300).fill(-15), 0.01)[0].end, 1.5);
+});
+
+test("wordStarts shares the line over the time with speech in it, so words after a pause start when it resumes", () => {
+  // 0-2 s speech, 2-5 s pause, 5-7 s speech (20 ms frames); four equal words, two on each side of the pause.
+  const level = Array.from({ length: 400 }, (_, f) => (f * 0.02 < 2 || f * 0.02 >= 5 ? -15 : -50));
+  const w = wordStarts("aaaa bbbb cccc dddd", 0, 7, level, 0.02);
+  assert.equal(w[0], 0);
+  assert.ok(w[1] > 0.8 && w[1] < 1.3, `second word mid first stretch: ${w[1]}`);
+  assert.ok(w[2] >= 4.9 && w[2] < 5.4, `third word when speech resumes, not in the pause: ${w[2]}`);
+  assert.ok(w[3] > 5.6 && w[3] < 6.4, `${w[3]}`);
+  // By length alone the third word would sit at 3.5 s, in the middle of the pause.
 });

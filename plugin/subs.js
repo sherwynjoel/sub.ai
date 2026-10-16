@@ -5,10 +5,11 @@
     return cues
       .filter(function (c) { return c.end > inS && c.start < outS; })
       .map(function (c) {
-        return { start: Math.max(c.start, inS) + offset, end: Math.min(c.end, outS) + offset, ta: c.ta, en: c.en };
+        var shift = function (t) { return t && t.map(function (x) { return x + offset; }); };
+        return { start: Math.max(c.start, inS) + offset, end: Math.min(c.end, outS) + offset, ta: c.ta, en: c.en, w: shift(c.w), we: shift(c.we) };
       })
       .filter(function (c) { return c.end > 0; })
-      .map(function (c) { return { start: Math.max(0, c.start), end: c.end, ta: c.ta, en: c.en }; });
+      .map(function (c) { return { start: Math.max(0, c.start), end: c.end, ta: c.ta, en: c.en, w: c.w, we: c.we }; });
   }
 
   // Word indexes after which a line break goes, splitting words into up to n lines of similar length (same rule as the server).
@@ -50,23 +51,34 @@
   // pieces of up to 3 words (2 with English, which takes the bottom box), timed by length across the cue. A piece
   // lasts at least minDur seconds (the template's intro plus a moment to read), so short cues get fewer, longer pieces.
   function partsChunks(c, lang, minDur) {
-    var words = String(lang === "en" ? c.en : c.ta || c.en || "").split(/\s+/).filter(Boolean);
+    var native = lang === "en" || !c.ta ? "en" : "ta";
+    var words = String(c[native] || "").split(/\s+/).filter(Boolean);
     var en = lang === "both" ? String(c.en || "").split(/\s+/).filter(Boolean) : [];
     if (!words.length) return [];
+    // When each word starts: measured from the audio by the server (w / we), else shared by length.
+    var wt = native === "ta" ? c.w : c.we;
+    if (!(wt && wt.length === words.length)) {
+      var total = 0, sofar = 0;
+      words.forEach(function (w) { total += w.length + 1; });
+      wt = words.map(function (w) { var s = c.start + ((c.end - c.start) * sofar) / total; sofar += w.length + 1; return s; });
+    }
     var size = en.length ? 2 : 3, k = Math.ceil(words.length / size);
     if (minDur > 0) k = Math.max(1, Math.min(k, Math.floor((c.end - c.start) / minDur)));
-    var groups = runs(words, k), ens = runs(en, k), total = 0;
-    groups.forEach(function (g) { total += g.join(" ").length + 1; });
-    var t = c.start;
+    var groups = runs(words, k), ens = runs(en, k), first = [], n = 0;
+    groups.forEach(function (g) { first.push(n); n += g.length; });
     return groups.map(function (g, i) {
-      var start = t, mid = g.length === 2 ? 1 : Math.floor((g.length - 1) / 2);
-      t += ((c.end - c.start) * (g.join(" ").length + 1)) / total;
-      var parts = en.length ? [g.slice(0, -1).join(" "), g[g.length - 1], ens[i].join(" ")]
-        : g.length === 1 ? ["", g[0], ""] : [g.slice(0, mid).join(" "), g[mid], g.slice(mid + 1).join(" ")];
-      var end = i === groups.length - 1 ? c.end : t, at = [], len = 0, all = 0;
-      parts.forEach(function (x) { if (x) all += x.length + 1; });
-      // When each box's words are said: its share of the piece by length, in reading order (top, big, bottom).
-      for (var k = 0; k < 3; k++) { at.push(start + ((end - start) * len) / (all || 1)); if (parts[k]) len += parts[k].length + 1; }
+      var f = first[i], start = i ? wt[f] : c.start, end = i + 1 < groups.length ? wt[first[i + 1]] : c.end;
+      var mid = g.length === 2 ? 1 : Math.floor((g.length - 1) / 2), parts, at;
+      // Each box starts with its first word, in reading order (top, big, bottom); English comes in after the big word.
+      if (en.length) {
+        parts = [g.slice(0, -1).join(" "), g[g.length - 1], ens[i].join(" ")];
+        at = [start, g.length > 1 ? wt[f + g.length - 1] : start, Math.min(end, (g.length > 1 ? wt[f + g.length - 1] : start) + 0.3)];
+      } else if (g.length === 1) {
+        parts = ["", g[0], ""]; at = [start, start, start];
+      } else {
+        parts = [g.slice(0, mid).join(" "), g[mid], g.slice(mid + 1).join(" ")];
+        at = [start, wt[f + mid], mid + 1 < g.length ? wt[f + mid + 1] : end];
+      }
       return { start: start, end: end, parts: parts, at: at };
     });
   }

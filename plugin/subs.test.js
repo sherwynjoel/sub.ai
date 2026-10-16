@@ -25,4 +25,10 @@ assert.deepEqual(partsChunks({ start: 0, end: 2, ta: "a bb ccc dddd eeeee", en: 
 // Each box starts when its words are said, in reading order: top, big, bottom.
 const at = partsChunks({ start: 0, end: 3, ta: "aa bb cc", en: "" }, "ta")[0].at;
 assert.deepEqual(at.map((t) => +t.toFixed(2)), [0, 1, 2]);
+// Measured word starts (w) time the pieces and boxes; placeCues moves them with the clip.
+const timed = { start: 0, end: 6, ta: "a b c d e f", en: "", w: [0, 0.5, 1, 3, 4.5, 5] };
+const tp = partsChunks(timed, "ta");
+assert.deepEqual(tp.map((p) => [p.start, p.end]), [[0, 3], [3, 6]]);
+assert.deepEqual(tp[1].at, [3, 4.5, 5]);
+assert.deepEqual(placeCues([timed], 10, 0, 99)[0].w, [10, 10.5, 11, 13, 14.5, 15]);
 console.log("plugin subs ok");

@@ -211,3 +211,48 @@ export function snapToPauses(cues: Cue[], level: ArrayLike<number>, frame: numbe
   }
   return out;
 }
+
+/**
+ * When each word of a line starts. The speech model only times whole phrases, and sharing a phrase's time by text
+ * length drifts after every pause (the first words land, later ones run early). Here the length is shared over the
+ * time that has speech in it: loudness frames above the phrase's own quiet level count fully, quiet ones (pauses)
+ * barely, and a word that would start in a pause starts where the speech resumes.
+ */
+export function wordStarts(text: string, start: number, end: number, level: ArrayLike<number>, frame: number): number[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const f0 = Math.max(0, Math.round(start / frame)), f1 = Math.min(level.length, Math.round(end / frame));
+  const total = words.reduce((n, w) => n + w.length + 1, 0) || 1;
+  if (f1 - f0 < 5) { // too short (or past the audio) to measure: by length
+    let t = 0;
+    return words.map((w) => { const s = start + ((end - start) * t) / total; t += w.length + 1; return s; });
+  }
+  const avg = (f: number) => { let s = 0, n = 0; for (let k = f - 2; k <= f + 2; k++) if (k >= f0 && k < f1) { s += level[k]; n++; } return s / n; };
+  const lv: number[] = [];
+  for (let f = f0; f < f1; f++) lv.push(avg(f));
+  const sorted = [...lv].sort((a, b) => a - b), lo = sorted[Math.floor(sorted.length * 0.2)], hi = sorted[Math.floor(sorted.length * 0.9)];
+  const voiced = lv.map((v) => v > lo + 0.35 * (hi - lo));
+  const cum = [0];
+  voiced.forEach((v) => cum.push(cum[cum.length - 1] + (v ? 1 : 0.05)));
+  const W = cum[cum.length - 1];
+  let chars = 0, k = 0, prev = -1;
+  return words.map((w) => {
+    const target = (W * chars) / total;
+    chars += w.length + 1;
+    while (k < voiced.length && cum[k + 1] <= target) k++;
+    let f = k;
+    while (f < voiced.length - 1 && !voiced[f]) f++; // a word doesn't start in a pause: it starts where the speech resumes
+    if (!voiced[f]) f = k;
+    f = Math.max(f, prev + 1);
+    prev = f;
+    return Math.min(end, (f0 + f) * frame);
+  });
+}
+
+/** Cues with the start of every word (w for the native line, we for English) from the audio's loudness. */
+export function withWordTimes(cues: Cue[], level: ArrayLike<number>, frame: number): Cue[] {
+  return cues.map((c) => ({
+    ...c,
+    w: c.ta ? wordStarts(c.ta, c.start, c.end, level, frame) : undefined,
+    we: c.en ? wordStarts(c.en, c.start, c.end, level, frame) : undefined,
+  }));
+}

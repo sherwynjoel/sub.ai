@@ -10,7 +10,7 @@ import { db, jobs, settings, users, type Cue } from "./db";
 import { getAiConfig, transcribe, type Script } from "./lib/ai";
 import { extractChunks, LEVEL_FRAME, loudness, probe, STORAGE } from "./lib/media";
 import { renderStyled } from "./lib/render";
-import { mergeChunks, snapToPauses } from "./lib/subtitles";
+import { mergeChunks, snapToPauses, withWordTimes } from "./lib/subtitles";
 
 const PARALLEL_CHUNKS = 3;
 const KEEP_DAYS = 7;
@@ -52,7 +52,7 @@ async function processJob(job: typeof jobs.$inferSelect) {
       }
     }));
     const level = await loudness(job.filePath!); // cuts inside a model's window are guesses: move them to the speech pauses
-    const cues = level ? snapToPauses(mergeChunks(results), level, LEVEL_FRAME) : mergeChunks(results);
+    const cues = level ? withWordTimes(snapToPauses(mergeChunks(results), level, LEVEL_FRAME), level, LEVEL_FRAME) : mergeChunks(results);
     await db.update(jobs).set({ status: "done", progress: 100, error: null, cues, updatedAt: new Date() }).where(eq(jobs.id, job.id));
     console.log(`job ${job.id} done (${plan.length} chunks, ${cfg.provider}/${cfg.model})`);
   } finally {

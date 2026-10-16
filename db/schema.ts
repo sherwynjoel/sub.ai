@@ -1,8 +1,11 @@
 import type { CaptionCustom } from "@/lib/captionStyles";
 import { pgTable, text, uuid, integer, real, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 
-/** `ta` is the line in the project's language (see lib/languages.ts); `en` is English. */
-export type Cue = { start: number; end: number; ta: string; en: string };
+/**
+ * `ta` is the line in the project's language (see lib/languages.ts); `en` is English. `w` / `we`: when each word of
+ * `ta` / `en` starts (seconds, from the audio: lib/subtitles.ts wordStarts), when known.
+ */
+export type Cue = { start: number; end: number; ta: string; en: string; w?: number[]; we?: number[] };
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
