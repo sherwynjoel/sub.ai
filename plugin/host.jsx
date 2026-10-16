@@ -157,8 +157,12 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
       for (var ly = 0; ly < targets.length; ly++) {
         var only = targets.length > 1 ? ly : -1; // this copy shows only its own box
         if (only >= 0 && !/\S/.test(parts[only] || "")) continue;
+        // One box per track: it starts when its words are said and skips to where the template animates that box in,
+        // so the words appear in reading order with the speech (the template's own order is big word first).
+        var boxAt = at, from = c.start, P = only >= 0 && tpl.layout && tpl.layout.parts ? tpl.layout.parts[only] : null;
+        if (P && c.at) { from = Math.max(c.start, Math.min(c.at[only], c.end - 0.6)); boxAt = new Time(); boxAt.seconds = from; }
         var item;
-        try { item = seq.importMGT(tpl.path, at.ticks, targets[ly], aTarget); }
+        try { item = seq.importMGT(tpl.path, boxAt.ticks, targets[ly], aTarget); }
         catch (e) { return "ERR|This Premiere Pro (" + app.version + ") can't load the caption template. It may need a newer Premiere Pro; pick another style."; }
         if (!item) return "ERR|Premiere could not import the caption template.";
         item.name = "Vasanam " + (i + 1);
@@ -170,6 +174,7 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
         // A caption shorter than the template's intro (plus a moment to read) would end mid-animation: start the
         // template that much into its intro, so the words have settled before the caption ends.
         var intro = tpl.layout && tpl.layout.intro, skip = intro ? Math.min(intro, intro + 0.5 - (c.end - c.start)) : 0;
+        if (P && P.appear != null) skip = P.appear;
         if (skip > 0.05) { try { var ip = new Time(); ip.seconds = skip; item.inPoint = ip; set.intro = 1; } catch (e) {} }
         var comp = item.getMGTComponent();
         var props = comp ? comp.properties : null;

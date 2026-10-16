@@ -195,7 +195,7 @@
         var cased = function (text) { return l.caps ? text.toUpperCase() : l.lower ? text.toLowerCase() : text; };
         var items = tpl.parts
           ? cues.reduce(function (all, c) {
-            return all.concat(window.Subs.partsChunks(c, lang, (tpl.layout.intro || 1) + 0.5).map(function (p) { return { start: p.start, end: p.end, text: p.parts.join(" ").trim(), parts: p.parts.map(cased) }; }));
+            return all.concat(window.Subs.partsChunks(c, lang, (tpl.layout.intro || 1) + 0.5).map(function (p) { return { start: p.start, end: p.end, at: p.at, text: p.parts.join(" ").trim(), parts: p.parts.map(cased) }; }));
           }, [])
           : cues.map(function (c) { return { start: c.start, end: c.end, text: cased(window.Subs.textOf(c, lang, "\r", lines)) }; });
         var arg = JSON.stringify(items).split("\u2028").join("\\u2028").split("\u2029").join("\\u2029");

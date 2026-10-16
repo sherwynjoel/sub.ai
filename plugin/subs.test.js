@@ -22,4 +22,7 @@ assert.deepEqual(partsChunks({ start: 0, end: 4, ta: "ஒன்று இரண�
   [["ஒன்று", "இரண்டு", "one two"], ["", "மூன்று", "three four"]]);
 assert.deepEqual(partsChunks({ start: 0, end: 1, ta: "x", en: "Hello" }, "en").map((c) => c.parts), [["", "Hello", ""]]);
 assert.deepEqual(partsChunks({ start: 0, end: 2, ta: "a bb ccc dddd eeeee", en: "" }, "ta", 1.5).map((c) => c.parts), [["a bb", "ccc", "dddd eeeee"]]);
+// Each box starts when its words are said, in reading order: top, big, bottom.
+const at = partsChunks({ start: 0, end: 3, ta: "aa bb cc", en: "" }, "ta")[0].at;
+assert.deepEqual(at.map((t) => +t.toFixed(2)), [0, 1, 2]);
 console.log("plugin subs ok");

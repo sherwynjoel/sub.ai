@@ -63,7 +63,11 @@
       t += ((c.end - c.start) * (g.join(" ").length + 1)) / total;
       var parts = en.length ? [g.slice(0, -1).join(" "), g[g.length - 1], ens[i].join(" ")]
         : g.length === 1 ? ["", g[0], ""] : [g.slice(0, mid).join(" "), g[mid], g.slice(mid + 1).join(" ")];
-      return { start: start, end: i === groups.length - 1 ? c.end : t, parts: parts };
+      var end = i === groups.length - 1 ? c.end : t, at = [], len = 0, all = 0;
+      parts.forEach(function (x) { if (x) all += x.length + 1; });
+      // When each box's words are said: its share of the piece by length, in reading order (top, big, bottom).
+      for (var k = 0; k < 3; k++) { at.push(start + ((end - start) * len) / (all || 1)); if (parts[k]) len += parts[k].length + 1; }
+      return { start: start, end: end, parts: parts, at: at };
     });
   }
 
