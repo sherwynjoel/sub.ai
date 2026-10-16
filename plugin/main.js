@@ -43,6 +43,7 @@
       if (el.tagName === "BUTTON") el.className = v === name ? "on" : ""; else el.hidden = v !== name;
     });
     if (typeof scrollTo === "function") scrollTo(0, 0);
+    if (name === "editor" && typeof growAll === "function") growAll();
   }
   if (document.querySelectorAll) Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) { b.onclick = function () { view(b.getAttribute("data-view")); }; });
 
@@ -298,7 +299,10 @@
   // Edits wait for "Update timeline"; say so, so nobody wonders why the timeline didn't change.
   var pending = false;
   function changed() { pending = true; say("Not on the timeline yet — click Update timeline.", ""); }
-  function grow(t) { t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px"; } // whole line visible, any panel width
+  function grow(t) { if (t.offsetParent) { t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px"; } } // whole line visible, any panel width
+  // Sized while visible only: a hidden editor measures 0 and left every box 2 px tall (text and English unreadable).
+  function growAll() { if (document.querySelectorAll) Array.prototype.forEach.call(document.querySelectorAll("#cues textarea"), grow); }
+  window.addEventListener("resize", growAll);
   function openEditor(job) {
     editing = { job: job, cues: job.cues.map(function (c) { return { start: c.start, end: c.end, ta: c.ta, en: c.en, w: c.w, we: c.we }; }), dirty: false, styleId: "", custom: {} };
     pending = false;
@@ -324,7 +328,6 @@
       });
       box.appendChild(row);
     });
-    setTimeout(function () { Array.prototype.forEach.call(box.querySelectorAll ? box.querySelectorAll("textarea") : [], grow); }, 0);
     return loadLook(job.id).then(function (d) { showLook(d); $("tabs").hidden = false; view("editor"); });
   }
   function tweak(patch) {
