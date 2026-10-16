@@ -21,7 +21,8 @@
   // Premiere loads host.jsx once, when the panel first opens in a session; after an update it keeps the old copy
   // until it restarts (an old copy put new templates' captions off screen). Load this version's copy before any call.
   var hostDir = decodeURI(cep.getSystemPath("extension")).replace(/^file:\/\//, "").replace(/^\/([A-Za-z]:)/, "$1");
-  var hostReady = hostEval("$.evalFile(new File(" + JSON.stringify(hostDir + "/host.jsx") + ")); 'ok'");
+  // Read as UTF-8 and evaluated at the top level (so its functions are global); $.evalFile would read it as Mac Roman.
+  var hostReady = hostEval("var vsHost = new File(" + JSON.stringify(hostDir + "/host.jsx") + "); vsHost.encoding = 'UTF-8'; vsHost.open('r'); eval(vsHost.read()); vsHost.close(); 'ok'");
   var evalHost = function (script) { return hostReady.then(function () { return hostEval(script); }); };
   function show(id) { ["connect", "main"].forEach(function (s) { $(s).hidden = s !== id; }); $("settingsBtn").hidden = $("account").hidden = id !== "main"; }
   // details: technical text for the tooltip (which template controls were set), not for the message itself.

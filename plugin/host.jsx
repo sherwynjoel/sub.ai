@@ -120,16 +120,21 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
       }
     }
     var first = cues.length ? cues[0].start : 0, last = cues.length ? cues[cues.length - 1].end : 0;
-    var target = -1;
-    for (t = Math.max(0, clipTrack + 1); t < seq.videoTracks.numTracks && target < 0; t++) {
+    // Free video tracks above the clip: one, or one per text box for three-box templates (Trending: top line, big
+    // word and bottom line each on their own track, so each can be edited and moved separately).
+    var layers = tpl.parts ? tpl.parts.length : 1, targets = [];
+    for (t = Math.max(0, clipTrack + 1); t < seq.videoTracks.numTracks && targets.length < layers; t++) {
       var busy = false, cs = seq.videoTracks[t].clips;
       for (k = 0; k < cs.numItems; k++) if (cs[k].start.seconds < last && cs[k].end.seconds > first) busy = true;
-      if (!busy) target = t;
+      if (!busy) targets.push(t);
     }
-    if (target < 0) {
-      try { app.enableQE(); qe.project.getActiveSequence().addTracks(1, seq.videoTracks.numTracks, 0, 0, 0, 0); target = seq.videoTracks.numTracks - 1; }
-      catch (e) { return "ERR|Add an empty video track above the clip, then place again."; }
+    if (targets.length < layers) {
+      var have = seq.videoTracks.numTracks, need = layers - targets.length;
+      try { app.enableQE(); qe.project.getActiveSequence().addTracks(need, have, 0, 0, 0, 0); } catch (e) {}
+      for (t = have; t < seq.videoTracks.numTracks && targets.length < layers; t++) targets.push(t);
+      if (targets.length < layers) return "ERR|Add " + need + " empty video track" + (need > 1 ? "s" : "") + " above the clip, then place again.";
     }
+    var target = targets[0];
     vs_dropTemplateAudio(seq, ours); // sound an earlier placement left (they start where our captions started)
     // Templates with sound (Text Break) bring an audio clip with each caption. importMGT puts it on the audio track
     // it's given and overwrites what's there, so give it an empty track (never the clip's own audio), then remove it.
@@ -148,56 +153,60 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
       var c = cues[i];
       if (c.end <= c.start) continue;
       var at = new Time(); at.seconds = c.start;
-      var item;
-      try { item = seq.importMGT(tpl.path, at.ticks, target, aTarget); }
-      catch (e) { return "ERR|This Premiere Pro (" + app.version + ") can't load the caption template. It may need a newer Premiere Pro; pick another style."; }
-      if (!item) return "ERR|Premiere could not import the caption template.";
-      item.name = "Vasanam " + (i + 1);
       var parts = c.parts || (tpl.parts ? vs_splitParts(String(c.text)) : null);
-      var fit = parts ? { place: vs_partsPlace(parts, tpl, W, H, z, look.size, xf, yf) } : vs_templateFit(String(c.text), tpl, W, H, z, look.size, xf, yf, look.lines > 0), place = fit.place;
-      if (fit.fewer) most = most ? Math.min(most, fit.fewer) : fit.fewer;
-      try { var end = new Time(); end.seconds = c.end; item.end = end; set.duration = 1; } catch (e) {
-        try { var out = new Time(); out.seconds = c.end - c.start; item.outPoint = out; set.duration = 1; } catch (e2) {}
-      }
-      // A caption shorter than the template's intro (plus a moment to read) would end mid-animation: start the
-      // template that much into its intro, so the words have settled before the caption ends.
-      var intro = tpl.layout && tpl.layout.intro, skip = intro ? Math.min(intro, intro + 0.5 - (c.end - c.start)) : 0;
-      if (skip > 0.05) { try { var ip = new Time(); ip.seconds = skip; item.inPoint = ip; set.intro = 1; } catch (e) {} }
-      var comp = item.getMGTComponent();
-      var props = comp ? comp.properties : null;
-      for (var p = 0; props && p < props.numItems; p++) {
-        var prm = props[p], name = prm.displayName;
-        if (i === 0) names.push(name);
+      for (var ly = 0; ly < targets.length; ly++) {
+        var only = targets.length > 1 ? ly : -1; // this copy shows only its own box
+        if (only >= 0 && !/\S/.test(parts[only] || "")) continue;
+        var item;
+        try { item = seq.importMGT(tpl.path, at.ticks, targets[ly], aTarget); }
+        catch (e) { return "ERR|This Premiere Pro (" + app.version + ") can't load the caption template. It may need a newer Premiere Pro; pick another style."; }
+        if (!item) return "ERR|Premiere could not import the caption template.";
+        item.name = "Vasanam " + (i + 1);
+        var fit = parts ? { place: vs_partsPlace(parts, tpl, W, H, z, look.size, xf, yf) } : vs_templateFit(String(c.text), tpl, W, H, z, look.size, xf, yf, look.lines > 0), place = fit.place;
+        if (fit.fewer) most = most ? Math.min(most, fit.fewer) : fit.fewer;
+        try { var end = new Time(); end.seconds = c.end; item.end = end; set.duration = 1; } catch (e) {
+          try { var out = new Time(); out.seconds = c.end - c.start; item.outPoint = out; set.duration = 1; } catch (e2) {}
+        }
+        // A caption shorter than the template's intro (plus a moment to read) would end mid-animation: start the
+        // template that much into its intro, so the words have settled before the caption ends.
+        var intro = tpl.layout && tpl.layout.intro, skip = intro ? Math.min(intro, intro + 0.5 - (c.end - c.start)) : 0;
+        if (skip > 0.05) { try { var ip = new Time(); ip.seconds = skip; item.inPoint = ip; set.intro = 1; } catch (e) {} }
+        var comp = item.getMGTComponent();
+        var props = comp ? comp.properties : null;
+        for (var p = 0; props && p < props.numItems; p++) {
+          var prm = props[p], name = prm.displayName;
+          if (i === 0 && ly === 0) names.push(name);
+          try {
+            var part = -1;
+            for (var pj = 0; parts && pj < tpl.parts.length; pj++) if (name === tpl.parts[pj]) part = pj;
+            if (part >= 0) {
+              var base = place.shrink[part] < 1 ? vs_fontSize(prm) : 0;
+              vs_setText(prm, (only < 0 || only === part) && parts[part] || " ", base ? Math.floor(base * place.shrink[part] * 10) / 10 : 0);
+              set.text = 1;
+            }
+            else if (!parts && (name === tpl.text || (!tpl.text && name === "Source Text"))) {
+              set.text = 1;
+              if (vs_setText(prm, fit.text, place.font)) set.font = 1;
+            }
+            else if (name === tpl.color && look.customColor && prm.setColorValue) { vs_setColor(prm, look.customColor); set.color = 1; }
+          } catch (e) {}
+        }
+        // Place and scale the whole graphic through the clip's Motion effect (values are frame fractions in older versions, pixels in newer).
         try {
-          var part = -1;
-          for (var pj = 0; parts && pj < tpl.parts.length; pj++) if (name === tpl.parts[pj]) part = pj;
-          if (part >= 0) {
-            var base = place.shrink[part] < 1 ? vs_fontSize(prm) : 0;
-            vs_setText(prm, parts[part] || " ", base ? Math.floor(base * place.shrink[part] * 10) / 10 : 0);
-            set.text = 1;
+          for (var m = 0; m < item.components.numItems; m++) {
+            var mc = item.components[m];
+            if (mc.displayName !== "Motion") continue;
+            for (var q = 0; q < mc.properties.numItems; q++) {
+              var mp = mc.properties[q];
+              if (mp.displayName === "Position" && isFinite(place.x) && isFinite(place.y)) { // never off screen
+                var cur = mp.getValue(), frac = cur[0] <= 1 && cur[1] <= 1;
+                mp.setValue(frac ? [place.x / W, place.y / H] : [place.x, place.y], true);
+                set.position = 1;
+              } else if (mp.displayName === "Scale" && isFinite(place.scale)) { mp.setValue(place.scale, true); set.scale = 1; }
+            }
           }
-          else if (!parts && (name === tpl.text || (!tpl.text && name === "Source Text"))) {
-            set.text = 1;
-            if (vs_setText(prm, fit.text, place.font)) set.font = 1;
-          }
-          else if (name === tpl.color && look.customColor && prm.setColorValue) { vs_setColor(prm, look.customColor); set.color = 1; }
         } catch (e) {}
       }
-      // Place and scale the whole graphic through the clip's Motion effect (values are frame fractions in older versions, pixels in newer).
-      try {
-        for (var m = 0; m < item.components.numItems; m++) {
-          var mc = item.components[m];
-          if (mc.displayName !== "Motion") continue;
-          for (var q = 0; q < mc.properties.numItems; q++) {
-            var mp = mc.properties[q];
-            if (mp.displayName === "Position" && isFinite(place.x) && isFinite(place.y)) { // never off screen
-              var cur = mp.getValue(), frac = cur[0] <= 1 && cur[1] <= 1;
-              mp.setValue(frac ? [place.x / W, place.y / H] : [place.x, place.y], true);
-              set.position = 1;
-            } else if (mp.displayName === "Scale" && isFinite(place.scale)) { mp.setValue(place.scale, true); set.scale = 1; }
-          }
-        }
-      } catch (e) {}
       n++;
     }
     var mine = seq.audioTracks[aTarget].clips; // our templates' sound on the track picked for it
@@ -205,7 +214,9 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
     var done = [];
     for (var s in set) done.push(s);
     // "OK|message|details": the panel shows the message; the details (for checking a new template) go in its tooltip.
-    return "OK|Added " + n + " styled captions on V" + (target + 1) + "." + (most ? " This template fits at most " + most + (most === 1 ? " line" : " lines") + ", so longer captions use " + most + "." : "") +
+    var where = "V" + (target + 1);
+    if (targets.length > 1) where += "-V" + (targets[targets.length - 1] + 1) + " (one track per text box)";
+    return "OK|Added " + n + " styled captions on " + where + "." + (most ? " This template fits at most " + most + (most === 1 ? " line" : " lines") + ", so longer captions use " + most + "." : "") +
       "|Set: " + (done.join(", ") || "nothing") + ". Template controls: " + names.join(", ");
   } catch (e) {
     return "ERR|" + e.toString();
@@ -270,7 +281,7 @@ function vs_templateFit(text, tpl, W, H, z, size, xf, yf, chosen) {
   // Some templates only ever show one line (Santhosham's reveal covers the first line): everything goes on it.
   var most = tpl.layout && tpl.layout.maxLines;
   if (most && lines.length > most) {
-    var joined = vs_layout(lines.join("  ·  "), Math.ceil(lines.join("  ·  ").length / most), most).text;
+    var joined = vs_layout(lines.join("  \u00B7  "), Math.ceil(lines.join("  \u00B7  ").length / most), most).text;
     var pm = vs_templatePlace(joined.split(CR), tpl, W, H, z, size, xf, yf);
     return { text: joined, place: pm, fewer: chosen ? most : 0 };
   }
@@ -294,7 +305,7 @@ function vs_templateFit(text, tpl, W, H, z, size, xf, yf, chosen) {
   }
   // Lines a fixed line spacing pushes out of the template's frame (Cracked: 455 px apart) go on one line instead.
   if (lines.length > 1 && !place.fits) {
-    var one = lines.join("  ·  ");
+    var one = lines.join("  \u00B7  ");
     return { text: one, place: vs_templatePlace([one], tpl, W, H, z, size, xf, yf) };
   }
   return { text: text, place: place };
