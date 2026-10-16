@@ -3,6 +3,12 @@
 @font-face { font-family: "Poppins ExtraBold"; src: url("/caption-fonts/Poppins-ExtraBold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Anton"; src: url("/caption-fonts/Anton-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Roboto Black"; src: url("/caption-fonts/Roboto-Black.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Noto Sans Tamil"; src: url("/caption-fonts/NotoSansTamil-Bold.ttf") format("truetype"); font-weight: 600 900; font-display: swap; }
+@font-face { font-family: "Mukta Malar ExtraBold"; src: url("/caption-fonts/MuktaMalar-ExtraBold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Hind Madurai"; src: url("/caption-fonts/HindMadurai-Bold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Kavivanar"; src: url("/caption-fonts/Kavivanar-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Pavanam"; src: url("/caption-fonts/Pavanam-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Meera Inimai"; src: url("/caption-fonts/MeeraInimai-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Satisfy"; src: url("/caption-fonts/Satisfy-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 
 .cap { display: grid; justify-items: center; gap: .25em; text-align: center; line-height: 1.25; pointer-events: none; }

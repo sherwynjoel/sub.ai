@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Cue } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
-import { CAPTION_FONTS, CAPTION_STYLES, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CaptionCustom, type SafeZoneId } from "@/lib/captionStyles";
+import { CAPTION_FONTS, CAPTION_STYLES, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, TAMIL_FONTS, type CaptionCustom, type SafeZoneId } from "@/lib/captionStyles";
 import { insertAt, mergeCues, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import StyledCaption from "@/components/StyledCaption";
 import Timeline from "@/components/Timeline";
@@ -119,6 +119,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [showZones, setShowZones] = useState(false);
   const language = languageOf(job.language);
   const short = shortCode(job.language);
+  const tamil = short === "ta" || initial.cues.some((c) => /[\u0B80-\u0BFF]/.test(c.ta)); // Tamil letters get their own font
   const video = useRef<HTMLVideoElement>(null);
   const list = useRef<HTMLOListElement>(null);
   const line: "ta" | "en" = view === "en" ? "en" : "ta"; // the line words and the timeline follow
@@ -416,6 +417,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                     {CAPTION_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
                   </select>
                 </label>
+                {tamil && <label>Tamil font
+                  <select value={own.fontTa ?? ""} onChange={(e) => styleCue(selected, { fontTa: e.target.value || undefined })}>
+                    <option value="">Project ({look.fontTa ?? "Noto Sans Tamil"})</option>
+                    {TAMIL_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f} — தமிழ்</option>)}
+                  </select>
+                </label>}
                 <label>Size <span className="cz-val">{Math.round((selLook.size ?? 1) * 100)}%</span>
                   <input type="range" min={0.4} max={2.6} step={0.05} value={selLook.size ?? 1} onChange={(e) => styleCue(selected, { size: +e.target.value })} />
                 </label>
@@ -494,6 +501,11 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                     {CAPTION_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
                   </select>
                 </label>
+                {tamil && <label>Tamil font
+                  <select value={look.fontTa ?? "Noto Sans Tamil"} onChange={(e) => tweak({ fontTa: e.target.value })}>
+                    {TAMIL_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f} — தமிழ்</option>)}
+                  </select>
+                </label>}
                 <label>Size <span className="cz-val">{Math.round((look.size ?? 1) * 100)}%</span>
                   <input type="range" min={0.4} max={2.6} step={0.05} value={look.size ?? 1} onChange={(e) => tweak({ size: +e.target.value })} />
                 </label>

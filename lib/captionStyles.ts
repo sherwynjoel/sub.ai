@@ -11,6 +11,7 @@ export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble
 export type CaptionStyle = {
   id: string; name: string; group: "Trending" | "Aesthetic" | "Clean" | "Fun"; blurb: string;
   font: string; size?: number; bold?: boolean; italic?: boolean; caps?: boolean; lower?: boolean;
+  fontTa?: string;               // font for Tamil letters (the Latin fonts have none); unset = Noto Sans Tamil
   color: string;                 // spoken and already-spoken words
   future?: string | null;        // words not yet spoken; null = hidden until spoken; omitted = same as color
   active?: string;               // the word being spoken
@@ -27,30 +28,30 @@ export type CaptionStyle = {
 const GOLD = "#FFC83D", BUTTER = "#FFE58A", CREAM = "#FFF4D6", INK = "#141414", HL = "#FFE14D";
 
 export const CAPTION_STYLES: CaptionStyle[] = [
-  { id: "setup-punch", name: "Setup & Punch", group: "Trending", blurb: "A quiet lead-in, then the last words land big, one by one.", font: "Poppins", bold: true, color: "#FFFFFF", future: null, shadow: 0.05, effect: "punch" },
-  { id: "comic-pop", name: "Comic Pop", group: "Trending", blurb: "Comic caps with a black ring; the keyword turns gold and grows.", font: "Poppins ExtraBold", size: 1.2, caps: true, color: "#FFFFFF", outline: ["#000000", 0.09], keyword: { color: GOLD, grow: true } },
-  { id: "butter-serif", name: "Butter Script", group: "Trending", blurb: "Soft script with a hairline edge and a butter-yellow keyword.", font: "Satisfy", color: "#FFFFFF", outline: ["#000000", 0.03], keyword: { color: BUTTER } },
-  { id: "word-box", name: "Word Box", group: "Trending", blurb: "One dark box; words fill in left to right, keyword in gold.", font: "Anton", size: 1.2, caps: true, color: "#FFFFFF", future: null, box: "#0B0B0BE6", keyword: { color: GOLD } },
-  { id: "handwritten", name: "Handwritten", group: "Trending", blurb: "Warm script in a single butter tone that brightens as it's said.", font: "Satisfy", size: 1.3, bold: true, color: BUTTER, future: "#FFE58A66", shadow: 0.04 },
-  { id: "retro-vhs", name: "Retro VHS", group: "Trending", blurb: "RGB-split tape look with a little tracking jitter.", font: "Anton", size: 1.1, caps: true, color: "#FFFFFF", effect: "vhs" },
-  { id: "trending-1", name: "Trending 1", group: "Trending", blurb: "A few words at a time: one big blue word between small orange lines.", font: "Poppins", bold: true, color: "#FF8A1F", shadow: 0.06, effect: "stack", stack: { big: "#2E8BFF", font: "Anton" } },
-  { id: "trending-2", name: "Trending 2", group: "Trending", blurb: "A big blue script word with heavy orange words above and below.", font: "Poppins ExtraBold", color: "#FF7A00", shadow: 0.06, effect: "stack", stack: { big: "#3D7BFF", font: "Satisfy" } },
-  { id: "trending-3", name: "Trending 3", group: "Trending", blurb: "Small white lines around one big red word.", font: "Poppins", bold: true, color: "#FFFFFF", shadow: 0.06, effect: "stack", stack: { big: "#FF2D2D", font: "Poppins ExtraBold" } },
-  { id: "editorial-cut", name: "Editorial Cut", group: "Aesthetic", blurb: "Warm script, every word set; the spoken one wakes up.", font: "Satisfy", color: "#FFF1E0", future: "#FFF1E073", active: "#FFD9A0", shadow: 0.04 },
-  { id: "soft-display", name: "Soft Display", group: "Aesthetic", blurb: "Lowercase script. Soft, cinematic, premium.", font: "Satisfy", lower: true, color: "#F6F0E6", shadow: 0.06 },
-  { id: "center-stage", name: "Center Stage", group: "Aesthetic", blurb: "One word at a time, tall and heavy, with the last word above.", font: "Anton", size: 1.6, caps: true, color: "#FFFFFF", shadow: 0.05, effect: "solo" },
-  { id: "marker-swipe", name: "Marker Swipe", group: "Aesthetic", blurb: "Marker type; the spoken word gets a yellow swipe.", font: "Roboto Black", caps: true, color: "#FFFFFF", active: INK, mark: HL, shadow: 0.04 },
-  { id: "spotlight", name: "Spotlight", group: "Aesthetic", blurb: "A warm beam sweeps across the line as it's spoken.", font: "Poppins", bold: true, color: "#FFE2B0", future: "#FFFFFF59", shadow: 0.05 },
-  { id: "highlighter-paper", name: "Highlighter Paper", group: "Aesthetic", blurb: "Heavy type on cream paper, underlined as you go.", font: "Satisfy", color: INK, future: "#14141480", underline: true, box: CREAM },
-  { id: "highlighter-clean", name: "Highlighter Clean", group: "Aesthetic", blurb: "Same swipe, no paper: white before, ink after.", font: "Poppins", bold: true, color: "#FFFFFF", active: INK, mark: HL, shadow: 0.04 },
-  { id: "minimal", name: "Minimal", group: "Clean", blurb: "Bold geometric white with a soft shadow. Stays out of the shot.", font: "Poppins ExtraBold", color: "#FFFFFF", shadow: 0.06 },
-  { id: "editorial-mix", name: "Editorial Mix", group: "Clean", blurb: "Heavy sans; the keyword switches to a script.", font: "Poppins ExtraBold", color: "#FFFFFF", shadow: 0.05, keyword: { font: "Satisfy", italic: true } },
-  { id: "tall-caps", name: "Tall Caps", group: "Clean", blurb: "Tall condensed caps with a blue bar under the spoken word.", font: "Anton", size: 1.25, caps: true, color: "#FFFFFF", mark: "#2F6BFF", shadow: 0.04 },
-  { id: "typewriter", name: "Typewriter", group: "Clean", blurb: "Types itself out, cursor and all.", font: "Roboto Black", color: "#FFFFFF", shadow: 0.05, effect: "typewriter" },
-  { id: "eight-bit", name: "8-Bit", group: "Fun", blurb: "Tall arcade caps with a thick outline.", font: "Anton", size: 1.1, color: "#FFFFFF", outline: ["#000000", 0.12], keyword: { color: HL } },
-  { id: "doodle-card", name: "Doodle Card", group: "Fun", blurb: "Marker on a paper card; words sit at playful angles.", font: "Roboto Black", color: INK, box: CREAM, effect: "wobble" },
-  { id: "doodle-clean", name: "Doodle Clean", group: "Fun", blurb: "Same marker, sticker edge, no card; keyword in marker yellow.", font: "Roboto Black", color: "#FFFFFF", outline: ["#000000", 0.07], keyword: { color: HL }, effect: "wobble" },
-  { id: "crawl", name: "Crawl", group: "Fun", blurb: "Opening-crawl lines rolling off into the distance.", font: "Anton", size: 1.1, caps: true, color: HL, effect: "crawl" },
+  { id: "setup-punch", name: "Setup & Punch", group: "Trending", blurb: "A quiet lead-in, then the last words land big, one by one.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFFFFF", future: null, shadow: 0.05, effect: "punch" },
+  { id: "comic-pop", name: "Comic Pop", group: "Trending", blurb: "Comic caps with a black ring; the keyword turns gold and grows.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.2, caps: true, color: "#FFFFFF", outline: ["#000000", 0.09], keyword: { color: GOLD, grow: true } },
+  { id: "butter-serif", name: "Butter Script", group: "Trending", blurb: "Soft script with a hairline edge and a butter-yellow keyword.", font: "Satisfy", fontTa: "Kavivanar", color: "#FFFFFF", outline: ["#000000", 0.03], keyword: { color: BUTTER } },
+  { id: "word-box", name: "Word Box", group: "Trending", blurb: "One dark box; words fill in left to right, keyword in gold.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.2, caps: true, color: "#FFFFFF", future: null, box: "#0B0B0BE6", keyword: { color: GOLD } },
+  { id: "handwritten", name: "Handwritten", group: "Trending", blurb: "Warm script in a single butter tone that brightens as it's said.", font: "Satisfy", fontTa: "Kavivanar", size: 1.3, bold: true, color: BUTTER, future: "#FFE58A66", shadow: 0.04 },
+  { id: "retro-vhs", name: "Retro VHS", group: "Trending", blurb: "RGB-split tape look with a little tracking jitter.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.1, caps: true, color: "#FFFFFF", effect: "vhs" },
+  { id: "trending-1", name: "Trending 1", group: "Trending", blurb: "A few words at a time: one big blue word between small orange lines.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FF8A1F", shadow: 0.06, effect: "stack", stack: { big: "#2E8BFF", font: "Anton" } },
+  { id: "trending-2", name: "Trending 2", group: "Trending", blurb: "A big blue script word with heavy orange words above and below.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", color: "#FF7A00", shadow: 0.06, effect: "stack", stack: { big: "#3D7BFF", font: "Satisfy" } },
+  { id: "trending-3", name: "Trending 3", group: "Trending", blurb: "Small white lines around one big red word.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFFFFF", shadow: 0.06, effect: "stack", stack: { big: "#FF2D2D", font: "Poppins ExtraBold" } },
+  { id: "editorial-cut", name: "Editorial Cut", group: "Aesthetic", blurb: "Warm script, every word set; the spoken one wakes up.", font: "Satisfy", fontTa: "Kavivanar", color: "#FFF1E0", future: "#FFF1E073", active: "#FFD9A0", shadow: 0.04 },
+  { id: "soft-display", name: "Soft Display", group: "Aesthetic", blurb: "Lowercase script. Soft, cinematic, premium.", font: "Satisfy", fontTa: "Kavivanar", lower: true, color: "#F6F0E6", shadow: 0.06 },
+  { id: "center-stage", name: "Center Stage", group: "Aesthetic", blurb: "One word at a time, tall and heavy, with the last word above.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.6, caps: true, color: "#FFFFFF", shadow: 0.05, effect: "solo" },
+  { id: "marker-swipe", name: "Marker Swipe", group: "Aesthetic", blurb: "Marker type; the spoken word gets a yellow swipe.", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", caps: true, color: "#FFFFFF", active: INK, mark: HL, shadow: 0.04 },
+  { id: "spotlight", name: "Spotlight", group: "Aesthetic", blurb: "A warm beam sweeps across the line as it's spoken.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFE2B0", future: "#FFFFFF59", shadow: 0.05 },
+  { id: "highlighter-paper", name: "Highlighter Paper", group: "Aesthetic", blurb: "Heavy type on cream paper, underlined as you go.", font: "Satisfy", fontTa: "Kavivanar", color: INK, future: "#14141480", underline: true, box: CREAM },
+  { id: "highlighter-clean", name: "Highlighter Clean", group: "Aesthetic", blurb: "Same swipe, no paper: white before, ink after.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFFFFF", active: INK, mark: HL, shadow: 0.04 },
+  { id: "minimal", name: "Minimal", group: "Clean", blurb: "Bold geometric white with a soft shadow. Stays out of the shot.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", color: "#FFFFFF", shadow: 0.06 },
+  { id: "editorial-mix", name: "Editorial Mix", group: "Clean", blurb: "Heavy sans; the keyword switches to a script.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", color: "#FFFFFF", shadow: 0.05, keyword: { font: "Satisfy", italic: true } },
+  { id: "tall-caps", name: "Tall Caps", group: "Clean", blurb: "Tall condensed caps with a blue bar under the spoken word.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.25, caps: true, color: "#FFFFFF", mark: "#2F6BFF", shadow: 0.04 },
+  { id: "typewriter", name: "Typewriter", group: "Clean", blurb: "Types itself out, cursor and all.", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: "#FFFFFF", shadow: 0.05, effect: "typewriter" },
+  { id: "eight-bit", name: "8-Bit", group: "Fun", blurb: "Tall arcade caps with a thick outline.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FFFFFF", outline: ["#000000", 0.12], keyword: { color: HL } },
+  { id: "doodle-card", name: "Doodle Card", group: "Fun", blurb: "Marker on a paper card; words sit at playful angles.", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: INK, box: CREAM, effect: "wobble" },
+  { id: "doodle-clean", name: "Doodle Clean", group: "Fun", blurb: "Same marker, sticker edge, no card; keyword in marker yellow.", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: "#FFFFFF", outline: ["#000000", 0.07], keyword: { color: HL }, effect: "wobble" },
+  { id: "crawl", name: "Crawl", group: "Fun", blurb: "Opening-crawl lines rolling off into the distance.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.1, caps: true, color: HL, effect: "crawl" },
 ];
 
 export const DEFAULT_STYLE = "minimal";
@@ -60,9 +61,12 @@ export const CAPTION_FONTS = [
   "Poppins", "Poppins ExtraBold", "Anton", "Roboto Black", "Satisfy",
 ] as const;
 
+/** Fonts for Tamil letters (bundled in public/caption-fonts; Noto Sans Tamil is also installed on the server). */
+export const TAMIL_FONTS = ["Noto Sans Tamil", "Mukta Malar ExtraBold", "Hind Madurai", "Kavivanar", "Pavanam", "Meera Inimai"] as const;
+
 /** A user's edits on top of a style. Every field is optional; null turns a feature off. */
 export type CaptionCustom = {
-  font?: string; size?: number; color?: string; accent?: string;
+  font?: string; fontTa?: string; size?: number; color?: string; accent?: string;
   outline?: string | null; outlineWidth?: number; box?: string | null; shadow?: boolean;
   case?: "none" | "upper" | "lower"; position?: "top" | "middle" | "bottom"; offset?: number;
   lines?: 1 | 2 | 3;             // lay each caption out on this many lines; unset = wrap by width
@@ -95,6 +99,7 @@ export function sanitizeCustom(input: unknown): CaptionCustom {
   const i = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
   const out: CaptionCustom = {};
   if (typeof i.font === "string" && (CAPTION_FONTS as readonly string[]).includes(i.font)) out.font = i.font;
+  if (typeof i.fontTa === "string" && (TAMIL_FONTS as readonly string[]).includes(i.fontTa)) out.fontTa = i.fontTa;
   const size = clamp(i.size, 0.4, 2.6); if (size !== undefined) out.size = size;
   if (typeof i.color === "string" && HEX.test(i.color)) out.color = i.color;
   if (typeof i.accent === "string" && HEX.test(i.accent)) out.accent = i.accent;
@@ -119,6 +124,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   const s: CaptionStyle = { ...styleOf(id), keyword: styleOf(id).keyword && { ...styleOf(id).keyword } };
   const c = custom;
   if (c.font) s.font = c.font;
+  if (c.fontTa) s.fontTa = c.fontTa;
   if (c.size !== undefined) s.size = c.size;
   if (c.color) {
     s.color = c.color;
@@ -232,18 +238,18 @@ const TAMIL_FONT = "Noto Sans Tamil"; // installed on the server (fonts-noto-cor
  * a style font without Tamil letters picks a font per run, and a word on its own can lose its conjuncts (ப்ப drawn
  * as ப + a dotted circle).
  */
-export function tamilRuns(text: string, fonts: Record<string, string>, style: string) {
+export function tamilRuns(text: string, fonts: Record<string, string>, style: string, tamil = TAMIL_FONT) {
   let font = fonts[style], out = "", inTamil = false;
   for (let i = 0; i < text.length; ) {
     if (text[i] === "{") { // override block: follow \fn and \r[Style]
       const end = text.indexOf("}", i), block = text.slice(i, end + 1);
       for (const m of block.matchAll(/\\(fn|r)([^\\}]*)/g)) font = m[1] === "fn" ? m[2] || fonts[style] : fonts[m[2]] ?? fonts[style];
       out += block; i = end + 1;
-      if (inTamil) out += `{\\fn${TAMIL_FONT}}`; // a block inside a Tamil run may have reset the font
+      if (inTamil) out += `{\\fn${tamil}}`; // a block inside a Tamil run may have reset the font
       continue;
     }
     const ta = /[\u0B80-\u0BFF\u200C\u200D]/.test(text[i]);
-    if (ta !== inTamil && (ta || !/\s/.test(text[i]))) { out += `{\\fn${ta ? TAMIL_FONT : font}}`; inTamil = ta; }
+    if (ta !== inTamil && (ta || !/\s/.test(text[i]))) { out += `{\\fn${ta ? tamil : font}}`; inTamil = ta; }
     out += text[i++];
   }
   return out;
@@ -287,10 +293,10 @@ export function buildAss(cues: Cue[], o: Opts) {
   const second = ["Second", "Poppins", Math.round(short * 0.075 * 0.55), "&H00FFFFFF&", "&H00FFFFFF&", "&H00000000&", "&H99000000&", 0, 0, 0, 0, 100, 100, 0, 0, 1, base.px(0.04), base.px(0.04), base.align, base.marginL, base.marginR, Math.round(o.height * base.s.offset), 1].join(",");
 
   const events: string[] = [];
-  const fonts: Record<string, string> = { Second: "Poppins" };
+  const fonts: Record<string, string> = { Second: "Poppins" }, tamil: Record<string, string> = {};
   let cur = "Main";
   const add = (start: number, end: number, text: string, layer = 0, ml = 0, mr = 0, st = cur) =>
-    end > start && events.push(`Dialogue: ${layer},${assTime(start)},${assTime(end)},${st},,${ml},${mr},0,,${tamilRuns(text, fonts, st)}`);
+    end > start && events.push(`Dialogue: ${layer},${assTime(start)},${assTime(end)},${st},,${ml},${mr},0,,${tamilRuns(text, fonts, st, tamil[st])}`);
 
   for (const c of cues) {
     const main = (o.lang === "en" ? c.en : c.ta).trim();
@@ -299,9 +305,10 @@ export function buildAss(cues: Cue[], o: Opts) {
     const { s, px, pos, posAt, wrapM, marginL, marginR } = look;
     cur = look.name;
     fonts[cur] = s.font;
+    if (s.fontTa) tamil[cur] = s.fontTa;
     const colors = o.lang === "en" ? c.wce : c.wc; // the user's colour for single words
     const sub = o.lang === "both" ? c.en.trim() : "";
-    const tail = sub ? `\\N{\\rSecond}${esc(breakLines(sub, s.lines))}` : "";
+    const tail = sub ? `\\N{\\rSecond\\fn${s.font}}${esc(breakLines(sub, s.lines))}` : ""; // English in the caption's font
     const words = wordTimes(caseOf(s, main), c.start, c.end, o.lang === "en" ? c.we : c.w);
     const kw = keywordIndex(words.map((w) => w.w));
     const brk = lineBreaks(words.map((w) => w.w), s.lines);

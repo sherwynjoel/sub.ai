@@ -8,7 +8,8 @@ type Props = {
   colors?: (string | null)[];    // a colour per word the user picked
 };
 
-const stack = (font: string) => `"${font}", var(--font-tamil), "Nirmala UI", "Noto Sans", sans-serif`;
+/** A font for the Latin letters, then the Tamil font for Tamil letters (the Latin caption fonts have none). */
+const stack = (font: string, tamil?: string) => `"${font}", ${tamil ? `"${tamil}", ` : ""}var(--font-tamil), "Nirmala UI", "Noto Sans", sans-serif`;
 
 /**
  * A caption line drawn in a caption style at a moment in time. Mirrors buildAss() in lib/captionStyles.ts
@@ -24,7 +25,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   const p = Math.min(1, Math.max(0, (time - start) / Math.max(0.01, end - start)));
 
   const base: React.CSSProperties = {
-    whiteSpace: s.lines === 1 ? "nowrap" : "pre-line", fontFamily: stack(s.font), fontSize: `calc(${s.size ?? 1} * 7.5cqmin)`, fontWeight: s.bold ? 700 : 400, fontStyle: s.italic ? "italic" : undefined,
+    whiteSpace: s.lines === 1 ? "nowrap" : "pre-line", fontFamily: stack(s.font, s.fontTa), fontSize: `calc(${s.size ?? 1} * 7.5cqmin)`, fontWeight: s.bold ? 700 : 400, fontStyle: s.italic ? "italic" : undefined,
     color: s.color,
     textShadow: s.shadow ? `0 ${s.shadow}em ${s.shadow * 2}em rgba(0,0,0,.6)` : undefined,
     WebkitTextStroke: s.outline ? `${s.outline[1] * 2}em ${s.outline[0]}` : undefined,
@@ -45,7 +46,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     }
     if (j === kw && s.keyword && state !== "future") {
       if (s.keyword.color) st.color = s.keyword.color;
-      if (s.keyword.font) st.fontFamily = stack(s.keyword.font);
+      if (s.keyword.font) st.fontFamily = stack(s.keyword.font, s.fontTa);
       if (s.keyword.italic) st.fontStyle = "italic";
       if (s.keyword.grow) st.transform = "scale(1.18)";
     }
@@ -60,7 +61,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   if (stacked) {
     const chunks = stackChunks(caseOf(s, text), sub ?? "", start, end);
     const k = Math.max(0, chunks.findIndex((c) => time < c.e)), [a, b, d] = chunks[k]?.parts ?? ["", "", ""];
-    body = <>{a && <span className="stack-small">{a}</span>}<span key={k} className="stack-big" style={{ color: s.stack!.big, fontFamily: stack(s.stack!.font), fontWeight: 400, fontSize: `${stackBig(b)}em` }}>{b}</span>{d && <span className="stack-small">{d}</span>}</>;
+    body = <>{a && <span className="stack-small">{a}</span>}<span key={k} className="stack-big" style={{ color: s.stack!.big, fontFamily: stack(s.stack!.font, s.fontTa), fontWeight: 400, fontSize: `${stackBig(b)}em` }}>{b}</span>{d && <span className="stack-small">{d}</span>}</>;
   } else if (s.effect === "typewriter") {
     const chars = [...breakLines(caseOf(s, text), s.lines)];
     body = <>{chars.slice(0, Math.max(1, Math.ceil(chars.length * Math.min(1, p / 0.8)))).join("")}<span className="caret">_</span></>;
@@ -78,7 +79,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   return (
     <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}`} style={{ "--p": p } as React.CSSProperties}>
       <span className="cap-main" style={base} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>{body}</span>
-      {sub && !stacked && <span className="cap-sub">{sub}</span>}
+      {sub && !stacked && <span className="cap-sub" style={{ fontFamily: stack(s.font, s.fontTa) }}>{sub}</span>}
     </div>
   );
 }
