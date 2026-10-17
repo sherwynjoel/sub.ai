@@ -27,7 +27,14 @@ local function setting(k, v)
   if v == nil then return fusion:GetData("Vasanam." .. k) end
   fusion:SetData("Vasanam." .. k, v)
 end
-local function q(s) return '"' .. tostring(s) .. '"' end
+-- One shell argument, taken literally. macOS/Linux: single quotes (the shell expands nothing inside them; a ' is
+-- written as '\''). A file named clip`rm -rf ~`.mp4 must stay a file name. Windows: names can't contain ", so
+-- double quotes are enough there.
+local function q(s)
+  s = tostring(s)
+  if isWin then return '"' .. (s:gsub('"', "")) .. '"' end
+  return "'" .. (s:gsub("'", "'\\''")) .. "'"
+end
 local function readAll(path)
   local f = io.open(path, "rb"); if not f then return "" end
   local s = f:read("*a"); f:close(); return s

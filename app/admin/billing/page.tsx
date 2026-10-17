@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { desc, isNotNull, sql } from "drizzle-orm";
+import { desc, isNotNull, notLike, sql } from "drizzle-orm";
 import { billingEvents, db, users } from "@/db";
 import { inr, overview, when } from "@/lib/admin";
 import { effectivePlan, PAID, PLANS } from "@/lib/plans";
@@ -14,7 +14,7 @@ export default async function Subscriptions() {
   const [o, subs, events, [counts]] = await Promise.all([
     overview(),
     db.select().from(users).where(isNotNull(users.subscriptionId)).orderBy(desc(users.periodEnd)).limit(200),
-    db.select().from(billingEvents).orderBy(desc(billingEvents.createdAt)).limit(50),
+    db.select().from(billingEvents).where(notLike(billingEvents.type, "checkout.%")).orderBy(desc(billingEvents.createdAt)).limit(50), // webhooks only, not checkout records
     db.select({
       active: sql<number>`(count(*) filter (where ${users.subscriptionStatus} = 'active'))::int`,
       cancelled: sql<number>`(count(*) filter (where ${users.subscriptionStatus} = 'cancelled'))::int`,

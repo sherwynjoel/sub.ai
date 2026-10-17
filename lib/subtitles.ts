@@ -56,6 +56,7 @@ export function mergeChunks(chunks: { offset: number; duration: number; cues: Cu
           end: offset + Math.min(Math.max(0, c.end), duration),
           ta: (c.ta ?? "").trim(),
           en: (c.en ?? "").trim(),
+          ...(c.anchor ? { anchor: true } : {}),
         }))
         .filter((c) => c.end > c.start && (c.ta || c.en)),
     )
@@ -133,10 +134,10 @@ export function layoutCue(c: Cue, max = 42): Cue[] {
   });
   const total = pieces.reduce((n, p) => n + p.ta.length, 0) || 1;
   let t = c.start;
-  return pieces.map((p) => {
+  return pieces.map((p, k) => {
     const s = t;
     t += ((c.end - c.start) * p.ta.length) / total;
-    return { start: s, end: t, ta: p.ta, en: p.en };
+    return { start: s, end: t, ta: p.ta, en: p.en, ...(k === 0 ? { anchor: true } : {}) }; // only the first start is the model's
   });
 }
 
@@ -149,15 +150,143 @@ export function divide(text: string, weights: number[]) {
   weights.forEach((w, k) => {
     cum += w;
     const left = weights.length - 1 - k; // pieces still to fill after this one
-    const to = k === weights.length - 1 ? words.length
-      : Math.max(from, Math.min(Math.max(Math.round((words.length * cum) / total), from + 1), words.length - left));
+    const lo = from + 1, hi = words.length - left;
+    let to = k === weights.length - 1 ? words.length : Math.max(from, Math.min(Math.max(Math.round((words.length * cum) / total), lo), hi));
+    if (k < weights.length - 1) to = naturalBreak(words, to, lo, hi);
     out.push(words.slice(from, to).join(" "));
     from = to;
   });
   return out;
 }
 
+const CLAUSE = /^(and|but|so|because|that|which|who|when|where|if|or|then|while|though|although)$/i;
+
+/**
+ * A cut point near `at` (at most 2 words away, inside [lo, hi]) where the English reads naturally: after
+ * punctuation first, else before a word that starts a clause. Tamil puts the verb last, so the words of a
+ * translation can't follow the Tamil pieces exactly; a cut at a phrase edge reads far better than one mid-phrase.
+ */
+export function naturalBreak(words: string[], at: number, lo: number, hi: number) {
+  let best = at, bestScore = 0;
+  for (let d = 0; d <= 2; d++) for (const i of d ? [at - d, at + d] : [at]) {
+    if (i < lo || i > hi || i <= 0 || i >= words.length) continue;
+    const score = /[,;:.!?]$/.test(words[i - 1]) ? 2 : CLAUSE.test(words[i].replace(/^[("']+/, "")) ? 1 : 0;
+    if (score > bestScore) { best = i; bestScore = score; }
+  }
+  return best;
+}
+
 /** Move every cue by `by` seconds; cues pushed before 0 are cut at 0 or dropped (a trimmed clip's head). */
 export function shiftCues(cues: Cue[], by: number): Cue[] {
   return cues.map((c) => ({ ...c, start: Math.max(0, c.start + by), end: c.end + by })).filter((c) => c.end > 0.05);
+}
+
+/**
+ * Move the cut between back-to-back cues to the quietest moment near it. Inside a speech model's window the
+ * cuts are only estimated by text length, so they can land mid-word up to a second or two off; speech pauses
+ * are where a new subtitle should start. `level` is loudness in dB per `frame` seconds (media.loudness).
+ * Cuts with a real gap (the model's own timestamps) are kept.
+ */
+export function snapToPauses(cues: Cue[], level: ArrayLike<number>, frame: number): Cue[] {
+  const out = cues.map((c) => ({ ...c }));
+  const avg = (f: number) => { // 100 ms average, so one quiet sample between syllables doesn't count as a pause
+    let s = 0, n = 0;
+    for (let k = f - 2; k <= f + 2; k++) if (k >= 0 && k < level.length) { s += level[k]; n++; }
+    return n ? s / n : 0;
+  };
+  for (let i = 0; i + 1 < out.length; i++) {
+    const a = out[i], b = out[i + 1];
+    if (b.start - a.end > 0.05 || b.start < a.end - 0.05) continue;
+    const t0 = (a.end + b.start) / 2;
+    const reach = Math.min(1.2, (t0 - a.start) * 0.5, (b.end - t0) * 0.5);
+    if (reach < 2 * frame) continue;
+    const f0 = Math.round(t0 / frame), span = Math.round(reach / frame);
+    if (f0 >= level.length) break;
+    let best = f0, bestCost = avg(f0);
+    for (let f = f0 - span; f <= f0 + span; f++) {
+      if (f < 0 || f >= level.length) continue;
+      const cost = avg(f) + (8 * Math.abs(f - f0)) / span; // up to 8 dB against moving far
+      if (cost < bestCost) { best = f; bestCost = cost; }
+    }
+    a.end = b.start = best * frame;
+  }
+  return out;
+}
+
+/**
+ * When each word of a line starts. The speech model only times whole phrases, and sharing a phrase's time by text
+ * length drifts after every pause (the first words land, later ones run early). Here the length is shared over the
+ * time that has speech in it: loudness frames above the phrase's own quiet level count fully, quiet ones (pauses)
+ * barely, and a word that would start in a pause starts where the speech resumes.
+ */
+export function wordStarts(text: string, start: number, end: number, level: ArrayLike<number>, frame: number): number[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const f0 = Math.max(0, Math.round(start / frame)), f1 = Math.min(level.length, Math.round(end / frame));
+  const total = words.reduce((n, w) => n + w.length + 1, 0) || 1;
+  if (f1 - f0 < 5) { // too short (or past the audio) to measure: by length
+    let t = 0;
+    return words.map((w) => { const s = start + ((end - start) * t) / total; t += w.length + 1; return s; });
+  }
+  const avg = (f: number) => { let s = 0, n = 0; for (let k = f - 2; k <= f + 2; k++) if (k >= f0 && k < f1) { s += level[k]; n++; } return s / n; };
+  const lv: number[] = [];
+  for (let f = f0; f < f1; f++) lv.push(avg(f));
+  const sorted = [...lv].sort((a, b) => a - b), lo = sorted[Math.floor(sorted.length * 0.2)], hi = sorted[Math.floor(sorted.length * 0.9)];
+  const voiced = lv.map((v) => v > lo + 0.35 * (hi - lo));
+  const cum = [0];
+  voiced.forEach((v) => cum.push(cum[cum.length - 1] + (v ? 1 : 0.05)));
+  const W = cum[cum.length - 1];
+  let chars = 0, k = 0, prev = -1;
+  return words.map((w) => {
+    const target = (W * chars) / total;
+    chars += w.length + 1;
+    while (k < voiced.length && cum[k + 1] <= target) k++;
+    let f = k;
+    while (f < voiced.length - 1 && !voiced[f]) f++; // a word doesn't start in a pause: it starts where the speech resumes
+    if (!voiced[f]) f = k;
+    f = Math.max(f, prev + 1);
+    prev = f;
+    return Math.min(end, (f0 + f) * frame);
+  });
+}
+
+/** Cues with the start of every word (w for the native line, we for English) from the audio's loudness. */
+export function withWordTimes(cues: Cue[], level: ArrayLike<number>, frame: number): Cue[] {
+  return cues.map((c) => ({
+    ...dropAnchor(c),
+    w: c.ta ? wordStarts(c.ta, c.start, c.end, level, frame) : undefined,
+    we: c.en ? wordStarts(c.en, c.start, c.end, level, frame) : undefined,
+  }));
+}
+
+/**
+ * Re-time the cues cut from one speech-model window (an anchor cue and the back-to-back cues after it): the window's
+ * start and end are the model's, the cuts between were shared by text length. Shared over the time with speech in
+ * it instead (wordStarts), a cut lands where its first word is said, so later cues no longer drift after pauses.
+ */
+export function retimeWindows(cues: Cue[], level: ArrayLike<number>, frame: number): Cue[] {
+  const out = cues.map((c) => ({ ...c }));
+  for (let i = 0; i < out.length; ) {
+    let j = i;
+    while (j + 1 < out.length && !out[j + 1].anchor && Math.abs(out[j + 1].start - out[j].end) < 0.05) j++;
+    if (out[i].anchor && j > i) {
+      const lines = out.slice(i, j + 1).map((c) => (c.ta || c.en).split(/\s+/).filter(Boolean));
+      const starts = wordStarts(lines.map((l) => l.join(" ")).join(" "), out[i].start, out[j].end, level, frame);
+      let w = lines[0].length;
+      for (let k = i + 1; k <= j; k++) {
+        const t = starts[w];
+        // Keep every cue at least 0.3 s long.
+        if (t !== undefined && t > out[k - 1].start + 0.3 && t < out[k].end - 0.3) out[k - 1].end = out[k].start = t;
+        w += lines[k - i].length;
+      }
+    }
+    i = j + 1;
+  }
+  return out;
+}
+
+/** A cue without the job-time `anchor` flag (it isn't stored). */
+export function dropAnchor(c: Cue): Cue {
+  const out = { ...c };
+  delete out.anchor;
+  return out;
 }

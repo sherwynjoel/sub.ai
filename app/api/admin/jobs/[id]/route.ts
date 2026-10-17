@@ -22,7 +22,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
   if (action === "delete") {
     if (j.status === "processing") return json({ error: "Wait until processing finishes." }, 409);
-    if (j.filePath) await unlink(j.filePath).catch(() => {});
+    // The upload and its styled MP4; a render still running notices the job is gone and removes its own file.
+    for (const f of [j.filePath, j.renderPath]) if (f) await unlink(f).catch(() => {});
     await db.delete(jobs).where(eq(jobs.id, j.id));
     return json({ ok: true });
   }

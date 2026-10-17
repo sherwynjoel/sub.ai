@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toSrt, toVtt, mergeChunks, pairChunks, splitLine, layoutCue, divide, shiftCues, breakLines } from "./subtitles";
+import { toSrt, toVtt, mergeChunks, pairChunks, splitLine, layoutCue, divide, naturalBreak, shiftCues, breakLines, snapToPauses, wordStarts, retimeWindows } from "./subtitles";
 import { secondsLeft, effectivePlan } from "./plans";
 
 const cue = (start: number, end: number, ta = "வணக்கம்", en = "Hello") => ({ start, end, ta, en });
@@ -89,4 +89,43 @@ test("breakLines lays text out on balanced lines, never more lines than words", 
   assert.equal(breakLines("one two three four", undefined), "one two three four");
   const srt = toSrt([{ start: 0, end: 1, ta: "one two three four", en: "a b" }], "both", 2).split("\n");
   assert.deepEqual(srt.slice(2, 6), ["one two", "three four", "a", "b"]);
+});
+
+test("divide cuts a translation at a phrase edge near the length-based point, never mid-phrase when one is close", () => {
+  assert.deepEqual(divide("They would say that I always prefer cotton materials", [1, 1]), ["They would say", "that I always prefer cotton materials"]);
+  assert.deepEqual(divide("But if you ask what cotton, they won't have an awareness", [1, 1]), ["But if you ask what cotton,", "they won't have an awareness"]);
+  assert.deepEqual(divide("one two three four", [1, 1]), ["one two", "three four"], "no phrase edge nearby: unchanged");
+  // Punctuation wins over a clause word; nothing more than 2 words from the length-based point.
+  assert.equal(naturalBreak("a b c, d and e f g".split(" "), 4, 1, 7), 3);
+  assert.equal(naturalBreak("a b c d e f g h, i".split(" "), 3, 1, 9), 3, "the comma is too far away");
+});
+
+test("snapToPauses moves a back-to-back cut to the nearby pause and keeps real gaps", () => {
+  const level = Array.from({ length: 300 }, (_, f) => (f >= 118 && f <= 124 ? -50 : -15)); // 10 ms frames, pause at 1.18-1.24 s
+  const out = snapToPauses([cue(0, 1.5), cue(1.5, 3), cue(3.2, 4)], level, 0.01);
+  assert.ok(Math.abs(out[0].end - 1.21) < 0.03 && out[1].start === out[0].end);
+  assert.deepEqual([out[1].end, out[2].start], [3, 3.2]);
+  // No pause nearby: the cut stays.
+  assert.equal(snapToPauses([cue(0, 1.5), cue(1.5, 3)], new Array(300).fill(-15), 0.01)[0].end, 1.5);
+});
+
+test("wordStarts shares the line over the time with speech in it, so words after a pause start when it resumes", () => {
+  // 0-2 s speech, 2-5 s pause, 5-7 s speech (20 ms frames); four equal words, two on each side of the pause.
+  const level = Array.from({ length: 400 }, (_, f) => (f * 0.02 < 2 || f * 0.02 >= 5 ? -15 : -50));
+  const w = wordStarts("aaaa bbbb cccc dddd", 0, 7, level, 0.02);
+  assert.equal(w[0], 0);
+  assert.ok(w[1] > 0.8 && w[1] < 1.3, `second word mid first stretch: ${w[1]}`);
+  assert.ok(w[2] >= 4.9 && w[2] < 5.4, `third word when speech resumes, not in the pause: ${w[2]}`);
+  assert.ok(w[3] > 5.6 && w[3] < 6.4, `${w[3]}`);
+  // By length alone the third word would sit at 3.5 s, in the middle of the pause.
+});
+
+test("retimeWindows moves the cuts inside a model window to where their first word is said", () => {
+  // Window 0-7 s: speech 0-2 s and 5-7 s. Two cues of equal length: by length the cut is at 3.5 s, in the pause.
+  const level = Array.from({ length: 400 }, (_, f) => (f * 0.02 < 2 || f * 0.02 >= 5 ? -15 : -50));
+  const cues = [{ ...cue(0, 3.5, "aaaa bbbb", ""), anchor: true }, cue(3.5, 7, "cccc dddd", "")];
+  const out = retimeWindows(cues, level, 0.02);
+  assert.ok(out[1].start >= 4.9 && out[1].start < 5.4 && out[0].end === out[1].start, `cut at ${out[1].start}`);
+  // Not from a window (no anchor): left alone.
+  assert.equal(retimeWindows([cue(0, 3.5, "aaaa bbbb", ""), cue(3.5, 7, "cccc dddd", "")], level, 0.02)[1].start, 3.5);
 });

@@ -1,4 +1,7 @@
-Caption style fonts, from https://github.com/google/fonts (unmodified).
-SIL Open Font License 1.1 (https://openfontlicense.org): Bebas Neue, Anton, Bangers, DM Serif Display,
-Caveat, Press Start 2P, Archivo Black, Instrument Sans, Fraunces.
-Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0): Permanent Marker, Special Elite.
+Caption fonts: the fonts of the Premiere Pro caption templates that are free to use on the web (unmodified).
+SIL Open Font License 1.1 (https://openfontlicense.org), from https://github.com/google/fonts: Anton, Poppins (Bold, ExtraBold).
+Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0): Roboto Black (https://github.com/googlefonts/roboto-2),
+Satisfy (https://github.com/google/fonts).
+Tamil fonts, SIL Open Font License 1.1, from https://github.com/google/fonts: Mukta Malar, Hind Madurai, Kavivanar,
+Pavanam, Meera Inimai; Noto Sans Tamil from https://github.com/notofonts.
+Noto Emoji (one-colour emoji), SIL Open Font License 1.1, from https://github.com/google/fonts.
