@@ -12,6 +12,11 @@ type Props = {
   onDrag: (i: number, patch: Partial<Cue>) => void;
   /** The drag finished: record one undo step. */
   onDragEnd: () => void;
+  /** Text layers, on their own row. */
+  layers?: { start: number; end: number; label: string }[];
+  selectedLayer?: number;
+  onSelectLayer?: (i: number) => void;
+  onDragLayer?: (i: number, span: { start: number; end: number }) => void;
 };
 
 const MIN = 0.2; // shortest caption, seconds
@@ -32,7 +37,7 @@ const rescale = (t: number[] | undefined, s0: number, e0: number, s1: number, e1
  * Caption blocks on a timeline: click to select and move the playhead, drag a block to move it, drag its edges to
  * change when it starts or ends, drag the word marks of the selected caption to retime its words.
  */
-export default function Timeline({ cues, duration, now, selected, zoom, line, playing, onSeek, onSelect, onDrag, onDragEnd }: Props) {
+export default function Timeline({ cues, duration, now, selected, zoom, line, playing, onSeek, onSelect, onDrag, onDragEnd, layers = [], selectedLayer = -1, onSelectLayer, onDragLayer }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
   const width = Math.max(duration, 1) * zoom + 40;
   const st = step(zoom);
@@ -91,6 +96,30 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
     addEventListener("pointerup", up);
   }
 
+  /** Drag a text layer (move, or one edge); a press without movement selects it. */
+  function grabLayer(e: React.PointerEvent, i: number, mode: "move" | "start" | "end") {
+    e.stopPropagation();
+    e.preventDefault();
+    const l0 = layers[i], x0 = e.clientX, len = l0.end - l0.start;
+    let moved = false;
+    const move = (ev: PointerEvent) => {
+      const dt = (ev.clientX - x0) / zoom;
+      if (!moved && Math.abs(ev.clientX - x0) < 3) return;
+      moved = true;
+      if (mode === "move") { const st = Math.min(Math.max(0, l0.start + dt), Math.max(0, duration - len)); onDragLayer?.(i, { start: st, end: st + len }); }
+      else if (mode === "start") onDragLayer?.(i, { start: Math.min(Math.max(0, l0.start + dt), l0.end - MIN), end: l0.end });
+      else onDragLayer?.(i, { start: l0.start, end: Math.max(Math.min(duration, l0.end + dt), l0.start + MIN) });
+    };
+    const up = (ev: PointerEvent) => {
+      removeEventListener("pointermove", move);
+      removeEventListener("pointerup", up);
+      if (moved) onDragEnd();
+      else { onSelectLayer?.(i); onSeek(timeAt(ev.clientX)); }
+    };
+    addEventListener("pointermove", move);
+    addEventListener("pointerup", up);
+  }
+
   /** Scrub: press on the ruler or empty track and drag to move the playhead. */
   function scrub(e: React.PointerEvent) {
     e.preventDefault();
@@ -101,6 +130,16 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
     addEventListener("pointerup", up);
   }
 
+  // Layers that overlap in time go on separate lanes.
+  const laneEnds: number[] = [];
+  const lanes = layers.map((l) => {
+    let k = laneEnds.findIndex((e) => e <= l.start + 0.001);
+    if (k < 0) { k = laneEnds.length; laneEnds.push(0); }
+    laneEnds[k] = l.end;
+    return k;
+  });
+  const laneCount = Math.max(1, laneEnds.length);
+
   const ticks = [];
   for (let t = 0; t <= duration + st; t += st) ticks.push(t);
   const sel = cues[selected];
@@ -108,7 +147,7 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
 
   return (
     <div className="tl" ref={scroller}>
-      <div className="tl-inner" style={{ width }}>
+      <div className="tl-inner" style={{ width, height: 132 + laneCount * 32 }}>
         <div className="tl-ruler" onPointerDown={scrub}>
           {ticks.map((t) => <span key={t} className="tl-tick" style={{ left: t * zoom }}>{label(t)}</span>)}
         </div>
@@ -131,6 +170,16 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
             ))}
           </div>
         )}
+        <div className="tl-layers" style={{ height: laneCount * 32 + 4 }} onPointerDown={scrub}>
+          {layers.map((l, i) => (
+            <div key={i} className={`tl-block tl-layer${i === selectedLayer ? " on" : ""}`} style={{ left: l.start * zoom, width: Math.max(4, (l.end - l.start) * zoom), top: 4 + lanes[i] * 32 }}
+              onPointerDown={(e) => grabLayer(e, i, "move")} title={`${l.label}\nText layer: drag to move · drag the edges to retime`}>
+              <span className="tl-text">{l.label}</span>
+              <i className="tl-edge l" onPointerDown={(e) => grabLayer(e, i, "start")} />
+              <i className="tl-edge r" onPointerDown={(e) => grabLayer(e, i, "end")} />
+            </div>
+          ))}
+        </div>
         <i className="tl-head" style={{ left: now * zoom }} />
       </div>
     </div>

@@ -119,3 +119,20 @@ test("text controls and entrances reach the MP4", () => {
   const slide = buildAss([{ start: 0, end: 2, ta: "hello", en: "" }], { styleId: "minimal", lang: "ta", width: 1080, height: 1920, custom: { anim: "slide" } });
   assert.match(slide, /\\move\(540,\d+,540,\d+,0,\d+\)/);
 });
+
+test("canvas, text layers and emoji reach the MP4; project-only settings stay out of a caption's look", async () => {
+  const { canvasSize, ownLook } = await import("./captionStyles");
+  assert.deepEqual(canvasSize({ ratio: "9:16", fit: "fit", bg: "blur" }, 1920, 1080), { width: 1080, height: 1920 });
+  assert.deepEqual(canvasSize(undefined, 1280, 720), { width: 1280, height: 720 });
+  const custom = sanitizeCustom({ canvas: { ratio: "1:1", fit: "fill", bg: "#123456" }, layers: [{ text: "Hi 🔥", start: 1, end: 3, x: 0.2, y: 0.3, style: { size: 1.5, canvas: { ratio: "9:16" } } }, { text: " ", start: 0, end: 1 }], logo: { ext: "png", x: 0.9, y: 0.1, size: 0.2, opacity: 0.5 } });
+  assert.equal(custom.layers!.length, 1, "empty layers dropped");
+  assert.equal(custom.layers![0].style!.canvas, undefined, "a layer's look has no canvas");
+  assert.deepEqual(custom.canvas, { ratio: "1:1", fit: "fill", bg: "#123456" });
+  assert.equal(ownLook({ size: 1.2, logo: { ext: "png" } }).logo, undefined);
+  const ass = buildAss([], { styleId: "minimal", custom, lang: "ta", width: 1080, height: 1080 });
+  const layer = ass.split("\n").find((l) => l.startsWith("Dialogue"))!;
+  assert.match(layer, /^Dialogue: 5,0:00:01\.00,0:00:03\.00,L1,/);
+  assert.match(layer, /\\pos\(216,324\)/);
+  assert.match(layer, /\\fnNoto Emoji\}🔥/, "emoji in the one-colour emoji font");
+  assert.match(ass, /Style: L1,Poppins ExtraBold,122,/, "the layer's own size");
+});

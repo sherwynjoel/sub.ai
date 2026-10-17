@@ -9,7 +9,7 @@ type Props = {
 };
 
 /** A font for the Latin letters, then the Tamil font for Tamil letters (the Latin caption fonts have none). */
-const stack = (font: string, tamil?: string) => `"${font}", ${tamil ? `"${tamil}", ` : ""}var(--font-tamil), "Nirmala UI", "Noto Sans", sans-serif`;
+const stack = (font: string, tamil?: string) => `"${font}", ${tamil ? `"${tamil}", ` : ""}"Noto Emoji", var(--font-tamil), "Nirmala UI", "Noto Sans", sans-serif`; // one-colour emoji, as in the MP4
 
 /**
  * A caption line drawn in a caption style at a moment in time. Mirrors buildAss() in lib/captionStyles.ts

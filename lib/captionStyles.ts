@@ -106,8 +106,27 @@ export type CaptionCustom = {
   spacing?: number; opacity?: number; rotate?: number;
   shadowColor?: string; shadowSize?: number; boxPad?: number;
   anim?: Anim; highlight?: Highlight;
+  canvas?: Canvas; layers?: TextLayer[]; logo?: Logo; // project only
 };
 export type Margins = { top: number; right: number; bottom: number; left: number }; // fractions of the frame
+
+/** The shape of the exported video. */
+export const CANVAS_RATIOS = { source: "Original", "9:16": "9:16 · Reels, Shorts, TikTok", "4:5": "4:5 · Feed", "1:1": "1:1 · Square", "16:9": "16:9 · YouTube" } as const;
+export type CanvasRatio = keyof typeof CANVAS_RATIOS;
+/** fit: the whole video on a background ("blur" = the video itself, blurred, or a #colour); fill: cropped to the shape. */
+export type Canvas = { ratio: CanvasRatio; fit: "fit" | "fill"; bg: string };
+/** Text (or emoji) over the video for a stretch of time, wherever it was put. */
+export type TextLayer = { text: string; start: number; end: number; x: number; y: number; style?: CaptionCustom };
+/** An uploaded image over the video: centre (fractions of the frame), width (fraction of the frame width), opacity. */
+export type Logo = { ext: "png" | "jpg" | "webp"; x: number; y: number; size: number; opacity: number };
+
+/** Output size for a canvas over a video of w x h. */
+export function canvasSize(c: Canvas | undefined, w: number, h: number) {
+  const sizes = { "9:16": [1080, 1920], "4:5": [1080, 1350], "1:1": [1080, 1080], "16:9": [1920, 1080] } as const;
+  if (!c || c.ratio === "source") return { width: w, height: h };
+  const [width, height] = sizes[c.ratio];
+  return { width, height };
+}
 export type Placement = { position: "top" | "middle" | "bottom"; offset: number; lines?: 1 | 2 | 3; x?: number; y?: number; safe: Margins };
 
 const m = (top: number, right: number, bottom: number, left: number): Margins => ({ top, right, bottom, left });
@@ -157,8 +176,32 @@ export function sanitizeCustom(input: unknown): CaptionCustom {
   if (typeof i.anim === "string" && i.anim in ANIMS) out.anim = i.anim as Anim;
   if (typeof i.highlight === "string" && i.highlight in HIGHLIGHTS) out.highlight = i.highlight as Highlight;
   if (typeof i.safe === "string" && i.safe in SAFE_ZONES) out.safe = i.safe as SafeZoneId;
+  const cv = i.canvas as Record<string, unknown> | undefined;
+  if (cv && typeof cv === "object" && typeof cv.ratio === "string" && cv.ratio in CANVAS_RATIOS) {
+    out.canvas = { ratio: cv.ratio as CanvasRatio, fit: cv.fit === "fill" ? "fill" : "fit", bg: cv.bg === "blur" || (typeof cv.bg === "string" && HEX.test(cv.bg)) ? cv.bg : "blur" };
+  }
+  if (Array.isArray(i.layers)) {
+    out.layers = i.layers.slice(0, 50).flatMap((l: Record<string, unknown>) => {
+      const text = typeof l?.text === "string" ? l.text.slice(0, 200) : "";
+      const start = clamp(l?.start, 0, 86400), end = clamp(l?.end, 0, 86400);
+      if (!text.trim() || start === undefined || end === undefined || end <= start) return [];
+      const style = ownLook(l.style);
+      return [{ text, start, end, x: clamp(l.x, 0, 1) ?? 0.5, y: clamp(l.y, 0, 1) ?? 0.5, ...(Object.keys(style).length ? { style } : {}) }];
+    });
+  }
+  const lg = i.logo as Record<string, unknown> | undefined;
+  if (lg && typeof lg === "object" && (lg.ext === "png" || lg.ext === "jpg" || lg.ext === "webp")) {
+    out.logo = { ext: lg.ext, x: clamp(lg.x, 0, 1) ?? 0.88, y: clamp(lg.y, 0, 1) ?? 0.08, size: clamp(lg.size, 0.03, 0.6) ?? 0.18, opacity: clamp(lg.opacity, 0.1, 1) ?? 1 };
+  }
   const sc = i.safeCustom as Record<string, unknown> | undefined;
   if (sc && typeof sc === "object") out.safeCustom = m(clamp(sc.top, 0, 0.4) ?? 0, clamp(sc.right, 0, 0.4) ?? 0, clamp(sc.bottom, 0, 0.4) ?? 0, clamp(sc.left, 0, 0.4) ?? 0);
+  return out;
+}
+
+/** A caption's or layer's own look: the project-only settings (safe zone, canvas, layers, logo) left out. */
+export function ownLook(input: unknown): CaptionCustom {
+  const out = sanitizeCustom(input);
+  delete out.safe; delete out.safeCustom; delete out.canvas; delete out.layers; delete out.logo;
   return out;
 }
 
@@ -300,6 +343,7 @@ const assTime = (t: number) => {
 const esc = (t: string) => t.replace(/[{}]/g, (c) => (c === "{" ? "(" : ")")).replace(/\\/g, "/").replace(/\n/g, "\\N");
 
 const TAMIL_FONT = "Noto Sans Tamil"; // installed on the server (fonts-noto-core)
+const EMOJI_FONT = "Noto Emoji"; // one-colour emoji (libass can't draw colour ones); the preview uses it too
 
 /**
  * Put Tamil runs of an ASS event in the Tamil font, then back to the font in effect. Left to libass's own fallback,
@@ -307,19 +351,23 @@ const TAMIL_FONT = "Noto Sans Tamil"; // installed on the server (fonts-noto-cor
  * as ப + a dotted circle).
  */
 export function tamilRuns(text: string, fonts: Record<string, string>, style: string, tamil = TAMIL_FONT, spacing = 0) {
-  let font = fonts[style], out = "", inTamil = false;
+  type Run = "latin" | "ta" | "emoji";
+  let font = fonts[style], out = "", run: Run = "latin";
+  const fontOf = (r: Run) => (r === "ta" ? tamil : r === "emoji" ? EMOJI_FONT : font);
   for (let i = 0; i < text.length; ) {
     if (text[i] === "{") { // override block: follow \fn and \r[Style]
       const end = text.indexOf("}", i), block = text.slice(i, end + 1);
       for (const m of block.matchAll(/\\(fn|r)([^\\}]*)/g)) font = m[1] === "fn" ? m[2] || fonts[style] : fonts[m[2]] ?? fonts[style];
       out += block; i = end + 1;
-      if (inTamil) out += `{\\fn${tamil}${spacing ? "\\fsp0" : ""}}`; // a block inside a Tamil run may have reset the font
+      if (run !== "latin") out += `{\\fn${fontOf(run)}${spacing ? "\\fsp0" : ""}}`; // a block inside a run may have reset the font
       continue;
     }
-    const ta = /[\u0B80-\u0BFF\u200C\u200D]/.test(text[i]);
-    // Letter spacing pulls Tamil letters apart in libass (ப்ப drawn as ப ் ப): none inside Tamil.
-    if (ta !== inTamil && (ta || !/\s/.test(text[i]))) { out += `{\\fn${ta ? tamil : font}${spacing ? `\\fsp${ta ? 0 : spacing}` : ""}}`; inTamil = ta; }
-    out += text[i++];
+    const cp = text.codePointAt(i)!, ch = String.fromCodePoint(cp);
+    const kind: Run = /[\u0B80-\u0BFF\u200C\u200D]/.test(ch) ? "ta" : /\p{Extended_Pictographic}/u.test(ch) ? "emoji" : /[\uFE0F\u{1F3FB}-\u{1F3FF}]/u.test(ch) ? run : "latin";
+    // Letter spacing pulls Tamil letters apart in libass (ப்ப drawn as ப ் ப): none inside Tamil or emoji.
+    if (kind !== run && (kind !== "latin" || !/\s/.test(ch))) { out += `{\\fn${fontOf(kind)}${spacing ? `\\fsp${kind === "latin" ? spacing : 0}` : ""}}`; run = kind; }
+    out += ch;
+    i += ch.length;
   }
   return out;
 }
@@ -489,6 +537,19 @@ export function buildAss(cues: Cue[], o: Opts) {
       add(wt.s, end, pos + q + text + tail, 0, wrapM, wrapM);
     });
   }
+
+  // Text layers: plain text placed where it was put, in the project look with its own changes on top.
+  (o.custom?.layers ?? []).forEach((l, n) => {
+    const look = lookOf(mergeCustom(o.custom, { ...l.style, x: l.x, y: l.y }), `L${n + 1}`);
+    looks.push(look);
+    cur = look.name;
+    fonts[cur] = look.s.font;
+    if (look.s.fontTa) tamil[cur] = look.s.fontTa;
+    if (look.s.spacing) spaced[cur] = look.px(look.s.spacing);
+    const [ev, each] = look.entrance(l.end - l.start);
+    const glow = look.s.glow && !look.s.box ? `\\blur${look.px(0.12)}` : "";
+    add(l.start, l.end, (ev.includes("\\move") ? "" : look.pos) + ev + `{\\r${each}${glow}}` + esc(caseOf(look.s, l.text)), 5, look.wrapM, look.wrapM);
+  });
 
   return `[Script Info]
 ScriptType: v4.00+

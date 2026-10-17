@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Cue } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
-import { CAPTION_STYLES, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CaptionCustom, type SafeZoneId } from "@/lib/captionStyles";
+import { CANVAS_RATIOS, CAPTION_STYLES, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
 import { insertAt, mergeCues, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import LookControls from "@/components/LookControls";
 import StyledCaption from "@/components/StyledCaption";
@@ -17,8 +17,10 @@ type Job = {
   captionStyle: string; captionCustom: CaptionCustom; renderStatus: string | null; renderProgress: number; renderError: string | null; renderLang: string;
 };
 type View = "ta" | "en" | "both";
-type Tab = "caption" | "style" | "export";
+type Tab = "caption" | "layers" | "style" | "export";
 const GROUPS = ["Premiere", "Trending", "Aesthetic", "Clean", "Fun"] as const;
+const RATIO = { "9:16": 9 / 16, "4:5": 4 / 5, "1:1": 1, "16:9": 16 / 9 } as const;
+const EMOJIS = ["😀", "😂", "🔥", "❤️", "👍", "🎉", "✨", "💯", "😍", "🙏", "👀", "⭐"];
 const FRAME = 1 / 30;
 
 /** The styled caption over the player, redrawn every frame while the video plays so word timing is smooth. */
@@ -77,6 +79,37 @@ function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, o
   );
 }
 
+/** Text layers over the video at time t (the selected one also while paused outside its time, so it can be placed). */
+function LayerViews({ layers, t, paused, styleId, custom, selected, onSelect, onMove }: {
+  layers: TextLayer[]; t: number; paused: boolean; styleId: string; custom: CaptionCustom; selected: number;
+  onSelect: (i: number) => void; onMove: (i: number, x: number, y: number) => void;
+}) {
+  return <>{layers.map((l, i) => {
+    const on = t >= l.start && t < l.end;
+    if (!on && !(paused && i === selected)) return null;
+    const own = mergeCustom({ ...custom, highlight: "none" }, l.style);
+    const words = l.text.split(/\s+/).filter(Boolean);
+    return (
+      <div key={i} className={`layer-view${i === selected ? " on" : ""}`} style={{ left: `${l.x * 100}%`, top: `${l.y * 100}%` }}
+        onPointerDown={(e) => { onSelect(i); dragIn(e, (x, y) => onMove(i, x, y)); }}>
+        <StyledCaption styleId={styleId} custom={own} text={l.text} start={l.start} end={l.end} time={on ? t : l.end - 0.01} starts={words.map(() => l.start)} />
+      </div>
+    );
+  })}</>;
+}
+
+/** Drag something over the player: report its centre as fractions of the frame. */
+function dragIn(e: React.PointerEvent, onMove: (x: number, y: number) => void) {
+  const frame = (e.currentTarget as HTMLElement).closest(".player")?.getBoundingClientRect();
+  if (!frame) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const at = (ev: PointerEvent) => onMove(Math.min(0.98, Math.max(0.02, (ev.clientX - frame.left) / frame.width)), Math.min(0.98, Math.max(0.02, (ev.clientY - frame.top) / frame.height)));
+  const stop = () => { removeEventListener("pointermove", at); removeEventListener("pointerup", stop); };
+  addEventListener("pointermove", at);
+  addEventListener("pointerup", stop);
+}
+
 const tc = (s: number) => {
   const ms = Math.round(s * 1000);
   const p = (n: number, w = 2) => String(n).padStart(w, "0");
@@ -109,6 +142,9 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [playing, setPlaying] = useState(false);
   const [duration, setDuration] = useState(Math.max(1, ...initial.cues.map((c) => c.end)));
   const [selected, setSelected] = useState(-1);
+  const [selLayer, setSelLayer] = useState(-1);
+  const [logoVer, setLogoVer] = useState(0); // bumps the logo image URL after an upload
+  const bgVideo = useRef<HTMLVideoElement>(null);
   const [tab, setTab] = useState<Tab>("caption");
   const [zoom, setZoom] = useState(80); // timeline px per second
   const [lang, setLang] = useState<View>("ta");
@@ -177,6 +213,28 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   }, [custom]); // eslint-disable-line react-hooks/exhaustive-deps
   const tweak = (patch: CaptionCustom) => setCustom((c) => ({ ...c, ...patch }));
   const look = resolveStyle(styleId, custom, portrait);
+  const layers = custom.layers ?? [];
+  const setLayers = (next: TextLayer[]) => tweak({ layers: next });
+  const editLayer = (i: number, patch: Partial<TextLayer>) => setLayers(layers.map((l, j) => (j === i ? { ...l, ...patch } : l)));
+  function addLayer(text: string) {
+    const start = Math.max(0, Math.min(now, duration - 0.5));
+    setLayers([...layers, { text, start, end: Math.min(duration, start + 3), x: 0.5, y: text.length <= 3 ? 0.4 : 0.25 }]);
+    setSelLayer(layers.length);
+    setTab("layers");
+  }
+  async function uploadLogo(file: File) {
+    const res = await fetch(`/api/jobs/${job.id}/logo`, { method: "POST", headers: { "content-type": file.type }, body: file });
+    const r = await res.json().catch(() => ({}));
+    if (!res.ok) { setMsg(r.error || "Couldn't upload the logo."); return; }
+    setCustom((c) => ({ ...c, logo: r.logo })); // the look autosave stores the same logo again
+    setLogoVer((v) => v + 1);
+  }
+  async function removeLogo() {
+    await fetch(`/api/jobs/${job.id}/logo`, { method: "DELETE" }).catch(() => {});
+    setCustom((c) => { const n = { ...c }; delete n.logo; return n; });
+  }
+  const cv = custom.canvas, shaped = !!cv && cv.ratio !== "source";
+  const frameRatio = shaped ? RATIO[cv!.ratio as keyof typeof RATIO] : ratio;
   const hex = (c: string | undefined, fallback: string) => (c ?? fallback).slice(0, 7);
 
   async function save() {
@@ -203,6 +261,14 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     if (v.videoWidth && v.videoHeight) setRatio(v.videoWidth / v.videoHeight);
     if (v.duration) setDuration(v.duration);
   }
+  // The blurred background copy (canvas "fit" on blur) follows the main video.
+  useEffect(() => {
+    const b = bgVideo.current;
+    if (!b) return;
+    if (Math.abs(b.currentTime - now) > 0.3) b.currentTime = now;
+    if (playing && b.paused) b.play().catch(() => {});
+    if (!playing && !b.paused) b.pause();
+  }, [now, playing]);
   // The video can be ready before this page's scripts are: then loadedmetadata already fired.
   useEffect(() => { const v = video.current; if (v && v.readyState >= 1) metadata(v); }, []);
   const seek = (t: number) => { const v = video.current; if (v) v.currentTime = Math.max(0, Math.min(t, (v.duration || duration) - 0.01)); setNow(t); };
@@ -360,11 +426,20 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
         <div className="ed-stage">
           {job.hasMedia || mediaUrl ? (
-            <div className="player" style={{ aspectRatio: ratio, width: `min(100%, ${(56 * ratio).toFixed(2)}vh)` }}>
-              <video ref={video} src={mediaUrl ?? `/api/jobs/${job.id}/media`} preload="metadata" onClick={togglePlay}
+            <div className="player" style={{ aspectRatio: frameRatio, width: `min(100%, ${(56 * frameRatio).toFixed(2)}vh)`, background: shaped && cv!.fit === "fit" && cv!.bg !== "blur" ? cv!.bg : undefined }}>
+              {shaped && cv!.fit === "fit" && cv!.bg === "blur" && <video ref={bgVideo} className="bg-blur" src={mediaUrl ?? `/api/jobs/${job.id}/media`} muted playsInline preload="metadata" aria-hidden="true" />}
+              <video ref={video} src={mediaUrl ?? `/api/jobs/${job.id}/media`} preload="metadata" onClick={togglePlay} style={shaped ? { objectFit: cv!.fit === "fill" ? "cover" : "contain" } : undefined}
                 onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
                 onLoadedMetadata={(e) => metadata(e.currentTarget)} />
               {showZones && (["top", "right", "bottom", "left"] as const).map((k) => <i key={k} className={`zone zone-${k}`} style={{ [k === "top" || k === "bottom" ? "height" : "width"]: `${look.safe[k] * 100}%` }} />)}
+              <LayerViews layers={layers} t={now} paused={!playing} styleId={styleId} custom={custom} selected={tab === "layers" ? selLayer : -1}
+                onSelect={(i) => { setSelLayer(i); setTab("layers"); }} onMove={(i, x, y) => editLayer(i, { x, y })} />
+              {custom.logo && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className={`logo-view${tab === "layers" ? " on" : ""}`} alt="Logo" src={`/api/jobs/${job.id}/logo?v=${logoVer}`} draggable={false}
+                  style={{ left: `${custom.logo.x * 100}%`, top: `${custom.logo.y * 100}%`, width: `${custom.logo.size * 100}%`, opacity: custom.logo.opacity }}
+                  onPointerDown={(e) => { setTab("layers"); dragIn(e, (x, y) => tweak({ logo: { ...custom.logo!, x, y } })); }} />
+              )}
               <LiveCaption video={video} cues={cues} styleId={styleId} custom={custom} portrait={portrait} view={view} selected={selected}
                 onMove={(i, x, y) => { if (tab === "caption" && i === selected) styleCue(i, { x, y }); else tweak({ x, y }); }} />
             </div>
@@ -390,7 +465,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
         <aside className="ed-side">
           <div className="seg ed-tabs" role="tablist" aria-label="Inspector">
-            {([["caption", "Caption"], ["style", "Style"], ["export", "Export"]] as const).map(([k, l]) => (
+            {([["caption", "Caption"], ["layers", "Layers"], ["style", "Style"], ["export", "Export"]] as const).map(([k, l]) => (
               <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>
             ))}
           </div>
@@ -434,8 +509,87 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             </div>
           ))}
 
+          {tab === "layers" && (
+            <div className="insp">
+              <h3>Text layers</h3>
+              <p className="muted small">Text or emoji over the video for as long as you like. Drag it on the video to place it, and on the timeline&apos;s lower row to time it.</p>
+              <div className="insp-actions">
+                <button className="btn small" onClick={() => addLayer("Your text")}>Add text</button>
+              </div>
+              <div className="emoji-row" role="group" aria-label="Add an emoji">
+                {EMOJIS.map((e) => <button key={e} onClick={() => addLayer(e)} title={`Add ${e}`}>{e}</button>)}
+              </div>
+              <p className="muted small">Emojis come out in one colour (the text colour) in the exported video.</p>
+              {layers.length > 0 && (
+                <ol className="layer-list">
+                  {layers.map((l, i) => (
+                    <li key={i} className={i === selLayer ? "on" : ""} onClick={() => { setSelLayer(i); seek(l.start); }}>
+                      <span className="tnum small">{l.text.slice(0, 28) || "…"} <span className="muted">· {tc(l.start).slice(3, 8)}–{tc(l.end).slice(3, 8)}</span></span>
+                      <button className="link small" onClick={(e) => { e.stopPropagation(); setLayers(layers.filter((_, j) => j !== i)); setSelLayer(-1); }}>Delete</button>
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {layers[selLayer] && (() => {
+                const l = layers[selLayer];
+                return (
+                  <>
+                    <label className="insp-field">Text<textarea rows={2} value={l.text} onChange={(e) => editLayer(selLayer, { text: e.target.value })} /></label>
+                    <div className="insp-row">
+                      <TimeInput key={`ls${selLayer}-${l.start}`} value={l.start} label="Start" onChange={(v) => editLayer(selLayer, { start: Math.max(0, Math.min(v, l.end - 0.2)) })} />
+                      <TimeInput key={`le${selLayer}-${l.end}`} value={l.end} label="End" onChange={(v) => editLayer(selLayer, { end: Math.min(duration, Math.max(v, l.start + 0.2)) })} />
+                    </div>
+                    <div className="insp-head">
+                      <h3>This layer&apos;s look</h3>
+                      <button className="btn ghost small" onClick={() => editLayer(selLayer, { style: undefined })} disabled={!l.style}>Use project style</button>
+                    </div>
+                    <LookControls look={resolveStyle(styleId, mergeCustom(custom, { ...l.style, x: l.x, y: l.y }), portrait)} own={l.style ?? {}} tamil={tamil} project={look}
+                      set={(patch) => { const st = { ...l.style, ...patch }; delete st.x; delete st.y; delete st.position; editLayer(selLayer, { style: st }); }} />
+                  </>
+                );
+              })()}
+
+              <h3>Logo or watermark</h3>
+              {custom.logo ? (
+                <>
+                  <label>Size <span className="cz-val">{Math.round(custom.logo.size * 100)}%</span>
+                    <input type="range" min={0.03} max={0.6} step={0.01} value={custom.logo.size} onChange={(e) => tweak({ logo: { ...custom.logo!, size: +e.target.value } })} />
+                  </label>
+                  <label>Opacity <span className="cz-val">{Math.round(custom.logo.opacity * 100)}%</span>
+                    <input type="range" min={0.1} max={1} step={0.05} value={custom.logo.opacity} onChange={(e) => tweak({ logo: { ...custom.logo!, opacity: +e.target.value } })} />
+                  </label>
+                  <p className="muted small">Drag the logo on the video to place it.</p>
+                  <div className="insp-actions">
+                    <label className="btn ghost small">Replace<input type="file" hidden accept="image/png,image/jpeg,image/webp" onChange={(e) => e.target.files?.[0] && uploadLogo(e.target.files[0])} /></label>
+                    <button className="btn ghost small" onClick={removeLogo}>Remove</button>
+                  </div>
+                </>
+              ) : (
+                <label className="btn small">Upload a logo (PNG, JPEG, WebP · up to 2 MB)<input type="file" hidden accept="image/png,image/jpeg,image/webp" onChange={(e) => e.target.files?.[0] && uploadLogo(e.target.files[0])} /></label>
+              )}
+            </div>
+          )}
+
           {tab === "style" && (
             <div className="insp">
+              <h3>Canvas</h3>
+              <label>Video shape
+                <select value={cv?.ratio ?? "source"} onChange={(e) => tweak({ canvas: { ratio: e.target.value as CanvasRatio, fit: cv?.fit ?? "fit", bg: cv?.bg ?? "blur" } })}>
+                  {Object.entries(CANVAS_RATIOS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                </select>
+              </label>
+              {shaped && <>
+                <div className="seg" role="group" aria-label="Fit">
+                  <button aria-pressed={cv!.fit === "fit"} onClick={() => tweak({ canvas: { ...cv!, fit: "fit" } })}>Fit whole video</button>
+                  <button aria-pressed={cv!.fit === "fill"} onClick={() => tweak({ canvas: { ...cv!, fit: "fill" } })}>Fill (crop)</button>
+                </div>
+                {cv!.fit === "fit" && <div className="look-row">
+                  <label className="cz-check"><input type="radio" name="bg" checked={cv!.bg === "blur"} onChange={() => tweak({ canvas: { ...cv!, bg: "blur" } })} /> Blurred video behind</label>
+                  <label className="cz-check"><input type="radio" name="bg" checked={cv!.bg !== "blur"} onChange={() => tweak({ canvas: { ...cv!, bg: cv!.bg !== "blur" ? cv!.bg : "#000000" } })} /> Colour</label>
+                  {cv!.bg !== "blur" && <input type="color" aria-label="Background colour" value={cv!.bg} onChange={(e) => tweak({ canvas: { ...cv!, bg: e.target.value } })} />}
+                </div>}
+              </>}
+
               <h3>Project style</h3>
               <p className="muted small">{styleOf(styleId).blurb} Applies to every caption without its own look.</p>
               {GROUPS.map((g) => (
@@ -541,6 +695,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
         </div>
         <Timeline cues={cues} duration={duration} now={now} selected={selected} zoom={zoom} line={line} playing={playing}
           onSeek={seek} onSelect={select}
+          layers={layers.map((l) => ({ start: l.start, end: l.end, label: l.text }))} selectedLayer={selLayer}
+          onSelectLayer={(i) => { setSelLayer(i); setTab("layers"); }} onDragLayer={(i, span) => editLayer(i, span)}
           onDrag={(i, patch) => { if (!dragFrom.current) dragFrom.current = cues; setCuesRaw((cs) => cs.map((c, j) => (j === i ? { ...c, ...patch } : c))); }}
           onDragEnd={() => { const from = dragFrom.current; dragFrom.current = null; if (from) { setPast((p) => [...p.slice(-199), from]); setFuture([]); setDirty(true); } }} />
       </div>

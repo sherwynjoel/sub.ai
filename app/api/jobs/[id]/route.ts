@@ -3,9 +3,10 @@ import { eq } from "drizzle-orm";
 import { db, jobs, type Cue } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { ownJob, publicJob } from "@/lib/jobs";
-import { CAPTION_STYLES, sanitizeCustom } from "@/lib/captionStyles";
+import { CAPTION_STYLES, ownLook, sanitizeCustom } from "@/lib/captionStyles";
 import { LEVEL_FRAME, loudness } from "@/lib/media";
 import { withWordTimes } from "@/lib/subtitles";
+import { logoPath } from "@/lib/render";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -55,8 +56,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
     const wt = times(w, c.ta, start, end), et = times(we, c.en, start, end);
     if (wt) c.w = wt;
     if (et) c.we = et;
-    const own = sanitizeCustom(style); // this caption's own look; safe zones stay project-wide
-    delete own.safe; delete own.safeCustom;
+    const own = ownLook(style); // this caption's own look; safe zone, canvas, layers and logo stay project-wide
     if (Object.keys(own).length) c.style = own;
     const tc = colors(wc, c.ta), ec = colors(wce, c.en);
     if (tc) c.wc = tc;
@@ -74,7 +74,7 @@ export async function DELETE(_: Request, { params }: Ctx) {
   if (!j) return json({ error: "Not found" }, 404);
   if (j.status === "processing") return json({ error: "Wait until processing finishes." }, 409);
   // The upload and its styled MP4; a render still running notices the job is gone and removes its own file.
-  for (const f of [j.filePath, j.renderPath]) if (f) await unlink(f).catch(() => {});
+  for (const f of [j.filePath, j.renderPath, j.captionCustom?.logo && logoPath(j.id, j.captionCustom.logo.ext)]) if (f) await unlink(f).catch(() => {});
   await db.delete(jobs).where(eq(jobs.id, j.id));
   return json({ ok: true });
 }

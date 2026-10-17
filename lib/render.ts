@@ -1,9 +1,9 @@
 import { spawn } from "node:child_process";
-import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import type { Cue } from "@/db";
-import { buildAss, type CaptionCustom } from "@/lib/captionStyles";
+import { buildAss, canvasSize, type CaptionCustom } from "@/lib/captionStyles";
 import { bin, STORAGE, videoSize } from "@/lib/media";
 
 const FONTS = resolve(/*turbopackIgnore: true*/ process.cwd(), "public", "caption-fonts");
@@ -16,7 +16,9 @@ type Job = { id: string; filePath: string; durationSec: number; cues: Cue[]; cap
  */
 export async function renderStyled(job: Job, onProgress: (pct: number) => void) {
   const size = await videoSize(job.filePath);
-  const { width, height } = size ?? { width: 1920, height: 1080 };
+  const src = size ?? { width: 1920, height: 1080 };
+  const canvas = job.captionCustom?.canvas;
+  const { width, height } = canvasSize(canvas, src.width, src.height); // the exported frame
   const lang = (["ta", "en", "both"].includes(job.renderLang) ? job.renderLang : "both") as "ta" | "en" | "both";
   const dir = await mkdtemp(join(tmpdir(), "vasanam-render-"));
   const outDir = join(STORAGE, "renders");
@@ -29,11 +31,24 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
     const input = size
       ? ["-i", job.filePath]
       : ["-f", "lavfi", "-i", `color=c=0x0c0c14:s=${width}x${height}:r=30`, "-i", job.filePath, "-shortest"];
+    const audio = size ? "0:a?" : "1:a?";
+    const logo = await logoFile(job);
+    const graph = [frame(canvas, width, height, !!size)];
+    let last = "framed";
+    if (logo) {
+      const l = job.captionCustom.logo!;
+      input.push("-i", logo);
+      const w = Math.max(8, Math.round((width * l.size) / 2) * 2);
+      graph.push(`[${size ? 1 : 2}:v]scale=${w}:-2,format=rgba,colorchannelmixer=aa=${l.opacity}[logo]`);
+      graph.push(`[${last}][logo]overlay=x=${Math.round(l.x * width)}-w/2:y=${Math.round(l.y * height)}-h/2[logoed]`);
+      last = "logoed";
+    }
+    // The ass filter with complex shaping: Tamil and other Indic scripts need it (otherwise vowel signs like ே land
+    // after the consonant instead of before it). The server also needs a font with the script (fonts-noto-core).
+    graph.push(`[${last}]ass=subs.ass:fontsdir=fonts:shaping=complex[out]`);
     const args = [
       "-y", "-v", "error", "-nostats", "-progress", "pipe:1", ...input,
-      // The ass filter with complex shaping: Tamil and other Indic scripts need it (otherwise vowel signs like ே land
-      // after the consonant instead of before it). The server also needs a font with the script (fonts-noto-core).
-      "-vf", "ass=subs.ass:fontsdir=fonts:shaping=complex",
+      "-filter_complex", graph.join(";"), "-map", "[out]", "-map", audio,
       "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
       "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out,
     ];
@@ -52,4 +67,26 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+}
+
+/** The uploaded logo of a job, when it has one. */
+async function logoFile(job: Job) {
+  const l = job.captionCustom?.logo;
+  if (!l) return null;
+  const f = logoPath(job.id, l.ext);
+  return access(f).then(() => f, () => null);
+}
+
+export const logoPath = (id: string, ext: string) => join(STORAGE, "logos", `${id}.${ext}`);
+
+/**
+ * The video in the exported frame: as it is, filling the shape (cropped), or fitting inside it on a colour or on a
+ * blurred, filled copy of itself. Output label [framed].
+ */
+function frame(canvas: CaptionCustom["canvas"], w: number, h: number, video: boolean) {
+  if (!video || !canvas || canvas.ratio === "source") return "[0:v]setsar=1[framed]";
+  if (canvas.fit === "fill") return `[0:v]scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h},setsar=1[framed]`;
+  if (canvas.bg !== "blur") return `[0:v]scale=${w}:${h}:force_original_aspect_ratio=decrease:force_divisible_by=2,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=0x${canvas.bg.slice(1)},setsar=1[framed]`;
+  return `[0:v]split[a][b];[a]scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h},boxblur=24:2[bg];` +
+    `[b]scale=${w}:${h}:force_original_aspect_ratio=decrease:force_divisible_by=2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[framed]`;
 }
