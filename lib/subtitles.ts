@@ -290,3 +290,56 @@ export function dropAnchor(c: Cue): Cue {
   delete out.anchor;
   return out;
 }
+
+/**
+ * English captions in whole sentences, for English shown on its own. The English line of a Tamil (or other) project is
+ * shared across the Tamil captions word by word, so alone it reads in fragments ("I also got acne in the same" /
+ * "way,"). Here each stretch of back-to-back captions is read as one translation and cut again at sentence ends, a
+ * long sentence also at a comma or a clause word, up to `max` characters (two lines). Each caption starts with its
+ * first word (measured word starts when known) and keeps that word's caption look.
+ */
+export function englishCues(cues: Cue[], max = 84): Cue[] {
+  const out: Cue[] = [];
+  for (let i = 0; i < cues.length; ) {
+    let j = i;
+    while (j + 1 < cues.length && cues[j + 1].start - cues[j].end < 0.3) j++;
+    const words: { w: string; s: number; c: Cue }[] = [];
+    for (let k = i; k <= j; k++) {
+      const c = cues[k], ws = c.en.split(/\s+/).filter(Boolean);
+      const total = ws.reduce((n, w) => n + w.length + 1, 0) || 1;
+      let so = 0;
+      const st = c.we && c.we.length === ws.length ? c.we : ws.map((w) => { const t = c.start + ((c.end - c.start) * so) / total; so += w.length + 1; return t; });
+      ws.forEach((w, n) => words.push({ w, s: st[n], c }));
+    }
+    const runEnd = cues[j].end;
+    i = j + 1;
+    if (!words.length) continue;
+    // Cut points: after a sentence end; a long sentence also at its best break before it gets too long.
+    const pieces: (typeof words)[] = [];
+    let cur: typeof words = [];
+    const len = (ws: typeof words) => ws.reduce((n, x) => n + x.w.length + 1, 0) - 1;
+    for (const x of words) {
+      if (cur.length && len([...cur, x]) > max) {
+        let at = cur.length; // break before the last clause word or after the last comma in the second half
+        for (let k = cur.length - 1; k >= Math.ceil(cur.length / 2); k--) {
+          if (/[,;:]$/.test(cur[k - 1]?.w ?? "")) { at = k; break; }
+          if (CLAUSE.test(cur[k].w.replace(/^[("']+/, ""))) { at = k; break; }
+        }
+        pieces.push(cur.slice(0, at));
+        cur = cur.slice(at);
+      }
+      cur.push(x);
+      if (/[.?!]["')]*$/.test(x.w) && !/^(Mr|Mrs|Ms|Dr|St|vs|etc)\.$/i.test(x.w)) { pieces.push(cur); cur = []; }
+    }
+    if (cur.length) pieces.push(cur);
+    pieces.forEach((p, k) => {
+      const start = k ? p[0].s : Math.min(p[0].s, words[0].c.start);
+      const end = k + 1 < pieces.length ? pieces[k + 1][0].s : runEnd;
+      if (end - start < 0.05) return;
+      const c: Cue = { start, end, ta: "", en: p.map((x) => x.w).join(" "), we: p.map((x) => Math.max(start, x.s)) };
+      if (p[0].c.style) c.style = p[0].c.style;
+      out.push(c);
+    });
+  }
+  return out;
+}

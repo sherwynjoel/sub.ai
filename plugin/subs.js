@@ -85,6 +85,51 @@
     });
   }
 
+  var CLAUSE = /^(and|but|so|because|that|which|who|when|where|if|or|then|while|though|although)$/i;
+
+  // English captions in whole sentences, for English placed on its own (same rule as lib/subtitles.ts englishCues):
+  // the English line is shared across the Tamil captions word by word, so alone it reads in fragments.
+  function englishCues(cues, max) {
+    max = max || 84;
+    var out = [];
+    for (var i = 0; i < cues.length; ) {
+      var j = i;
+      while (j + 1 < cues.length && cues[j + 1].start - cues[j].end < 0.3) j++;
+      var words = [];
+      for (var k = i; k <= j; k++) {
+        var c = cues[k], ws = String(c.en || "").split(/\s+/).filter(Boolean), total = 0, so = 0;
+        ws.forEach(function (w) { total += w.length + 1; });
+        var st = c.we && c.we.length === ws.length ? c.we : ws.map(function (w) { var t = c.start + ((c.end - c.start) * so) / (total || 1); so += w.length + 1; return t; });
+        for (var n = 0; n < ws.length; n++) words.push({ w: ws[n], s: st[n], c: c });
+      }
+      var runEnd = cues[j].end;
+      i = j + 1;
+      if (!words.length) continue;
+      var pieces = [], cur = [];
+      var len = function (ws) { var n = -1; ws.forEach(function (x) { n += x.w.length + 1; }); return n; };
+      words.forEach(function (x) {
+        if (cur.length && len(cur.concat([x])) > max) {
+          var at = cur.length;
+          for (var b = cur.length - 1; b >= Math.ceil(cur.length / 2); b--) {
+            if (cur[b - 1] && /[,;:]$/.test(cur[b - 1].w)) { at = b; break; }
+            if (CLAUSE.test(cur[b].w.replace(/^[("']+/, ""))) { at = b; break; }
+          }
+          pieces.push(cur.slice(0, at));
+          cur = cur.slice(at);
+        }
+        cur.push(x);
+        if (/[.?!]["')]*$/.test(x.w) && !/^(Mr|Mrs|Ms|Dr|St|vs|etc)\.$/i.test(x.w)) { pieces.push(cur); cur = []; }
+      });
+      if (cur.length) pieces.push(cur);
+      pieces.forEach(function (p, q) {
+        var start = q ? p[0].s : Math.min(p[0].s, words[0].c.start), end = q + 1 < pieces.length ? pieces[q + 1][0].s : runEnd;
+        if (end - start < 0.05) return;
+        out.push({ start: start, end: end, ta: "", en: p.map(function (x) { return x.w; }).join(" "), we: p.map(function (x) { return Math.max(start, x.s); }) });
+      });
+    }
+    return out;
+  }
+
   function stamp(sec) {
     var ms = Math.round(Math.max(0, sec) * 1000);
     function p(n, w) { n = String(n); while (n.length < (w || 2)) n = "0" + n; return n; }
@@ -101,6 +146,7 @@
   exports.breakLines = breakLines;
   exports.textOf = textOf;
   exports.partsChunks = partsChunks;
+  exports.englishCues = englishCues;
   exports.stamp = stamp;
   exports.toSrt = toSrt;
 })(typeof module !== "undefined" && module.exports && typeof window === "undefined" ? module.exports : (window.Subs = {}));

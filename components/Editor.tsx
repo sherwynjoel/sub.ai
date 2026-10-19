@@ -6,6 +6,7 @@ import type { Cue } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
 import { CANVAS_RATIOS, CAPTION_STYLES, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
 import { insertAt, mergeCues, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
+import { englishCues } from "@/lib/subtitles";
 import LookControls from "@/components/LookControls";
 import StyledCaption from "@/components/StyledCaption";
 import Timeline from "@/components/Timeline";
@@ -444,7 +445,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   style={{ left: `${custom.logo.x * 100}%`, top: `${custom.logo.y * 100}%`, width: `${custom.logo.size * 100}%`, opacity: custom.logo.opacity }}
                   onPointerDown={(e) => { setTab("layers"); dragIn(e, (x, y) => tweak({ logo: { ...custom.logo!, x, y } })); }} />
               )}
-              <LiveCaption video={video} cues={cues} styleId={styleId} custom={custom} portrait={portrait} view={view} selected={selected}
+              <LiveCaption video={video} cues={view === "en" && cues.some((c) => c.ta) ? englishCues(cues) : cues} styleId={styleId} custom={custom} portrait={portrait} view={view} selected={selected}
                 onMove={(i, x, y) => { if (tab === "caption" && i === selected) styleCue(i, { x, y }); else tweak({ x, y }); }} />
             </div>
           ) : (

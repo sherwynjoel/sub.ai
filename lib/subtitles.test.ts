@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toSrt, toVtt, mergeChunks, pairChunks, splitLine, layoutCue, divide, naturalBreak, shiftCues, breakLines, snapToPauses, wordStarts, retimeWindows } from "./subtitles";
+import { toSrt, toVtt, mergeChunks, pairChunks, splitLine, layoutCue, divide, naturalBreak, shiftCues, breakLines, snapToPauses, wordStarts, retimeWindows, englishCues } from "./subtitles";
 import { secondsLeft, effectivePlan } from "./plans";
 
 const cue = (start: number, end: number, ta = "வணக்கம்", en = "Hello") => ({ start, end, ta, en });
@@ -128,4 +128,24 @@ test("retimeWindows moves the cuts inside a model window to where their first wo
   assert.ok(out[1].start >= 4.9 && out[1].start < 5.4 && out[0].end === out[1].start, `cut at ${out[1].start}`);
   // Not from a window (no anchor): left alone.
   assert.equal(retimeWindows([cue(0, 3.5, "aaaa bbbb", ""), cue(3.5, 7, "cccc dddd", "")], level, 0.02)[1].start, 3.5);
+});
+
+test("englishCues: whole sentences from an English line shared across the Tamil captions", () => {
+  const cues = [
+    { start: 0, end: 1.6, ta: "இப்போ சில patients கேக்குறாங்க sir,", en: "Now some patients are asking, sir," },
+    { start: 1.6, end: 4.0, ta: "எனக்கும் ஒரே மாதிரி", en: "I also got acne in the same" },
+    { start: 4.0, end: 4.3, ta: "என்", en: "way," },
+    { start: 4.3, end: 5.6, ta: "friend-க்கும்", en: "and my friend also got it." },
+    { start: 9, end: 10, ta: "அடுத்து", en: "Next." },
+  ];
+  const out = englishCues(cues);
+  assert.deepEqual(out.map((c) => c.en), [
+    "Now some patients are asking, sir, I also got acne in the same way,",
+    "and my friend also got it.",
+    "Next.",
+  ]);
+  assert.equal(out[0].start, 0);
+  assert.equal(out[1].end, 5.6);
+  assert.deepEqual([out[2].start, out[2].end], [9, 10], "a gap starts a new stretch");
+  assert.ok(out.every((c) => c.ta === "" && c.we!.length === c.en.split(" ").length));
 });

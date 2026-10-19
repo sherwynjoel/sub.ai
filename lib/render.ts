@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import type { Cue } from "@/db";
 import { buildAss, canvasSize, type CaptionCustom } from "@/lib/captionStyles";
 import { bin, STORAGE, videoSize } from "@/lib/media";
+import { englishCues } from "@/lib/subtitles";
 
 const FONTS = resolve(/*turbopackIgnore: true*/ process.cwd(), "public", "caption-fonts");
 
@@ -25,7 +26,7 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
   await mkdir(outDir, { recursive: true });
   const out = join(outDir, `${job.id}.mp4`);
   try {
-    await writeFile(join(dir, "subs.ass"), buildAss(job.cues, { styleId: job.captionStyle, custom: job.captionCustom, lang, width, height }), "utf8");
+    await writeFile(join(dir, "subs.ass"), buildAss(lang === "en" ? englishCues(job.cues) : job.cues, { styleId: job.captionStyle, custom: job.captionCustom, lang, width, height }), "utf8");
     // Relative paths keep Windows drive colons out of the filter string, which ffmpeg would misparse.
     await cp(FONTS, join(dir, "fonts"), { recursive: true });
     const input = size

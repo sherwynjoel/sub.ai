@@ -1,6 +1,6 @@
 // node plugin/subs.test.js
 const assert = require("node:assert/strict");
-const { placeCues, toSrt, partsChunks } = require("./subs.js");
+const { placeCues, toSrt, partsChunks, englishCues } = require("./subs.js");
 
 const cues = [
   { start: 1, end: 3, ta: "ஒன்று", en: "one" },
@@ -32,4 +32,9 @@ assert.deepEqual(tp.map((p) => [p.start, p.end]), [[0, 3], [3, 6]]);
 assert.deepEqual(tp[1].at, [3, 4.5, 5]);
 assert.deepEqual(placeCues([timed], 10, 0, 99)[0].w, [10, 10.5, 11, 13, 14.5, 15]);
 assert.equal(partsChunks({ start: 0, end: 4, ta: "a b c", en: "", w: [1.5, 2, 3] }, "ta")[0].at[0], 1.5, "first box waits for its word");
+// English on its own: whole sentences, not the pieces shared across the Tamil captions.
+assert.deepEqual(englishCues([
+  { start: 0, end: 2, ta: "அ", en: "I also got acne in the same" },
+  { start: 2, end: 2.4, ta: "ஆ", en: "way." },
+]).map((c) => [c.en, c.start, c.end]), [["I also got acne in the same way.", 0, 2.4]]);
 console.log("plugin subs ok");

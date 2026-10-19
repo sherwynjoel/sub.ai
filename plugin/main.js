@@ -185,7 +185,9 @@
   function placeCuesNow(job, lang) {
     // The user's line count: the editor's Lines once a project is open, else the main screen's (empty = Auto).
     var lines = editing ? editing.custom.lines : (+$("linesMain").value || undefined);
-    var cues = window.Subs.placeCues(job.cues, picked.offset, picked.inS, picked.outS);
+    // English on its own goes on in whole sentences (the English line is shared across the Tamil captions).
+    var source = lang === "en" && job.cues.some(function (c) { return c.ta; }) ? window.Subs.englishCues(job.cues) : job.cues;
+    var cues = window.Subs.placeCues(source, picked.offset, picked.inS, picked.outS);
     if (!cues.length) return Promise.resolve("OK|No speech was found in this clip.");
     var tpl = HOST === "PPRO" ? template() : null;
     if (tpl) {
