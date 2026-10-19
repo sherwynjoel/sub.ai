@@ -7,7 +7,7 @@
 </head>
 <body>
   <header>
-    <span class="logo"><i></i>Vasanam <small class="muted">v1.0.31</small></span> <!-- shortcut: keep in step with CSXS/manifest.xml by hand, automate in build.ps1 if it drifts -->
+    <span class="logo"><i></i>Vasanam <small class="muted">v1.0.32</small></span> <!-- shortcut: keep in step with CSXS/manifest.xml by hand, automate in build.ps1 if it drifts -->
     <span class="head-right">
       <span id="account" class="chip" hidden></span>
       <button id="settingsBtn" class="link" hidden>Account</button>
@@ -84,6 +84,7 @@
           </label>
           <label>Write it as
             <select id="script">
+              <option value="english" selected>Full English translation</option>
               <option value="mixed">Native script, English words as English</option>
               <option value="roman">Roman letters (Tanglish)</option>
               <option value="native">Native script only</option>

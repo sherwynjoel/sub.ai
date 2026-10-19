@@ -232,7 +232,7 @@
     store("vs_style", $("styleMain").value);
     store("vs_safe", $("safeMain").value);
     store("vs_lines", $("linesMain").value);
-    api("POST", "/api/upload?name=" + encodeURIComponent(picked.name) + "&lang=" + $("language").value + "&script=" + $("script").value + "&english=" + ($("english").checked || $("lang").value !== "ta" ? 1 : 0) + (HOST === "PPRO" ? "" : "&style=" + $("styleMain").value) + "&safe=" + $("safeMain").value, { file: picked.file }, function (f) { progress(f * 40, "Uploading… " + Math.round(f * 100) + "%"); })
+    api("POST", "/api/upload?name=" + encodeURIComponent(picked.name) + "&lang=" + $("language").value + "&script=" + (englishOnly() ? "mixed" : $("script").value) + "&english=" + ($("english").checked || englishOnly() || $("lang").value !== "ta" ? 1 : 0) + (englishOnly() ? "&show=en" : "") + (HOST === "PPRO" ? "" : "&style=" + $("styleMain").value) + "&safe=" + $("safeMain").value, { file: picked.file }, function (f) { progress(f * 40, "Uploading… " + Math.round(f * 100) + "%"); })
       .then(function (r) {
         if (r.status !== 201) throw new Error(r.data.error || "Upload failed (" + r.status + ").");
         lastJob = r.data.id;
@@ -383,6 +383,13 @@
       .then(function () { $("placeBtn").disabled = false; });
   };
 
+  // "Full English translation" (Write it as): the whole clip as English sentences, translated from the spoken language.
+  function englishOnly() { return $("script").value === "english"; }
+  $("script").onchange = function () {
+    store("vs_script", $("script").value);
+    $("english").parentNode.hidden = englishOnly(); // the English line is the subtitles here
+    if (englishOnly()) { $("english").checked = true; $("lang").value = "en"; $("lang").onchange(); }
+  };
   // English on the timeline needs the English line: unticking it puts the spoken language on, and choosing English
   // (or both) ticks it again.
   $("english").onchange = function () {
@@ -563,7 +570,9 @@
   if (store("vs_safe")) $("safeMain").value = store("vs_safe");
   $("linesMain").value = store("vs_lines"); // lines per caption, Auto until the user picks
   if (/^(ta|en|both)$/.test(store("vs_lang"))) $("lang").value = store("vs_lang"); // English translation only until the user picks
+  if (/^(english|mixed|roman|native)$/.test(store("vs_script"))) $("script").value = store("vs_script"); // Full English translation until the user picks
   $("english").onchange(); // also sets the Lines hint
+  $("script").onchange();
 
   // ---------- developer test mode ----------
   // Only when <tmp>/vasanam-dev/ exists (never on customer machines): the panel runs commands written to
