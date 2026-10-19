@@ -237,7 +237,9 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .cz-check { display: flex; align-items: center; gap: .5em; font-size: .85rem; color: var(--ink-2); }
 
 /* ---------- Editor workspace: list | player | inspector, timeline below ---------- */
-.ed { width: min(1680px, calc(100vw - 32px)); position: relative; left: 50%; transform: translateX(-50%); gap: 14px; }
+/* Wider than the page column (.wrap: min(1180px, 100% - 40px)), centred on the window: a negative left margin of
+   half the difference (left: 50% + translate broke when the grid track grew to the editor's width). */
+.ed { width: min(1680px, calc(100vw - 32px)); margin-left: calc((min(1180px, 100vw - 40px) - min(1680px, 100vw - 32px)) / 2); gap: 14px; }
 .ed-top { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }
 .ed-title { min-width: 0; }
 .ed-title h1 { margin: 2px 0 0; font-size: 1.4rem; overflow-wrap: anywhere; }
