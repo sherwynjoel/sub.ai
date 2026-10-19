@@ -21,7 +21,7 @@ export default function Dashboard() {
   const [drag, setDrag] = useState(false);
   const [language, setLanguage] = useState<string>(DEFAULT_LANGUAGE);
   const [script, setScript] = useState("mixed");
-  const [english, setEnglish] = useState(true);
+  const [show, setShow] = useState<"both" | "ta" | "en">("both"); // which lines the subtitles show
   const [safe, setSafe] = useState("none");
   const input = useRef<HTMLInputElement>(null);
 
@@ -41,7 +41,7 @@ export default function Dashboard() {
     setError("");
     setUpload({ name: file.name, pct: 0 });
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `/api/upload?name=${encodeURIComponent(file.name)}&lang=${language}&script=${script}&english=${english ? 1 : 0}&safe=${safe}`);
+    xhr.open("POST", `/api/upload?name=${encodeURIComponent(file.name)}&lang=${language}&script=${script}&english=${show === "ta" ? 0 : 1}&show=${show}&safe=${safe}`);
     xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
     xhr.upload.onprogress = (e) => e.lengthComputable && setUpload({ name: file.name, pct: Math.round((e.loaded / e.total) * 100) });
     xhr.onload = () => {
@@ -62,15 +62,19 @@ export default function Dashboard() {
           <select value={language} onChange={(e) => setLanguage(e.target.value)} disabled={!!upload}>
             {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name} · {l.native}</option>)}
           </select>
-          <select value={script} onChange={(e) => setScript(e.target.value)} disabled={!!upload} aria-label="Script">
+          <select value={show} onChange={(e) => setShow(e.target.value as typeof show)} disabled={!!upload} aria-label="Show">
+            <option value="both">{languageOf(language).name} + English</option>
+            <option value="ta">{languageOf(language).name} only</option>
+            <option value="en">English only (translation)</option>
+          </select>
+          {show !== "en" && <select value={script} onChange={(e) => setScript(e.target.value)} disabled={!!upload} aria-label="Script">
             <option value="mixed">{languageOf(language).name} script, English words as English</option>
             <option value="roman">Roman letters{language === "ta-IN" ? " (Tanglish)" : ""}</option>
             <option value="native">{languageOf(language).name} script only</option>
-          </select>
+          </select>}
           <select value={safe} onChange={(e) => setSafe(e.target.value)} disabled={!!upload} aria-label="Safe zone">
             {Object.entries(SAFE_ZONES).filter(([id]) => id !== "custom").map(([id, z]) => <option key={id} value={id}>{id === "none" ? "No safe zone" : `Safe zone: ${z.name}`}</option>)}
           </select>
-          <span className="muted"><input type="checkbox" checked={english} onChange={(e) => setEnglish(e.target.checked)} disabled={!!upload} aria-label="Also English" /> + English</span>
         </span>
       </label>
       <div

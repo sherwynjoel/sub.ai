@@ -137,7 +137,10 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const hasEnglish = initial.cues.some((c) => c.en);
-  const [view, setView] = useState<View>(hasEnglish ? "both" : "ta");
+  // What the subtitles show (the project's choice from upload, changed with the buttons under the video): the
+  // preview, the MP4 and the default download all follow it.
+  const shown = initial.captionCustom?.show;
+  const [view, setViewState] = useState<View>(!hasEnglish ? "ta" : shown ?? "both");
   const [now, setNow] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [duration, setDuration] = useState(Math.max(1, ...initial.cues.map((c) => c.end)));
@@ -147,7 +150,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const bgVideo = useRef<HTMLVideoElement>(null);
   const [tab, setTab] = useState<Tab>("caption");
   const [zoom, setZoom] = useState(80); // timeline px per second
-  const [lang, setLang] = useState<View>("ta");
+  const [lang, setLang] = useState<View>(!hasEnglish ? "ta" : shown ?? "both");
   const [fmt, setFmt] = useState("srt");
   const [styleId, setStyleId] = useState(initial.captionStyle || "minimal");
   const [custom, setCustom] = useState<CaptionCustom>(initial.captionCustom ?? {});
@@ -212,6 +215,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     return () => clearTimeout(t);
   }, [custom]); // eslint-disable-line react-hooks/exhaustive-deps
   const tweak = (patch: CaptionCustom) => setCustom((c) => ({ ...c, ...patch }));
+  const setView = (v: View) => { setViewState(v); setLang(v); tweak({ show: v }); };
   const look = resolveStyle(styleId, custom, portrait);
   const layers = custom.layers ?? [];
   const setLayers = (next: TextLayer[]) => tweak({ layers: next });

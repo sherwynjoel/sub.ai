@@ -27,10 +27,12 @@ export async function POST(req: Request) {
   const lang = q.get("lang") ?? DEFAULT_LANGUAGE;
   if (!isLanguage(lang)) return json({ error: "Unsupported subtitle language." }, 400);
   const script = (SCRIPTS as readonly string[]).includes(q.get("script") ?? "") ? (q.get("script") as Script) : "mixed";
-  const withEnglish = q.get("english") !== "0";
+  // show: which lines the subtitles show; English only still needs the English pass.
+  const show = q.get("show") === "en" || q.get("show") === "ta" ? (q.get("show") as "en" | "ta") : undefined;
+  const withEnglish = show === "en" || q.get("english") !== "0";
   const captionStyle = CAPTION_STYLES.some((s) => s.id === q.get("style")) ? q.get("style")! : DEFAULT_STYLE;
   const safe = q.get("safe") ?? "";
-  const captionCustom = safe in SAFE_ZONES && safe !== "none" && safe !== "custom" ? { safe: safe as keyof typeof SAFE_ZONES } : {};
+  const captionCustom = { ...(safe in SAFE_ZONES && safe !== "none" && safe !== "custom" ? { safe: safe as keyof typeof SAFE_ZONES } : {}), ...(show ? { show } : {}) };
   const dir = join(STORAGE, "uploads", u.id);
   await mkdir(dir, { recursive: true });
   const path = join(dir, randomUUID() + (extname(name).toLowerCase().replace(/[^.a-z0-9]/g, "") || ".mp4"));

@@ -107,6 +107,7 @@ export type CaptionCustom = {
   shadowColor?: string; shadowSize?: number; boxPad?: number;
   anim?: Anim; highlight?: Highlight;
   canvas?: Canvas; layers?: TextLayer[]; logo?: Logo; // project only
+  show?: "ta" | "en" | "both";   // project only: which lines the subtitles show (ta = the project's language)
 };
 export type Margins = { top: number; right: number; bottom: number; left: number }; // fractions of the frame
 
@@ -176,6 +177,7 @@ export function sanitizeCustom(input: unknown): CaptionCustom {
   if (typeof i.anim === "string" && i.anim in ANIMS) out.anim = i.anim as Anim;
   if (typeof i.highlight === "string" && i.highlight in HIGHLIGHTS) out.highlight = i.highlight as Highlight;
   if (typeof i.safe === "string" && i.safe in SAFE_ZONES) out.safe = i.safe as SafeZoneId;
+  if (i.show === "ta" || i.show === "en" || i.show === "both") out.show = i.show;
   const cv = i.canvas as Record<string, unknown> | undefined;
   if (cv && typeof cv === "object" && typeof cv.ratio === "string" && cv.ratio in CANVAS_RATIOS) {
     out.canvas = { ratio: cv.ratio as CanvasRatio, fit: cv.fit === "fill" ? "fill" : "fit", bg: cv.bg === "blur" || (typeof cv.bg === "string" && HEX.test(cv.bg)) ? cv.bg : "blur" };
@@ -201,7 +203,7 @@ export function sanitizeCustom(input: unknown): CaptionCustom {
 /** A caption's or layer's own look: the project-only settings (safe zone, canvas, layers, logo) left out. */
 export function ownLook(input: unknown): CaptionCustom {
   const out = sanitizeCustom(input);
-  delete out.safe; delete out.safeCustom; delete out.canvas; delete out.layers; delete out.logo;
+  delete out.safe; delete out.safeCustom; delete out.canvas; delete out.layers; delete out.logo; delete out.show;
   return out;
 }
 
