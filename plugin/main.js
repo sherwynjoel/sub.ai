@@ -232,7 +232,7 @@
     store("vs_style", $("styleMain").value);
     store("vs_safe", $("safeMain").value);
     store("vs_lines", $("linesMain").value);
-    api("POST", "/api/upload?name=" + encodeURIComponent(picked.name) + "&lang=" + $("language").value + "&script=" + $("script").value + "&english=" + ($("english").checked ? 1 : 0) + (HOST === "PPRO" ? "" : "&style=" + $("styleMain").value) + "&safe=" + $("safeMain").value, { file: picked.file }, function (f) { progress(f * 40, "Uploading… " + Math.round(f * 100) + "%"); })
+    api("POST", "/api/upload?name=" + encodeURIComponent(picked.name) + "&lang=" + $("language").value + "&script=" + $("script").value + "&english=" + ($("english").checked || $("lang").value !== "ta" ? 1 : 0) + (HOST === "PPRO" ? "" : "&style=" + $("styleMain").value) + "&safe=" + $("safeMain").value, { file: picked.file }, function (f) { progress(f * 40, "Uploading… " + Math.round(f * 100) + "%"); })
       .then(function (r) {
         if (r.status !== 201) throw new Error(r.data.error || "Upload failed (" + r.status + ").");
         lastJob = r.data.id;
@@ -383,15 +383,18 @@
       .then(function () { $("placeBtn").disabled = false; });
   };
 
-  // Without an English line, only "That language" can go on the timeline.
+  // English on the timeline needs the English line: unticking it puts the spoken language on, and choosing English
+  // (or both) ticks it again.
   $("english").onchange = function () {
-    var on = $("english").checked;
-    Array.prototype.forEach.call($("lang").options, function (o) { o.disabled = !on && o.value !== "ta"; });
-    if (!on) $("lang").value = "ta";
+    if (!$("english").checked && $("lang").value !== "ta") { $("lang").value = "ta"; store("vs_lang", "ta"); }
     $("lang").onchange();
   };
-  // Lines count per language: with both stacked, the caption has twice as many.
-  $("lang").onchange = function () { $("linesHint").hidden = $("lang").value !== "both"; };
+  // Lines count per language: with both stacked, the caption has twice as many. The choice is remembered.
+  $("lang").onchange = function () {
+    if ($("lang").value !== "ta") $("english").checked = true;
+    store("vs_lang", $("lang").value);
+    $("linesHint").hidden = $("lang").value !== "both";
+  };
 
   // ---------- style previews (Premiere) ----------
   // A template's picture: templates/previews/<id>.png (cropped to the text, shipped with the templates), else the
@@ -559,6 +562,7 @@
   // Safe zone for new projects, chosen before generating (list in index.html, same ids as lib/captionStyles.ts); the last choice is remembered.
   if (store("vs_safe")) $("safeMain").value = store("vs_safe");
   $("linesMain").value = store("vs_lines"); // lines per caption, Auto until the user picks
+  if (/^(ta|en|both)$/.test(store("vs_lang"))) $("lang").value = store("vs_lang"); // English translation only until the user picks
   $("english").onchange(); // also sets the Lines hint
 
   // ---------- developer test mode ----------

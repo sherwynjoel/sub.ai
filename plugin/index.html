@@ -7,7 +7,7 @@
 </head>
 <body>
   <header>
-    <span class="logo"><i></i>Vasanam <small class="muted">v1.0.30</small></span> <!-- shortcut: keep in step with CSXS/manifest.xml by hand, automate in build.ps1 if it drifts -->
+    <span class="logo"><i></i>Vasanam <small class="muted">v1.0.31</small></span> <!-- shortcut: keep in step with CSXS/manifest.xml by hand, automate in build.ps1 if it drifts -->
     <span class="head-right">
       <span id="account" class="chip" hidden></span>
       <button id="settingsBtn" class="link" hidden>Account</button>
@@ -105,8 +105,8 @@
         <div class="pair">
           <label>Put on the timeline
             <select id="lang">
-              <option value="ta">That language</option>
-              <option value="en">English</option>
+              <option value="en" selected>English translation only</option>
+              <option value="ta">Spoken language only</option>
               <option value="both">Both, stacked</option>
             </select>
           </label>
