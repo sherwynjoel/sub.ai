@@ -89,11 +89,13 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
     const up = (ev: PointerEvent) => {
       removeEventListener("pointermove", move);
       removeEventListener("pointerup", up);
+      removeEventListener("pointercancel", up);
       if (moved) onDragEnd();
-      else { onSelect(i); onSeek(typeof mode === "number" ? words[mode] : timeAt(ev.clientX)); }
+      else if (ev.type === "pointerup") { onSelect(i); onSeek(typeof mode === "number" ? words[mode] : timeAt(ev.clientX)); }
     };
     addEventListener("pointermove", move);
     addEventListener("pointerup", up);
+    addEventListener("pointercancel", up); // a touch taken over by scrolling
   }
 
   /** Drag a text layer (move, or one edge); a press without movement selects it. */
@@ -113,11 +115,13 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
     const up = (ev: PointerEvent) => {
       removeEventListener("pointermove", move);
       removeEventListener("pointerup", up);
+      removeEventListener("pointercancel", up);
       if (moved) onDragEnd();
-      else { onSelectLayer?.(i); onSeek(timeAt(ev.clientX)); }
+      else if (ev.type === "pointerup") { onSelectLayer?.(i); onSeek(timeAt(ev.clientX)); }
     };
     addEventListener("pointermove", move);
     addEventListener("pointerup", up);
+    addEventListener("pointercancel", up); // a touch taken over by scrolling
   }
 
   /** Scrub: press on the ruler or empty track and drag to move the playhead. */
@@ -125,9 +129,10 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
     e.preventDefault();
     onSeek(timeAt(e.clientX));
     const move = (ev: PointerEvent) => onSeek(timeAt(ev.clientX));
-    const up = () => { removeEventListener("pointermove", move); removeEventListener("pointerup", up); };
+    const up = () => { removeEventListener("pointermove", move); removeEventListener("pointerup", up); removeEventListener("pointercancel", up); };
     addEventListener("pointermove", move);
     addEventListener("pointerup", up);
+    addEventListener("pointercancel", up); // a touch taken over by scrolling
   }
 
   // Layers that overlap in time go on separate lanes.

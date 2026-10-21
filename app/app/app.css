@@ -340,3 +340,51 @@ kbd { font: 600 .75rem/1 var(--font-body); padding: 3px 6px; border: 1px solid v
 .layer-list li.on { border-color: var(--black); box-shadow: 0 0 0 1px var(--black); }
 .emoji-row { display: flex; gap: 4px; flex-wrap: wrap; }
 .emoji-row button { font-size: 1.2rem; line-height: 1; padding: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--glass-strong); cursor: pointer; }
+
+/* ---------- Phones ---------- */
+.plugin-grid > * { min-width: 0; }
+.plugin-grid code, .howto code { overflow-wrap: anywhere; }
+.lang-row { flex-wrap: wrap; }
+@media (max-width: 720px) {
+  .lang-pick { justify-self: stretch; }
+  .lang-row { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .lang-row select { width: 100%; min-width: 0; }
+}
+
+/* Timeline on touch: a swipe on empty track scrolls it; captions, words, edges and the ruler still drag. */
+.tl { touch-action: pan-x pan-y; }
+.tl-ruler, .tl-block, .tl-word, .tl-edge { touch-action: none; }
+@media (pointer: coarse) {
+  .tl-edge { width: 16px; }
+  input, select, textarea { font-size: max(16px, 1em); } /* iOS zooms into smaller fields */
+}
+
+@media (max-width: 720px) {
+  .app-head { position: static; border-radius: 24px; }
+  .app-main { padding-top: 24px; }
+
+  /* Editor: video pinned on top, then the timeline, the inspector and the caption list. */
+  .ed { width: 100%; margin-left: 0; }
+  .ed-top { align-items: start; }
+  .ed-title h1 { font-size: 1.1rem; }
+  .ed-tools { width: 100%; }
+  .ed-tools .save-msg { flex: 1; font-size: .8rem; }
+  .ed-main { display: contents; }
+  .ed-stage { order: 1; position: sticky; top: 0; z-index: 5; margin: 0 -20px; padding: 6px 20px 8px; background: var(--bg, #f6f5fb); box-shadow: 0 6px 12px -10px rgb(0 0 0 / .4); }
+  .ed-stage .player { width: min(100%, calc(30svh * var(--ar, 1.78))) !important; }
+  .ed-transport { gap: 4px; }
+  .ed-transport .btn.small { padding: .45em .8em; font-size: .8rem; }
+  .ed-transport .seg button { padding: .35em .8em; font-size: .8rem; }
+  .ed-transport .ed-sep { display: none; }
+  .ed-time { min-width: 0; font-size: .8rem; }
+  .ed-timeline { order: 2; }
+  .ed-tl-bar > .muted { display: none; }
+  .ed-zoom { margin-left: auto; }
+  .ed-zoom input { width: 110px; }
+  .ed-side { order: 3; overflow: visible; padding-right: 0; }
+  .ed-tabs { position: static; }
+  .ed-list { order: 4; grid-row: auto; grid-column: auto; }
+  .insp-words li { grid-template-columns: minmax(0, 1fr) 100px 34px auto; }
+  .insp-words .time { width: 100px; }
+  .keys { display: none; }
+}

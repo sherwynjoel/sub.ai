@@ -439,7 +439,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
         <div className="ed-stage">
           {job.hasMedia || mediaUrl ? (
-            <div className="player" style={{ aspectRatio: frameRatio, width: `min(100%, ${(56 * frameRatio).toFixed(2)}vh)`, background: shaped && cv!.fit === "fit" && cv!.bg !== "blur" ? cv!.bg : undefined }}>
+            <div className="player" style={{ aspectRatio: frameRatio, "--ar": frameRatio, width: `min(100%, ${(56 * frameRatio).toFixed(2)}vh)`, background: shaped && cv!.fit === "fit" && cv!.bg !== "blur" ? cv!.bg : undefined } as React.CSSProperties}>
               {shaped && cv!.fit === "fit" && cv!.bg === "blur" && <video ref={bgVideo} className="bg-blur" src={mediaUrl ?? `/api/jobs/${job.id}/media`} muted playsInline preload="metadata" aria-hidden="true" />}
               <video ref={video} src={mediaUrl ?? `/api/jobs/${job.id}/media`} preload="metadata" onClick={togglePlay} style={shaped ? { objectFit: cv!.fit === "fill" ? "cover" : "contain" } : undefined}
                 onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
