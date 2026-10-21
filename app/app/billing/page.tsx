@@ -25,8 +25,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
           </p>
         </div>
         <div className="usage-meter">
-          <strong>{Math.floor(left / 60)} of {PLANS[plan].minutes} minutes left</strong>
-          <span className="bar"><i style={{ width: `${(left / total) * 100}%` }} /></span>
+          {/* Extra minutes (an admin top-up) can leave more than the plan gives. */}
+          <strong>{Math.floor(left / 60)}{left <= total ? ` of ${PLANS[plan].minutes}` : ""} minutes left</strong>
+          <span className="bar"><i style={{ width: `${Math.min(1, left / total) * 100}%` }} /></span>
         </div>
       </div>
       <BillingActions current={plan} live={live} preselect={(await searchParams).plan} />
