@@ -21,6 +21,9 @@ type View = "ta" | "en" | "both";
 type Tab = "caption" | "layers" | "style" | "export";
 const GROUPS = ["Premiere", "Trending", "Aesthetic", "Clean", "Fun"] as const;
 const RATIO = { "9:16": 9 / 16, "4:5": 4 / 5, "1:1": 1, "16:9": 16 / 9 } as const;
+/** Settings that belong to the project, not to a look: picking a style or resetting the look keeps them. */
+const PROJECT_KEYS: string[] = ["safe", "safeCustom", "canvas", "layers", "logo", "show", "lines"];
+const projectOnly = (c: CaptionCustom): CaptionCustom => Object.fromEntries(Object.entries(c).filter(([k]) => PROJECT_KEYS.includes(k)));
 const EMOJIS = ["😀", "😂", "🔥", "❤️", "👍", "🎉", "✨", "💯", "😍", "🙏", "👀", "⭐"];
 const FRAME = 1 / 30;
 
@@ -136,7 +139,10 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const dragFrom = useRef<Cue[] | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState("");
+  const [msg, setMsgState] = useState("");
+  const msgTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  /** A message under the toolbar; it clears itself (hints and errors after 6 s). */
+  const setMsg = (m: string, ms = 6000) => { clearTimeout(msgTimer.current); setMsgState(m); if (m) msgTimer.current = setTimeout(() => setMsgState(""), ms); };
   const hasEnglish = initial.cues.some((c) => c.en);
   // What the subtitles show (the project's choice from upload, changed with the buttons under the video): the
   // preview, the MP4 and the default download all follow it.
@@ -202,11 +208,13 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
   const saveLook = (body: object) =>
     fetch(`/api/jobs/${job.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => {});
+  // A new style starts from its own look; the project's layers, logo, canvas, safe zone, languages and lines stay.
   function pickStyle(id: string) {
+    const kept = projectOnly(custom);
     setStyleId(id);
-    setCustom({});
-    savedLook.current = "{}";
-    saveLook({ captionStyle: id, captionCustom: {} });
+    setCustom(kept);
+    savedLook.current = JSON.stringify(kept);
+    saveLook({ captionStyle: id, captionCustom: kept });
   }
   const savedLook = useRef(JSON.stringify(initial.captionCustom ?? {}));
   useEffect(() => {
@@ -246,7 +254,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     setSaving(true);
     const res = await fetch(`/api/jobs/${job.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ cues }) });
     setSaving(false);
-    if (res.ok) { setDirty(false); setMsg("Saved"); setTimeout(() => setMsg(""), 2000); }
+    if (res.ok) { setDirty(false); setMsg("Saved", 2000); }
     else setMsg((await res.json().catch(() => ({}))).error || "Couldn't save. Try again.");
     return res.ok;
   }
@@ -442,6 +450,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               {custom.logo && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img className={`logo-view${tab === "layers" ? " on" : ""}`} alt="Logo" src={`/api/jobs/${job.id}/logo?v=${logoVer}`} draggable={false}
+                  onError={() => { if (logoVer < 3) setTimeout(() => setLogoVer((v) => v + 1), 800); }}
                   style={{ left: `${custom.logo.x * 100}%`, top: `${custom.logo.y * 100}%`, width: `${custom.logo.size * 100}%`, opacity: custom.logo.opacity }}
                   onPointerDown={(e) => { setTab("layers"); dragIn(e, (x, y) => tweak({ logo: { ...custom.logo!, x, y } })); }} />
               )}
@@ -612,7 +621,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               ))}
               <div className="insp-head">
                 <h3>Customize</h3>
-                <button className="btn ghost small" onClick={() => setCustom({})} disabled={!Object.keys(custom).length}>Reset to {styleOf(styleId).name}</button>
+                <button className="btn ghost small" onClick={() => setCustom((c) => projectOnly(c))} disabled={Object.keys(custom).every((k) => PROJECT_KEYS.includes(k))}>Reset to {styleOf(styleId).name}</button>
               </div>
               <LookControls look={look} own={custom} set={tweak} tamil={tamil} />
               <div className="cz-grid">

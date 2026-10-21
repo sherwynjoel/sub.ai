@@ -7,7 +7,7 @@ import { SAFE_ZONES } from "@/lib/captionStyles";
 
 type Job = {
   id: string; filename: string; durationSec: number; status: string; progress: number;
-  error: string | null; createdAt: string; cueCount: number; language: string;
+  error: string | null; createdAt: string; cueCount: number; language: string; captionCustom?: { show?: "ta" | "en" | "both" };
 };
 
 const mins = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
@@ -109,7 +109,7 @@ export default function Dashboard() {
           jobs.map((j) => (
             <Link key={j.id} href={`/app/jobs/${j.id}`} className={`job ${j.status}`}>
               <span className="name">{j.filename}</span>
-              <span className="meta muted">{languageOf(j.language).name} · {mins(j.durationSec)} · {new Date(j.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+              <span className="meta muted">{languageOf(j.language).name}{j.captionCustom?.show === "en" ? " → English" : j.captionCustom?.show === "ta" ? " only" : ""} · {mins(j.durationSec)} · {new Date(j.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
               <span className="state">
                 {j.status === "processing" || j.status === "queued" ? (
                   <>
