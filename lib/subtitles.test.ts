@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toSrt, toVtt, mergeChunks, pairChunks, splitLine, layoutCue, divide, naturalBreak, shiftCues, breakLines, snapToPauses, wordStarts, retimeWindows, englishCues, translateBySentence, mergeShort } from "./subtitles";
+import { toSrt, toVtt, mergeChunks, pairChunks, splitLine, layoutCue, divide, naturalBreak, shiftCues, breakLines, snapToPauses, wordStarts, retimeWindows, englishCues, mergeShort, alignSentences } from "./subtitles";
 import { secondsLeft, effectivePlan } from "./plans";
 
 const cue = (start: number, end: number, ta = "வணக்கம்", en = "Hello") => ({ start, end, ta, en });
@@ -150,25 +150,16 @@ test("englishCues: whole sentences from an English line shared across the Tamil 
   assert.ok(out.every((c) => c.ta === "" && c.we!.length === c.en.split(" ").length));
 });
 
-test("translateBySentence: each native sentence translated on its own, its English shared across its captions", async () => {
-  const cues = [
-    { start: 0, end: 2, ta: "இப்போ treatment earlier-ஆ start பண்ணும்போது", en: "", anchor: true },
-    { start: 2, end: 4, ta: "நம்ம acne-யோட inflammation ரொம்ப நிறைய இருக்காது,", en: "" },
-    { start: 4, end: 5.5, ta: "scars இல்லாம heal ஆயிரும்.", en: "" },
-    { start: 5.5, end: 6.2, ta: "So சில பேத்துக்கு", en: "", anchor: true },
-  ];
-  const asked: string[] = [];
-  const out = await translateBySentence(cues, async (t) => {
-    asked.push(t);
-    return t.startsWith("So") ? "So for some people" : "When we start treatment early, the inflammation won't be much. It heals without scars.";
-  });
-  assert.equal(asked.length, 2, "one request per sentence; a new window starts a new one");
-  assert.equal(out.slice(0, 3).map((c) => c.en).join(" "), "When we start treatment early, the inflammation won't be much. It heals without scars.");
-  assert.equal(out[3].en, "So for some people", "the next sentence keeps its own English");
-  assert.ok(out.slice(0, 3).every((c) => c.en), "every caption of the sentence gets some English");
-});
-
 test("mergeShort: a caption too short to read joins the neighbour it runs into", () => {
   const out = mergeShort([cue(0, 2, "a b c", "x y z"), cue(2, 2.3, "d", "w"), cue(2.3, 5, "e f g h i j", "v u t s"), cue(8, 8.2, "k", "q")]);
   assert.deepEqual(out.map((c) => [c.start, c.end, c.ta, c.en]), [[0, 2.3, "a b c d", "x y z w"], [2.3, 5, "e f g h i j", "v u t s"], [8, 8.2, "k", "q"]]);
+});
+
+test("alignSentences keeps each English sentence with the native sentence it translates", () => {
+  const ta = ["இப்போ treatment earlier-ஆ start பண்ணும்போது நம்ம acne-யோட inflammation ரொம்ப நிறைய இருக்காது, scars இல்லாம heal ஆயிரும்.", "So சில பேத்துக்கு genetically-யாவே acne வந்து scar ஆகுற tendency ஜாஸ்தியா இருக்கும்."];
+  const en = ["When we start treatment earlier, the inflammation of our acne will not be too much.", "It will heal without scars.", "So, for some people, genetically, acne has a higher tendency to scar."];
+  assert.deepEqual(alignSentences(ta, en).map((p) => p.en), [en[0] + " " + en[1], en[2]]);
+  // More native sentences than English: they share one.
+  assert.deepEqual(alignSentences(["அ.", "ஆ இ ஈ."], ["One two three four."]).map((p) => [p.ta, p.en]), [["அ. ஆ இ ஈ.", "One two three four."]]);
+  assert.deepEqual(alignSentences(["அ."], []), [{ ta: "அ.", en: "" }]);
 });
