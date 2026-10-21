@@ -33,11 +33,19 @@ export const sarvam: Provider = async (audio, _dur, cfg, lang, want) => {
   return pairChunks(native, english).flatMap((c) => layoutCue(c));
 };
 
-/** Sarvam text translation into English (sarvam-translate covers all 22 languages; 2000 characters a request). */
-async function translateText(text: string, key: string, lang: string): Promise<string> {
+/** Languages Mayura translates: it reads code-mixed speech (Tamil with English words) far better than sarvam-translate. */
+const MAYURA = new Set(["bn-IN", "gu-IN", "hi-IN", "kn-IN", "ml-IN", "mr-IN", "od-IN", "pa-IN", "ta-IN", "te-IN"]);
+
+/**
+ * Sarvam text translation into English: Mayura (1000 characters a request) where it covers the language, otherwise
+ * sarvam-translate (all 22 languages, 2000 characters). sarvam-translate turned "எனக்கு இவ்ளோ deep scars இருக்கு"
+ * ("I have such deep scars") into "I have a tattoo that is more detailed".
+ */
+export async function translateText(text: string, key: string, lang: string): Promise<string> {
+  const mayura = MAYURA.has(lang);
   const r = await postJson("https://api.sarvam.ai/translate", {
     headers: { "api-subscription-key": key, "content-type": "application/json" },
-    body: JSON.stringify({ input: text.slice(0, 2000), source_language_code: lang, target_language_code: "en-IN", model: "sarvam-translate:v1" }),
+    body: JSON.stringify({ input: text.slice(0, mayura ? 1000 : 2000), source_language_code: lang, target_language_code: "en-IN", model: mayura ? "mayura:v1" : "sarvam-translate:v1", mode: "formal" }),
   });
   return String(r.translated_text ?? "");
 }

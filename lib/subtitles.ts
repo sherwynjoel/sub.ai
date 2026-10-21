@@ -358,7 +358,7 @@ export async function translateBySentence(cues: Cue[], translate: (text: string)
     if (cur.length && c.anchor) { groups.push(cur); cur = []; }
     cur.push(i);
     const len = cur.reduce((n, k) => n + cues[k].ta.length + 1, 0);
-    if (/[.?!।]["')\]]*$/.test(c.ta.trim()) || len > 1500) { groups.push(cur); cur = []; }
+    if (/[.?!।]["')\]]*$/.test(c.ta.trim()) || len > 900) { groups.push(cur); cur = []; } // Mayura takes 1000 characters
   });
   if (cur.length) groups.push(cur);
   const english: string[] = new Array(groups.length);
