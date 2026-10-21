@@ -343,3 +343,62 @@ export function englishCues(cues: Cue[], max = 84): Cue[] {
   }
   return out;
 }
+
+/**
+ * English for each sentence of the native line, from a text translator: captions are grouped into the sentences they
+ * cut (a sentence ends at . ? ! । or where a speech-model window ends), each sentence is translated on its own, and
+ * its English is shared across that sentence's captions by their length. The English then stays with the sentence it
+ * translates; a whole window translated at once drifted a caption or more from the speech (Tamil puts the verb last,
+ * so its English can't be cut where the Tamil is). Runs `parallel` translations at a time.
+ */
+export async function translateBySentence(cues: Cue[], translate: (text: string) => Promise<string>, parallel = 4): Promise<Cue[]> {
+  const groups: number[][] = [];
+  let cur: number[] = [];
+  cues.forEach((c, i) => {
+    if (cur.length && c.anchor) { groups.push(cur); cur = []; }
+    cur.push(i);
+    const len = cur.reduce((n, k) => n + cues[k].ta.length + 1, 0);
+    if (/[.?!।]["')\]]*$/.test(c.ta.trim()) || len > 1500) { groups.push(cur); cur = []; }
+  });
+  if (cur.length) groups.push(cur);
+  const english: string[] = new Array(groups.length);
+  const queue = groups.map((_, g) => g);
+  await Promise.all(Array.from({ length: Math.min(parallel, queue.length) }, async () => {
+    for (let g; (g = queue.shift()) !== undefined; ) {
+      const text = groups[g].map((k) => cues[k].ta).join(" ").trim();
+      english[g] = text ? (await translate(text)).trim() : "";
+    }
+  }));
+  const out = cues.map((c) => ({ ...c }));
+  groups.forEach((g, n) => {
+    const shares = divide(english[n], g.map((k) => Math.max(1, out[k].ta.length)));
+    g.forEach((k, j) => { out[k].en = shares[j] ?? ""; });
+  });
+  return out;
+}
+
+/**
+ * Captions too short to read (under `min` seconds; a few words left at the end of a sentence or a window) join the
+ * neighbour they run into, the one with less text, so nothing flashes past. Word times are dropped (they're measured
+ * again afterwards); a caption with a real gap on both sides is left alone.
+ */
+export function mergeShort(cues: Cue[], min = 0.7): Cue[] {
+  const out = cues.map((c) => ({ ...c }));
+  const join = (a: string, b: string) => [a, b].filter((x) => x.trim()).join(" ");
+  for (let i = 0; i < out.length; ) {
+    const c = out[i];
+    if (c.end - c.start >= min || out.length < 2) { i++; continue; }
+    const prev = i > 0 && c.start - out[i - 1].end < 0.05 ? out[i - 1] : null;
+    const next = i + 1 < out.length && out[i + 1].start - c.end < 0.05 ? out[i + 1] : null;
+    if (!prev && !next) { i++; continue; }
+    const intoPrev = !!prev && (!next || prev.ta.length + prev.en.length <= next.ta.length + next.en.length);
+    if (intoPrev) {
+      out[i - 1] = { ...prev!, end: c.end, ta: join(prev!.ta, c.ta), en: join(prev!.en, c.en), w: undefined, we: undefined };
+      out.splice(i, 1);
+    } else {
+      out[i + 1] = { ...next!, start: c.start, ta: join(c.ta, next!.ta), en: join(c.en, next!.en), w: undefined, we: undefined, ...(c.anchor ? { anchor: true } : {}) };
+      out.splice(i, 1);
+    }
+  }
+  return out.map((c) => { const o = { ...c }; if (!o.w) delete o.w; if (!o.we) delete o.we; return o; });
+}

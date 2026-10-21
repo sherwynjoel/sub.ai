@@ -1,5 +1,5 @@
 import { getSecret } from "@/lib/secrets";
-import { layoutCue, pairChunks, type Piece } from "@/lib/subtitles";
+import { layoutCue, pairChunks, translateBySentence, type Piece } from "@/lib/subtitles";
 import { postJson, type Provider, type Script } from "./shared";
 
 const API = "https://api.sarvam.ai/speech-to-text/job/v1";
@@ -7,15 +7,40 @@ const API = "https://api.sarvam.ai/speech-to-text/job/v1";
 /**
  * Sarvam AI (built for Indian languages). Saaras is run twice on the whole chunk through the Batch API, which
  * takes up to 2 h of audio and returns phrase-level timestamps, so nothing is cut at silences: once in code-mix
- * mode (Tanglish, Hinglish and the like stay as spoken) and once in translate mode (English). The two are paired by time.
+ * mode (Tanglish, Hinglish and the like stay as spoken) and once in translate mode (English). The English line is
+ * then translated from the native line sentence by sentence (text translation), with the translate pass as fallback.
  */
 export const sarvam: Provider = async (audio, _dur, cfg, lang, want) => {
   const key = await getSecret("SARVAM_API_KEY");
   if (!key) throw new Error("No Sarvam API key saved. Add it in /admin → Connections.");
-  const [native, english = []] = await Promise.all(passesFor(want.script, want.english).map((mode) => batch(audio, key, cfg.model, mode, lang)));
+  // Text translation gives the English line sentence by sentence (see below); Roman-letter lines (Tanglish) aren't text
+  // the translator reads well, so they keep the speech pass's English.
+  const bySentence = want.english && want.script !== "roman" && lang !== "en-IN";
+  const [native, english = []] = await Promise.all(passesFor(want.script, want.english && !bySentence).map((mode) => batch(audio, key, cfg.model, mode, lang)));
+  if (bySentence) {
+    // English from the speech pass covers a whole 10–30 s window and is only shared out by length, so it drifts from
+    // the speech; translated sentence by sentence it stays with the sentence it translates.
+    const own = native.flatMap((p) => layoutCue({ start: p.start, end: p.end, ta: p.text, en: "" }));
+    try {
+      return await translateBySentence(own, (text) => translateText(text, key, lang));
+    } catch (e) {
+      console.error("sentence translation failed; using the speech pass's English", e);
+      const spoken = await batch(audio, key, cfg.model, "translate", lang);
+      return pairChunks(native, spoken).flatMap((c) => layoutCue(c));
+    }
+  }
   // Saaras windows are 10–30 s, so each paired window is cut into readable cues by sentence.
   return pairChunks(native, english).flatMap((c) => layoutCue(c));
 };
+
+/** Sarvam text translation into English (sarvam-translate covers all 22 languages; 2000 characters a request). */
+async function translateText(text: string, key: string, lang: string): Promise<string> {
+  const r = await postJson("https://api.sarvam.ai/translate", {
+    headers: { "api-subscription-key": key, "content-type": "application/json" },
+    body: JSON.stringify({ input: text.slice(0, 2000), source_language_code: lang, target_language_code: "en-IN", model: "sarvam-translate:v1" }),
+  });
+  return String(r.translated_text ?? "");
+}
 
 const MODE = { mixed: "codemix", roman: "translit", native: "transcribe" } as const;
 type Mode = (typeof MODE)[Script] | "translate";
