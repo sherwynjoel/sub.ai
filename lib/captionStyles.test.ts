@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { assColor, buildAss, CAPTION_STYLES, keywordIndex, resolveStyle, SAFE_ZONES, sanitizeCustom, styleOf, wordTimes } from "./captionStyles";
+import { assColor, buildAss, CAPTION_STYLES, keywordIndex, resolveStyle, SAFE_ZONES, sanitizeCustom, stackBig, stackChunks, styleOf, tamilRuns, wordTimes } from "./captionStyles";
 
 test("assColor converts #RRGGBB[AA] to ASS &HAABBGGRR with inverted alpha", () => {
   assert.equal(assColor("#FFC83D"), "&H003DC8FF&");
@@ -34,13 +34,13 @@ test("sanitizeCustom keeps valid edits and drops anything unsafe", () => {
 });
 
 test("custom edits layer on a style and reach the MP4 subtitles", () => {
-  const r = resolveStyle("comic-pop", { font: "Fraunces", accent: "#00ff00", outline: null, position: "top", offset: 0.1 });
-  assert.equal(r.font, "Fraunces");
+  const r = resolveStyle("comic-pop", { font: "Satisfy", accent: "#00ff00", outline: null, position: "top", offset: 0.1 });
+  assert.equal(r.font, "Satisfy");
   assert.equal(r.keyword?.color, "#00ff00");
   assert.equal(r.outline, undefined);
   assert.equal(styleOf("comic-pop").keyword?.color, "#FFC83D"); // the preset itself is untouched
-  const ass = buildAss([{ start: 0, end: 2, ta: "hello world", en: "" }], { styleId: "comic-pop", custom: { font: "Fraunces", position: "top", offset: 0.1 }, lang: "ta", width: 1920, height: 1080 });
-  assert.match(ass, /Style: Main,Fraunces,/);
+  const ass = buildAss([{ start: 0, end: 2, ta: "hello world", en: "" }], { styleId: "comic-pop", custom: { font: "Satisfy", position: "top", offset: 0.1 }, lang: "ta", width: 1920, height: 1080 });
+  assert.match(ass, /Style: Main,Satisfy,/);
   assert.match(ass, /,8,\d+,\d+,108,1\n/); // top alignment, 10% margin
 });
 
@@ -82,4 +82,57 @@ test("safe zones keep captions inside the platform's clear area", () => {
   assert.equal(ml, Math.round(1080 * SAFE_ZONES.tiktok.m.left));
   assert.equal(mr, Math.round(1080 * SAFE_ZONES.tiktok.m.right));
   assert.ok(mv >= Math.round(1920 * SAFE_ZONES.tiktok.m.bottom));
+});
+
+test("stack styles: a few words a piece, small / big / small, English on the bottom line", () => {
+  const p = stackChunks("a bb ccc dddd eeeee", "", 0, 10);
+  assert.deepEqual(p.map((c) => c.parts), [["a", "bb", "ccc"], ["dddd", "eeeee", ""]]);
+  assert.deepEqual([p[0].s, p[1].e], [0, 10]);
+  assert.deepEqual(stackChunks("ஒன்று இரண்டு மூன்று", "one two three four", 0, 4).map((c) => c.parts), [["ஒன்று", "இரண்டு", "one two"], ["", "மூன்று", "three four"]]);
+  assert.equal(stackChunks("a b c d e f g h i", "", 0, 1.5).length, 1, "a short cue keeps one piece on screen long enough to read");
+  const ass = buildAss([{ start: 0, end: 3, ta: "நான் எப்பவுமே சூப்பரான", en: "I always" }], { styleId: "trending-1", lang: "both", width: 1080, height: 1920 });
+  assert.match(ass, /\\fnAnton/); assert.match(ass, /எப்பவுமே/); assert.match(ass, /always/);
+  assert.ok(stackBig("பரிந்துரைக்கப்பட்டது") < stackBig("Hi"));
+});
+
+test("tamilRuns puts Tamil in the Tamil font and returns to the font in effect", () => {
+  const fonts = { Main: "Anton", Second: "Poppins" };
+  assert.equal(tamilRuns("Hi வணக்கம் you", fonts, "Main"), "Hi {\\fnNoto Sans Tamil}வணக்கம் {\\fnAnton}you");
+  assert.equal(tamilRuns("{\\fnBangers}வணக்கம்\\N{\\rSecond}hello", fonts, "Main"), "{\\fnBangers}{\\fnNoto Sans Tamil}வணக்கம்{\\fnBangers}\\N{\\rSecond}hello");
+  assert.equal(tamilRuns("plain", fonts, "Main"), "plain");
+});
+
+test("text controls and entrances reach the MP4", () => {
+  const ass = buildAss([{ start: 0, end: 2, ta: "hello world", en: "hi" }], {
+    styleId: "minimal", lang: "both", width: 1080, height: 1920,
+    custom: { bold: true, spacing: 0.1, rotate: 10, opacity: 0.5, shadowColor: "#ff0000", shadowSize: 0.1, anim: "pop", highlight: "grow" },
+  });
+  const style = ass.split("\n").find((l) => l.startsWith("Style: Main"))!.split(",");
+  assert.equal(style[7], "-1", "bold");
+  assert.equal(style[13], String(Math.round(0.1 * 81 * 10) / 10), "letter spacing");
+  assert.equal(style[14], "-10", "rotation");
+  assert.match(style[3], /^&H(7F|80)/, "half opacity");
+  const first = ass.split("\n").find((l) => l.startsWith("Dialogue"))!;
+  assert.match(first, /\\fscx60\\fscy60\\t\(0,\d+,\\fscx100\\fscy100\)/, "pop on the first event");
+  assert.match(first, /\\frz-10/, "the English line turns with it");
+  assert.match(ass, /\\t\(0,120,\\fscx115\\fscy115\)/, "the spoken word grows");
+  const slide = buildAss([{ start: 0, end: 2, ta: "hello", en: "" }], { styleId: "minimal", lang: "ta", width: 1080, height: 1920, custom: { anim: "slide" } });
+  assert.match(slide, /\\move\(540,\d+,540,\d+,0,\d+\)/);
+});
+
+test("canvas, text layers and emoji reach the MP4; project-only settings stay out of a caption's look", async () => {
+  const { canvasSize, ownLook } = await import("./captionStyles");
+  assert.deepEqual(canvasSize({ ratio: "9:16", fit: "fit", bg: "blur" }, 1920, 1080), { width: 1080, height: 1920 });
+  assert.deepEqual(canvasSize(undefined, 1280, 720), { width: 1280, height: 720 });
+  const custom = sanitizeCustom({ canvas: { ratio: "1:1", fit: "fill", bg: "#123456" }, layers: [{ text: "Hi 🔥", start: 1, end: 3, x: 0.2, y: 0.3, style: { size: 1.5, canvas: { ratio: "9:16" } } }, { text: " ", start: 0, end: 1 }], logo: { ext: "png", x: 0.9, y: 0.1, size: 0.2, opacity: 0.5 } });
+  assert.equal(custom.layers!.length, 1, "empty layers dropped");
+  assert.equal(custom.layers![0].style!.canvas, undefined, "a layer's look has no canvas");
+  assert.deepEqual(custom.canvas, { ratio: "1:1", fit: "fill", bg: "#123456" });
+  assert.equal(ownLook({ size: 1.2, logo: { ext: "png" } }).logo, undefined);
+  const ass = buildAss([], { styleId: "minimal", custom, lang: "ta", width: 1080, height: 1080 });
+  const layer = ass.split("\n").find((l) => l.startsWith("Dialogue"))!;
+  assert.match(layer, /^Dialogue: 5,0:00:01\.00,0:00:03\.00,L1,/);
+  assert.match(layer, /\\pos\(216,324\)/);
+  assert.match(layer, /\\fnNoto Emoji\}🔥/, "emoji in the one-colour emoji font");
+  assert.match(ass, /Style: L1,Poppins ExtraBold,122,/, "the layer's own size");
 });

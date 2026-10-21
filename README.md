@@ -20,7 +20,7 @@ npm run worker                  # second terminal: processes uploads
 npm test                        # unit checks; plus: node plugin/subs.test.js
 ```
 
-Needs **ffmpeg/ffprobe** on PATH (or `FFMPEG_DIR`). The account whose email equals `ADMIN_EMAIL` becomes admin at sign-up.
+Needs **ffmpeg/ffprobe** on PATH (or `FFMPEG_DIR`). To make yourself admin, sign up on the site, then run `npm run make-admin -- you@example.com` on the server (sign-ups never create admins).
 
 ## Admin panel (`/admin`)
 
@@ -60,7 +60,7 @@ Usage resets on every `subscription.charged`. Cancelling keeps the plan until th
 ## Adobe panel (Premiere Pro + After Effects, CEP)
 
 - Source: `plugin/`. Build the signed installer (downloads Adobe's ZXPSignCmd on first run):
-  `powershell -File plugin/build.ps1 -Server https://<your-domain>` → `public/downloads/vasanam-panel.zxp` (served at `/downloads/vasanam-panel.zxp`).
+  `powershell -File plugin/build.ps1 -Server https://<your-domain>` → `public/downloads/vasanam-panel.zxp`. The Plugin page downloads it through `/api/plugin/panel`, which names the file `vasanam-panel-v<version>.zxp` from the version in `plugin/CSXS/manifest.xml` (raise it for each release).
 - Users install it with the free ZXP Installer; steps are on `/app/plugin`.
 - Dev without packaging: copy `plugin/` to `%APPDATA%\Adobe\CEP\extensions\vasanam` (mac: `~/Library/Application Support/Adobe/CEP/extensions/vasanam`) and enable unsigned panels:
   `reg add HKCU\Software\Adobe\CSXS.11 /v PlayerDebugMode /t REG_SZ /d 1` (repeat for CSXS.12).
@@ -76,6 +76,10 @@ pm2 start "npm start" --name vasanam-web
 pm2 start "npm run worker" --name vasanam-worker
 pm2 save && pm2 startup
 ```
+
+Later updates, from a clean checkout on your computer: `scripts/deploy.sh ubuntu@<host> <ssh-key>`. It ships the
+committed code only (storage/, .env.local and public/downloads/ stay as they are), installs, migrates, builds, restarts,
+and records the commit in `/opt/vasanam/DEPLOYED_COMMIT`.
 
 nginx in front with TLS (certbot) and **`client_max_body_size 4g; proxy_request_buffering off;`** so large uploads stream.
 Uploaded videos are deleted automatically after 7 days.

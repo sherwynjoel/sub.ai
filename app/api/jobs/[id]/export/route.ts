@@ -1,7 +1,7 @@
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { ownJob } from "@/lib/jobs";
 import { shortCode } from "@/lib/languages";
-import { shiftCues, toSrt, toTxt, toVtt, type Lang } from "@/lib/subtitles";
+import { shiftCues, toSrt, toTxt, toVtt, type Lang, englishCues } from "@/lib/subtitles";
 
 const FORMATS = { srt: [toSrt, "application/x-subrip"], vtt: [toVtt, "text/vtt"], txt: [toTxt, "text/plain"] } as const;
 
@@ -18,7 +18,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const [fn, type] = FORMATS[fmt];
   const shift = Number(q.get("shift") ?? 0);
   if (!Number.isFinite(shift) || Math.abs(shift) > 86400) return json({ error: "Bad shift" }, 400);
-  const cues = shift ? shiftCues(j.cues, shift) : j.cues;
+  const own = lang === "en" ? englishCues(j.cues) : j.cues; // English alone reads in whole sentences
+  const cues = shift ? shiftCues(own, shift) : own;
   const base = j.filename.replace(/\.[^.]+$/, "").replace(/[^\w\- ]+/g, "_") || "subtitles";
   return new Response("\uFEFF" + fn(cues, lang, j.captionCustom?.lines), {
     headers: {

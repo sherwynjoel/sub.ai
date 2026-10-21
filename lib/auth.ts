@@ -73,10 +73,14 @@ export function newApiKey() {
 const attempts = new Map<string, { n: number; until: number }>();
 export function rateLimited(key: string, max = 10, windowMs = 15 * 60e3) {
   const now = Date.now();
+  if (attempts.size > 10000) for (const [k, v] of attempts) if (v.until < now) attempts.delete(k); // expired keys
   const a = attempts.get(key);
   if (!a || a.until < now) return attempts.set(key, { n: 1, until: now + windowMs }), false;
   return ++a.n > max;
 }
+
+
+export { clientIp } from "@/lib/net";
 
 /** JSON helpers for route handlers. */
 export const json = (data: unknown, status = 200) => Response.json(data, { status });

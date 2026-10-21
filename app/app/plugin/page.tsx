@@ -1,8 +1,10 @@
 import ApiKeyBox from "@/components/ApiKeyBox";
 import { requireUser } from "@/lib/auth";
+import { panelVersion } from "@/lib/panel";
 
 export default async function Page() {
   const u = await requireUser();
+  const version = await panelVersion();
   return (
     <>
       <h1 className="page-title">Plugin</h1>
@@ -10,7 +12,8 @@ export default async function Page() {
         <section className="panel">
           <h2>1. Install</h2>
           <p>Premiere Pro or After Effects 2022+, Windows or macOS.</p>
-          <a className="btn" href="/downloads/vasanam-panel.zxp" download>Download panel (.zxp)</a>
+          {/* The route names the file vasanam-panel-v<version>.zxp, so a saved download says which version it is. */}
+          <a className="btn" href="/api/plugin/panel" download>Download panel{version ? ` v${version}` : ""} (.zxp)</a>
           <p className="muted small spaced">
             Open it with the free <a href="https://aescripts.com/learn/zxp-installer/" target="_blank" rel="noreferrer">ZXP Installer</a>, then
             restart and open <strong>Window → Extensions → Vasanam</strong>.
