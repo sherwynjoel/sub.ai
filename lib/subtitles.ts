@@ -127,7 +127,7 @@ export function splitLine(text: string, start: number, end: number, max = 42) {
  */
 export function layoutCue(c: Cue, max = 42): Cue[] {
   const sentences = (t: string) => splitLine(t, c.start, c.end, 2000).filter((p) => p.text); // breaks only at sentence ends
-  const pieces = pairChunks(sentences(c.ta), sentences(c.en), (c.end - c.start) * 0.15).flatMap((s) => {
+  const pieces = alignSentences(sentences(c.ta).map((p) => p.text), sentences(c.en).map((p) => p.text)).flatMap((s) => {
     const ps = splitLine(s.ta, 0, 1, max);
     const shares = divide(s.en, ps.map((p) => p.text.length));
     return ps.map((p, k) => ({ ta: p.text, en: shares[k] }));
@@ -139,6 +139,39 @@ export function layoutCue(c: Cue, max = 42): Cue[] {
     t += ((c.end - c.start) * p.ta.length) / total;
     return { start: s, end: t, ta: p.ta, en: p.en, ...(k === 0 ? { anchor: true } : {}) }; // only the first start is the model's
   });
+}
+
+/**
+ * Match a window's native sentences with its English sentences, in order: each sentence of the side with fewer gets
+ * one or more whole sentences of the other, chosen so that where each group ends (as a share of the window's text)
+ * is as close as it can be on both sides. The English then stays with the sentence it translates: shared out by
+ * length alone, an English line with more sentences than the Tamil ran a caption or more behind the speech.
+ */
+export function alignSentences(ta: string[], en: string[]): { ta: string; en: string }[] {
+  if (!ta.length || !en.length) return ta.length ? ta.map((t) => ({ ta: t, en: "" })) : en.length ? [{ ta: "", en: en.join(" ") }] : [];
+  const swap = ta.length > en.length;
+  const a = swap ? en : ta, b = swap ? ta : en; // each of a's sentences gets one or more of b's
+  const ends = (xs: string[]) => { const tot = xs.reduce((n, x) => n + x.length, 0) || 1; let c = 0; return xs.map((x) => (c += x.length) / tot); };
+  const A = ends(a), B = ends(b), n = a.length, m = b.length;
+  // cost[i][j]: a's first i sentences matched with b's first j; from[i][j]: where a's sentence i starts in b.
+  const cost = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(Infinity));
+  const from = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  cost[0][0] = 0;
+  for (let i = 1; i <= n; i++) {
+    for (let j = i; j <= m - (n - i); j++) {
+      for (let p = i - 1; p < j; p++) {
+        const v = cost[i - 1][p] + (A[i - 1] - B[j - 1]) ** 2;
+        if (v < cost[i][j]) { cost[i][j] = v; from[i][j] = p; }
+      }
+    }
+  }
+  const out: { ta: string; en: string }[] = [];
+  for (let i = n, j = m; i > 0; i--) {
+    const p = from[i][j], group = b.slice(p, j).join(" ");
+    out.unshift(swap ? { ta: group, en: a[i - 1] } : { ta: a[i - 1], en: group });
+    j = p;
+  }
+  return out;
 }
 
 /** Share a translation's words across pieces in proportion to `weights` (the source pieces' lengths). */
@@ -342,4 +375,30 @@ export function englishCues(cues: Cue[], max = 84): Cue[] {
     });
   }
   return out;
+}
+
+/**
+ * Captions too short to read (under `min` seconds; a few words left at the end of a sentence or a window) join the
+ * neighbour they run into, the one with less text, so nothing flashes past. Word times are dropped (they're measured
+ * again afterwards); a caption with a real gap on both sides is left alone.
+ */
+export function mergeShort(cues: Cue[], min = 0.7): Cue[] {
+  const out = cues.map((c) => ({ ...c }));
+  const join = (a: string, b: string) => [a, b].filter((x) => x.trim()).join(" ");
+  for (let i = 0; i < out.length; ) {
+    const c = out[i];
+    if (c.end - c.start >= min || out.length < 2) { i++; continue; }
+    const prev = i > 0 && c.start - out[i - 1].end < 0.05 ? out[i - 1] : null;
+    const next = i + 1 < out.length && out[i + 1].start - c.end < 0.05 ? out[i + 1] : null;
+    if (!prev && !next) { i++; continue; }
+    const intoPrev = !!prev && (!next || prev.ta.length + prev.en.length <= next.ta.length + next.en.length);
+    if (intoPrev) {
+      out[i - 1] = { ...prev!, end: c.end, ta: join(prev!.ta, c.ta), en: join(prev!.en, c.en), w: undefined, we: undefined };
+      out.splice(i, 1);
+    } else {
+      out[i + 1] = { ...next!, start: c.start, ta: join(c.ta, next!.ta), en: join(c.en, next!.en), w: undefined, we: undefined, ...(c.anchor ? { anchor: true } : {}) };
+      out.splice(i, 1);
+    }
+  }
+  return out.map((c) => { const o = { ...c }; if (!o.w) delete o.w; if (!o.we) delete o.we; return o; });
 }

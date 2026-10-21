@@ -7,13 +7,16 @@ const API = "https://api.sarvam.ai/speech-to-text/job/v1";
 /**
  * Sarvam AI (built for Indian languages). Saaras is run twice on the whole chunk through the Batch API, which
  * takes up to 2 h of audio and returns phrase-level timestamps, so nothing is cut at silences: once in code-mix
- * mode (Tanglish, Hinglish and the like stay as spoken) and once in translate mode (English). The two are paired by time.
+ * mode (Tanglish, Hinglish and the like stay as spoken) and once in translate mode (English). The two are paired by
+ * time. (Text translation, sentence by sentence, was tried: sarvam-translate and Mayura both mistranslated
+ * code-mixed Tamil far more often than Saaras translating the speech.)
  */
 export const sarvam: Provider = async (audio, _dur, cfg, lang, want) => {
   const key = await getSecret("SARVAM_API_KEY");
   if (!key) throw new Error("No Sarvam API key saved. Add it in /admin → Connections.");
   const [native, english = []] = await Promise.all(passesFor(want.script, want.english).map((mode) => batch(audio, key, cfg.model, mode, lang)));
-  // Saaras windows are 10–30 s, so each paired window is cut into readable cues by sentence.
+  // Saaras windows are 10–30 s, so each paired window is cut into readable cues by sentence (English sentences matched
+  // to the native sentences they translate).
   return pairChunks(native, english).flatMap((c) => layoutCue(c));
 };
 
