@@ -55,10 +55,26 @@ function vs_pproFindClip(mediaPath) {
 
 // Imports an SRT and places it as a caption track on the active sequence.
 // Premiere's scripting API can't style captions; the user styles the track in Essential Graphics.
+// Remove the styled captions an earlier placement put on the sequence ("Vasanam <n>" clips) and their template
+// sound; returns where they started.
+function vs_clearOurGraphics(seq) {
+  var ours = {};
+  for (var t = 0; t < seq.videoTracks.numTracks; t++) {
+    var tr = seq.videoTracks[t];
+    for (var k = tr.clips.numItems - 1; k >= 0; k--) {
+      var cl = tr.clips[k];
+      if (/^Vasanam \d+$/.test(cl.name)) { ours[Math.round(cl.start.seconds * 100)] = 1; try { cl.remove(false, false); } catch (e) {} }
+    }
+  }
+  vs_dropTemplateAudio(seq, ours);
+  return ours;
+}
+
 function vs_pproImportSrt(srtPath) {
   try {
     var seq = app.project.activeSequence;
     if (!seq) return "ERR|Open a sequence first.";
+    vs_clearOurGraphics(seq); // switching from a template to plain captions: the styled ones would show twice
     var before = app.project.rootItem.children.numItems;
     if (!app.project.importFiles([srtPath], true, app.project.rootItem, false)) return "ERR|Premiere could not import the subtitle file.";
     var item = null;
