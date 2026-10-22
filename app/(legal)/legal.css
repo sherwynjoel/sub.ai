@@ -1,0 +1,14 @@
+/* Policy pages: one readable column. */
+.legal { max-width: 760px; padding: 48px 0 32px; }
+.legal h1 { font-size: clamp(2.2rem, 5vw, 3.2rem); margin-bottom: .2em; }
+.legal h2 { font-size: 1.35rem; margin: 2em 0 .5em; letter-spacing: -.02em; }
+.legal p, .legal li { line-height: 1.65; color: var(--ink-2); }
+.legal ul { padding-left: 1.2em; display: grid; gap: 6px; }
+.legal .updated { color: var(--muted); margin-bottom: 2em; }
+.legal .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 18px 20px; }
+.legal dl { display: grid; grid-template-columns: max-content 1fr; gap: 8px 20px; margin: 0; }
+.legal dt { color: var(--muted); }
+.legal dd { margin: 0; overflow-wrap: anywhere; }
+.legal-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px 24px; flex-wrap: wrap; padding: 24px 0 48px; }
+@media (max-width: 600px) { .legal dl { grid-template-columns: 1fr; gap: 2px; } .legal dd { margin-bottom: 10px; } }
+.legal .card + p { margin-top: 18px; }

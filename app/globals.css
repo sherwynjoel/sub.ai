@@ -140,3 +140,8 @@ select { appearance: none; -webkit-appearance: none; padding-right: 2.5em; curso
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .js .rise { opacity: 1; transform: none; }
 }
+
+/* Policy links in every public footer (components/LegalLinks). */
+.legal-links { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .9rem; }
+.legal-links a { color: var(--ink-2); }
+.auth-legal { justify-content: center; margin-top: 4px; }

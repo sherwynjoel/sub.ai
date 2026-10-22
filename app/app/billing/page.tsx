@@ -1,3 +1,4 @@
+import Link from "next/link";
 import BillingActions from "@/components/BillingActions";
 import { requireUser } from "@/lib/auth";
 import { effectivePlan, PLANS, secondsLeft } from "@/lib/plans";
@@ -31,6 +32,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
         </div>
       </div>
       <BillingActions current={plan} live={live} preselect={(await searchParams).plan} />
+      <p className="muted small">Monthly plans, cancel any time. See the <Link href="/refunds">refund and cancellation policy</Link> and <Link href="/terms">terms</Link>.</p>
     </>
   );
 }

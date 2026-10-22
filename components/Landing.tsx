@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import Cube from "@/components/Cube";
 import Effects from "@/components/Effects";
+import LegalLinks from "@/components/LegalLinks";
 import HeroEditor from "@/components/HeroEditor";
 import StyleShowcase from "@/components/StyleShowcase";
 import { CAPTION_STYLES } from "@/lib/captionStyles";
@@ -253,6 +254,7 @@ export default function Landing() {
 
       <footer className="wrap foot">
         <span className="logo"><i />{BRAND.name}</span>
+        <LegalLinks />
         <span className="muted">© 2026 {BRAND.name} · Powered by <a href="https://thearktech.in" target="_blank" rel="noopener">Arktech</a></span>
       </footer>
     </>
