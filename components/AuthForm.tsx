@@ -38,6 +38,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
         Password
         <input name="password" type="password" minLength={signup ? 8 : undefined} autoComplete={signup ? "new-password" : "current-password"} required />
       </label>
+      {!signup && <p className="small forgot"><Link href="/forgot">Forgot password?</Link></p>}
       {error && <p className="error" role="alert">{error}</p>}
       <button className="btn" disabled={busy}>{busy ? "Please wait…" : signup ? "Create account" : "Sign in"}</button>
       {signup && <p className="muted small">By creating an account you agree to the <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy policy</Link>.</p>}

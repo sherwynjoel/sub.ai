@@ -3,7 +3,7 @@ import Link from "next/link";
 import { BRAND, BUSINESS } from "@/lib/brand";
 import { PLANS } from "@/lib/plans";
 
-export const metadata: Metadata = { title: `Refund and cancellation policy — ${BRAND.name}` };
+export const metadata: Metadata = { title: "Refund and cancellation policy" };
 
 export default function Page() {
   return (

@@ -254,6 +254,11 @@ export default function Landing() {
 
       <footer className="wrap foot">
         <span className="logo"><i />{BRAND.name}</span>
+        <nav className="legal-links" aria-label="Guides">
+          <Link href="/tamil-subtitle-generator">Tamil subtitle generator</Link>
+          <Link href="/tanglish-captions">Tanglish captions</Link>
+          <Link href="/premiere-pro-subtitle-plugin">Premiere Pro plugin</Link>
+        </nav>
         <LegalLinks />
         <span className="muted">© 2026 {BRAND.name} · Powered by <a href="https://thearktech.in" target="_blank" rel="noopener">Arktech</a></span>
       </footer>

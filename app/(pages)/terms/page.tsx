@@ -3,7 +3,7 @@ import Link from "next/link";
 import { BRAND, BUSINESS } from "@/lib/brand";
 import { PLANS } from "@/lib/plans";
 
-export const metadata: Metadata = { title: `Terms of service — ${BRAND.name}` };
+export const metadata: Metadata = { title: "Terms of service" };
 
 export default function Page() {
   const paid = (["creator", "pro", "studio"] as const).map((p) => PLANS[p]);

@@ -83,3 +83,11 @@
 /* Grid children default to min-width:auto; long unbroken text (error paths) must not widen the page */
 .admin-main > * { min-width: 0; }
 .table-wrap td { overflow-wrap: anywhere; }
+.traffic-chart { display: flex; align-items: flex-end; gap: 3px; height: 160px; padding-top: 8px; }
+.traffic-day { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
+.traffic-day i { display: block; width: 100%; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--black); }
+.traffic-day span { font-size: .65rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.traffic-tables { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 900px) { .traffic-tables { grid-template-columns: 1fr; } }
+.reset-link { display: grid; gap: 4px; flex-basis: 100%; }
+.reset-link code { overflow-wrap: anywhere; }

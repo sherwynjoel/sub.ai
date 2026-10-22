@@ -49,6 +49,13 @@ export default async function Connections() {
       </section>
 
       <section className="panel">
+        <h2>Email</h2>
+        <p className="muted">For password reset emails. Create a free account at resend.com, verify your domain there, then save the key and the sender address.</p>
+        {group("email").map((c) => <ConnectionRow key={c.name} {...c} />)}
+        <div className="test-row"><TestButton service="email" label="Send me a test email" /></div>
+      </section>
+
+      <section className="panel">
         <h2>Worker</h2>
         <p>
           <span className={`status ${worker.online ? "good" : "bad"}`}>{worker.online ? "Running" : "Stopped"}</span>{" "}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { desc, eq, sql } from "drizzle-orm";
 import Action from "@/components/admin/Action";
+import ResetLink from "@/components/admin/ResetLink";
 import UserPlanForm from "@/components/admin/UserPlanForm";
 import { billingEvents, db, jobs, users } from "@/db";
 import { mins, requireAdmin, when } from "@/lib/admin";
@@ -56,6 +57,7 @@ export default async function UserDetail({ params }: { params: Promise<{ id: str
           <div className="btn-row spaced">
             <Action url={url} body={{ action: "reset_usage" }} label="Reset minutes used" confirm={`Reset ${u.email}'s used minutes to 0?`} />
             <Action url={url} body={{ action: "sign_out" }} label="Sign out everywhere" confirm={`Sign ${u.email} out of every browser?`} />
+            <ResetLink url={url} email={u.email} />
             {u.id !== me.id && (
               <Action url={url} body={{ action: "set_admin", value: !u.isAdmin }} label={u.isAdmin ? "Remove admin" : "Make admin"}
                 confirm={u.isAdmin ? `Remove admin access from ${u.email}?` : `Give ${u.email} full admin access, including API keys?`} />

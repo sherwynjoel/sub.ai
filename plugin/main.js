@@ -132,6 +132,7 @@
     show("connect");
   };
   $("backBtn").onclick = function () { show("main"); };
+  $("helpBtn").onclick = function () { window.cep.util.openURLInDefaultBrowser(server() + "/contact"); };
 
   // ---------- pick media ----------
   $("pickBtn").onclick = function () {
