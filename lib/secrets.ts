@@ -23,6 +23,8 @@ export const CONNECTIONS = {
   RAZORPAY_PLAN_CREATOR: { group: "razorpay", label: "Creator plan ID", secret: false, help: "plan_… from Subscriptions → Plans" },
   RAZORPAY_PLAN_PRO: { group: "razorpay", label: "Pro plan ID", secret: false, help: "plan_…" },
   RAZORPAY_PLAN_STUDIO: { group: "razorpay", label: "Studio plan ID", secret: false, help: "plan_…" },
+  RESEND_API_KEY: { group: "email", label: "Resend API key", secret: true, help: "resend.com → API keys (verify your domain there first)" },
+  EMAIL_FROM: { group: "email", label: "Send emails from", secret: false, help: "e.g. Vasanam <hello@yourdomain.in>, on the domain verified in Resend" },
 } as const;
 
 export type ConnectionName = keyof typeof CONNECTIONS;

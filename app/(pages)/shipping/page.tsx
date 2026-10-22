@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BRAND, BUSINESS } from "@/lib/brand";
 
-export const metadata: Metadata = { title: `Delivery policy — ${BRAND.name}` };
+export const metadata: Metadata = { title: "Delivery policy" };
 
 export default function Page() {
   return (

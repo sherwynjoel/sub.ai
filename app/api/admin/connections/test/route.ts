@@ -3,6 +3,7 @@ import { adminOrNull } from "@/lib/admin";
 import { openaiApi } from "@/lib/ai";
 import { PAID, PLANS } from "@/lib/plans";
 import { razorpayPlanId, rzp } from "@/lib/razorpay";
+import { emailReady, sendEmail } from "@/lib/email";
 import { getSecret } from "@/lib/secrets";
 import { postJson } from "@/lib/ai/shared";
 
@@ -36,7 +37,8 @@ async function testRazorpay(): Promise<Result> {
 
 /** Checks a saved connection with a harmless read-only call. */
 export async function POST(req: Request) {
-  if (!(await adminOrNull())) return json({ error: "Admins only." }, 403);
+  const me = await adminOrNull();
+  if (!me) return json({ error: "Admins only." }, 403);
   const { service } = await req.json().catch(() => ({}));
   try {
     if (service === "gemini") {
@@ -60,6 +62,11 @@ export async function POST(req: Request) {
       return json(await check(`${api.baseUrl}/models`, { authorization: `Bearer ${api.apiKey}` }));
     }
     if (service === "razorpay") return json(await testRazorpay());
+    if (service === "email") {
+      if (!(await emailReady())) return json({ ok: false, message: "Save the Resend key and the sender address first." });
+      await sendEmail(me.email, "Vasanam test email", "Email from Vasanam works. Password reset links will be sent like this one.");
+      return json({ ok: true, message: `Sent to ${me.email}. Check the inbox (and spam).` });
+    }
     return json({ error: "Unknown service." }, 400);
   } catch (e) {
     return json({ ok: false, message: (e as Error).message });

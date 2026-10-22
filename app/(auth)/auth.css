@@ -10,3 +10,4 @@
 .auth .btn { margin-top: 6px; width: 100%; }
 .auth .switch { font-size: .95rem; text-align: center; }
 .auth-foot { font-size: .9rem; margin: 0; }
+.auth .forgot { margin: -6px 0 0; text-align: right; }

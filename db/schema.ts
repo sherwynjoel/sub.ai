@@ -1,5 +1,5 @@
 import type { CaptionCustom } from "@/lib/captionStyles";
-import { pgTable, text, uuid, integer, real, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, integer, real, boolean, timestamp, jsonb, date, bigserial, index } from "drizzle-orm/pg-core";
 
 /**
  * `ta` is the line in the project's language (see lib/languages.ts); `en` is English. `w` / `we`: when each word of
@@ -71,5 +71,28 @@ export const billingEvents = pgTable("billing_events", {
   id: text("id").primaryKey(), // x-razorpay-event-id, for idempotency
   type: text("type").notNull(),
   payload: jsonb("payload").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Page visits, counted without cookies (components/Track.tsx → /api/hit). `visitor` is a hash of the IP address and
+ * browser with a salt that changes every day, so a visitor counts once a day and can't be followed across days.
+ */
+export const pageViews = pgTable("page_views", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  day: date("day").notNull(),
+  path: text("path").notNull(),
+  referrer: text("referrer"), // the other site's host name only
+  source: text("source"), // ?utm_source= or ?ref=
+  visitor: text("visitor").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("page_views_day_idx").on(t.day)]);
+
+/** One-time password reset links (lib/reset.ts). Only a hash of the link's token is kept. */
+export const passwordResets = pgTable("password_resets", {
+  tokenHash: text("token_hash").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

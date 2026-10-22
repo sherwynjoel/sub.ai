@@ -388,3 +388,5 @@ kbd { font: 600 .75rem/1 var(--font-body); padding: 3px 6px; border: 1px solid v
   .insp-words .time { width: 100px; }
   .keys { display: none; }
 }
+.app-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px 24px; flex-wrap: wrap; padding: 8px 0 40px; }
+a.signout { text-decoration: none; }

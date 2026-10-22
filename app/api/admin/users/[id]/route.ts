@@ -3,6 +3,7 @@ import { db, sessions, users } from "@/db";
 import { json } from "@/lib/auth";
 import { adminOrNull } from "@/lib/admin";
 import { PLANS, type PlanId } from "@/lib/plans";
+import { resetLink } from "@/lib/reset";
 
 /** Admin account actions. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -37,6 +38,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (u.id === me.id) return json({ error: "You can't change your own admin access." }, 400);
       await db.update(users).set({ isAdmin: !!b.value }).where(where);
       break;
+    case "reset_link":
+      // Valid for a day: it's sent by hand (WhatsApp, email), not straight away.
+      return json({ ok: true, link: await resetLink(u.id, 24) });
     case "sign_out":
       await db.delete(sessions).where(eq(sessions.userId, u.id));
       break;

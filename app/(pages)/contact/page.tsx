@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { BRAND, BUSINESS } from "@/lib/brand";
 
-export const metadata: Metadata = { title: `Contact — ${BRAND.name}` };
+export const metadata: Metadata = { title: "Contact" };
 
 export default function Page() {
   return (

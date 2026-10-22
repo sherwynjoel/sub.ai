@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BRAND, BUSINESS } from "@/lib/brand";
 
-export const metadata: Metadata = { title: `Privacy policy — ${BRAND.name}` };
+export const metadata: Metadata = { title: "Privacy policy" };
 
 export default function Page() {
   return (
@@ -25,6 +25,7 @@ export default function Page() {
         <li><strong>Plugin keys:</strong> the keys that connect the panel to your account. We keep only a fingerprint of each key, not the key itself.</li>
         <li><strong>Payments:</strong> handled by Razorpay. We receive your plan, subscription status and payment references, never your card, UPI or bank details.</li>
         <li><strong>Technical logs:</strong> our server records IP addresses and requests for security and to fix problems.</li>
+        <li><strong>Visit counts:</strong> which pages are visited and which website or link sent the visitor, counted on our own server without cookies. Your IP address is turned into a code that changes every day and is not stored, so we can count visitors but not follow anyone.</li>
       </ul>
 
       <h2>Why we use it</h2>
@@ -42,6 +43,7 @@ export default function Page() {
         <li><strong>Speech recognition and translation:</strong> the audio of your video is sent to our AI provider (currently Sarvam AI, India) to turn speech into text and translate it.</li>
         <li><strong>Hosting:</strong> our servers and database run on Amazon Web Services in Mumbai, India.</li>
         <li><strong>Payments:</strong> Razorpay processes subscriptions and payments.</li>
+        <li><strong>Email:</strong> Resend delivers the emails we send you, such as password reset links.</li>
       </ul>
       <p>We may also disclose data when Indian law or a valid order from a court or authority requires it.</p>
 
