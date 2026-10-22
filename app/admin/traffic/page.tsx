@@ -8,7 +8,9 @@ const DAYS = 30;
 /** The last DAYS days of visits and sign-ups. */
 async function load() {
   const since = new Date(Date.now() + 5.5 * 3600e3 - (DAYS - 1) * 864e5).toISOString().slice(0, 10);
-  const from = new Date(Date.now() - DAYS * 864e5);
+  // Sign-ups count from when visits started being counted, so the steps compare the same people.
+  const [first] = await db.select({ at: sql<string | null>`min(${pageViews.createdAt})::text` }).from(pageViews);
+  const from = new Date(Math.max(Date.now() - DAYS * 864e5, first.at ? new Date(first.at).getTime() : 0));
   const inRange = gte(pageViews.day, since);
   const [daily, pages, sources, [signups], [made], [paid]] = await Promise.all([
     db.select({ day: pageViews.day, visitors: sql<number>`count(distinct ${pageViews.visitor})::int`, views: sql<number>`count(*)::int` })
@@ -21,12 +23,18 @@ async function load() {
     db.select({ n: sql<number>`count(distinct ${jobs.userId})::int` }).from(jobs).innerJoin(users, eq(users.id, jobs.userId)).where(gt(users.createdAt, from)),
     db.select({ n: sql<number>`count(*)::int` }).from(users).where(and(gt(users.createdAt, from), ne(users.plan, "free"), isNotNull(users.periodEnd))),
   ]);
-  return { daily, pages, sources, signups: signups.n, made: made.n, paid: paid.n };
+  // Every day of the range, with the days nobody came as zero.
+  const byDay = new Map(daily.map((d) => [d.day, d]));
+  const days = Array.from({ length: DAYS }, (_, k) => {
+    const day = new Date(Date.parse(since) + k * 864e5).toISOString().slice(0, 10);
+    return byDay.get(day) ?? { day, visitors: 0, views: 0 };
+  });
+  return { daily: days, pages, sources, signups: signups.n, made: made.n, paid: paid.n, since: from };
 }
 
 /** Visits (counted without cookies, see /api/hit) and how many visitors go on to sign up, make a project and pay. */
 export default async function Traffic() {
-  const { daily, pages, sources, ...n } = await load();
+  const { daily, pages, sources, since, ...n } = await load();
   const signups = { n: n.signups }, made = { n: n.made }, paid = { n: n.paid };
   const visitors = daily.reduce((n, d) => n + d.visitors, 0), views = daily.reduce((n, d) => n + d.views, 0);
   const top = Math.max(1, ...daily.map((d) => d.visitors));
@@ -52,7 +60,7 @@ export default async function Traffic() {
 
       <section className="panel">
         <h2>Visitors per day</h2>
-        {daily.length === 0 ? <p className="muted">No visits counted yet.</p> : (
+        {!daily.some((d) => d.views) ? <p className="muted">No visits counted yet.</p> : (
           <div className="traffic-chart" role="img" aria-label={`Visitors per day, ${visitors} in total`}>
             {daily.map((d) => (
               <div key={d.day} className="traffic-day" title={`${d.day}: ${d.visitors} visitors, ${d.views} page views`}>
@@ -62,7 +70,7 @@ export default async function Traffic() {
             ))}
           </div>
         )}
-        <p className="muted small">{visitors.toLocaleString("en-IN")} visitors · {views.toLocaleString("en-IN")} page views</p>
+        <p className="muted small">{visitors.toLocaleString("en-IN")} {visitors === 1 ? "visitor" : "visitors"} · {views.toLocaleString("en-IN")} page {views === 1 ? "view" : "views"} · sign-ups counted from {since.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</p>
       </section>
 
       <div className="traffic-tables">
