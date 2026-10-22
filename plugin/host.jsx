@@ -5,6 +5,11 @@
 
 // Finds the media to subtitle: a selected clip on the active sequence, else the Project panel selection.
 // Returns "OK|<path>|<offsetSeconds>|<inSeconds>|<outSeconds>|<name>"; offset maps source time -> sequence time.
+// Files that have no speech to subtitle: captions, graphics, stills, projects (picking one of these by mistake used
+// to upload it as if it were the video).
+var VS_NOT_MEDIA = /\.(srt|vtt|txt|xml|scc|mcc|stl|mogrt|aegraphic|prproj|aep|psd|ai|eps|svg|png|jpe?g|gif|bmp|tiff?|webp|heic|exr|dpx|tga)$/i;
+function vs_isMedia(p) { return !!p && !VS_NOT_MEDIA.test(p); }
+
 function vs_pproPickMedia() {
   try {
     var seq = app.project.activeSequence;
@@ -12,18 +17,19 @@ function vs_pproPickMedia() {
       var sel = seq.getSelection();
       for (var i = 0; sel && i < sel.length; i++) {
         var c = sel[i];
-        if (c.projectItem && c.projectItem.getMediaPath()) {
+        if (c.projectItem && vs_isMedia(c.projectItem.getMediaPath())) {
           return "OK|" + c.projectItem.getMediaPath() + "|" + (c.start.seconds - c.inPoint.seconds) + "|" +
             c.inPoint.seconds + "|" + c.outPoint.seconds + "|" + c.projectItem.name;
         }
       }
     }
     var view = app.getCurrentProjectViewSelection ? app.getCurrentProjectViewSelection() : null;
-    if (view && view.length && view[0].getMediaPath()) {
+    for (var v = 0; view && v < view.length; v++) {
+      if (!vs_isMedia(view[v].getMediaPath())) continue;
       var at = seq ? seq.getPlayerPosition().seconds : 0;
-      return "OK|" + view[0].getMediaPath() + "|" + at + "|0|999999|" + view[0].name;
+      return "OK|" + view[v].getMediaPath() + "|" + at + "|0|999999|" + view[v].name;
     }
-    return "ERR|Select a clip on the timeline or in the Project panel.";
+    return "ERR|Select a video or audio clip on the timeline or in the Project panel.";
   } catch (e) {
     return "ERR|" + e.toString();
   }
@@ -484,7 +490,7 @@ function vs_aePickMedia() {
     var layers = comp.selectedLayers;
     for (var i = 0; i < layers.length; i++) {
       var l = layers[i];
-      if (l.source && l.source.file) {
+      if (l.source && l.source.file && vs_isMedia(l.source.file.fsName)) {
         return "OK|" + l.source.file.fsName + "|" + l.startTime + "|" + (l.inPoint - l.startTime) + "|" + (l.outPoint - l.startTime) + "|" + l.name;
       }
     }
