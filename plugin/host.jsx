@@ -170,12 +170,12 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
       try { app.enableQE(); qe.project.getActiveSequence().addTracks(0, 0, 1, 1, seq.audioTracks.numTracks, 0, 0); aTarget = seq.audioTracks.numTracks - 1; } catch (e) {}
       if (aTarget < 0 || seq.audioTracks[aTarget].clips.numItems) return "ERR|Add an empty audio track, then place again (so the captions don't replace your audio).";
     }
-    var set = {}, names = [], n = 0, most = 0; // most: the fewest lines a caption had to drop to
+    var set = {}, names = [], n = 0, most = 0, capped = 0; // most: the fewest lines a caption had to drop to
     for (var i = 0; i < cues.length; i++) {
       var c = cues[i];
       if (c.end <= c.start) continue;
       var at = new Time(); at.seconds = c.start;
-      var parts = c.parts || (tpl.parts ? vs_splitParts(String(c.text)) : null);
+      var parts = c.parts || (tpl.parts ? vs_splitParts(String(c.text)) : null), capThis = false;
       for (var ly = 0; ly < targets.length; ly++) {
         var only = targets.length > 1 ? ly : -1; // this copy shows only its own box
         if (only >= 0 && !/\S/.test(parts[only] || "")) continue;
@@ -190,6 +190,7 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
         item.name = "Vasanam " + (i + 1);
         var fit = parts ? { place: vs_partsPlace(parts, tpl, W, H, z, look.size, xf, yf) } : vs_templateFit(String(c.text), tpl, W, H, z, look.size, xf, yf, look.lines > 0), place = fit.place;
         if (fit.fewer) most = most ? Math.min(most, fit.fewer) : fit.fewer;
+        if (place.capped) capThis = true;
         try { var end = new Time(); end.seconds = c.end; item.end = end; set.duration = 1; } catch (e) {
           try { var out = new Time(); out.seconds = c.end - c.start; item.outPoint = out; set.duration = 1; } catch (e2) {}
         }
@@ -235,6 +236,7 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
         } catch (e) {}
       }
       n++;
+      if (capThis) capped++;
     }
     var mine = seq.audioTracks[aTarget].clips; // our templates' sound on the track picked for it
     for (k = mine.numItems - 1; k >= 0; k--) { try { if (/\.aegraphic$/i.test(mine[k].projectItem.getMediaPath())) mine[k].remove(false, false); } catch (e) {} }
@@ -244,6 +246,7 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
     var where = "V" + (target + 1);
     if (targets.length > 1) where += "-V" + (targets[targets.length - 1] + 1) + " (one track per text box)";
     return "OK|Added " + n + " styled captions on " + where + "." + (most ? " This template fits at most " + most + (most === 1 ? " line" : " lines") + ", so longer captions use " + most + "." : "") +
+      (capped && look.size > 1 ? " " + (capped === n ? "All" : capped) + " captions are already as wide as the screen allows, so a bigger Size can't grow them." : "") +
       "|Set: " + (done.join(", ") || "nothing") + ". Template controls: " + names.join(", ");
   } catch (e) {
     return "ERR|" + e.toString();
@@ -292,15 +295,16 @@ function vs_partsPlace(texts, tpl, W, H, z, size, xf, yf) {
   }
   if (R < L) { L = R = tw / 2; top = bottom = th / 2; }
   var s = Math.min(W, H) * 0.075 * (size || 1) / (tpl.layout.size || 200);
-  var safe = W * 2 * Math.min(xf - z.left, 1 - z.right - xf), lo = H * z.top, hi = H * (1 - z.bottom);
+  var safe = W * 2 * Math.min(xf - z.left, 1 - z.right - xf), lo = H * z.top, hi = H * (1 - z.bottom), want = s;
   if ((R - L) * s > safe) s = safe / (R - L);
   if ((bottom - top) * s > hi - lo) s = (hi - lo) / (bottom - top);
+  var capped = s < want * 0.98; // the screen (inside the safe zone) limits the size
   s = Math.floor(s * 1000) / 1000;
   var x = xf * W - ((L + R) / 2 - tw / 2) * s, y = yf * H - ((top + bottom) / 2 - th / 2) * s;
   var yTop = y + (top - th / 2) * s, yBottom = y + (bottom - th / 2) * s;
   if (yBottom > hi) y -= yBottom - hi;
   if (yTop < lo) y += lo - yTop;
-  return { scale: s * 100, x: Math.round(x), y: Math.round(y), shrink: shrink };
+  return { scale: s * 100, x: Math.round(x), y: Math.round(y), shrink: shrink, capped: capped };
 }
 
 function vs_templateFit(text, tpl, W, H, z, size, xf, yf, chosen) {
@@ -358,6 +362,7 @@ function vs_templatePlace(lines, tpl, W, H, z, size, xf, yf) {
   var s = Math.min(W, H) * 0.075 * (size || 1) / L.size;
   var safe = W * 2 * Math.min(xf - z.left, 1 - z.right - xf);
   var f = Math.min(1, room / wide, safe / (wide * s)); // font shrink so the longest line fits both
+  var capped = safe / (wide * s) < Math.min(1, room / wide) * 0.98; // the screen, not the template, limits the size
   var font = Math.floor(L.size * f * 10) / 10; // rounded down (never wider than what fits); placed from this size
   f = font / L.size;
   // Text grows right from a left-aligned x, both ways from a centred one; a smaller font keeps its baseline (≈ bottom).
@@ -367,7 +372,7 @@ function vs_templatePlace(lines, tpl, W, H, z, size, xf, yf) {
   // Top to bottom: lines taller than the safe area shrink the graphic; then the block is moved inside the frame
   // (wide line spacing at a big size pushed a second line off the bottom).
   var lo = H * z.top, hi = H * (1 - z.bottom);
-  if ((bottom - top) * s > hi - lo) s = (hi - lo) / (bottom - top);
+  if ((bottom - top) * s > hi - lo) { s = (hi - lo) / (bottom - top); capped = true; }
   var y = yf * H - (ty - th / 2) * s, yTop = y + (top - th / 2) * s, yBottom = y + (bottom - th / 2) * s;
   if (yBottom > hi) y -= yBottom - hi;
   if (yTop < lo) y += lo - yTop;
@@ -376,7 +381,8 @@ function vs_templatePlace(lines, tpl, W, H, z, size, xf, yf) {
     font: font,
     x: Math.round(xf * W - (tx - tw / 2) * Math.floor(s * 1000) / 1000),
     y: Math.round(y),
-    fits: top >= 0 && bottom <= th
+    fits: top >= 0 && bottom <= th,
+    capped: capped
   };
 }
 
