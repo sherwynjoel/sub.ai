@@ -144,10 +144,13 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   /** A message under the toolbar; it clears itself (hints and errors after 6 s). */
   const setMsg = (m: string, ms = 6000) => { clearTimeout(msgTimer.current); setMsgState(m); if (m) msgTimer.current = setTimeout(() => setMsgState(""), ms); };
   const hasEnglish = initial.cues.some((c) => c.en);
+  // A full English translation (English only at upload) keeps no spoken-language text: English is all there is.
+  const hasSpoken = !hasEnglish || initial.cues.some((c) => c.ta);
+  const views: View[] = !hasSpoken ? ["en"] : hasEnglish ? ["ta", "en", "both"] : ["ta"];
   // What the subtitles show (the project's choice from upload, changed with the buttons under the video): the
   // preview, the MP4 and the default download all follow it.
   const shown = initial.captionCustom?.show;
-  const [view, setViewState] = useState<View>(!hasEnglish ? "ta" : shown ?? "both");
+  const [view, setViewState] = useState<View>(!hasEnglish ? "ta" : !hasSpoken ? "en" : shown ?? "both");
   const [now, setNow] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [duration, setDuration] = useState(Math.max(1, ...initial.cues.map((c) => c.end)));
@@ -157,7 +160,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const bgVideo = useRef<HTMLVideoElement>(null);
   const [tab, setTab] = useState<Tab>("caption");
   const [zoom, setZoom] = useState(80); // timeline px per second
-  const [lang, setLang] = useState<View>(!hasEnglish ? "ta" : shown ?? "both");
+  const [lang, setLang] = useState<View>(!hasEnglish ? "ta" : !hasSpoken ? "en" : shown ?? "both");
   const [fmt, setFmt] = useState("srt");
   const [styleId, setStyleId] = useState(initial.captionStyle || "minimal");
   const [custom, setCustom] = useState<CaptionCustom>(initial.captionCustom ?? {});
@@ -425,7 +428,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 <span className="muted small tnum">{tc(c.start)} → {tc(c.end)}</span>
                 {c.style && <span className="chip-own" title="This caption has its own style">Own style</span>}
               </div>
-              <textarea lang={short} rows={1} value={c.ta} onChange={(e) => editCue(i, setText(c, "ta", e.target.value))} aria-label={`${language.name} subtitle ${i + 1}`} />
+              {hasSpoken && <textarea lang={short} rows={1} value={c.ta} onChange={(e) => editCue(i, setText(c, "ta", e.target.value))} aria-label={`${language.name} subtitle ${i + 1}`} />}
               {hasEnglish && <textarea rows={1} value={c.en} onChange={(e) => editCue(i, setText(c, "en", e.target.value))} aria-label={`English subtitle ${i + 1}`} />}
             </li>
           ))}
@@ -468,12 +471,14 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             <button className="btn ghost small" onClick={merge} title="Merge the selected caption with the next (M)">Merge</button>
             <button className="btn ghost small" onClick={add} title="Add a caption at the playhead (A)">Add</button>
             <button className="btn ghost small" onClick={() => remove()} disabled={target() < 0} title="Delete the selected caption (Delete)">Delete</button>
-            <span className="ed-sep" />
-            <div className="seg" role="group" aria-label="Preview language">
-              {((hasEnglish ? ["ta", "en", "both"] : ["ta"]) as View[]).map((v) => (
-                <button key={v} aria-pressed={view === v} onClick={() => setView(v)}>{v === "ta" ? language.native : v === "en" ? "English" : "Both"}</button>
-              ))}
-            </div>
+            {views.length > 1 && <>
+              <span className="ed-sep" />
+              <div className="seg" role="group" aria-label="Preview language">
+                {views.map((v) => (
+                  <button key={v} aria-pressed={view === v} onClick={() => setView(v)}>{v === "ta" ? language.native : v === "en" ? "English" : "Both"}</button>
+                ))}
+              </div>
+            </>}
           </div>
         </div>
 
@@ -491,9 +496,9 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 <TimeInput key={`e${selected}-${sel.end}`} value={sel.end} label="End" onChange={(v) => { const next = cues[selected + 1]; const en = Math.min(next ? next.start : duration, Math.max(v, sel.start + 0.2)); editCue(selected, { ...sel, end: en }); }} />
                 <span className="muted small">{(sel.end - sel.start).toFixed(2)} s</span>
               </div>
-              <label className="insp-field">{language.name}
+              {hasSpoken && <label className="insp-field">{language.name}
                 <textarea id="cap-text" lang={short} rows={2} value={sel.ta} onChange={(e) => editCue(selected, setText(sel, "ta", e.target.value))} />
-              </label>
+              </label>}
               {hasEnglish && <label className="insp-field">English<textarea rows={2} value={sel.en} onChange={(e) => editCue(selected, setText(sel, "en", e.target.value))} /></label>}
 
               <div className="insp-head">
@@ -674,8 +679,9 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               <div className="export-row">
                 <label>Language
                   <select value={lang} onChange={(e) => setLang(e.target.value as View)}>
-                    <option value="ta">{language.name}</option>
-                    {hasEnglish && <><option value="en">English</option><option value="both">{language.name} + English</option></>}
+                    {hasSpoken && <option value="ta">{language.name}</option>}
+                    {hasEnglish && <option value="en">English</option>}
+                    {hasEnglish && hasSpoken && <option value="both">{language.name} + English</option>}
                   </select>
                 </label>
                 <label>Format
