@@ -94,13 +94,19 @@
   }
 
   $("connectBtn").onclick = function () {
-    // An empty box keeps the saved key (Account → Connect used to sign people out).
+    // An empty box keeps the saved key (Account → Connect used to sign people out). A new key or address is kept
+    // only once it works: a typo must not replace the key that was working.
+    var oldKey = store("vs_key"), oldServer = store("vs_server");
+    var undo = function () { store("vs_key", oldKey); store("vs_server", oldServer); };
     if ($("key").value.trim()) store("vs_key", $("key").value.trim());
     if ($("server").value.trim()) store("vs_server", $("server").value.trim());
-    $("connectMsg").textContent = "";
-    $("connectMsg").textContent = "Connecting to " + server() + "…";
-    refreshAccount().then(function (ok) { if (!ok) $("connectMsg").textContent = "That key was not accepted by " + server() + ". Check the website address matches the site where you created the key."; })
-      .catch(function (e) { $("connectMsg").textContent = e.message; });
+    var tried = server();
+    $("connectMsg").textContent = "Connecting to " + tried + "…";
+    refreshAccount().then(function (ok) {
+      if (ok) { $("key").value = ""; return; }
+      undo();
+      $("connectMsg").textContent = "That key was not accepted by " + tried + ". Check the website address matches the site where you created the key.";
+    }).catch(function (e) { undo(); $("connectMsg").textContent = e.message; });
   };
   // Premiere can keep Cmd/Ctrl+V for its own Edit menu and panels have no right-click menu, so the key box has a
   // Paste button that reads the system clipboard directly.
@@ -185,6 +191,10 @@
   function placeCuesNow(job, lang) {
     // The user's line count: the editor's Lines once a project is open, else the main screen's (empty = Auto).
     var lines = editing ? editing.custom.lines : (+$("linesMain").value || undefined);
+    var hasSpoken = job.cues.some(function (c) { return c.ta; }), hasEnglish = job.cues.some(function (c) { return c.en; });
+    if (!hasSpoken) lang = "en"; // a full English translation has only English
+    else if (!hasEnglish && lang === "both") lang = "ta";
+    else if (!hasEnglish && lang === "en") return Promise.resolve("ERR|This project has no English line. To get one, tick Also an English line on Generate and generate again.");
     // English on its own goes on in whole sentences (the English line is shared across the Tamil captions).
     var source = lang === "en" && job.cues.some(function (c) { return c.ta; }) ? window.Subs.englishCues(job.cues) : job.cues;
     var cues = window.Subs.placeCues(source, picked.offset, picked.inS, picked.outS);
@@ -237,8 +247,11 @@
         if (r.status !== 201) throw new Error(r.data.error || "Upload failed (" + r.status + ").");
         lastJob = r.data.id;
         // Save a chosen line count with the project so the web editor and exports use it too.
-        var n = +$("linesMain").value, safe = $("safeMain").value;
-        var saved = n ? api("PATCH", "/api/jobs/" + r.data.id, { json: { captionCustom: Object.assign(safe !== "none" ? { safe: safe } : {}, { lines: n }) } }) : Promise.resolve();
+        // The PATCH replaces the project's settings, so it repeats the ones the upload set (English only must survive:
+        // the server reads it when it writes the subtitles). Three-box templates have no line count.
+        var n = $("linesMain").parentNode.hidden ? 0 : +$("linesMain").value, safe = $("safeMain").value;
+        var custom = Object.assign(safe !== "none" ? { safe: safe } : {}, englishOnly() ? { show: "en" } : {}, { lines: n });
+        var saved = n ? api("PATCH", "/api/jobs/" + r.data.id, { json: { captionCustom: custom } }) : Promise.resolve();
         return saved.then(function () { return wait(r.data.id); });
       })
       .then(function (job) { jobData = job; progress(97, "Placing subtitles…"); return placeOnTimeline(job, lang); })
@@ -246,7 +259,7 @@
         var r = reply(res);
         $("progress").hidden = true;
         say(r.ok ? r.text : "Subtitles are ready, but " + r.text, r.ok ? "ok" : "error", r.details);
-        if (jobData) return openEditor(jobData);
+        if (jobData) { store("vs_last", JSON.stringify({ job: jobData.id, picked: picked })); return openEditor(jobData); }
       })
       .catch(function (e) { $("progress").hidden = true; say(e.message, "error"); })
       .then(function () { $("openBtn").hidden = !lastJob; return refreshAccount(); })
@@ -289,9 +302,10 @@
   // Only the controls that change what lands on the timeline: all of them for After Effects text layers; size,
   // colour, position, lines and safe zone for Premiere templates; lines for the plain caption track.
   function lookControls() {
-    var ae = HOST !== "PPRO", tpl = !ae && !!template();
+    var ae = HOST !== "PPRO", t = ae ? null : template(), tpl = !!t;
+    // A template without a colour control keeps its own colours; three-box templates split the words themselves.
     var on = ae ? ["lkStyle", "lkFont", "lkSize", "lkColors", "lkColor", "lkAccent", "lkPosition", "lkLines", "lkSafe"]
-      : tpl ? ["lkSize", "lkColors", "lkColor", "lkPosition", "lkLines", "lkSafe"] : ["lkLines"];
+      : tpl ? ["lkSize", "lkPosition", "lkSafe"].concat(t.color ? ["lkColors", "lkColor"] : [], t.parts ? [] : ["lkLines"]) : ["lkLines"];
     ["lkStyle", "lkFont", "lkSize", "lkColors", "lkColor", "lkAccent", "lkPosition", "lkLines", "lkSafe"].forEach(function (id) { $(id).hidden = on.indexOf(id) < 0; });
     $("lookNote").textContent = ae
       ? "Text layers get this font, size, colours and position. Install the caption fonts (website → Plugin) to see the exact font."
@@ -306,9 +320,10 @@
   function growAll() { if (document.querySelectorAll) Array.prototype.forEach.call(document.querySelectorAll("#cues textarea"), grow); }
   window.addEventListener("resize", growAll);
   function openEditor(job) {
-    editing = { job: job, cues: job.cues.map(function (c) { return { start: c.start, end: c.end, ta: c.ta, en: c.en, w: c.w, we: c.we }; }), dirty: false, styleId: "", custom: {} };
+    // Whole cues are kept (a caption's own style and word colours from the web editor are saved back with the text).
+    editing = { job: job, cues: job.cues.map(function (c) { return JSON.parse(JSON.stringify(c)); }), dirty: false, styleId: "", custom: {} };
     pending = false;
-    var box = $("cues"), hasEnglish = editing.cues.some(function (c) { return c.en; });
+    var box = $("cues"), hasEnglish = editing.cues.some(function (c) { return c.en; }), hasSpoken = editing.cues.some(function (c) { return c.ta; });
     box.innerHTML = "";
     editing.cues.forEach(function (c) {
       var row = document.createElement("div");
@@ -320,12 +335,20 @@
       t.textContent = window.Subs.stamp(c.start).slice(0, 8) + " → " + window.Subs.stamp(c.end).slice(0, 8);
       t.onclick = function () { if (picked) evalHost("vs_seek(" + Math.max(0, c.start + picked.offset) + ")"); };
       row.appendChild(t);
-      (hasEnglish ? ["ta", "en"] : ["ta"]).forEach(function (k) {
+      (hasEnglish && hasSpoken ? ["ta", "en"] : hasEnglish ? ["en"] : ["ta"]).forEach(function (k) {
         var inp = document.createElement("textarea");
         inp.rows = 1;
         inp.value = c[k];
         inp.setAttribute("aria-label", k === "en" ? "English" : "Subtitle");
-        inp.oninput = function () { c[k] = inp.value.replace(/\n/g, " "); editing.dirty = true; grow(inp); changed(); };
+        inp.oninput = function () {
+          c[k] = inp.value.replace(/\n/g, " ");
+          // Word times belong to the old words: with a word added or removed they're shared out again from the text.
+          var tk = k === "en" ? "we" : "w", n = c[k].split(/\s+/).filter(Boolean).length;
+          if (c[tk] && c[tk].length !== n) delete c[tk];
+          var ck = k === "en" ? "wce" : "wc"; // word colours, likewise
+          if (c[ck] && c[ck].length !== n) delete c[ck];
+          editing.dirty = true; grow(inp); changed();
+        };
         row.appendChild(inp);
       });
       box.appendChild(row);
@@ -347,7 +370,10 @@
   // A new style starts clean (same as the website); it is saved at once so the look below reflects it.
   $("style").onchange = function () {
     editing.styleId = $("style").value;
-    editing.custom = {};
+    // The look starts clean; project settings stay (same list as the web editor).
+    var keep = {};
+    ["safe", "safeCustom", "canvas", "layers", "logo", "show", "lines"].forEach(function (k) { if (editing.custom[k] !== undefined) keep[k] = editing.custom[k]; });
+    editing.custom = keep;
     saveLook().then(function () { return loadLook(editing.job.id); }).then(showLook).catch(function (e) { say(e.message, "error"); });
   };
   $("font").onchange = function () { tweak({ font: $("font").value }); };
@@ -388,6 +414,8 @@
   $("script").onchange = function () {
     store("vs_script", $("script").value);
     $("english").parentNode.hidden = englishOnly(); // the English line is the subtitles here
+    // A full translation keeps no spoken-language text, so only English can go on the timeline.
+    Array.prototype.forEach.call($("lang").options, function (o) { o.disabled = englishOnly() && o.value !== "en"; });
     if (englishOnly()) { $("english").checked = true; $("lang").value = "en"; $("lang").onchange(); }
   };
   // English on the timeline needs the English line: unticking it puts the spoken language on, and choosing English
@@ -498,8 +526,11 @@
     if (typeof document.addEventListener === "function") { // not in the Node test's fake DOM
       $("styleSelectRow").hidden = true;
       $("styleCurrent").hidden = false;
-      $("styleMain").addEventListener("change", function () { renderCurrent(); if (editing) lookControls(); });
+      // Three-box templates split the words over their boxes themselves: no line count to choose.
+      var linesFor = function () { var t = template(); $("linesMain").parentNode.hidden = !!(t && t.parts); };
+      $("styleMain").addEventListener("change", function () { renderCurrent(); linesFor(); if (editing) lookControls(); });
       renderCurrent();
+      linesFor();
     }
   } else {
     api("GET", "/api/styles").then(function (r) {
@@ -600,7 +631,22 @@
   }
 
   // ---------- start ----------
+  // The last project comes back after the panel or Premiere restarts: its clip and the Edit subtitles tab.
+  function reopenLast() {
+    var last; try { last = JSON.parse(store("vs_last")); } catch (e) { return; }
+    if (!last || !last.job || !last.picked || !fs.existsSync(last.picked.file)) return;
+    return api("GET", "/api/jobs/" + last.job).then(function (r) {
+      if (r.status !== 200 || r.data.status !== "done" || editing || picked) return;
+      picked = last.picked;
+      lastJob = last.job;
+      $("clip").textContent = picked.name;
+      $("clip").title = picked.file;
+      $("openBtn").hidden = false;
+      updateGo();
+      return openEditor(r.data).then(function () { view("setup"); });
+    }).catch(function () {}); // a missed reopen only means starting fresh
+  }
   $("server").value = server();
   if (!store("vs_key")) show("connect");
-  else refreshAccount().catch(function (e) { show("connect"); $("connectMsg").textContent = e.message; });
+  else refreshAccount().then(function (ok) { if (ok) return reopenLast(); }).catch(function (e) { show("connect"); $("connectMsg").textContent = e.message; });
 })();
