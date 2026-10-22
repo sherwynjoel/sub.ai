@@ -40,6 +40,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
       </label>
       {error && <p className="error" role="alert">{error}</p>}
       <button className="btn" disabled={busy}>{busy ? "Please wait…" : signup ? "Create account" : "Sign in"}</button>
+      {signup && <p className="muted small">By creating an account you agree to the <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy policy</Link>.</p>}
       <p className="muted switch">
         {signup ? <>Already have an account? <Link href="/login">Sign in</Link></> : <>New here? <Link href={`/signup${plan ? `?plan=${plan}` : ""}`}>Create an account</Link></>}
       </p>
