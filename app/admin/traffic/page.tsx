@@ -1,4 +1,4 @@
-import { and, desc, gt, gte, isNotNull, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, isNotNull, ne, sql } from "drizzle-orm";
 import { db, jobs, pageViews, users } from "@/db";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ async function load() {
     db.select({ from: sql<string>`coalesce(${pageViews.source}, ${pageViews.referrer}, 'Direct / unknown')`, visitors: sql<number>`count(distinct (${pageViews.day}, ${pageViews.visitor}))::int` })
       .from(pageViews).where(inRange).groupBy(sql`1`).orderBy(desc(sql`2`)).limit(15),
     db.select({ n: sql<number>`count(*)::int` }).from(users).where(gt(users.createdAt, from)),
-    db.select({ n: sql<number>`count(distinct ${jobs.userId})::int` }).from(jobs).where(sql`${jobs.userId} in (select id from users where created_at > ${from})`),
+    db.select({ n: sql<number>`count(distinct ${jobs.userId})::int` }).from(jobs).innerJoin(users, eq(users.id, jobs.userId)).where(gt(users.createdAt, from)),
     db.select({ n: sql<number>`count(*)::int` }).from(users).where(and(gt(users.createdAt, from), ne(users.plan, "free"), isNotNull(users.periodEnd))),
   ]);
   return { daily, pages, sources, signups: signups.n, made: made.n, paid: paid.n };
