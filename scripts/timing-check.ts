@@ -51,7 +51,8 @@ async function subtitle(name: string): Promise<{ cues: Cue[]; speech?: Speech }>
   if (!up.id) throw new Error(`${name}: upload failed: ${JSON.stringify(up)}`);
   for (;;) {
     await new Promise((r) => setTimeout(r, 4000));
-    const j = await fetch(`${url}/api/jobs/${up.id}`, { headers: auth }).then((r) => r.json());
+    // A dropped connection while waiting is retried, not fatal.
+    const j = await fetch(`${url}/api/jobs/${up.id}`, { headers: auth, signal: AbortSignal.timeout(30000) }).then((r) => r.json()).catch(() => ({}));
     if (j.status === "failed") throw new Error(`${name}: ${j.error}`);
     if (j.status === "done") { writeFileSync(join(dir, `${name}.out.json`), JSON.stringify(j)); return j; }
   }
