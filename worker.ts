@@ -11,6 +11,7 @@ import { getAiConfig, transcribe, type Script } from "./lib/ai";
 import { extractChunks, LEVEL_FRAME, loudness, probe, STORAGE } from "./lib/media";
 import { speechRegions } from "./lib/timing";
 import { ALIGN_LANGS, alignCues } from "./lib/align";
+import { translateLines } from "./lib/ai/translate";
 import { renderStyled } from "./lib/render";
 import { dropAnchor, englishCues, mergeChunks, mergeShort, retimeWindows, snapToPauses, withWordTimes } from "./lib/subtitles";
 
@@ -40,11 +41,16 @@ async function processJob(job: typeof jobs.$inferSelect) {
       offset += duration;
     }
     const results: { offset: number; duration: number; cues: Cue[] }[] = [];
+    // "Translate to <language>" (English speech): Sarvam writes down the English, which is translated below; the
+    // LLM providers translate as they listen (English speech becomes <language> in their main line).
+    const translated = job.script === "translated", bySarvam = translated && cfg.provider === "sarvam";
+    const ask = bySarvam ? { lang: "en-IN", want: { script: "mixed" as Script, english: false } }
+      : { lang: job.language, want: { script: (translated ? "mixed" : job.script) as Script, english: translated || job.withEnglish } };
     // Simple pool: PARALLEL_CHUNKS requests in flight.
     const queue = [...plan];
     await Promise.all(Array.from({ length: PARALLEL_CHUNKS }, async () => {
       for (let c; (c = queue.shift()); ) {
-        const cues = await transcribe(await readFile(c.f), c.duration, cfg, job.language, { script: job.script as Script, english: job.withEnglish }).catch((e) => {
+        const cues = await transcribe(await readFile(c.f), c.duration, cfg, ask.lang, ask.want).catch((e) => {
           queue.length = 0; // stop the other lanes too
           throw e;
         });
@@ -58,12 +64,18 @@ async function processJob(job: typeof jobs.$inferSelect) {
     // Where the word-timing model knows the language, every word is placed in the audio first (lib/align.ts);
     // windows it can't place keep the loudness estimates.
     const level = await loudness(job.filePath!), merged = mergeChunks(results);
-    const timed = ALIGN_LANGS.includes(job.language) ? await alignCues(job.filePath!, merged) : merged;
+    const timed = ALIGN_LANGS.includes(job.language) && !translated ? await alignCues(job.filePath!, merged) : merged;
     const cues = level
       ? withWordTimes(mergeShort(snapToPauses(retimeWindows(timed, level, LEVEL_FRAME), level, LEVEL_FRAME)), level, LEVEL_FRAME)
       : mergeShort(timed).map(dropAnchor);
     // English only: the captions are the translation in whole sentences (not cut where the Tamil was).
-    const stored = job.captionCustom?.show === "en" ? englishCues(cues) : cues;
+    let stored = job.captionCustom?.show === "en" ? englishCues(cues) : cues;
+    if (bySarvam) { // the English, cut into whole sentences, each translated
+      const sentences = englishCues(cues.map((c) => ({ ...c, en: c.ta, we: c.w, ta: "", w: undefined })));
+      const lines = await translateLines(sentences.map((c) => c.en), job.language);
+      stored = sentences.map((c, i) => ({ ...c, ta: lines[i] }));
+      await db.update(jobs).set({ progress: 98 }).where(eq(jobs.id, job.id));
+    }
     const speech = level ? speechRegions(level, LEVEL_FRAME) : null; // for the editor's timing check
     await db.update(jobs).set({ status: "done", progress: 100, error: null, cues: stored, speech, updatedAt: new Date() }).where(eq(jobs.id, job.id));
     console.log(`job ${job.id} done (${plan.length} chunks, ${cfg.provider}/${cfg.model})`);
@@ -103,8 +115,8 @@ async function processRender(job: typeof jobs.$inferSelect) {
 async function fail(job: typeof jobs.$inferSelect, err: unknown) {
   console.error(`job ${job.id} failed`, err);
   await db.update(jobs).set({ status: "failed", error: String((err as Error)?.message ?? err).slice(0, 500), updatedAt: new Date() }).where(eq(jobs.id, job.id));
-  // Give the minutes back — the user got nothing for them.
-  await db.update(users).set({ secondsUsed: sql`greatest(0, ${users.secondsUsed} - ${Math.ceil(job.durationSec)})` }).where(eq(users.id, job.userId));
+  // Give the minutes back — the user got nothing for them. (A redo with another caption type cost nothing.)
+  if (!job.redos) await db.update(users).set({ secondsUsed: sql`greatest(0, ${users.secondsUsed} - ${Math.ceil(job.durationSec)})` }).where(eq(users.id, job.userId));
 }
 
 async function purgeOld() {

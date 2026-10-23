@@ -8,6 +8,8 @@ import { CANVAS_RATIOS, CAPTION_STYLES, mergeCustom, resolveStyle, SAFE_ZONES, s
 import { insertAt, mergeCues, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
+import { MAX_REDOS, typeLabel, typeOf, type CaptionType } from "@/lib/captionTypes";
+import CaptionTypePicker from "@/components/CaptionTypePicker";
 import LookControls from "@/components/LookControls";
 import StyledCaption from "@/components/StyledCaption";
 import Timeline from "@/components/Timeline";
@@ -15,7 +17,7 @@ import "@/app/caption-styles.css";
 
 type Job = {
   id: string; filename: string; language: string; status: string; progress: number; error: string | null;
-  hasMedia: boolean; provider: string | null; model: string | null; cues: Cue[]; speech?: [number, number][];
+  hasMedia: boolean; provider: string | null; model: string | null; cues: Cue[]; speech?: [number, number][]; script: string; redos: number;
   captionStyle: string; captionCustom: CaptionCustom; renderStatus: string | null; renderProgress: number; renderError: string | null; renderLang: string;
 };
 type View = "ta" | "en" | "both";
@@ -296,7 +298,9 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     list.current?.children[activeIdx]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [activeIdx, playing]);
   // Timing check: captions that don't line up with the speech, or are far faster or slower than the rest (lib/timing.ts).
-  const issues = useMemo(() => timingIssues(cues, initial.speech ?? [], hasSpoken ? "ta" : "en"), [cues, initial.speech, hasSpoken]);
+  // A translation isn't what's said: check the English (what's said) instead.
+  const checkLine = hasSpoken && initial.script !== "translated" ? "ta" : "en";
+  const issues = useMemo(() => timingIssues(cues, initial.speech ?? [], checkLine), [cues, initial.speech, checkLine]);
   const issueOf = new Map(issues.filter((x) => x.cue >= 0).map((x) => [x.cue, x]));
   function nextIssue() {
     const x = issues.find((x) => x.at > now + 0.6) ?? issues[0];
@@ -304,6 +308,19 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     if (x.cue >= 0) select(x.cue);
     seek(Math.max(0, x.at - 0.5));
     setMsg(ISSUE_TEXT[x.kind]);
+  }
+  const [retype, setRetype] = useState<{ type: CaptionType; withEnglish: boolean } | null>(null);
+  const [retyping, setRetyping] = useState(false);
+  async function applyType() {
+    if (!retype) return;
+    setRetyping(true);
+    const res = await fetch(`/api/jobs/${initial.id}/redo`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(retype) });
+    const r = await res.json().catch(() => ({}));
+    setRetyping(false);
+    if (!res.ok) { setRetype(null); setMsg(r.error || "Couldn't change the caption type."); return; }
+    setDirty(false);
+    if (r.redone) router.push("/app"); // the projects page shows the progress
+    else setTimeout(() => window.location.reload(), 50); // after the unsaved-changes guard is off
   }
   function select(i: number) {
     setSelected(i);
@@ -419,7 +436,28 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
         <div className="ed-title">
           <Link href="/app" className="muted">Projects</Link>
           <h1 className="page-title">{job.filename}</h1>
+          <button className="ctype-chip" onClick={() => setRetype(typeOf(initial))} title="Change what the captions say and how they're written">
+            {typeLabel(initial, language.name)} · Change
+          </button>
         </div>
+        {retype && (
+          <div className="modal-back" onClick={(e) => e.target === e.currentTarget && !retyping && setRetype(null)}>
+            <div className="modal" role="dialog" aria-modal="true" aria-label="Change caption type">
+              <h2>Change caption type</h2>
+              <CaptionTypePicker language={language.name} tamil={short === "ta"} type={retype.type} withEnglish={retype.withEnglish}
+                onChange={(type, withEnglish) => setRetype({ type, withEnglish })} disabled={retyping} />
+              <p className="muted small">
+                Some changes are instant (like hiding the English line). Others make the captions again from your video:
+                that takes a minute or two, uses no minutes, and replaces your text edits (your style stays).
+                {` ${Math.max(0, MAX_REDOS - initial.redos)} of ${MAX_REDOS} remakes left.`}{dirty ? " Unsaved changes will be lost." : ""}
+              </p>
+              <div className="modal-actions">
+                <button className="btn ghost" onClick={() => setRetype(null)} disabled={retyping}>Cancel</button>
+                <button className="btn" onClick={applyType} disabled={retyping}>{retyping ? "Changing…" : "Change"}</button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="ed-tools" role="toolbar" aria-label="Edit">
           <button className="btn ghost small" onClick={undo} disabled={!past.length} title="Undo (⌘Z)">Undo</button>
           <button className="btn ghost small" onClick={redo} disabled={!future.length} title="Redo (⇧⌘Z)">Redo</button>

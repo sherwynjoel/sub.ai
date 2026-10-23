@@ -3,11 +3,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_LANGUAGE, LANGUAGES, languageOf } from "@/lib/languages";
+import { typeLabel, typeSettings, type CaptionType } from "@/lib/captionTypes";
+import CaptionTypePicker from "@/components/CaptionTypePicker";
 import { SAFE_ZONES } from "@/lib/captionStyles";
 
 type Job = {
   id: string; filename: string; durationSec: number; status: string; progress: number;
-  error: string | null; createdAt: string; cueCount: number; language: string; captionCustom?: { show?: "ta" | "en" | "both" };
+  error: string | null; createdAt: string; cueCount: number; language: string; script: string; captionCustom?: { show?: "ta" | "en" | "both" };
 };
 
 const mins = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
@@ -20,8 +22,7 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [drag, setDrag] = useState(false);
   const [language, setLanguage] = useState<string>(DEFAULT_LANGUAGE);
-  const [script, setScript] = useState("mixed");
-  const [show, setShow] = useState<"both" | "ta" | "en">("both"); // which lines the subtitles show
+  const [ctype, setCtype] = useState<{ type: CaptionType; withEnglish: boolean }>({ type: "spoken", withEnglish: true });
   const [safe, setSafe] = useState("none");
   const input = useRef<HTMLInputElement>(null);
 
@@ -41,7 +42,8 @@ export default function Dashboard() {
     setError("");
     setUpload({ name: file.name, pct: 0 });
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `/api/upload?name=${encodeURIComponent(file.name)}&lang=${language}&script=${script}&english=${show === "ta" ? 0 : 1}&show=${show}&safe=${safe}`);
+    const { script, show, english } = typeSettings(ctype.type, ctype.withEnglish);
+    xhr.open("POST", `/api/upload?name=${encodeURIComponent(file.name)}&lang=${language}&script=${script}&english=${english ? 1 : 0}&show=${show}&safe=${safe}`);
     xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
     xhr.upload.onprogress = (e) => e.lengthComputable && setUpload({ name: file.name, pct: Math.round((e.loaded / e.total) * 100) });
     xhr.onload = () => {
@@ -62,21 +64,13 @@ export default function Dashboard() {
           <select value={language} onChange={(e) => setLanguage(e.target.value)} disabled={!!upload}>
             {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name} · {l.native}</option>)}
           </select>
-          <select value={show} onChange={(e) => setShow(e.target.value as typeof show)} disabled={!!upload} aria-label="Show">
-            <option value="both">{languageOf(language).name} + English</option>
-            <option value="ta">{languageOf(language).name} only</option>
-            <option value="en">English only (translation)</option>
-          </select>
-          {show !== "en" && <select value={script} onChange={(e) => setScript(e.target.value)} disabled={!!upload} aria-label="Script">
-            <option value="mixed">{languageOf(language).name} script, English words as English</option>
-            <option value="roman">Roman letters{language === "ta-IN" ? " (Tanglish)" : ""}</option>
-            <option value="native">{languageOf(language).name} script only</option>
-          </select>}
           <select value={safe} onChange={(e) => setSafe(e.target.value)} disabled={!!upload} aria-label="Safe zone">
             {Object.entries(SAFE_ZONES).filter(([id]) => id !== "custom").map(([id, z]) => <option key={id} value={id}>{id === "none" ? "No safe zone" : `Safe zone: ${z.name}`}</option>)}
           </select>
         </span>
       </label>
+      <CaptionTypePicker language={languageOf(language).name} tamil={language === "ta-IN"} type={ctype.type} withEnglish={ctype.withEnglish}
+        onChange={(type, withEnglish) => setCtype({ type, withEnglish })} disabled={!!upload} />
       <div
         className={`drop${drag ? " over" : ""}${upload ? " uploading" : ""}`}
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
@@ -109,7 +103,7 @@ export default function Dashboard() {
           jobs.map((j) => (
             <Link key={j.id} href={`/app/jobs/${j.id}`} className={`job ${j.status}`}>
               <span className="name">{j.filename}</span>
-              <span className="meta muted">{languageOf(j.language).name}{j.captionCustom?.show === "en" ? " → English" : j.captionCustom?.show === "ta" ? " only" : ""} · {mins(j.durationSec)} · {new Date(j.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+              <span className="meta muted">{typeLabel({ script: j.script, captionCustom: j.captionCustom }, languageOf(j.language).name)} · {mins(j.durationSec)} · {new Date(j.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
               <span className="state">
                 {j.status === "processing" || j.status === "queued" ? (
                   <>

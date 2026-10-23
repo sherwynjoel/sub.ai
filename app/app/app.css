@@ -392,3 +392,23 @@ kbd { font: 600 .75rem/1 var(--font-body); padding: 3px 6px; border: 1px solid v
 }
 .app-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px 24px; flex-wrap: wrap; padding: 8px 0 40px; }
 a.signout { text-decoration: none; }
+
+/* Caption type picker (upload and editor) */
+.ctype { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; min-width: 0; }
+.ctype legend { font-weight: 700; margin-bottom: 8px; padding: 0; }
+.ctype-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.ctype-card { position: relative; display: grid; gap: 4px; align-content: start; padding: 12px 14px; border: 1px solid var(--line-hi); border-radius: var(--r-sm); background: var(--glass-strong); cursor: pointer; }
+.ctype-card input { position: absolute; opacity: 0; pointer-events: none; }
+.ctype-card.on { border-color: var(--black); box-shadow: 0 0 0 1px var(--black); }
+.ctype-card:has(input:focus-visible) { outline: 2px solid var(--black); outline-offset: 2px; }
+.ctype-sample { font-size: .95rem; padding: 4px 8px; border-radius: 8px; background: var(--black); color: #fff; justify-self: start; }
+.ctype-note { font-size: .8rem; color: var(--muted); }
+.ctype-en { display: flex; align-items: center; gap: 8px; font-size: .9rem; }
+.ctype-en input { width: auto; }
+.ctype[disabled] .ctype-card { opacity: .6; cursor: default; }
+.ctype-chip { justify-self: start; font: inherit; font-size: .8rem; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line-hi); background: var(--glass-strong); color: var(--ink); cursor: pointer; }
+.modal-back { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(12, 12, 20, .45); }
+.modal { width: min(760px, 100%); max-height: calc(100svh - 32px); overflow-y: auto; display: grid; gap: 14px; padding: 20px; border-radius: 16px; background: #fff; color: var(--ink); }
+.modal h2 { margin: 0; font-size: 1.2rem; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+@media (max-width: 640px) { .ctype-cards { grid-template-columns: 1fr 1fr; } }
