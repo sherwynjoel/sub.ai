@@ -412,3 +412,4 @@ a.signout { text-decoration: none; }
 .modal h2 { margin: 0; font-size: 1.2rem; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
 @media (max-width: 640px) { .ctype-cards { grid-template-columns: 1fr 1fr; } }
+.modal .ctype legend { display: none; } /* the dialog has its own heading */
