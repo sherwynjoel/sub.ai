@@ -29,13 +29,13 @@
 .caret { animation: capBlink .8s steps(1) infinite; }
 @keyframes capBlink { 50% { opacity: 0; } }
 
-/* Retro VHS: red and cyan copies nudged apart, with a little jitter */
+/* Tape Glitch (vhs): red and cyan copies nudged apart, with a little jitter */
 .fx-vhs .cap-main { position: relative; text-shadow: none !important; }
 .fx-vhs .cap-main::before, .fx-vhs .cap-main::after { content: attr(data-text); position: absolute; inset: 0; opacity: .62; padding: inherit; }
 .fx-vhs .cap-main::before { color: #ff3c3c; transform: translateX(.05em); animation: vhs 1s steps(4) infinite; z-index: -1; }
 .fx-vhs .cap-main::after { color: #00e6ff; transform: translateX(-.05em); animation: vhs 1s steps(4) infinite reverse; z-index: -1; }
 @keyframes vhs { 25% { translate: .02em 0; } 50% { translate: -.015em 0; } 75% { translate: .01em 0; } }
 
-/* Crawl: tilts away and rolls up as the line plays (--p 0 to 1) */
+/* Roll Away (crawl): tilts away and rolls up as the line plays (--p 0 to 1) */
 .fx-crawl { perspective: 30cqmin; }
 .fx-crawl .cap-main { transform: rotateX(50deg) translateY(calc(var(--p) * -28cqmin)); transform-origin: 50% 100%; opacity: calc(1.7 - var(--p)); }

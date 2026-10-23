@@ -5,7 +5,7 @@ import { CAPTION_STYLES } from "@/lib/captionStyles";
 import "@/app/caption-styles.css";
 
 const LINE = { text: "இந்த song தான் என் favourite", start: 0.3, end: 2.7, loop: 3.6 };
-const GROUPS = ["All", "Premiere", "Trending", "Aesthetic", "Clean", "Fun"] as const;
+const GROUPS = ["All", "Premiere", "Bold", "Soft", "Simple", "Playful"] as const;
 
 /** Every caption style playing the same line on a loop; the clock only runs while the grid is on screen. */
 export default function StyleShowcase() {
