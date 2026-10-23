@@ -450,7 +450,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           <Link href="/app" className="muted">Projects</Link>
           <h1 className="page-title">{job.filename}</h1>
           <button className="ctype-chip" onClick={() => setRetype(typeOf(initial))} title="Change what the captions say and how they're written">
-            {typeLabel(initial, language.name)} · Change
+            <span className="muted">Captions:</span> <strong>{typeLabel(initial, language.name)}</strong> <span className="ctype-go">Change type</span>
           </button>
         </div>
         {retype && (

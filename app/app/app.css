@@ -406,7 +406,9 @@ a.signout { text-decoration: none; }
 .ctype-en { display: flex; align-items: center; gap: 8px; font-size: .9rem; }
 .ctype-en input { width: auto; }
 .ctype[disabled] .ctype-card { opacity: .6; cursor: default; }
-.ctype-chip { justify-self: start; font: inherit; font-size: .8rem; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line-hi); background: var(--glass-strong); color: var(--ink); cursor: pointer; }
+.ctype-chip { justify-self: start; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: .9rem; padding: 4px 4px 4px 12px; border-radius: 999px; border: 1px solid var(--line-hi); background: var(--glass-strong); color: var(--ink); cursor: pointer; }
+.ctype-chip:hover { border-color: var(--black); }
+.ctype-go { margin-left: 4px; padding: 3px 10px; border-radius: 999px; background: var(--black); color: #fff; font-weight: 700; font-size: .8rem; }
 .modal-back { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(12, 12, 20, .45); }
 .modal { width: min(760px, 100%); max-height: calc(100svh - 32px); overflow-y: auto; display: grid; gap: 14px; padding: 20px; border-radius: 16px; background: #fff; color: var(--ink); }
 .modal h2 { margin: 0; font-size: 1.2rem; }
