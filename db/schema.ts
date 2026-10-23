@@ -8,6 +8,7 @@ import { pgTable, text, uuid, integer, real, boolean, timestamp, jsonb, date, bi
  */
 export type Cue = {
   start: number; end: number; ta: string; en: string; w?: number[]; we?: number[]; anchor?: boolean;
+  aligned?: boolean;            // job time only: timed from its words in the audio (lib/align.ts), not estimated
   style?: CaptionCustom;        // this caption's own look, over the project's (font, size, colours, position…)
   wc?: (string | null)[];       // colour of each word of `ta` (null = the style's own)
   wce?: (string | null)[];      // colour of each word of `en`
