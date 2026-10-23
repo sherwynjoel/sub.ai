@@ -19,6 +19,8 @@ if [ -n "$gone" ]; then
   printf '%s\n' "$gone" | ssh "${ssh_opts[@]}" "$host" 'cd /opt/vasanam && while IFS= read -r f; do rm -f -- "$f"; rmdir -p -- "$(dirname -- "$f")" 2>/dev/null || true; done'
   echo "Removed $(printf '%s\n' "$gone" | wc -l | tr -d ' ') deleted file(s)."
 fi
-ssh "${ssh_opts[@]}" "$host" "cd /opt/vasanam && npm ci --no-audit --no-fund > deploy.log 2>&1 && (set -a && . ./.env.local && set +a && npx drizzle-kit migrate) >> deploy.log 2>&1 && npm run build >> deploy.log 2>&1 && pm2 restart vasanam-web vasanam-worker > /dev/null" \
+# ONNXRUNTIME_NODE_INSTALL=skip: the model runtime would otherwise download its GPU (CUDA) files on Linux, which
+# the server has no use for and which ran npm out of memory.
+ssh "${ssh_opts[@]}" "$host" "cd /opt/vasanam && ONNXRUNTIME_NODE_INSTALL=skip npm ci --no-audit --no-fund > deploy.log 2>&1 && (set -a && . ./.env.local && set +a && npx drizzle-kit migrate) >> deploy.log 2>&1 && npm run build >> deploy.log 2>&1 && pm2 restart vasanam-web vasanam-worker > /dev/null" \
   || { echo "Deploy failed; see /opt/vasanam/deploy.log on the server."; exit 1; }
 echo "Deployed $commit to $host."
