@@ -214,7 +214,7 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 @media (max-width: 600px) { .cz-grid { grid-template-columns: 1fr; } }
 
 /* Editing on the video: draggable caption and a floating toolbar */
-.overlay.styled { pointer-events: none; }
+.overlay.styled { pointer-events: none; text-align: center; } /* a short caption's box sits in the middle, not at the left */
 .overlay.styled.free { right: auto; bottom: auto; width: max-content; transform: translate(-50%, -50%); }
 .overlay.ghost { opacity: .72; }
 .drag-handle { display: inline-block; max-width: 100%; pointer-events: auto; cursor: move; touch-action: none; border-radius: 8px; outline: 1px dashed transparent; transition: outline-color .2s; }

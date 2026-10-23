@@ -65,15 +65,8 @@ function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, o
   const drag = (e: React.PointerEvent<HTMLDivElement>) => {
     const frame = video.current?.parentElement?.getBoundingClientRect();
     if (!frame) return;
-    video.current?.pause();
     e.preventDefault();
-    const at = (ev: PointerEvent) => onMove(i,
-      Math.min(0.95, Math.max(0.05, (ev.clientX - frame.left) / frame.width)),
-      Math.min(0.95, Math.max(0.05, (ev.clientY - frame.top) / frame.height)),
-    );
-    const stop = () => { removeEventListener("pointermove", at); removeEventListener("pointerup", stop); };
-    addEventListener("pointermove", at);
-    addEventListener("pointerup", stop);
+    follow(e, frame, (x, y) => { video.current?.pause(); onMove(i, x, y); }, 0.05);
   };
   const line = view === "en" ? "en" : "ta";
   return (
@@ -111,7 +104,27 @@ function dragIn(e: React.PointerEvent, onMove: (x: number, y: number) => void) {
   if (!frame) return;
   e.preventDefault();
   e.stopPropagation();
-  const at = (ev: PointerEvent) => onMove(Math.min(0.98, Math.max(0.02, (ev.clientX - frame.left) / frame.width)), Math.min(0.98, Math.max(0.02, (ev.clientY - frame.top) / frame.height)));
+  follow(e, frame, onMove, 0.02);
+}
+
+/**
+ * Move something placed by its centre (a caption, layer or logo) with the pointer: by how far the pointer moves, not
+ * to where it is (grabbing a caption by its left end used to pull its centre there), only once it has moved a few
+ * pixels (a click or a shaky tap leaves it where it is), and snapping to the middle of the frame when near it.
+ */
+function follow(e: React.PointerEvent, frame: DOMRect, onMove: (x: number, y: number) => void, edge: number) {
+  const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const x0 = (box.left + box.width / 2 - frame.left) / frame.width, y0 = (box.top + box.height / 2 - frame.top) / frame.height;
+  const sx = e.clientX, sy = e.clientY;
+  let moving = false;
+  const clamp = (n: number) => Math.min(1 - edge, Math.max(edge, n));
+  const at = (ev: PointerEvent) => {
+    const dx = ev.clientX - sx, dy = ev.clientY - sy;
+    if (!moving && Math.hypot(dx, dy) < 6) return;
+    moving = true;
+    const x = x0 + dx / frame.width;
+    onMove(clamp(Math.abs(x - 0.5) < 0.03 ? 0.5 : x), clamp(y0 + dy / frame.height));
+  };
   const stop = () => { removeEventListener("pointermove", at); removeEventListener("pointerup", stop); };
   addEventListener("pointermove", at);
   addEventListener("pointerup", stop);
