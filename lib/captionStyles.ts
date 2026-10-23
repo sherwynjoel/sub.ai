@@ -81,6 +81,11 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "doodle-card", name: "Doodle Card", group: "Fun", blurb: "Marker on a paper card; words sit at playful angles.", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: INK, box: CREAM, effect: "wobble" },
   { id: "doodle-clean", name: "Doodle Clean", group: "Fun", blurb: "Same marker, sticker edge, no card; keyword in marker yellow.", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: "#FFFFFF", outline: ["#000000", 0.07], keyword: { color: HL }, effect: "wobble" },
   { id: "crawl", name: "Crawl", group: "Fun", blurb: "Opening-crawl lines rolling off into the distance.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.1, caps: true, color: HL, effect: "crawl" },
+  { id: "mass-title", name: "Mass Title", group: "Trending", blurb: "Big yellow caps with a thick black edge, bouncing in; the keyword hits red.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.35, caps: true, color: "#FFD60A", outline: ["#000000", 0.1], shadow: 0.08, keyword: { color: "#FF2A2A", grow: true }, anim: "bounce" },
+  { id: "neon-aura", name: "Neon Aura", group: "Trending", blurb: "White letters in a violet haze; the keyword glows pink and grows.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.15, color: "#FFFFFF", glow: "#A855F7", keyword: { color: "#FF6AD5", grow: true }, anim: "pop" },
+  { id: "frost-glass", name: "Frost Glass", group: "Aesthetic", blurb: "Calm white type on a see-through frosted card.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFFFFF", box: "#FFFFFF38", boxPad: 0.34, anim: "fade" },
+  { id: "flip-card", name: "Flip Card", group: "Clean", blurb: "White with a black edge; the spoken word flips to black on white.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FFFFFF", outline: ["#000000", 0.06], mark: "#FFFFFF", active: INK },
+  { id: "lavender-pill", name: "Lavender Pill", group: "Clean", blurb: "Soft lavender card with ink type; the spoken word turns violet.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: INK, active: "#6D28D9", box: "#E9DDFF", anim: "slide" },
 ];
 
 export const DEFAULT_STYLE = "minimal";
