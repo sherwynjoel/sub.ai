@@ -6,6 +6,7 @@ import { ownJob, publicJob } from "@/lib/jobs";
 import { CAPTION_STYLES, ownLook, sanitizeCustom } from "@/lib/captionStyles";
 import { LEVEL_FRAME, loudness } from "@/lib/media";
 import { withWordTimes } from "@/lib/subtitles";
+import { speechRegions } from "@/lib/timing";
 import { logoPath } from "@/lib/render";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -15,12 +16,14 @@ export async function GET(_: Request, { params }: Ctx) {
   if (!u) return unauthorized();
   const j = await ownJob((await params).id, u);
   if (!j) return json({ error: "Not found" }, 404);
-  // Jobs from before word timing (or edited since): time the words from the audio once, while the upload is kept.
-  if (j.status === "done" && j.filePath && j.cues?.length && !j.cues.some((c) => c.w || c.we)) {
+  // Jobs from before word timing (or edited since) and the timing check: measure the audio once, while the upload is kept.
+  const needWords = !!j.cues?.length && !j.cues.some((c) => c.w || c.we);
+  if (j.status === "done" && j.filePath && (needWords || !j.speech)) {
     const level = await loudness(j.filePath);
     if (level) {
-      j.cues = withWordTimes(j.cues, level, LEVEL_FRAME);
-      await db.update(jobs).set({ cues: j.cues }).where(eq(jobs.id, j.id));
+      if (needWords) j.cues = withWordTimes(j.cues!, level, LEVEL_FRAME);
+      j.speech = speechRegions(level, LEVEL_FRAME);
+      await db.update(jobs).set({ cues: j.cues, speech: j.speech }).where(eq(jobs.id, j.id));
     }
   }
   return json(publicJob(j, true));

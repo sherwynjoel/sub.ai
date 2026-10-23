@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Cue } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
 import { CANVAS_RATIOS, CAPTION_STYLES, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
 import { insertAt, mergeCues, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
+import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
 import LookControls from "@/components/LookControls";
 import StyledCaption from "@/components/StyledCaption";
 import Timeline from "@/components/Timeline";
@@ -14,7 +15,7 @@ import "@/app/caption-styles.css";
 
 type Job = {
   id: string; filename: string; language: string; status: string; progress: number; error: string | null;
-  hasMedia: boolean; provider: string | null; model: string | null; cues: Cue[];
+  hasMedia: boolean; provider: string | null; model: string | null; cues: Cue[]; speech?: [number, number][];
   captionStyle: string; captionCustom: CaptionCustom; renderStatus: string | null; renderProgress: number; renderError: string | null; renderLang: string;
 };
 type View = "ta" | "en" | "both";
@@ -294,6 +295,16 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     if (activeIdx < 0 || !playing) return;
     list.current?.children[activeIdx]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [activeIdx, playing]);
+  // Timing check: captions that don't line up with the speech, or are far faster or slower than the rest (lib/timing.ts).
+  const issues = useMemo(() => timingIssues(cues, initial.speech ?? [], hasSpoken ? "ta" : "en"), [cues, initial.speech, hasSpoken]);
+  const issueOf = new Map(issues.filter((x) => x.cue >= 0).map((x) => [x.cue, x]));
+  function nextIssue() {
+    const x = issues.find((x) => x.at > now + 0.6) ?? issues[0];
+    if (!x) return;
+    if (x.cue >= 0) select(x.cue);
+    seek(Math.max(0, x.at - 0.5));
+    setMsg(ISSUE_TEXT[x.kind]);
+  }
   function select(i: number) {
     setSelected(i);
     if (i >= 0) { setTab("caption"); list.current?.children[i]?.scrollIntoView({ block: "nearest" }); }
@@ -427,6 +438,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 </button>
                 <span className="muted small tnum">{tc(c.start)} → {tc(c.end)}</span>
                 {c.style && <span className="chip-own" title="This caption has its own style">Own style</span>}
+                {issueOf.has(i) && <span className="chip-timing" title={ISSUE_TEXT[issueOf.get(i)!.kind]}>Check timing</span>}
               </div>
               {hasSpoken && <textarea lang={short} rows={1} value={c.ta} onChange={(e) => editCue(i, setText(c, "ta", e.target.value))} aria-label={`${language.name} subtitle ${i + 1}`} />}
               {hasEnglish && <textarea rows={1} value={c.en} onChange={(e) => editCue(i, setText(c, "en", e.target.value))} aria-label={`English subtitle ${i + 1}`} />}
@@ -471,6 +483,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             <button className="btn ghost small" onClick={merge} title="Merge the selected caption with the next (M)">Merge</button>
             <button className="btn ghost small" onClick={add} title="Add a caption at the playhead (A)">Add</button>
             <button className="btn ghost small" onClick={() => remove()} disabled={target() < 0} title="Delete the selected caption (Delete)">Delete</button>
+            {issues.length > 0 && <button className="btn ghost small timing-next" onClick={nextIssue} title="Go to the next caption whose timing may be off">Check timing · {issues.length}</button>}
             {views.length > 1 && <>
               <span className="ed-sep" />
               <div className="seg" role="group" aria-label="Preview language">

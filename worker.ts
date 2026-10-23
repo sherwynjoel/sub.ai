@@ -9,6 +9,7 @@ import { and, eq, lt, isNotNull, sql } from "drizzle-orm";
 import { db, jobs, settings, users, type Cue } from "./db";
 import { getAiConfig, transcribe, type Script } from "./lib/ai";
 import { extractChunks, LEVEL_FRAME, loudness, probe, STORAGE } from "./lib/media";
+import { speechRegions } from "./lib/timing";
 import { renderStyled } from "./lib/render";
 import { dropAnchor, englishCues, mergeChunks, mergeShort, retimeWindows, snapToPauses, withWordTimes } from "./lib/subtitles";
 
@@ -59,7 +60,8 @@ async function processJob(job: typeof jobs.$inferSelect) {
       : mergeShort(merged).map(dropAnchor);
     // English only: the captions are the translation in whole sentences (not cut where the Tamil was).
     const stored = job.captionCustom?.show === "en" ? englishCues(cues) : cues;
-    await db.update(jobs).set({ status: "done", progress: 100, error: null, cues: stored, updatedAt: new Date() }).where(eq(jobs.id, job.id));
+    const speech = level ? speechRegions(level, LEVEL_FRAME) : null; // for the editor's timing check
+    await db.update(jobs).set({ status: "done", progress: 100, error: null, cues: stored, speech, updatedAt: new Date() }).where(eq(jobs.id, job.id));
     console.log(`job ${job.id} done (${plan.length} chunks, ${cfg.provider}/${cfg.model})`);
   } finally {
     await rm(dir, { recursive: true, force: true });

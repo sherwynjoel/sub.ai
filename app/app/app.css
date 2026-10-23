@@ -251,6 +251,8 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .ed-list textarea { cursor: text; }
 .tnum { font-variant-numeric: tabular-nums; }
 .chip-own { font-size: .7rem; padding: 1px 7px; border-radius: 999px; background: var(--lime); color: var(--black); }
+.chip-timing { font-size: .7rem; padding: 1px 7px; border-radius: 999px; background: #fff1d6; color: var(--warn); }
+.timing-next { color: var(--warn); }
 .ed-stage { display: grid; gap: 10px; justify-items: center; min-width: 0; }
 .ed-stage .player { max-width: 100%; }
 .ed-stage video { cursor: pointer; }
