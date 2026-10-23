@@ -9,7 +9,7 @@ import { db, jobs, users } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { probe, STORAGE } from "@/lib/media";
 import { DEFAULT_LANGUAGE, isLanguage } from "@/lib/languages";
-import { SCRIPTS, type Script } from "@/lib/ai/shared";
+import { JOB_SCRIPTS, type JobScript } from "@/lib/captionTypes";
 import { CAPTION_STYLES, DEFAULT_STYLE, SAFE_ZONES } from "@/lib/captionStyles";
 import { effectivePlan, PLANS, secondsLeft } from "@/lib/plans";
 
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   const name = (q.get("name") || "video").slice(0, 200);
   const lang = q.get("lang") ?? DEFAULT_LANGUAGE;
   if (!isLanguage(lang)) return json({ error: "Unsupported subtitle language." }, 400);
-  const script = (SCRIPTS as readonly string[]).includes(q.get("script") ?? "") ? (q.get("script") as Script) : "mixed";
+  const script = (JOB_SCRIPTS as readonly string[]).includes(q.get("script") ?? "") ? (q.get("script") as JobScript) : "mixed";
   // show: which lines the subtitles show; English only still needs the English pass.
   const show = q.get("show") === "en" || q.get("show") === "ta" ? (q.get("show") as "en" | "ta") : undefined;
   const withEnglish = show === "en" || q.get("english") !== "0";

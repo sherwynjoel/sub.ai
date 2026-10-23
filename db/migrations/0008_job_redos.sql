@@ -1,0 +1,1 @@
+ALTER TABLE "jobs" ADD COLUMN "redos" integer DEFAULT 0 NOT NULL;
