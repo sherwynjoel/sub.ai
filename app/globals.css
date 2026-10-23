@@ -145,3 +145,8 @@ select { appearance: none; -webkit-appearance: none; padding-right: 2.5em; curso
 .legal-links { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .9rem; }
 .legal-links a { color: var(--ink-2); }
 .auth-legal { justify-content: center; margin-top: 4px; }
+
+/* New version available (components/UpdateBanner.tsx) */
+.update-banner { position: fixed; z-index: 100; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px); padding: 10px 12px 10px 18px; border-radius: 999px; background: var(--black); color: #fff; font-size: .9rem; box-shadow: 0 10px 30px rgba(12, 12, 20, .25); }
+.update-banner button { font: inherit; font-weight: 700; border: 0; border-radius: 999px; padding: 6px 14px; background: var(--lime); color: var(--black); cursor: pointer; }
+.update-banner .update-x { background: transparent; color: #fff; padding: 6px 8px; font-weight: 400; }

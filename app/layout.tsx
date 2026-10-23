@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Instrument_Sans, Noto_Sans_Tamil } from "next/font/google";
 import Track from "@/components/Track";
+import UpdateBanner from "@/components/UpdateBanner";
 import { BRAND } from "@/lib/brand";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${sans.variable} ${display.variable} ${tamil.variable}`}>
-      <body>{children}<Track /></body>
+      <body>{children}<Track /><UpdateBanner /></body>
     </html>
   );
 }
