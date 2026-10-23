@@ -62,8 +62,9 @@ test("a dragged placement is clamped and reaches the MP4 as \\pos", () => {
 
 test("safe zones keep captions inside the platform's clear area", () => {
   // TikTok: bottom band and right-side buttons are excluded.
-  const s = resolveStyle("minimal", { safe: "tiktok" }, true);
-  assert.deepEqual(s.safe, SAFE_ZONES.tiktok.m);
+  const s = resolveStyle("minimal", { safe: "tiktok" }, true), t = SAFE_ZONES.tiktok.m;
+  // Centred: both sides keep the larger side margin (the buttons' side), so the caption isn't pushed off-centre.
+  assert.deepEqual(s.safe, { ...t, left: t.right, right: t.right });
   assert.ok(s.offset >= SAFE_ZONES.tiktok.m.bottom, "bottom caption sits above the bottom band");
   assert.ok(resolveStyle("minimal", { safe: "tiktok", position: "top" }, true).offset >= SAFE_ZONES.tiktok.m.top);
   // A dragged caption is pulled back inside the zone.
@@ -74,12 +75,12 @@ test("safe zones keep captions inside the platform's clear area", () => {
   // Custom margins are clamped; unknown presets dropped.
   assert.deepEqual(sanitizeCustom({ safe: "custom", safeCustom: { top: 0.1, right: 0.9, bottom: -1, left: 0.05 } }), { safe: "custom", safeCustom: { top: 0.1, right: 0.4, bottom: 0, left: 0.05 } });
   assert.deepEqual(sanitizeCustom({ safe: "myspace" }), {});
-  assert.deepEqual(resolveStyle("minimal", { safe: "custom", safeCustom: { top: 0.1, right: 0.2, bottom: 0.3, left: 0.05 } }).safe, { top: 0.1, right: 0.2, bottom: 0.3, left: 0.05 });
+  assert.deepEqual(resolveStyle("minimal", { safe: "custom", safeCustom: { top: 0.1, right: 0.2, bottom: 0.3, left: 0.05 } }).safe, { top: 0.1, right: 0.2, bottom: 0.3, left: 0.2 });
   // The MP4 subtitles wrap inside the zone and sit above its bottom band.
   const ass = buildAss([{ start: 0, end: 2, ta: "வணக்கம்", en: "Hello" }], { styleId: "minimal", custom: { safe: "tiktok" }, lang: "ta", width: 1080, height: 1920 });
   const main = ass.split("\n").find((l) => l.startsWith("Style: Main"))!.split(",");
   const [ml, mr, mv] = main.slice(-4, -1).map(Number);
-  assert.equal(ml, Math.round(1080 * SAFE_ZONES.tiktok.m.left));
+  assert.equal(ml, Math.round(1080 * SAFE_ZONES.tiktok.m.right), "the same margin both sides: centred");
   assert.equal(mr, Math.round(1080 * SAFE_ZONES.tiktok.m.right));
   assert.ok(mv >= Math.round(1920 * SAFE_ZONES.tiktok.m.bottom));
 });
