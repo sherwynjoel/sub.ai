@@ -15,7 +15,7 @@ export const CAPTION_TYPES: Def[] = [
   { id: "roman", title: (l) => (l === "Tamil" ? "Tanglish" : `${l} in English letters`), note: (l) => `${l} written in English letters.`, sample: "Indha song dhaan en favourite", english: "line" },
   { id: "native", title: (l) => `Pure ${l}`, note: (l) => `Everything in ${l} letters, English words too.`, sample: "இந்த சாங் தான் என் ஃபேவரைட்", english: "line" },
   { id: "english", title: () => "English", note: (l) => `The ${l} speech translated into English.`, sample: "This song is my favourite", english: "never" },
-  { id: "translated", title: (l) => `Translate to ${l}`, note: (l) => `For videos in English: captions translated into ${l}.`, sample: "இந்தப் பாடல் எனக்கு மிகவும் பிடிக்கும்", english: "line" },
+  { id: "translated", title: (l) => `Translate to ${l}`, note: (l) => `For videos in English: captions translated into ${l}.`, sample: "இந்த song எனக்கு ரொம்ப பிடிக்கும்", english: "line" },
 ];
 
 /** Upload and job settings for a caption type, with or without the English line underneath. */
