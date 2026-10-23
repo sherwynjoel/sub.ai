@@ -254,7 +254,11 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
     else if (c.highlight === "underline") { s.underline = true; s.active = c.accent; }
     else if (c.highlight === "grow") { s.activeGrow = true; s.active = acc; }
   }
-  const safe = c.safe === "custom" && c.safeCustom ? c.safeCustom : SAFE_ZONES[c.safe ?? "none"].m;
+  // Captions stay centred on the frame: the platforms cover more of one side (their buttons are on the right), so
+  // both sides keep the larger margin rather than centring the caption in the off-centre space left over.
+  const zone = c.safe === "custom" && c.safeCustom ? c.safeCustom : SAFE_ZONES[c.safe ?? "none"].m;
+  const side = Math.max(zone.left, zone.right);
+  const safe: Margins = { ...zone, left: side, right: side };
   const position = c.position ?? "bottom";
   const offset = Math.max(c.offset ?? (portrait ? 0.2 : 0.09), position === "top" ? safe.top : safe.bottom);
   const inside = (v: number | undefined, lo: number, hi: number) => (v === undefined ? undefined : Math.min(hi, Math.max(lo, v)));

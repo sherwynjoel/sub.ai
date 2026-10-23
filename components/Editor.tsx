@@ -695,9 +695,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   </select>
                 </label>
                 <label className="cz-check"><input type="checkbox" checked={showZones} onChange={(e) => setShowZones(e.target.checked)} /> Show safe zones on the video</label>
-                {custom.safe === "custom" && (["top", "bottom", "left", "right"] as const).map((k) => (
-                  <label key={k}>Keep clear: {k} <span className="cz-val">{Math.round(look.safe[k] * 100)}%</span>
-                    <input type="range" min={0} max={0.4} step={0.01} value={look.safe[k]} onChange={(e) => tweak({ safeCustom: { ...look.safe, [k]: +e.target.value } })} />
+                {/* Every zone can be adjusted: moving a slider makes it a custom zone starting from the one picked. Both
+                    sides move together so captions stay centred. */}
+                {([["top", "Keep clear: top"], ["bottom", "Keep clear: bottom"], ["left", "Keep clear: sides"]] as const).map(([k, label]) => (
+                  <label key={k}>{label} <span className="cz-val">{Math.round(look.safe[k] * 100)}%</span>
+                    <input type="range" min={0} max={0.4} step={0.01} value={look.safe[k]}
+                      onChange={(e) => tweak({ safe: "custom", safeCustom: { ...look.safe, ...(k === "left" ? { left: +e.target.value, right: +e.target.value } : { [k]: +e.target.value }) } })} />
                   </label>
                 ))}
                 {look.position !== "middle" && (
