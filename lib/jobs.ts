@@ -14,6 +14,6 @@ export function publicJob(j: typeof jobs.$inferSelect, withCues = false) {
     id: j.id, filename: j.filename, language: j.language, durationSec: j.durationSec, status: j.status, progress: j.progress,
     provider: j.provider, model: j.model, error: j.error, createdAt: j.createdAt, hasMedia: !!j.filePath,
     cueCount: j.cues?.length ?? 0,
-    captionStyle: j.captionStyle, captionCustom: j.captionCustom, renderStatus: j.renderStatus, renderProgress: j.renderProgress, renderLang: j.renderLang, renderError: j.renderError, ...(withCues ? { cues: j.cues ?? [] } : {}),
+    captionStyle: j.captionStyle, captionCustom: j.captionCustom, renderStatus: j.renderStatus, renderProgress: j.renderProgress, renderLang: j.renderLang, renderError: j.renderError, ...(withCues ? { cues: j.cues ?? [], speech: j.speech ?? [] } : {}),
   };
 }
