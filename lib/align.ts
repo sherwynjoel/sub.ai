@@ -89,13 +89,14 @@ export function forcedAlign(logp: Float32Array, frames: number, vocab: number, t
   }
   let s = prev[S - 1] >= prev[S - 2] ? S - 1 : S - 2;
   if (prev[s] <= NEG) return null;
-  const spans: { first: number; last: number; prob: number; n: number }[] = tokens.map(() => ({ first: -1, last: -1, prob: 0, n: 0 }));
+  // prob: how sure the model was of the token at its most likely frame.
+  const spans: { first: number; last: number; prob: number }[] = tokens.map(() => ({ first: -1, last: -1, prob: 0 }));
   for (let t = frames - 1; t >= 0; t--) {
     if (s % 2) {
       const k = (s - 1) >> 1, sp = spans[k];
       sp.first = t;
       if (sp.last < 0) sp.last = t;
-      sp.prob += Math.exp(logp[t * vocab + tokens[k]]); sp.n++;
+      sp.prob = Math.max(sp.prob, Math.exp(logp[t * vocab + tokens[k]]));
     }
     s -= back[t * S + s];
   }
@@ -114,20 +115,38 @@ export function aligner() {
   return session;
 }
 
-/** Log-probabilities per 20 ms frame for 16 kHz mono samples (normalised as the model was trained). */
+/**
+ * Log-probabilities per 20 ms frame for 16 kHz mono samples. The model was trained on short utterances: run on half
+ * a minute at once it grows unsure and slow (attention grows with the square of the length), so it hears 10 s pieces,
+ * each with 1 s of context either side, normalised on their own as in training.
+ */
 async function logProbs(samples: Float32Array) {
   const s = await aligner();
   if (!s) return null;
   const ort = await import("onnxruntime-node");
-  let mean = 0, sq = 0;
-  for (const x of samples) mean += x;
-  mean /= samples.length;
-  for (const x of samples) sq += (x - mean) ** 2;
-  const sd = Math.sqrt(sq / samples.length) + 1e-7;
-  const input = Float32Array.from(samples, (x) => (x - mean) / sd);
-  const out = await s.run({ audio: new ort.Tensor("float32", input, [1, input.length]) });
-  const t = out.logp;
-  return { data: t.data as Float32Array, frames: t.dims[1], vocab: t.dims[2] };
+  const PIECE = 10 * RATE, PAD = RATE, FRAME = 320; // the model's stride: 20 ms
+  const frames = Math.floor(samples.length / FRAME);
+  let data: Float32Array | null = null, vocab = 0;
+  for (let at = 0; at < samples.length; at += PIECE) {
+    const from = Math.max(0, at - PAD), to = Math.min(samples.length, at + PIECE + PAD);
+    const seg = samples.subarray(from, to);
+    let mean = 0, sq = 0;
+    for (const x of seg) mean += x;
+    mean /= seg.length;
+    for (const x of seg) sq += (x - mean) ** 2;
+    const sd = Math.sqrt(sq / seg.length) + 1e-7;
+    const out = (await s.run({ audio: new ort.Tensor("float32", Float32Array.from(seg, (x) => (x - mean) / sd), [1, seg.length]) })).logp;
+    const lp = out.data as Float32Array, n = out.dims[1];
+    vocab = out.dims[2];
+    data ??= new Float32Array(frames * vocab);
+    // Keep this piece's own frames (not its context).
+    const f0 = Math.floor(at / FRAME), f1 = Math.min(frames, Math.floor(Math.min(samples.length, at + PIECE) / FRAME)), skip = Math.floor((at - from) / FRAME);
+    for (let f = f0; f < f1; f++) {
+      const g = Math.min(n - 1, f - f0 + skip);
+      data.set(lp.subarray(g * vocab, (g + 1) * vocab), f * vocab);
+    }
+  }
+  return data && { data, frames, vocab };
 }
 
 /** 16 kHz mono samples of [start, start + dur) of a file. */
@@ -164,17 +183,17 @@ export async function alignWords(samples: Float32Array, words: string[]): Promis
   if (!lp || lp.frames * seq.length * 2 > 60e6) return null; // too long to align in one go: keep the estimates
   const spans = forcedAlign(lp.data, lp.frames, lp.vocab, seq);
   if (!spans) return null;
-  const sec = samples.length / RATE / lp.frames;
+  const sec = 320 / RATE; // one frame: 20 ms
   const out: TimedWord[] = words.map(() => null);
   const acc = new Map<number, { first: number; last: number; prob: number; n: number }>();
   spans.forEach((sp, k) => {
     const i = owner[k];
     if (i < 0) return;
     const a = acc.get(i);
-    if (!a) acc.set(i, { ...sp });
-    else { a.last = sp.last; a.prob += sp.prob; a.n += sp.n; }
+    if (!a) acc.set(i, { ...sp, n: 1 });
+    else { a.last = sp.last; a.prob += sp.prob; a.n++; }
   });
-  for (const [i, a] of acc) out[i] = { start: a.first * sec, end: (a.last + 1) * sec, prob: a.prob / Math.max(1, a.n) };
+  for (const [i, a] of acc) out[i] = { start: a.first * sec, end: (a.last + 1) * sec, prob: a.prob / a.n }; // mean of its letters
   return out;
 }
 
@@ -240,9 +259,9 @@ export async function alignCues(file: string, cues: Cue[]): Promise<Cue[]> {
     const audio = words.length ? await readAudio(file, from, to - from) : null;
     const times = audio && (await alignWords(audio, words).catch((e) => { console.error("align failed:", e); return null; }));
     const known = times?.filter(Boolean) as { prob: number }[] | undefined;
-    // Trust it when most words were placed and the model was sure enough: speech scored 0.14–0.5 on the test clips, a
-    // song (music under the voice) 0.02–0.1, where the estimates are safer.
-    if (times && known && known.length >= words.length * 0.6 && known.reduce((n, t) => n + t.prob, 0) / known.length >= 0.12) {
+    // Trust it when most words were placed and the model was sure enough: on the test clips Tamil speech scored
+    // 0.25–0.87, English speech 0.19–0.5 and a song (music under the voice) 0.08–0.22, where the estimates are safer.
+    if (times && known && known.length >= words.length * 0.6 && known.reduce((n, t) => n + t.prob, 0) / known.length >= 0.25) {
       const abs = times.map((t) => (t ? { ...t, start: from + t.start, end: from + t.end } : null));
       out.push(...placeCues(group, fillGaps(abs, from, to), to));
     } else out.push(...group);
