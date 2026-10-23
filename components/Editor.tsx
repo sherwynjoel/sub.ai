@@ -19,7 +19,7 @@ type Job = {
 };
 type View = "ta" | "en" | "both";
 type Tab = "caption" | "layers" | "style" | "export";
-const GROUPS = ["Premiere", "Trending", "Aesthetic", "Clean", "Fun"] as const;
+const GROUPS = ["Premiere", "Bold", "Soft", "Simple", "Playful"] as const;
 const RATIO = { "9:16": 9 / 16, "4:5": 4 / 5, "1:1": 1, "16:9": 16 / 9 } as const;
 /** Settings that belong to the project, not to a look: picking a style or resetting the look keeps them. */
 const PROJECT_KEYS: string[] = ["safe", "safeCustom", "canvas", "layers", "logo", "show", "lines"];
