@@ -57,7 +57,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     }
     if (state === "active") {
       if (s.active) st.color = s.active;
-      if (s.mark) Object.assign(st, { background: s.mark, borderRadius: ".14em", padding: "0 .12em", textShadow: "none" });
+      if (s.mark) Object.assign(st, { background: s.mark, borderRadius: ".14em", padding: "0 .12em", textShadow: "none", WebkitTextStroke: "0" }); // the MP4 turns the edge into the swipe
       if (s.underline) st.textDecoration = "underline";
       if (s.activeGrow) st.transform = "scale(1.15)";
     }
