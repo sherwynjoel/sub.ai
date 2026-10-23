@@ -62,3 +62,6 @@ next-env.d.ts
 
 # development-only editor fixture (app/dev/editor)
 /public/dev-media.mp4
+
+# word-timing model (scripts/timing/export_onnx.py), copied to the server separately
+/models/

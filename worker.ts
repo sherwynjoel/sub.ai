@@ -10,6 +10,7 @@ import { db, jobs, settings, users, type Cue } from "./db";
 import { getAiConfig, transcribe, type Script } from "./lib/ai";
 import { extractChunks, LEVEL_FRAME, loudness, probe, STORAGE } from "./lib/media";
 import { speechRegions } from "./lib/timing";
+import { ALIGN_LANGS, alignCues } from "./lib/align";
 import { renderStyled } from "./lib/render";
 import { dropAnchor, englishCues, mergeChunks, mergeShort, retimeWindows, snapToPauses, withWordTimes } from "./lib/subtitles";
 
@@ -54,10 +55,13 @@ async function processJob(job: typeof jobs.$inferSelect) {
     }));
     // Cuts inside a model's window are estimates: time them from where the speech is, then settle each on the
     // nearby pause, and record when every word starts. Without readable audio the estimates stay.
+    // Where the word-timing model knows the language, every word is placed in the audio first (lib/align.ts);
+    // windows it can't place keep the loudness estimates.
     const level = await loudness(job.filePath!), merged = mergeChunks(results);
+    const timed = ALIGN_LANGS.includes(job.language) ? await alignCues(job.filePath!, merged) : merged;
     const cues = level
-      ? withWordTimes(mergeShort(snapToPauses(retimeWindows(merged, level, LEVEL_FRAME), level, LEVEL_FRAME)), level, LEVEL_FRAME)
-      : mergeShort(merged).map(dropAnchor);
+      ? withWordTimes(mergeShort(snapToPauses(retimeWindows(timed, level, LEVEL_FRAME), level, LEVEL_FRAME)), level, LEVEL_FRAME)
+      : mergeShort(timed).map(dropAnchor);
     // English only: the captions are the translation in whole sentences (not cut where the Tamil was).
     const stored = job.captionCustom?.show === "en" ? englishCues(cues) : cues;
     const speech = level ? speechRegions(level, LEVEL_FRAME) : null; // for the editor's timing check

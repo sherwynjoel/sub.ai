@@ -44,3 +44,21 @@ venv/bin/python -I align.py clip.wav words.json clip.key.json
 ```
 
 Spot-check a few words by ear before trusting a new key.
+
+## The word-timing model (production)
+
+The worker places every word in the audio with Vakyansh's Tamil wav2vec2 model
+(`Harveenchadha/vakyansh-wav2vec2-tamil-tam-250`, MIT licence), see `lib/align.ts`. (The MMS model used for the
+answer keys is licensed for non-commercial use only, so it stays a testing tool.) Build the 95 MB int8 file once
+and copy it to the server:
+
+```bash
+venv/bin/pip install transformers==4.46.3 onnx onnxruntime
+for f in config.json vocab.json preprocessor_config.json pytorch_model.bin; do
+  curl -sL -o vak/$f https://huggingface.co/Harveenchadha/vakyansh-wav2vec2-tamil-tam-250/resolve/main/$f; done
+venv/bin/python -I export_onnx.py vak tamil-ctc.onnx
+scp tamil-ctc.onnx ubuntu@<server>:/opt/vasanam/models/tamil-ctc.onnx
+```
+
+Without the file the worker keeps the loudness estimates. On the test clips the two models (MMS and Vakyansh) agree
+on word starts within 0.02 s (median), which is also how the answer keys were checked.

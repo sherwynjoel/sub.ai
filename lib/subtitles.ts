@@ -229,7 +229,7 @@ export function snapToPauses(cues: Cue[], level: ArrayLike<number>, frame: numbe
   };
   for (let i = 0; i + 1 < out.length; i++) {
     const a = out[i], b = out[i + 1];
-    if (b.start - a.end > 0.05 || b.start < a.end - 0.05) continue;
+    if (b.start - a.end > 0.05 || b.start < a.end - 0.05 || (a.aligned && b.aligned)) continue; // word-timed cuts are measured
     const t0 = (a.end + b.start) / 2;
     const reach = Math.min(1.2, (t0 - a.start) * 0.5, (b.end - t0) * 0.5);
     if (reach < 2 * frame) continue;
@@ -286,7 +286,7 @@ export function wordStarts(text: string, start: number, end: number, level: Arra
 export function withWordTimes(cues: Cue[], level: ArrayLike<number>, frame: number): Cue[] {
   return cues.map((c) => ({
     ...dropAnchor(c),
-    w: c.ta ? wordStarts(c.ta, c.start, c.end, level, frame) : undefined,
+    w: c.ta ? (c.w && c.w.length === c.ta.split(/\s+/).filter(Boolean).length ? c.w : wordStarts(c.ta, c.start, c.end, level, frame)) : undefined, // measured starts kept
     we: c.en ? wordStarts(c.en, c.start, c.end, level, frame) : undefined,
   }));
 }
@@ -301,7 +301,7 @@ export function retimeWindows(cues: Cue[], level: ArrayLike<number>, frame: numb
   for (let i = 0; i < out.length; ) {
     let j = i;
     while (j + 1 < out.length && !out[j + 1].anchor && Math.abs(out[j + 1].start - out[j].end) < 0.05) j++;
-    if (out[i].anchor && j > i) {
+    if (out[i].anchor && !out[i].aligned && j > i) {
       const lines = out.slice(i, j + 1).map((c) => (c.ta || c.en).split(/\s+/).filter(Boolean));
       const starts = wordStarts(lines.map((l) => l.join(" ")).join(" "), out[i].start, out[j].end, level, frame);
       let w = lines[0].length;
@@ -321,6 +321,7 @@ export function retimeWindows(cues: Cue[], level: ArrayLike<number>, frame: numb
 export function dropAnchor(c: Cue): Cue {
   const out = { ...c };
   delete out.anchor;
+  delete out.aligned;
   return out;
 }
 
@@ -385,6 +386,7 @@ export function englishCues(cues: Cue[], max = 84): Cue[] {
 export function mergeShort(cues: Cue[], min = 0.7): Cue[] {
   const out = cues.map((c) => ({ ...c }));
   const join = (a: string, b: string) => [a, b].filter((x) => x.trim()).join(" ");
+  const both = (a: Cue, b: Cue) => (a.w && b.w ? [...a.w, ...b.w] : undefined); // measured word starts carry over
   for (let i = 0; i < out.length; ) {
     const c = out[i];
     if (c.end - c.start >= min || out.length < 2) { i++; continue; }
@@ -393,10 +395,10 @@ export function mergeShort(cues: Cue[], min = 0.7): Cue[] {
     if (!prev && !next) { i++; continue; }
     const intoPrev = !!prev && (!next || prev.ta.length + prev.en.length <= next.ta.length + next.en.length);
     if (intoPrev) {
-      out[i - 1] = { ...prev!, end: c.end, ta: join(prev!.ta, c.ta), en: join(prev!.en, c.en), w: undefined, we: undefined };
+      out[i - 1] = { ...prev!, end: c.end, ta: join(prev!.ta, c.ta), en: join(prev!.en, c.en), w: both(prev!, c), we: undefined };
       out.splice(i, 1);
     } else {
-      out[i + 1] = { ...next!, start: c.start, ta: join(c.ta, next!.ta), en: join(c.en, next!.en), w: undefined, we: undefined, ...(c.anchor ? { anchor: true } : {}) };
+      out[i + 1] = { ...next!, start: c.start, ta: join(c.ta, next!.ta), en: join(c.en, next!.en), w: both(c, next!), we: undefined, ...(c.anchor ? { anchor: true } : {}) };
       out.splice(i, 1);
     }
   }
