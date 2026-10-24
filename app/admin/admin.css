@@ -82,7 +82,8 @@
 
 /* Grid children default to min-width:auto; long unbroken text (error paths) must not widen the page */
 .admin-main > * { min-width: 0; }
-.table-wrap td { overflow-wrap: anywhere; }
+.table-wrap td { overflow-wrap: break-word; } /* "anywhere" let phone columns squeeze to one letter a line */
+@media (max-width: 720px) { .table-wrap table { min-width: 560px; } }
 .traffic-chart { display: flex; align-items: flex-end; gap: 3px; height: 160px; padding-top: 8px; }
 .traffic-day { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
 .traffic-day i { display: block; width: 100%; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--black); }

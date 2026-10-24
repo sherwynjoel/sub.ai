@@ -25,6 +25,7 @@ export default function CaptionTypePicker({ language, tamil, type, withEnglish, 
           </label>
         ))}
       </div>
+      <p className="ctype-chosen">{def.note(language)}</p>
       {def.english === "line" && (
         <label className="ctype-en">
           <input type="checkbox" checked={withEnglish} onChange={(e) => onChange(type, e.target.checked)} />
