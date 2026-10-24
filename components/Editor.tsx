@@ -32,11 +32,13 @@ const EMOJIS = ["😀", "😂", "🔥", "❤️", "👍", "🎉", "✨", "💯",
 const FRAME = 1 / 30;
 
 /** The styled caption over the player, redrawn every frame while the video plays so word timing is smooth. */
-function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, onMove }: {
+function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, onMove, onResize }: {
   video: React.RefObject<HTMLVideoElement | null>; cues: Cue[]; styleId: string; custom: CaptionCustom; portrait: boolean; view: View; selected: number;
   onMove: (i: number, x: number, y: number) => void;
+  onResize: (i: number, size: number) => void;
 }) {
   const [t, setT] = useState(0);
+  const [sizing, setSizing] = useState<number | null>(null); // the size shown while the corner is dragged
   useEffect(() => {
     const v = video.current;
     if (!v) return;
@@ -55,7 +57,7 @@ function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, o
   const main = view === "en" ? c.en : c.ta;
   if (!main.trim()) return null;
   const own = mergeCustom(custom, c.style);
-  const { position, offset, x, y, safe } = resolveStyle(styleId, own, portrait);
+  const { position, offset, x, y, safe, size } = resolveStyle(styleId, own, portrait);
   const free = x !== undefined && y !== undefined;
   const pct = (n: number) => `${n * 100}%`;
   const sides = { left: pct(safe.left), right: pct(safe.right) };
@@ -69,12 +71,35 @@ function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, o
     e.preventDefault();
     follow(e, frame, (x, y) => { video.current?.pause(); onMove(i, x, y); }, 0.05);
   };
+  // The corner dot resizes: the caption grows as the pointer moves away from its centre (Size, 40–260%).
+  const resize = (e: React.PointerEvent<HTMLSpanElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const box = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
+    const cx = box.left + box.width / 2, cy = box.top + box.height / 2;
+    const d0 = Math.max(8, Math.hypot(e.clientX - cx, e.clientY - cy)), s0 = size ?? 1;
+    let moving = false;
+    const at = (ev: PointerEvent) => {
+      const d = Math.hypot(ev.clientX - cx, ev.clientY - cy);
+      if (!moving && Math.abs(d - d0) < 4) return;
+      moving = true;
+      video.current?.pause();
+      const next = Math.round(Math.min(2.6, Math.max(0.4, (s0 * d) / d0)) * 20) / 20; // steps of 5%
+      setSizing(next);
+      onResize(i, next);
+    };
+    const stop = () => { setSizing(null); removeEventListener("pointermove", at); removeEventListener("pointerup", stop); };
+    addEventListener("pointermove", at);
+    addEventListener("pointerup", stop);
+  };
   const line = view === "en" ? "en" : "ta";
   return (
     <div className={`overlay styled${free ? " free" : ""}${ghost ? " ghost" : ""}`} style={place}>
       <div className="drag-handle" onPointerDown={drag} title="Drag to move the subtitle">
         <StyledCaption styleId={styleId} custom={own} text={main} sub={view === "both" ? c.en : undefined} start={c.start} end={c.end} time={ghost ? c.end - 0.01 : t}
           starts={line === "en" ? c.we : c.w} colors={line === "en" ? c.wce : c.wc} />
+        {video.current?.paused !== false && <span className="rs-handle" onPointerDown={resize} title="Drag to resize the subtitle" aria-hidden="true" />}
+        {sizing !== null && <span className="rs-size">{Math.round(sizing * 100)}%</span>}
       </div>
     </div>
   );
@@ -522,7 +547,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   onPointerDown={(e) => { setTab("layers"); dragIn(e, (x, y) => tweak({ logo: { ...custom.logo!, x, y } })); }} />
               )}
               <LiveCaption video={video} cues={view === "en" && cues.some((c) => c.ta) ? englishCues(cues) : cues} styleId={styleId} custom={custom} portrait={portrait} view={view} selected={selected}
-                onMove={(i, x, y) => { if (tab === "caption" && i === selected) styleCue(i, { x, y }); else tweak({ x, y }); }} />
+                onMove={(i, x, y) => { if (tab === "caption" && i === selected) styleCue(i, { x, y }); else tweak({ x, y }); }}
+                onResize={(i, size) => { if (tab === "caption" && i === selected) styleCue(i, { size }); else tweak({ size }); }} />
             </div>
           ) : (
             <div className="player gone"><p>The video was removed after 7 days. Your subtitles are still here.</p></div>

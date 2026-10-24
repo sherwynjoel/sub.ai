@@ -219,6 +219,13 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .overlay.ghost { opacity: .72; }
 .drag-handle { display: inline-block; max-width: 100%; pointer-events: auto; cursor: move; touch-action: none; border-radius: 8px; outline: 1px dashed transparent; transition: outline-color .2s; }
 .drag-handle:hover { outline-color: rgba(255, 255, 255, .55); }
+/* Resize: a dot on the caption's bottom-right corner (shown while paused); a finger-sized hit area on touch screens. */
+.drag-handle { position: relative; }
+.rs-handle { position: absolute; right: -7px; bottom: -7px; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid var(--black); box-shadow: 0 1px 4px rgb(0 0 0 / .4); cursor: nwse-resize; touch-action: none; opacity: .85; }
+.rs-handle::after { content: ""; position: absolute; inset: -12px; } /* easier to grab */
+.drag-handle:hover .rs-handle { opacity: 1; }
+.rs-size { position: absolute; right: 0; bottom: calc(100% + 6px); padding: 2px 8px; border-radius: 999px; background: var(--black); color: #fff; font: 600 .75rem/1.6 var(--font-sans, sans-serif); pointer-events: none; }
+@media (pointer: coarse) { .rs-handle { width: 20px; height: 20px; right: -10px; bottom: -10px; } }
 .canvas-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 12px; border-radius: 16px; background: rgba(14, 14, 24, .72); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); color: #fff; font-size: .78rem; }
 .canvas-bar select { width: auto; max-width: 150px; padding: .3em .5em; font-size: .78rem; color: #fff; background: rgba(255, 255, 255, .12); border-color: transparent; }
 .canvas-bar button { font: 600 .78rem var(--font-body); border: 0; border-radius: 999px; padding: .35em .6em; background: rgba(255, 255, 255, .12); color: #fff; cursor: pointer; }
