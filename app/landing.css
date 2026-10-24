@@ -199,6 +199,8 @@ main { overflow-x: clip; }
 
 .foot { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 24px 0 48px; }
 
+.style-more { display: none; } /* phones only (below) */
+
 @media (max-width: 1020px) {
   .site-head .hide-sm { display: none; }
   .bento { grid-template-columns: 1fr 1fr; }
@@ -215,6 +217,8 @@ main { overflow-x: clip; }
     .hero { padding-top: 48px; }
   .bento, .plans { grid-template-columns: 1fr; }
   .style-cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .style-cards:not(.all) > :nth-child(n + 9) { display: none; } /* 8 on a phone, then "Show all" */
+  .style-more { display: block; margin: 14px auto 0; }
   .style-card { padding: 6px 6px 12px; }
   .style-stage { height: 96px; border-radius: 12px; }
   .style-meta { flex-direction: column; gap: 0; padding: 8px 4px 0; }
@@ -229,3 +233,4 @@ main { overflow-x: clip; }
 @media (prefers-reduced-motion: reduce) {
   .hero > *, .scene { animation: none; }
 }
+

@@ -11,6 +11,7 @@ const GROUPS = ["All", "Premiere", "Bold", "Soft", "Simple", "Playful"] as const
 export default function StyleShowcase() {
   const [group, setGroup] = useState<(typeof GROUPS)[number]>("All");
   const [t, setT] = useState(LINE.end);
+  const [all, setAll] = useState(false); // phones show 8 styles until asked for the rest
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,7 +37,7 @@ export default function StyleShowcase() {
           </button>
         ))}
       </div>
-      <div className="style-cards">
+      <div className={`style-cards${all ? " all" : ""}`}>
         {shown.map((s) => (
           <article key={s.id} className="style-card glass shine">
             <div className="style-stage" aria-hidden="true" style={{ "--s": s.size ?? 1 } as React.CSSProperties}>
@@ -50,6 +51,7 @@ export default function StyleShowcase() {
           </article>
         ))}
       </div>
+      {!all && shown.length > 8 && <button className="btn ghost style-more" onClick={() => setAll(true)}>Show all {shown.length} styles</button>}
     </div>
   );
 }

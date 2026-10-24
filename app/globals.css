@@ -143,7 +143,7 @@ select { appearance: none; -webkit-appearance: none; padding-right: 2.5em; curso
 
 /* Policy links in every public footer (components/LegalLinks). */
 .legal-links { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .9rem; }
-.legal-links a { color: var(--ink-2); }
+.legal-links a { color: var(--ink-2); display: inline-block; padding: 8px 0; }
 .auth-legal { justify-content: center; margin-top: 4px; }
 
 /* New version available (components/UpdateBanner.tsx) */

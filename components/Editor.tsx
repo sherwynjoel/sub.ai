@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Cue } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
 import { CANVAS_RATIOS, CAPTION_STYLES, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
@@ -453,7 +454,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             <span className="muted">Captions:</span> <strong>{typeLabel(initial, language.name)}</strong> <span className="ctype-go">Change type</span>
           </button>
         </div>
-        {retype && (
+        {retype && createPortal(
           <div className="modal-back" onClick={(e) => e.target === e.currentTarget && !retyping && setRetype(null)}>
             <div className="modal" role="dialog" aria-modal="true" aria-label="Change caption type">
               <h2>Change caption type</h2>
@@ -469,7 +470,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 <button className="btn" onClick={applyType} disabled={retyping}>{retyping ? "Changing…" : "Change"}</button>
               </div>
             </div>
-          </div>
+          </div>, document.body, // on the page itself: a sticky or animated parent would trap a fixed dialog off-screen
         )}
         <div className="ed-tools" role="toolbar" aria-label="Edit">
           <button className="btn ghost small" onClick={undo} disabled={!past.length} title="Undo (⌘Z)">Undo</button>
