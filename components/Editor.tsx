@@ -578,6 +578,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>
             ))}
           </div>
+          <div className="ed-side-body">{/* scrolls under the tabs, which stay put */}
 
           {tab === "caption" && (sel ? (
             <div className="insp">
@@ -795,6 +796,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               <button className="btn danger small" onClick={del}>Delete project</button>
             </div>
           )}
+          </div>
         </aside>
       </div>
 
