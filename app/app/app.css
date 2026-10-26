@@ -521,3 +521,38 @@ a.signout { text-decoration: none; }
   .pcard-meta, .pcard-state { font-size: .76rem; }
   .projects-search { width: 100%; }
 }
+
+/* ---------- Editor on phones: one section at a time, actions in a bottom bar ---------- */
+.ed-mnav, .ed-mbar, .ed-mtoast, .t-short { display: none; }
+@media (max-width: 720px) {
+  .ed { padding-bottom: 92px; }
+  body:has(.ed) .app-foot { display: none; } /* the bottom bar sits there */
+  body:has(.ed) { padding-bottom: 0; }
+  .ed-tools, .ed-act, .ed-tabs { display: none !important; }
+  .t-long { display: none; }
+  .t-short { display: inline; }
+  .ed-stage { gap: 8px; }
+  .ed-stage .player { width: min(100%, calc(28svh * var(--ar, 1.78))) !important; }
+  .ed-transport { gap: 6px; }
+
+  /* Sections under the video. */
+  .ed-mnav { display: flex; gap: 2px; width: 100%; overflow-x: auto; padding: 4px; border-radius: 999px; background: var(--line-2); scrollbar-width: none; }
+  .ed-mnav::-webkit-scrollbar { display: none; }
+  .ed-mnav button { flex: 1 0 auto; min-height: 38px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--ink-2, var(--ink)); font: 600 .84rem var(--font-body); cursor: pointer; }
+  .ed-mnav button[aria-pressed="true"] { background: var(--black); color: #fff; }
+  .ed:not([data-pane="list"]) .ed-list { display: none; }
+  .ed:not([data-pane="timeline"]) .ed-timeline { display: none; }
+  .ed[data-pane="list"] .ed-side, .ed[data-pane="timeline"] .ed-side { display: none; }
+  .ed-side, .ed-list, .ed-timeline { margin-top: 4px; }
+  .ed-list li { scroll-margin-top: 45svh; } /* a caption scrolled to stays clear of the pinned video */
+
+  /* Actions within thumb's reach. */
+  .ed-mbar { display: flex; position: fixed; z-index: 40; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); gap: 2px; padding: 6px; border-radius: 22px; background: #0c0c14; box-shadow: 0 12px 30px -10px rgb(0 0 0 / .45); }
+  .ed-mbar button { flex: 1; display: grid; justify-items: center; align-content: center; gap: 3px; min-height: 52px; padding: 4px 2px; border: 0; border-radius: 14px; background: transparent; color: #fff; font: 600 .66rem var(--font-body); cursor: pointer; }
+  .ed-mbar button:active { background: rgb(255 255 255 / .12); }
+  .ed-mbar button:disabled { opacity: .35; }
+  .ed-mbar button.primary { background: var(--lime); color: var(--black); }
+  .ed-mbar button.primary:disabled { opacity: .6; }
+  .ed-mbar svg { width: 20px; height: 20px; }
+  .ed-mtoast { display: block; position: fixed; z-index: 41; left: 16px; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom)); margin: 0; padding: 10px 14px; border-radius: 14px; background: var(--black); color: #fff; font-size: .85rem; text-align: center; box-shadow: 0 10px 24px -12px rgb(0 0 0 / .5); }
+}
