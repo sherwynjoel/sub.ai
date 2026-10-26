@@ -33,7 +33,7 @@ export default function StyleShowcase() {
       <div className="style-tabs" role="tablist" aria-label="Style groups">
         {GROUPS.map((g) => (
           <button key={g} role="tab" aria-selected={group === g} onClick={() => setGroup(g)}>
-            {g} <small>{g === "All" ? STYLE_CHOICES.length : STYLE_CHOICES.filter((s) => s.group === g).length}</small>
+            {g}
           </button>
         ))}
       </div>
@@ -51,7 +51,7 @@ export default function StyleShowcase() {
           </article>
         ))}
       </div>
-      {!all && shown.length > 8 && <button className="btn ghost style-more" onClick={() => setAll(true)}>Show all {shown.length} styles</button>}
+      {!all && shown.length > 8 && <button className="btn ghost style-more" onClick={() => setAll(true)}>Show all styles</button>}
     </div>
   );
 }
