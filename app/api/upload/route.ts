@@ -10,7 +10,7 @@ import { currentUser, json, unauthorized } from "@/lib/auth";
 import { probe, STORAGE } from "@/lib/media";
 import { DEFAULT_LANGUAGE, isLanguage } from "@/lib/languages";
 import { JOB_SCRIPTS, type JobScript } from "@/lib/captionTypes";
-import { CAPTION_STYLES, DEFAULT_STYLE, SAFE_ZONES } from "@/lib/captionStyles";
+import { DEFAULT_STYLE, SAFE_ZONES, STYLE_CHOICES } from "@/lib/captionStyles";
 import { effectivePlan, PLANS, secondsLeft } from "@/lib/plans";
 
 const MAX_BYTES = 4 * 1024 ** 3; // 4 GB
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   // show: which lines the subtitles show; English only still needs the English pass.
   const show = q.get("show") === "en" || q.get("show") === "ta" ? (q.get("show") as "en" | "ta") : undefined;
   const withEnglish = show === "en" || q.get("english") !== "0";
-  const captionStyle = CAPTION_STYLES.some((s) => s.id === q.get("style")) ? q.get("style")! : DEFAULT_STYLE;
+  const captionStyle = STYLE_CHOICES.some((s) => s.id === q.get("style")) ? q.get("style")! : DEFAULT_STYLE;
   const safe = q.get("safe") ?? "";
   const captionCustom = { ...(safe in SAFE_ZONES && safe !== "none" && safe !== "custom" ? { safe: safe as keyof typeof SAFE_ZONES } : {}), ...(show ? { show } : {}) };
   const dir = join(STORAGE, "uploads", u.id);

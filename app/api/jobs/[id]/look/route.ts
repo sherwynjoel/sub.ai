@@ -1,5 +1,5 @@
 import { currentUser, json, unauthorized } from "@/lib/auth";
-import { CAPTION_FONTS, CAPTION_STYLES, resolveStyle, SAFE_ZONES } from "@/lib/captionStyles";
+import { CAPTION_FONTS, resolveStyle, STYLE_CHOICES, SAFE_ZONES } from "@/lib/captionStyles";
 import { ownJob } from "@/lib/jobs";
 
 /** The job's caption look for the Adobe panel: values for its controls, plus the resolved look After Effects applies. */
@@ -19,7 +19,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       position: s.position, offset: s.offset, lines: s.lines ?? null, x: s.x ?? null, y: s.y ?? null,
       safe: s.safe, safeId: j.captionCustom.safe ?? "none",
     },
-    styles: CAPTION_STYLES.map((x) => ({ id: x.id, name: x.name, group: x.group })),
+    styles: STYLE_CHOICES.map((x) => ({ id: x.id, name: x.name, group: x.group })),
     fonts: CAPTION_FONTS,
     safeZones: Object.entries(SAFE_ZONES).map(([id, z]) => ({ id, name: z.name })),
   });

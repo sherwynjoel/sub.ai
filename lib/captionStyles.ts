@@ -88,7 +88,21 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "lavender-pill", name: "Lavender Pill", group: "Simple", blurb: "Soft lavender card with ink type; the spoken word turns violet.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: INK, active: "#6D28D9", box: "#E9DDFF", anim: "slide" },
 ];
 
-export const DEFAULT_STYLE = "minimal";
+/**
+ * The styles offered (pickers, landing page, the panel). The others stay defined so projects already using one
+ * keep their look and can still render; they just aren't offered for new looks.
+ */
+const OFFERED = [
+  "pr-butter-up", "pr-energetic-2",
+  "setup-punch", "comic-pop", "butter-serif", "handwritten", "trending-1", "trending-2", "trending-3", "neon-aura",
+  "editorial-cut", "center-stage", "marker-swipe", "spotlight", "highlighter-paper", "highlighter-clean",
+  "editorial-mix", "tall-caps", "typewriter", "flip-card",
+];
+export const STYLE_CHOICES = CAPTION_STYLES.filter((s) => OFFERED.includes(s.id));
+/** The groups that have styles on offer, in order. */
+export const STYLE_GROUPS = (["Premiere", "Bold", "Soft", "Simple", "Playful"] as const).filter((g) => STYLE_CHOICES.some((s) => s.group === g));
+
+export const DEFAULT_STYLE = "tall-caps";
 
 /** Fonts users can pick (bundled in public/caption-fonts): the Premiere templates' fonts that are free for the web. */
 export const CAPTION_FONTS = [

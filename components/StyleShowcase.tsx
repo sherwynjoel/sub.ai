@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import StyledCaption from "@/components/StyledCaption";
-import { CAPTION_STYLES } from "@/lib/captionStyles";
+import { STYLE_CHOICES, STYLE_GROUPS } from "@/lib/captionStyles";
 import "@/app/caption-styles.css";
 
 const LINE = { text: "இந்த song தான் என் favourite", start: 0.3, end: 2.7, loop: 3.6 };
-const GROUPS = ["All", "Premiere", "Bold", "Soft", "Simple", "Playful"] as const;
+const GROUPS = ["All", ...STYLE_GROUPS] as const;
 
 /** Every caption style playing the same line on a loop; the clock only runs while the grid is on screen. */
 export default function StyleShowcase() {
@@ -27,13 +27,13 @@ export default function StyleShowcase() {
     return () => { io.disconnect(); clearInterval(id); };
   }, []);
 
-  const shown = CAPTION_STYLES.filter((s) => group === "All" || s.group === group);
+  const shown = STYLE_CHOICES.filter((s) => group === "All" || s.group === group);
   return (
     <div ref={ref}>
       <div className="style-tabs" role="tablist" aria-label="Style groups">
         {GROUPS.map((g) => (
           <button key={g} role="tab" aria-selected={group === g} onClick={() => setGroup(g)}>
-            {g} <small>{g === "All" ? CAPTION_STYLES.length : CAPTION_STYLES.filter((s) => s.group === g).length}</small>
+            {g} <small>{g === "All" ? STYLE_CHOICES.length : STYLE_CHOICES.filter((s) => s.group === g).length}</small>
           </button>
         ))}
       </div>
