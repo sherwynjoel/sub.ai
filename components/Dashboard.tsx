@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_LANGUAGE, LANGUAGES, languageOf } from "@/lib/languages";
 import { typeLabel, typeSettings, type CaptionType } from "@/lib/captionTypes";
 import CaptionTypePicker from "@/components/CaptionTypePicker";
+import TetrisLoader from "@/components/TetrisLoader";
 import { SAFE_ZONES } from "@/lib/captionStyles";
 
 type Job = {
@@ -78,10 +79,11 @@ export default function Dashboard() {
         onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f && !upload) send(f); }}
       >
         {upload ? (
-          <div className="drop-inner">
+          <div className="drop-inner uploading-inner">
+            <TetrisLoader columns={8} rows={14} cellSize={7} gap={2} label={`Uploading ${upload.name}`} />
             <strong>Uploading {upload.name}</strong>
             <div className="bar" role="progressbar" aria-valuenow={upload.pct} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${upload.pct}%` }} /></div>
-            <span className="muted">{upload.pct}%</span>
+            <span className="muted">{upload.pct}%{upload.pct >= 100 ? ". Starting your subtitles…" : ". Keep this tab open until it finishes."}</span>
           </div>
         ) : (
           <div className="drop-inner">
