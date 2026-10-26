@@ -449,3 +449,14 @@ a.signout { text-decoration: none; }
 @keyframes reveal-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 @keyframes reveal-tip { from { opacity: 0; transform: translateY(4px); } }
 @media (prefers-reduced-motion: reduce) { .reveal-stage, .reveal-tip { animation: none; } .reveal-stage { color: var(--ink); background: none; } }
+
+/* Uploading (components/TetrisLoader.tsx): a little game of tetris while the file goes up. */
+:root {
+  --tetris-1: oklch(0.609 0.111 221.7); --tetris-2: oklch(0.666 0.157 58.3); --tetris-3: oklch(0.541 0.247 293);
+  --tetris-4: oklch(0.627 0.17 149.2); --tetris-5: oklch(0.577 0.215 27.3); --tetris-6: oklch(0.546 0.215 262.9);
+  --tetris-7: oklch(0.646 0.194 41.1);
+  --tetris-cell-8: var(--ink); --tetris-cell-9: color-mix(in oklab, var(--ink) 45%, transparent); /* clearing line, game over */
+}
+.tetris { display: grid; width: fit-content; gap: var(--tetris-gap); padding: 8px; border-radius: 12px; background: rgb(255 255 255 / .55); border: 1px solid var(--line); }
+.tetris-dot { height: var(--tetris-cell); border-radius: calc(var(--tetris-cell) / 3); background: color-mix(in oklab, var(--ink) 8%, transparent); }
+.uploading-inner { gap: 12px; }
