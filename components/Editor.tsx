@@ -11,6 +11,7 @@ import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
 import { MAX_REDOS, typeLabel, typeOf, type CaptionType } from "@/lib/captionTypes";
 import CaptionTypePicker from "@/components/CaptionTypePicker";
+import SubtitleReveal from "@/components/SubtitleReveal";
 import LookControls from "@/components/LookControls";
 import StyledCaption from "@/components/StyledCaption";
 import Timeline from "@/components/Timeline";
@@ -453,8 +454,9 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           </>
         ) : (
           <>
+            <SubtitleReveal src={job.hasMedia || mediaUrl ? mediaUrl ?? `/api/jobs/${job.id}/media` : undefined} progress={job.progress} queued={job.status === "queued"} />
             <div className="bar big" role="progressbar" aria-valuenow={job.progress} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${Math.max(job.progress, 3)}%` }} /></div>
-            <p className="muted">{job.status === "queued" ? "Waiting in line…" : `Listening and writing subtitles — ${job.progress}%`} You can leave this page; we&apos;ll keep working.</p>
+            <p className="muted">{job.status === "queued" ? "Waiting in line…" : `${job.progress}% done.`} You can leave this page; we&apos;ll keep working.</p>
           </>
         )}
       </div>
