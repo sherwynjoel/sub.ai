@@ -43,7 +43,7 @@ export default function Page() {
         <li><strong>Speech recognition and translation:</strong> the audio of your video is sent to our AI provider (currently Sarvam AI, India) to turn speech into text and translate it.</li>
         <li><strong>Hosting:</strong> our servers and database run on Amazon Web Services in Mumbai, India.</li>
         <li><strong>Payments:</strong> Razorpay processes subscriptions and payments.</li>
-        <li><strong>Email:</strong> Resend delivers the emails we send you, such as password reset links.</li>
+        <li><strong>Email:</strong> Google (Gmail) delivers the emails we send you, such as password reset links.</li>
       </ul>
       <p>We may also disclose data when Indian law or a valid order from a court or authority requires it.</p>
 

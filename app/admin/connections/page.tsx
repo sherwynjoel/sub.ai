@@ -50,7 +50,7 @@ export default async function Connections() {
 
       <section className="panel">
         <h2>Email</h2>
-        <p className="muted">For password reset emails. Create a free account at resend.com, verify your domain there, then save the key and the sender address.</p>
+        <p className="muted">For password reset emails. Without a domain: turn on 2-Step Verification on the Gmail account, create an app password at myaccount.google.com/apppasswords, and save the Gmail address and that app password. With a domain, Resend can be used instead (it takes over when its key and sender are saved).</p>
         {group("email").map((c) => <ConnectionRow key={c.name} {...c} />)}
         <div className="test-row"><TestButton service="email" label="Send me a test email" /></div>
       </section>
