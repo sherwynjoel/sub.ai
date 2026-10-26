@@ -5,7 +5,7 @@ import Cube from "@/components/Cube";
 import Effects from "@/components/Effects";
 import LegalLinks from "@/components/LegalLinks";
 import StickerSlapFooter from "@/components/StickerSlapFooter";
-import FruitSticker from "@/components/FruitStickerHero";
+import FruitSticker, { MEDIA } from "@/components/FruitStickerHero";
 import HeroEditor from "@/components/HeroEditor";
 import StyleShowcase from "@/components/StyleShowcase";
 import { STYLE_CHOICES } from "@/lib/captionStyles";
@@ -137,6 +137,13 @@ export default function Landing() {
           farewells={["speak!", "pop!", "sing!", "hit!"]}
           lines={[`Tamil, Tanglish and ${LANGUAGES.length - 1} more Indian languages,`, "with English on the same timeline."]}
           email="" links={[]} name=""
+          stickers={[
+            { fruit: "cc", x: 2, y: 66, size: 0.92, rotate: -8 },
+            { fruit: "mic", x: 10.5, y: 98, size: 0.72, rotate: 10 },
+            { fruit: "clapper", x: 63, y: -28, size: 0.64, rotate: -10, shape: "oval", behind: true },
+            { fruit: "bubble", x: 99, y: 84, size: 0.56, rotate: 6, shape: "oval" },
+          ]}
+          cycle={MEDIA}
           accent="#ff5a3c" ink="var(--ink)" muted="var(--muted)" background="transparent"
           fontSans="var(--font-head)" height="78svh"
         >
