@@ -440,10 +440,10 @@ a.signout { text-decoration: none; }
 /* Waiting for subtitles (components/SubtitleReveal.tsx): the video's frame comes into focus from the top. */
 .reveal { display: grid; gap: 12px; justify-items: start; margin-top: 14px; }
 .reveal-stage { margin: 0; font-weight: 600; font-size: 1.05rem; background: linear-gradient(110deg, var(--muted) 35%, var(--ink) 50%, var(--muted) 65%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: reveal-shimmer 2.4s linear infinite; }
-.reveal-card { position: relative; width: min(100%, 420px); border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--black); }
-.reveal-frame { display: block; width: 100%; max-height: 46vh; object-fit: cover; aspect-ratio: auto; }
-.reveal-plain { aspect-ratio: 16 / 9; background: radial-gradient(circle at 25% 30%, #9b8cff, transparent 55%), radial-gradient(circle at 80% 70%, #7fe3c4, transparent 55%), var(--black); }
-.reveal-blur { position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; filter: blur(18px) brightness(.85) saturate(1.2); transform: scale(1.12); } /* scaled so the blur has no pale edges */
+.reveal-card { position: relative; width: fit-content; max-width: min(100%, 520px); border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--black); line-height: 0; }
+.reveal-frame { display: block; width: auto; height: auto; max-width: 100%; max-height: 56vh; } /* the video's own shape: tall for Reels, wide for YouTube */
+.reveal-plain { width: min(420px, 80vw); aspect-ratio: 16 / 9; background: radial-gradient(circle at 25% 30%, #9b8cff, transparent 55%), radial-gradient(circle at 80% 70%, #7fe3c4, transparent 55%), var(--black); }
+.reveal-blur { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: cover; filter: blur(18px) brightness(.85) saturate(1.2); transform: scale(1.12); } /* scaled so the blur has no pale edges */
 .reveal-line { position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--lime), transparent); box-shadow: 0 0 12px var(--lime); transition: top .6s linear; }
 .reveal-tip { margin: 0; font-size: .9rem; animation: reveal-tip .5s ease; }
 @keyframes reveal-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
