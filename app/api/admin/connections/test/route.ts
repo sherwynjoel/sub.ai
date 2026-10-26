@@ -63,7 +63,7 @@ export async function POST(req: Request) {
     }
     if (service === "razorpay") return json(await testRazorpay());
     if (service === "email") {
-      if (!(await emailReady())) return json({ ok: false, message: "Save the Resend key and the sender address first." });
+      if (!(await emailReady())) return json({ ok: false, message: "Save the Gmail address and app password (or a Resend key and sender) first." });
       await sendEmail(me.email, "Vasanam test email", "Email from Vasanam works. Password reset links will be sent like this one.");
       return json({ ok: true, message: `Sent to ${me.email}. Check the inbox (and spam).` });
     }
