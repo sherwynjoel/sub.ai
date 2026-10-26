@@ -6,44 +6,59 @@ import { DEFAULT_LANGUAGE, LANGUAGES, languageOf } from "@/lib/languages";
 import { typeLabel, typeSettings, type CaptionType } from "@/lib/captionTypes";
 import CaptionTypePicker from "@/components/CaptionTypePicker";
 import TetrisLoader from "@/components/TetrisLoader";
+import GlassFolder, { type FolderFile } from "@/components/GlassFolder";
 import { SAFE_ZONES } from "@/lib/captionStyles";
 
 type Job = {
   id: string; filename: string; durationSec: number; status: string; progress: number;
   error: string | null; createdAt: string; cueCount: number; language: string; script: string; captionCustom?: { show?: "ta" | "en" | "both" };
-  hasMedia: boolean;
+  hasMedia: boolean; renderStatus?: string | null;
 };
 
 const mins = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 
-/**
- * A project's picture: a frame from its video, loaded only once the card is on screen, playing silently while
- * the pointer is over it. The upload is removed after 7 days; then a plain tile.
- */
-function Thumb({ src, children }: { src?: string; children?: React.ReactNode }) {
-  const box = useRef<HTMLSpanElement>(null);
-  const [near, setNear] = useState(false);
-  const [ok, setOk] = useState(true);
+/** A folder as wide as its grid cell (it draws at a fixed width, so it's measured), at most 340 px. */
+function ProjectFolder({ job, index }: { job: Job; index: number }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
   useEffect(() => {
     const el = box.current;
-    if (!el || !src) return;
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setNear(true); io.disconnect(); } }, { rootMargin: "200px" });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [src]);
-  const play = (on: boolean) => (e: React.MouseEvent<HTMLSpanElement>) => {
-    const v = e.currentTarget.querySelector("video");
-    if (!v) return;
-    if (on) v.play().catch(() => {});
-    else { v.pause(); v.currentTime = 1; }
-  };
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setWidth(Math.min(340, Math.floor(e.contentRect.width))));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const lang = job.captionCustom?.show === "en" ? "en" : job.captionCustom?.show === "ta" ? "ta" : "both";
+  const busy = job.status === "queued" || job.status === "processing";
+  const open = `/app/jobs/${job.id}`;
+  // The files inside, back to front: the newest (front) is the editor.
+  const files: FolderFile[] = busy
+    ? [{ name: "View progress", meta: job.status === "queued" ? "In line" : `${job.progress}%`, href: open }]
+    : job.status === "failed"
+      ? [{ name: "See what went wrong", meta: "Failed", href: open }]
+      : [
+          { name: "Transcript.txt", meta: "Plain text", href: `/api/jobs/${job.id}/export?lang=${lang}&fmt=txt` },
+          { name: "Subtitles.vtt", meta: "Web players", href: `/api/jobs/${job.id}/export?lang=${lang}&fmt=vtt` },
+          { name: "Subtitles.srt", meta: "Premiere · YouTube", href: `/api/jobs/${job.id}/export?lang=${lang}&fmt=srt` },
+          ...(job.renderStatus === "done" ? [{ name: "Styled video.mp4", meta: "With captions", href: `/api/jobs/${job.id}/render`, art: "ember" as const }] : []),
+          { name: "Edit captions", meta: `${job.cueCount} subtitles`, href: open, art: "aurora" as const },
+        ];
+  const type = typeLabel({ script: job.script, captionCustom: job.captionCustom }, languageOf(job.language).name);
+  const meta = busy ? (job.status === "queued" ? "Waiting in line" : `Making subtitles ${job.progress}%`)
+    : job.status === "failed" ? "Failed" : `${type} · ${mins(job.durationSec)}`;
+  const arts = ["dusk", "glacier", "verdant", "aurora", "ember"] as const;
   return (
-    <span ref={box} className="pcard-thumb" onMouseEnter={play(true)} onMouseLeave={play(false)} aria-hidden="true">
-      {src && ok && near
-        ? <video src={`${src}#t=1`} muted playsInline loop preload="metadata" onError={() => setOk(false)} />
-        : <span className="pcard-blank">{src ? "" : "Video removed after 7 days"}</span>}
-      {children}
-    </span>
+    <div ref={box} className="folder-cell" title={job.filename}>
+      {width > 0 && (
+        <GlassFolder
+          key={`${job.id}:${job.status}:${job.renderStatus}`} // a new state brings a new set of files
+          label={job.filename} meta={meta} width={width}
+          video={job.hasMedia ? `/api/jobs/${job.id}/media` : undefined}
+          art={arts[(job.id.charCodeAt(0) + job.id.charCodeAt(1)) % arts.length]} seed={job.id.charCodeAt(2)}
+          files={files} action="none" appearDelay={Math.min(index, 8) * 70}
+        />
+      )}
+    </div>
   );
 }
 
@@ -148,23 +163,8 @@ export default function Dashboard() {
         ) : shown.length === 0 ? (
           <p className="muted empty">No project matches “{query}”.</p>
         ) : (
-          <div className="project-grid">
-            {shown.map((j) => (
-              <Link key={j.id} href={`/app/jobs/${j.id}`} className={`pcard ${j.status}`}>
-                <Thumb src={j.hasMedia ? `/api/jobs/${j.id}/media` : undefined}><span className="pcard-time">{mins(j.durationSec)}</span></Thumb>
-                <span className="pcard-body">
-                  <span className="pcard-name" title={j.filename}>{j.filename}</span>
-                  <span className="pcard-meta">{typeLabel({ script: j.script, captionCustom: j.captionCustom }, languageOf(j.language).name)} · {new Date(j.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
-                  {j.status === "processing" || j.status === "queued" ? (
-                    <span className="pcard-state busy"><span className="bar"><i style={{ width: `${Math.max(3, j.progress)}%` }} /></span>{j.status === "queued" ? "Waiting in line" : `Making subtitles ${j.progress}%`}</span>
-                  ) : j.status === "failed" ? (
-                    <span className="pcard-state failed">Failed</span>
-                  ) : (
-                    <span className="pcard-state ready">Ready · {j.cueCount} subtitles</span>
-                  )}
-                </span>
-              </Link>
-            ))}
+          <div className="folder-grid">
+            {shown.map((j, i) => <ProjectFolder key={j.id} job={j} index={i} />)}
           </div>
         )}
       </section>

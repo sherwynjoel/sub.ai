@@ -556,3 +556,8 @@ a.signout { text-decoration: none; }
   .ed-mbar svg { width: 20px; height: 20px; }
   .ed-mtoast { display: block; position: fixed; z-index: 41; left: 16px; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom)); margin: 0; padding: 10px 14px; border-radius: 14px; background: var(--black); color: #fff; font-size: .85rem; text-align: center; box-shadow: 0 10px 24px -12px rgb(0 0 0 / .5); }
 }
+
+/* Projects as glass folders (components/GlassFolder.tsx): hover leans the glass, a click fans the files out. */
+.folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 30px 22px; padding-top: 10px; }
+.folder-cell { min-width: 0; display: grid; justify-items: center; }
+@media (max-width: 600px) { .folder-grid { grid-template-columns: 1fr; gap: 22px; } }
