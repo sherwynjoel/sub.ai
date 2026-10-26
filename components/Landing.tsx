@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import Cube from "@/components/Cube";
 import Effects from "@/components/Effects";
 import LegalLinks from "@/components/LegalLinks";
+import StickerSlapFooter from "@/components/StickerSlapFooter";
 import HeroEditor from "@/components/HeroEditor";
 import StyleShowcase from "@/components/StyleShowcase";
 import { STYLE_CHOICES } from "@/lib/captionStyles";
-import { BRAND } from "@/lib/brand";
+import { BRAND, BUSINESS } from "@/lib/brand";
 import { LANGUAGES } from "@/lib/languages";
 import { PLANS, type PlanId } from "@/lib/plans";
 
@@ -252,16 +253,39 @@ export default function Landing() {
         </section>
       </main>
 
-      <footer className="wrap foot">
-        <span className="logo"><i />{BRAND.name}</span>
-        <nav className="legal-links" aria-label="Guides">
-          <Link href="/tamil-subtitle-generator">Tamil subtitle generator</Link>
-          <Link href="/tanglish-captions">Tanglish captions</Link>
-          <Link href="/premiere-pro-subtitle-plugin">Premiere Pro plugin</Link>
-        </nav>
+      <StickerSlapFooter
+        wordmark="vasanam"
+        homeHref="/"
+        navLabel="start" navHref="/signup"
+        chatHref="" /* no messaging number yet: hides the chat bubble */
+        jobsLabel="start here"
+        jobs={[
+          { title: "start free", href: "/signup" },
+          { title: "sign in", href: "/login" },
+          { title: "tamil subtitles", href: "/tamil-subtitle-generator" },
+          { title: "tanglish captions", href: "/tanglish-captions" },
+          { title: "premiere plugin", href: "/premiere-pro-subtitle-plugin" },
+        ]}
+        officeLabel="made in"
+        address={["tamil nadu,", "india"]}
+        mapLabel="contact & policies" mapHref="/contact"
+        contactLabel="say vanakkam"
+        email={BUSINESS.email}
+        copiedLabel="copied! talk soon"
+        note="We reply within a day: bugs, ideas, Tanglish questions, all welcome."
+        socials={[]}
+        stickers={[{ kind: "burst", text: "wow" }, { kind: "bubble", text: "vanakkam!" }, "heart", "camera", "smiley", "daisy"]}
+        credits={[{ role: "made by", name: "Arktech" }, { role: "stickers", name: "drawn in code, peel freely" }]}
+        height="88svh"
+        wordmarkMaxHeight="40svh"
+        paper="#f3f1f8" panel="#0c0c14" ink="#0c0c14" cream="#f5f2ea" accent="#d4ff3f"
+        fontSans="var(--font-sans), system-ui, sans-serif"
+      />
+      {/* The policies stay one click away on every page (Razorpay checks for them). */}
+      <div className="wrap foot foot-legal">
         <LegalLinks />
         <span className="muted">© 2026 {BRAND.name} · Powered by <a href="https://thearktech.in" target="_blank" rel="noopener">Arktech</a></span>
-      </footer>
+      </div>
     </>
   );
 }
