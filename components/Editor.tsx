@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Cue } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
-import { CANVAS_RATIOS, CAPTION_STYLES, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
+import { CANVAS_RATIOS, CAPTION_STYLES, mergeCustom, STYLE_CHOICES, STYLE_GROUPS, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
 import { insertAt, mergeCues, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
@@ -23,7 +23,6 @@ type Job = {
 };
 type View = "ta" | "en" | "both";
 type Tab = "caption" | "layers" | "style" | "export";
-const GROUPS = ["Premiere", "Bold", "Soft", "Simple", "Playful"] as const;
 const RATIO = { "9:16": 9 / 16, "4:5": 4 / 5, "1:1": 1, "16:9": 16 / 9 } as const;
 /** Settings that belong to the project, not to a look: picking a style or resetting the look keeps them. */
 const PROJECT_KEYS: string[] = ["safe", "safeCustom", "canvas", "layers", "logo", "show", "lines"];
@@ -702,11 +701,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
               <h3>Project style</h3>
               <p className="muted small">{styleOf(styleId).blurb} Applies to every caption without its own look.</p>
-              {GROUPS.map((g) => (
+              {/* The styles on offer, plus this project's own if it's one no longer offered (so it still shows as picked). */}
+              {STYLE_GROUPS.concat(STYLE_GROUPS.includes(styleOf(styleId).group) ? [] : [styleOf(styleId).group]).map((g) => (
                 <div key={g} className="style-group">
                   <span className="muted small">{g}</span>
                   <div className="style-grid" role="radiogroup" aria-label={`${g} styles`}>
-                    {CAPTION_STYLES.filter((x) => x.group === g).map((x) => (
+                    {CAPTION_STYLES.filter((x) => x.group === g && (STYLE_CHOICES.includes(x) || x.id === styleId)).map((x) => (
                       <button key={x.id} role="radio" aria-checked={styleId === x.id} className="style-chip" onClick={() => pickStyle(x.id)}>
                         <span className="style-sample" style={{ "--s": x.size ?? 1 } as React.CSSProperties}><StyledCaption styleId={x.id} text="Aa கா" start={0} end={1} time={0.99} /></span>
                         <span className="style-name">{x.name}</span>

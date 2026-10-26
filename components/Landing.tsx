@@ -6,7 +6,7 @@ import Effects from "@/components/Effects";
 import LegalLinks from "@/components/LegalLinks";
 import HeroEditor from "@/components/HeroEditor";
 import StyleShowcase from "@/components/StyleShowcase";
-import { CAPTION_STYLES } from "@/lib/captionStyles";
+import { STYLE_CHOICES } from "@/lib/captionStyles";
 import { BRAND } from "@/lib/brand";
 import { LANGUAGES } from "@/lib/languages";
 import { PLANS, type PlanId } from "@/lib/plans";
@@ -52,7 +52,7 @@ const t = {
   free: "Free", perMonth: "/month",
   blurb: { free: PLANS.free.blurb, creator: PLANS.creator.blurb, pro: PLANS.pro.blurb, studio: PLANS.studio.blurb } as Record<PlanId, string>,
   mins: (n: string, once: boolean) => `${n} minutes${once ? ", once" : " a month"}`,
-  perks: [`${LANGUAGES.length} Indian languages + English`, `${CAPTION_STYLES.length} caption styles, styled MP4 export`, "SRT, VTT and text export", "Premiere & After Effects panel"],
+  perks: [`${LANGUAGES.length} Indian languages + English`, `${STYLE_CHOICES.length} caption styles, styled MP4 export`, "SRT, VTT and text export", "Premiere & After Effects panel"],
   choose: (name: string) => `Choose ${name}`,
   faqH: "Quick answers",
   faq: [
@@ -170,7 +170,7 @@ export default function Landing() {
         </section>
 
         <section className="wrap sec" id="styles">
-          <h2 className="rise">{CAPTION_STYLES.length} looks. <span className="mark">One tap.</span></h2>
+          <h2 className="rise">{STYLE_CHOICES.length} looks. <span className="mark">One tap.</span></h2>
           <p className="sec-lede rise">Pick a style in the editor, watch it on your clip, then download a finished MP4 with the captions burned in. Every style works in every language.</p>
           <StyleShowcase />
         </section>

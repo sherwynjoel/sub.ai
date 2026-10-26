@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { assColor, buildAss, CAPTION_STYLES, keywordIndex, resolveStyle, SAFE_ZONES, sanitizeCustom, stackBig, stackChunks, styleOf, tamilRuns, wordTimes } from "./captionStyles";
+import { assColor, buildAss, CAPTION_STYLES, DEFAULT_STYLE, STYLE_CHOICES, STYLE_GROUPS, keywordIndex, resolveStyle, SAFE_ZONES, sanitizeCustom, stackBig, stackChunks, styleOf, tamilRuns, wordTimes } from "./captionStyles";
 
 test("assColor converts #RRGGBB[AA] to ASS &HAABBGGRR with inverted alpha", () => {
   assert.equal(assColor("#FFC83D"), "&H003DC8FF&");
@@ -136,4 +136,11 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
   assert.match(layer, /\\pos\(216,324\)/);
   assert.match(layer, /\\fnNoto Emoji\}🔥/, "emoji in the one-colour emoji font");
   assert.match(ass, /Style: L1,Poppins ExtraBold,122,/, "the layer's own size");
+});
+
+test("styles on offer: the chosen 20, with the default among them", () => {
+  assert.equal(STYLE_CHOICES.length, 20);
+  assert.ok(STYLE_CHOICES.some((s) => s.id === DEFAULT_STYLE));
+  assert.ok(!STYLE_GROUPS.includes("Playful"), "a group with nothing on offer isn't shown");
+  assert.equal(styleOf("minimal").name, "Plain Bold", "projects on a style no longer offered keep it");
 });
