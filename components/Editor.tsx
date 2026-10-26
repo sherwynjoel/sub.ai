@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import type { Cue } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
@@ -24,6 +24,22 @@ type Job = {
 };
 type View = "ta" | "en" | "both";
 type Tab = "caption" | "layers" | "style" | "export";
+type Pane = "list" | "caption" | "timeline" | "style" | "layers" | "export";
+const PANES: [Pane, string][] = [["list", "Captions"], ["caption", "Edit"], ["timeline", "Timeline"], ["style", "Style"], ["layers", "Layers"], ["export", "Export"]];
+const noop = () => () => {};
+/** m:ss for the phone toolbar. */
+const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+/** Toolbar icons (24 px grid, drawn with the current colour). */
+const ICON: Record<string, string> = {
+  undo: "M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3",
+  redo: "m15 14 5-5-5-5M20 9H9a5 5 0 0 0 0 10h3",
+  split: "M6 3v18M18 3v18M6 12h3M15 12h3M12 4v4M12 16v4",
+  merge: "M8 6l4 6-4 6M16 6l-4 6 4 6",
+  add: "M12 5v14M5 12h14",
+  delete: "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3",
+  save: "M5 12l5 5L20 7",
+};
+const Icon = ({ name }: { name: string }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICON[name]} /></svg>;
 const RATIO = { "9:16": 9 / 16, "4:5": 4 / 5, "1:1": 1, "16:9": 16 / 9 } as const;
 /** Settings that belong to the project, not to a look: picking a style or resetting the look keeps them. */
 const PROJECT_KEYS: string[] = ["safe", "safeCustom", "canvas", "layers", "logo", "show", "lines"];
@@ -201,6 +217,9 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [logoVer, setLogoVer] = useState(0); // bumps the logo image URL after an upload
   const bgVideo = useRef<HTMLVideoElement>(null);
   const [tab, setTab] = useState<Tab>("caption");
+  const inBrowser = useSyncExternalStore(noop, () => true, () => false); // false while rendered on the server
+  // Phones show one section at a time under the video (desktop shows them all).
+  const [pane, setPane] = useState<Pane>("list");
   const [zoom, setZoom] = useState(80); // timeline px per second
   const [lang, setLang] = useState<View>(!hasEnglish ? "ta" : !hasSpoken ? "en" : shown ?? "both");
   const [fmt, setFmt] = useState("srt");
@@ -361,6 +380,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     if (r.redone) router.push("/app"); // the projects page shows the progress
     else setTimeout(() => window.location.reload(), 50); // after the unsaved-changes guard is off
   }
+  /** Phones: show one section; the inspector ones open their tab (Edit opens the caption under the playhead). */
+  function openPane(k: Pane) {
+    setPane(k);
+    if (k === "caption" || k === "style" || k === "layers" || k === "export") setTab(k);
+    if (k === "caption" && selected < 0 && activeIdx >= 0) setSelected(activeIdx);
+  }
   function select(i: number) {
     setSelected(i);
     if (i >= 0) { setTab("caption"); list.current?.children[i]?.scrollIntoView({ block: "nearest" }); }
@@ -471,7 +496,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const own = sel?.style ?? {};
 
   return (
-    <div className="editor ed">
+    <div className="editor ed" data-pane={pane}>
       <div className="ed-top">
         <div className="ed-title">
           <Link href="/app" className="muted">Projects</Link>
@@ -556,12 +581,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           )}
           <div className="ed-transport" role="toolbar" aria-label="Playback and editing">
             <button className="btn small" onClick={togglePlay} title="Play / pause (Space)">{playing ? "Pause" : "Play"}</button>
-            <span className="tnum ed-time">{tc(now)} / {tc(duration)}</span>
+            <span className="tnum ed-time"><span className="t-long">{tc(now)} / {tc(duration)}</span><span className="t-short">{mmss(now)} / {mmss(duration)}</span></span>
             <span className="ed-sep" />
-            <button className="btn ghost small" onClick={split} title="Split the caption at the playhead (S)">Split</button>
-            <button className="btn ghost small" onClick={merge} title="Merge the selected caption with the next (M)">Merge</button>
-            <button className="btn ghost small" onClick={add} title="Add a caption at the playhead (A)">Add</button>
-            <button className="btn ghost small" onClick={() => remove()} disabled={target() < 0} title="Delete the selected caption (Delete)">Delete</button>
+            <button className="btn ghost small ed-act" onClick={split} title="Split the caption at the playhead (S)">Split</button>
+            <button className="btn ghost small ed-act" onClick={merge} title="Merge the selected caption with the next (M)">Merge</button>
+            <button className="btn ghost small ed-act" onClick={add} title="Add a caption at the playhead (A)">Add</button>
+            <button className="btn ghost small ed-act" onClick={() => remove()} disabled={target() < 0} title="Delete the selected caption (Delete)">Delete</button>
             {issues.length > 0 && <button className="btn ghost small timing-next" onClick={nextIssue} title="Go to the next caption whose timing may be off">Check timing · {issues.length}</button>}
             {views.length > 1 && <>
               <span className="ed-sep" />
@@ -572,6 +597,11 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               </div>
             </>}
           </div>
+          <nav className="ed-mnav" aria-label="Editor sections">
+            {PANES.map(([k, l]) => (
+              <button key={k} aria-pressed={pane === k} onClick={() => openPane(k)}>{l}</button>
+            ))}
+          </nav>
         </div>
 
         <aside className="ed-side">
@@ -818,6 +848,21 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           onDrag={(i, patch) => { if (!dragFrom.current) dragFrom.current = cues; setCuesRaw((cs) => cs.map((c, j) => (j === i ? { ...c, ...patch } : c))); }}
           onDragEnd={() => { const from = dragFrom.current; dragFrom.current = null; if (from) { setPast((p) => [...p.slice(-199), from]); setFuture([]); setDirty(true); } }} />
       </div>
+
+      {/* Phones: the editing actions within thumb's reach, and messages just above them. On the page body: inside
+          the glass panels a fixed bar would stick to the panel, not the screen. */}
+      {inBrowser && createPortal(<>
+      {msg && <p className="ed-mtoast" role="status">{msg}</p>}
+      <div className="ed-mbar" role="toolbar" aria-label="Edit">
+        <button onClick={undo} disabled={!past.length}><Icon name="undo" />Undo</button>
+        <button onClick={redo} disabled={!future.length}><Icon name="redo" />Redo</button>
+        <button onClick={split}><Icon name="split" />Split</button>
+        <button onClick={merge}><Icon name="merge" />Merge</button>
+        <button onClick={add}><Icon name="add" />Add</button>
+        <button onClick={() => remove()} disabled={target() < 0}><Icon name="delete" />Delete</button>
+        <button className="primary" onClick={save} disabled={!dirty || saving}><Icon name="save" />{saving ? "Saving" : dirty ? "Save" : "Saved"}</button>
+      </div>
+      </>, document.body)}
     </div>
   );
 }
