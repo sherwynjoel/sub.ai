@@ -5,6 +5,7 @@ import Cube from "@/components/Cube";
 import Effects from "@/components/Effects";
 import LegalLinks from "@/components/LegalLinks";
 import StickerSlapFooter from "@/components/StickerSlapFooter";
+import FruitSticker from "@/components/FruitStickerHero";
 import HeroEditor from "@/components/HeroEditor";
 import StyleShowcase from "@/components/StyleShowcase";
 import { STYLE_CHOICES } from "@/lib/captionStyles";
@@ -129,23 +130,26 @@ export default function Landing() {
       </header>
 
       <main>
-        <section className="wrap hero">
+        {/* Hero: a headline that ends in a hand-written word (click it for another) with fruit stickers to play with. */}
+        <FruitSticker
+          as="section" headingTag="h1" className="hero-fruit"
+          headline="Subtitles that"
+          farewells={["speak!", "pop!", "sing!", "hit!"]}
+          lines={[`Tamil, Tanglish and ${LANGUAGES.length - 1} more Indian languages,`, "with English on the same timeline."]}
+          email="" links={[]} name=""
+          accent="#ff5a3c" ink="var(--ink)" muted="var(--muted)" background="transparent"
+          fontSans="var(--font-head)" height="78svh"
+        >
           <p className="hello glass" aria-hidden="true">
             <span key={hi} className="hello-word" lang={hello.lang}>{hello.w}</span>
             <span className="hello-lang">{hello.l}</span>
           </p>
-          <h1>
-            {t.h1[0]}<span className="mark">{t.h1[1]}</span>{" "}
-            <span className="sr-only">Tamil, Hindi, Telugu, Malayalam, Kannada and more.</span>
-            <span key={hi} className="lang-word" lang={hello.lang} aria-hidden="true">{hello.n}</span>
-          </h1>
-          <p className="lede">{t.lede}</p>
           <div className="cta">
             <Link href="/signup" className="btn">{t.cta}</Link>
             <a href="#how" className="btn ghost">{t.how}</a>
           </div>
           <p className="note">{t.note}</p>
-        </section>
+        </FruitSticker>
         <div className="wrap"><HeroEditor /></div>
 
         <section className="langs" aria-label={t.langs}>

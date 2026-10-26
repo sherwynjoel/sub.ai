@@ -294,3 +294,11 @@ main { overflow-x: clip; }
   .sq-card, .sq-price, .sq-bg, .sq-bg * { transition: none; }
   .sq-price { transform: none; }
 }
+
+/* Hero (components/FruitStickerHero.tsx): the buttons and greeting under the headline, in the page's own type. */
+.hero-fruit .fsf-extra { font-family: var(--font-body); }
+.hero-fruit .fsf-sub { font-family: var(--font-body); color: var(--ink-2, var(--ink)); }
+.hero-fruit .fsf-stage { padding-top: clamp(6rem, 11cqw, 9rem); padding-bottom: clamp(2rem, 5cqw, 4rem); }
+.hero-fruit .cta { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.hero-fruit .note { margin: 0; }
+@media (max-width: 600px) { .hero-fruit { min-height: auto !important; } }
