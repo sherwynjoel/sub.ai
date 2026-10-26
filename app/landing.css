@@ -234,3 +234,10 @@ main { overflow-x: clip; }
   .hero > *, .scene { animation: none; }
 }
 
+
+/* Under the sticker footer: the policies and the small print. */
+.foot-legal { padding-top: 18px; }
+@media (max-width: 600px) {
+  .ssf { min-height: auto !important; } /* phones: as tall as the content, no empty band above the wordmark */
+  .ssf .ssf-stage { margin-top: 28px; }
+}
