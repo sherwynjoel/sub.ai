@@ -181,8 +181,12 @@ export const spring = (x: number, v: number, target: number, k: number, damp: nu
 // ---- fruit -------------------------------------------------------------------
 
 export type Fruit = "strawberry" | "banana" | "chili" | "orange" | "cherry" | "lemon" | "watermelon" | "pear"
+  // Vasanam's own: video and subtitles
+  | "clapper" | "mic" | "cc" | "bubble" | "play" | "reel" | "headphones" | "wave"
 
 export const FRUITS: Fruit[] = ["strawberry", "banana", "chili", "orange", "cherry", "lemon", "watermelon", "pear"]
+/** Video and subtitle stickers (the Vasanam hero swaps among these). */
+export const MEDIA: Fruit[] = ["clapper", "mic", "cc", "bubble", "play", "reel", "headphones", "wave"]
 
 // The sticker each fruit is printed on when it's swapped in.
 const PAPER: Record<Fruit, string> = {
@@ -194,6 +198,14 @@ const PAPER: Record<Fruit, string> = {
   lemon: "#ff8f70",
   watermelon: "#fde7a6",
   pear: "#ffb8a6",
+  clapper: "#ffd23f",
+  mic: "#9ab8ff",
+  cc: "#d4ff3f",
+  bubble: "#ffb6e1",
+  play: "#ffe7a3",
+  reel: "#b8f0d2",
+  headphones: "#cdb8f2",
+  wave: "#ff9f80",
 }
 
 const NAMES: Record<Fruit, string> = {
@@ -205,6 +217,14 @@ const NAMES: Record<Fruit, string> = {
   lemon: "Lemon",
   watermelon: "Watermelon",
   pear: "Pear",
+  clapper: "Clapperboard",
+  mic: "Microphone",
+  cc: "Captions",
+  bubble: "Tamil speech bubble",
+  play: "Play button",
+  reel: "Film reel",
+  headphones: "Headphones",
+  wave: "Sound wave",
 }
 
 const shine = (cx: number, cy: number, rx: number, ry: number, rot: number) => (
@@ -314,6 +334,74 @@ const ART: Record<Fruit, ReactNode> = {
       {leaf("M3,-38C10,-50 24,-50 28,-43C20,-36 11,-35 3,-38Z", "M6,-39C13,-42 19,-43 24,-43")}
     </g>
   ),
+
+  clapper: (
+    <g transform="rotate(-6)">
+      <rect x={-34} y={-12} width={68} height={44} rx={6} fill="#1d1c22" />
+      <rect x={-34} y={-12} width={68} height={10} fill="#2c2b33" />
+      <path d="M-26,6H18M-26,16H8M-26,24H14" stroke="#fff" strokeWidth={3} strokeLinecap="round" opacity={0.55} />
+      <g transform="rotate(-16 -34 -14)">
+        <rect x={-34} y={-30} width={68} height={14} rx={3} fill="#1d1c22" />
+        <path d="M-26,-30L-18,-16M-10,-30L-2,-16M6,-30L14,-16M22,-30L30,-16" stroke="#fff" strokeWidth={5} />
+      </g>
+      <circle cx={-34} cy={-15} r={3.4} fill="#c9c6d6" />
+    </g>
+  ),
+  mic: (
+    <g transform="rotate(12)">
+      <rect x={-13} y={-40} width={26} height={44} rx={13} fill="#2b2a33" />
+      <path d="M-13,-26H13M-13,-17H13M-13,-8H13" stroke="#5b5a66" strokeWidth={2.4} />
+      {shine(-6, -32, 3, 6, 0)}
+      <path d="M-22,-6C-22,14 22,14 22,-6" fill="none" stroke="#2b2a33" strokeWidth={5} strokeLinecap="round" />
+      <path d="M0,11V30M-14,32H14" stroke="#2b2a33" strokeWidth={5} strokeLinecap="round" />
+    </g>
+  ),
+  cc: (
+    <g transform="rotate(-8)">
+      <rect x={-38} y={-26} width={76} height={52} rx={12} fill="#141414" />
+      <text x={0} y={13} textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontWeight={900} fontSize={36} fill="#fff" letterSpacing={-1}>CC</text>
+    </g>
+  ),
+  bubble: (
+    <g transform="rotate(6)">
+      <path d="M-34,-28H34A10,10 0 0 1 44,-18V14A10,10 0 0 1 34,24H-4L-22,40L-18,24H-34A10,10 0 0 1 -44,14V-18A10,10 0 0 1 -34,-28Z" fill="#fff" />
+      <text x={0} y={12} textAnchor="middle" fontFamily="'Noto Sans Tamil', 'Mukta Malar', sans-serif" fontWeight={800} fontSize={40} fill="#8a1550">த</text>
+    </g>
+  ),
+  play: (
+    <g>
+      <circle r={34} fill="#ff3b30" />
+      <path fill="#d52a20" d="M34,0A34,34 0 0 1 -22,26C4,32 30,20 34,0Z" />
+      {shine(-14, -16, 8, 4, -38)}
+      <path d="M-9,-16L18,0L-9,16Z" fill="#fff" stroke="#fff" strokeWidth={4} strokeLinejoin="round" />
+    </g>
+  ),
+  reel: (
+    <g transform="rotate(14)">
+      <circle r={36} fill="#2b2a33" />
+      <circle r={9} fill="#c9c6d6" />
+      {[0, 72, 144, 216, 288].map((a) => (
+        <circle key={a} cx={Math.round(Math.cos((a * Math.PI) / 180) * 21)} cy={Math.round(Math.sin((a * Math.PI) / 180) * 21)} r={8} fill="#141414" />
+      ))}
+      <path d="M30,20C40,30 44,38 46,44" fill="none" stroke="#2b2a33" strokeWidth={7} strokeLinecap="round" />
+    </g>
+  ),
+  headphones: (
+    <g>
+      <path d="M-30,10V0C-30,-22 -16,-34 0,-34C16,-34 30,-22 30,0V10" fill="none" stroke="#2b2a33" strokeWidth={7} strokeLinecap="round" />
+      <rect x={-38} y={2} width={18} height={30} rx={8} fill="#2b2a33" />
+      <rect x={20} y={2} width={18} height={30} rx={8} fill="#2b2a33" />
+      <rect x={-34} y={6} width={6} height={22} rx={3} fill="#5b7cff" />
+      <rect x={28} y={6} width={6} height={22} rx={3} fill="#5b7cff" />
+    </g>
+  ),
+  wave: (
+    <g>
+      {[[-30, 12], [-20, 24], [-10, 36], [0, 22], [10, 40], [20, 26], [30, 14]].map(([x, h], i) => (
+        <rect key={i} x={x - 3.5} y={-h / 2} width={7} height={h} rx={3.5} fill="#1d1c22" />
+      ))}
+    </g>
+  ),
 }
 
 // ---- types -------------------------------------------------------------------
@@ -355,6 +443,8 @@ export interface FruitStickerProps {
   name?: string
   year?: number
   stickers?: StickerSpec[]
+  /** What a sticker can swap to when clicked. Default: the fruit. */
+  cycle?: Fruit[]
   /** Script colour. */
   accent?: string
   ink?: string
@@ -536,6 +626,7 @@ export default function FruitSticker({
   name = "Nora Vale",
   year = 2026,
   stickers = DEFAULT_STICKERS,
+  cycle = FRUITS,
   accent = "#ff5a3c",
   ink = "var(--color-foreground, #141210)",
   muted = "var(--color-muted-foreground, #6f6a63)",
@@ -706,8 +797,8 @@ export default function FruitSticker({
   const swap = (i: number) => {
     const current = fruits[i]
     let next = current
-    for (let k = 1; k <= FRUITS.length; k++) {
-      const f = FRUITS[(FRUITS.indexOf(current) + k) % FRUITS.length]
+    for (let k = 1; k <= cycle.length; k++) {
+      const f = cycle[(Math.max(0, cycle.indexOf(current)) + k) % cycle.length]
       if (!fruits.includes(f)) {
         next = f
         break
