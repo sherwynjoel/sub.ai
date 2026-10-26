@@ -7,13 +7,14 @@ type Props = {
   type: CaptionType; withEnglish: boolean;
   onChange: (type: CaptionType, withEnglish: boolean) => void;
   disabled?: boolean;
+  compact?: boolean;           // a side panel: two columns, the chosen type's note once below
 };
 
 /** The caption types as cards with a sample line each, and whether to add the English line underneath. */
-export default function CaptionTypePicker({ language, tamil, type, withEnglish, onChange, disabled }: Props) {
+export default function CaptionTypePicker({ language, tamil, type, withEnglish, onChange, disabled, compact }: Props) {
   const def = CAPTION_TYPES.find((t) => t.id === type)!;
   return (
-    <fieldset className="ctype" disabled={disabled}>
+    <fieldset className={`ctype${compact ? " compact" : ""}`} disabled={disabled}>
       <legend>Caption type</legend>
       <div className="ctype-cards" role="radiogroup" aria-label="Caption type">
         {CAPTION_TYPES.map((t) => (
