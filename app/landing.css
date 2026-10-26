@@ -241,3 +241,56 @@ main { overflow-x: clip; }
   .ssf { min-height: auto !important; } /* phones: as tall as the content, no empty band above the wordmark */
   .ssf .ssf-stage { margin-top: 28px; }
 }
+
+/* ---------- Pricing: squishy cards (after 21st.dev's squishy pricing, in CSS) ---------- */
+.sq-plans { --back: cubic-bezier(.68, -.55, .27, 1.55); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.sq-wrap { display: grid; }
+.sq-card { position: relative; isolation: isolate; display: flex; flex-direction: column; min-height: 400px; padding: 28px 24px 84px; border-radius: 18px; overflow: hidden; color: #fff; box-shadow: 0 14px 30px -18px rgb(12 12 20 / .55); transition: transform 1s var(--back), box-shadow .4s; }
+.sq-card:hover, .sq-card:focus-within { transform: scale(1.05); box-shadow: 0 24px 44px -20px rgb(12 12 20 / .6); z-index: 1; }
+.sq-free { background: #14141f; }
+.sq-creator { background: #6366f1; }
+.sq-pro { background: #9333ea; }
+.sq-studio { background: #ec4899; }
+.sq-body { position: relative; z-index: 1; display: grid; gap: 4px; align-content: start; }
+.sq-label { justify-self: start; margin-bottom: 8px; padding: 2px 12px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .22); background: rgb(255 255 255 / .18); font-size: .85rem; font-weight: 600; }
+.sq-price { display: block; margin: 4px 0 10px; font: 900 clamp(2.4rem, 3.6vw, 3.4rem)/1.12 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: -.03em; transform: scale(.85); transform-origin: 0 0; transition: transform 1s var(--back); }
+.sq-card:hover .sq-price, .sq-card:focus-within .sq-price { transform: none; }
+.sq-mins { margin: 0; font-weight: 700; font-size: 1.02rem; }
+.sq-desc { margin: 2px 0 0; color: rgb(255 255 255 / .86); font-size: 1rem; }
+.sq-free .sq-label { color: var(--lime); border-color: rgb(212 255 63 / .35); background: rgb(212 255 63 / .12); }
+.sq-cta { position: absolute; z-index: 2; left: 16px; right: 16px; bottom: 16px; padding: 11px 10px; border-radius: 10px; border: 2px solid #fff; background: #fff; color: #1f1f26; font: 900 .9rem/1 ui-monospace, "SF Mono", Menlo, monospace; text-align: center; text-transform: uppercase; text-decoration: none; letter-spacing: .02em; transition: background .2s, color .2s, border-color .2s; }
+.sq-cta:hover, .sq-cta:focus-visible { background: rgb(255 255 255 / .1); color: #fff; border-color: rgb(255 255 255 / .8); }
+.sq-free .sq-cta { background: var(--lime); border-color: var(--lime); }
+.sq-free .sq-cta:hover { background: transparent; color: var(--lime); }
+
+/* The shapes: each squishes, flips or rises on hover with a little overshoot. */
+.sq-bg { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; transition: transform 1s var(--back); }
+.sq-bg * { fill: rgb(0 0 0 / .2); transform-box: fill-box; transform-origin: center; transition: transform 1s var(--back) .2s; }
+.sq-free .sq-bg * { fill: rgb(255 255 255 / .08); }
+.sq-card:hover .sq-bg0, .sq-card:focus-within .sq-bg0 { transform: scale(1.5); }
+.sq-card:hover .sq-bg0 .s1, .sq-card:focus-within .sq-bg0 .s1 { transform: translateY(-25px) scaleY(.5); }
+.sq-card:hover .sq-bg0 .s2, .sq-card:focus-within .sq-bg0 .s2 { transform: translateY(-25px) scaleY(2.25); }
+.sq-card:hover .sq-bg1, .sq-card:focus-within .sq-bg1 { transform: scale(1.05); }
+.sq-card:hover .sq-bg1 .s1, .sq-card:focus-within .sq-bg1 .s1 { transform: translateY(207px) rotate(90deg) scaleX(2); }
+.sq-card:hover .sq-bg1 .s2, .sq-card:focus-within .sq-bg1 .s2 { transform: translateY(-207px) rotate(90deg) scaleX(2); }
+.sq-card:hover .sq-bg2, .sq-card:focus-within .sq-bg2 { transform: scale(1.25); }
+.sq-bg2 .s1 { transition-delay: .3s; } .sq-bg2 .s3 { transition-delay: .1s; }
+.sq-card:hover .sq-bg2 *, .sq-card:focus-within .sq-bg2 * { transform: translateY(-50px); }
+.sq-card:hover .sq-bg3, .sq-card:focus-within .sq-bg3 { transform: scale(1.1); }
+.sq-card:hover .sq-bg3 .s1, .sq-card:focus-within .sq-bg3 .s1 { transform: translate(70px, 60px) scale(.6); }
+.sq-card:hover .sq-bg3 .s2, .sq-card:focus-within .sq-bg3 .s2 { transform: translate(-60px, -70px) scale(1.9); }
+
+/* What every plan gets, once under the cards. */
+.sq-perks { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; margin: 22px 0 0; padding: 0; list-style: none; font-size: .92rem; color: var(--ink-2, var(--ink)); }
+.sq-perks li::before { content: "✓"; margin-right: 7px; font-weight: 800; }
+
+@media (max-width: 1020px) { .sq-plans { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) {
+  .sq-plans { grid-template-columns: 1fr; }
+  .sq-card { min-height: 340px; }
+  .sq-card:hover, .sq-card:focus-within { transform: scale(1.02); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sq-card, .sq-price, .sq-bg, .sq-bg * { transition: none; }
+  .sq-price { transform: none; }
+}

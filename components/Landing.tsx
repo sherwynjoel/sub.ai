@@ -69,6 +69,34 @@ const t = {
 
 const d = (s: number) => ({ "--d": `${s}s` }) as React.CSSProperties;
 
+/**
+ * The shapes behind a pricing card, which squish and swap on hover (after 21st.dev's squishy pricing cards,
+ * drawn in CSS instead of framer-motion: see .sq-* in app/landing.css). One set per card, 320 × 384.
+ */
+function SquishyShapes({ kind }: { kind: number }) {
+  return (
+    <svg className={`sq-bg sq-bg${kind}`} viewBox="0 0 320 384" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      {kind === 0 && <>
+        <circle className="s1" cx="160.5" cy="114.5" r="101.5" />
+        <ellipse className="s2" cx="160.5" cy="265.5" rx="101.5" ry="43.5" />
+      </>}
+      {kind === 1 && <>
+        <rect className="s1" x="14" y="12" width="153" height="153" rx="15" />
+        <rect className="s2" x="155" y="219" width="153" height="153" rx="15" />
+      </>}
+      {kind === 2 && <>
+        <path className="s1" d="M148.893 157.531C154.751 151.673 164.249 151.673 170.107 157.531L267.393 254.818C273.251 260.676 273.251 270.173 267.393 276.031L218.75 324.674C186.027 357.397 132.973 357.397 100.25 324.674L51.6068 276.031C45.7489 270.173 45.7489 260.676 51.6068 254.818L148.893 157.531Z" />
+        <path className="s2" d="M148.893 99.069C154.751 93.2111 164.249 93.2111 170.107 99.069L267.393 196.356C273.251 202.213 273.251 211.711 267.393 217.569L218.75 266.212C186.027 298.935 132.973 298.935 100.25 266.212L51.6068 217.569C45.7489 211.711 45.7489 202.213 51.6068 196.356L148.893 99.069Z" />
+        <path className="s3" d="M148.893 40.6066C154.751 34.7487 164.249 34.7487 170.107 40.6066L267.393 137.893C273.251 143.751 273.251 153.249 267.393 159.106L218.75 207.75C186.027 240.473 132.973 240.473 100.25 207.75L51.6068 159.106C45.7489 153.249 45.7489 143.751 51.6068 137.893L148.893 40.6066Z" />
+      </>}
+      {kind >= 3 && <>
+        <circle className="s1" cx="100" cy="120" r="92" />
+        <circle className="s2" cx="236" cy="290" r="62" />
+      </>}
+    </svg>
+  );
+}
+
 /** The landing page: English copy with Tamil dialogue samples and a multilingual greeting strip. */
 export default function Landing() {
   const [hi, setHi] = useState(0);
@@ -216,26 +244,25 @@ export default function Landing() {
         <section className="wrap sec" id="pricing">
           <h2 className="rise">{t.priceH}</h2>
           <p className="sec-lede rise">{t.priceP}</p>
-          <div className="plans">
+          <div className="sq-plans">
             {(Object.keys(PLANS) as PlanId[]).map((id, n) => {
               const p = PLANS[id];
               return (
-                <div key={id} className={`plan-card glass shine rise${id === "pro" ? " hot" : ""}`} style={d(n * 0.06)}>
-                  {id === "pro" && <span className="badge">★</span>}
-                  <h3>{p.name}</h3>
-                  <p className="hint">{t.blurb[id]}</p>
-                  <div className="price">{p.priceInr ? `₹${p.priceInr.toLocaleString("en-IN")}` : t.free}{p.priceInr ? <small>{t.perMonth}</small> : null}</div>
-                  <ul>
-                    <li>{t.mins(p.minutes.toLocaleString("en-IN"), id === "free")}</li>
-                    {t.perks.map((x) => <li key={x}>{x}</li>)}
-                  </ul>
-                  <Link href={id === "free" ? "/signup" : `/signup?plan=${id}`} className={`btn small${id === "pro" ? "" : " ghost"}`}>
-                    {id === "free" ? t.start : t.choose(p.name)}
-                  </Link>
-                </div>
+                // The scroll-in lives on the wrapper so it doesn't override the card's own hover transform.
+                <div key={id} className="sq-wrap rise" style={d(n * 0.06)}><div className={`sq-card sq-${id}`}>
+                  <div className="sq-body">
+                    <span className="sq-label">{p.name}{id === "pro" ? " · popular" : ""}</span>
+                    <span className="sq-price">{p.priceInr ? `₹${p.priceInr.toLocaleString("en-IN")}` : t.free}<br />{p.priceInr ? "Month" : "Once"}</span>
+                    <p className="sq-mins">{t.mins(p.minutes.toLocaleString("en-IN"), id === "free")}</p>
+                    <p className="sq-desc">{t.blurb[id]}</p>
+                  </div>
+                  <Link href={id === "free" ? "/signup" : `/signup?plan=${id}`} className="sq-cta">{id === "free" ? t.start : t.choose(p.name)}</Link>
+                  <SquishyShapes kind={n} />
+                </div></div>
               );
             })}
           </div>
+          <ul className="sq-perks rise">{t.perks.map((x) => <li key={x}>{x}</li>)}</ul>
         </section>
 
         <section className="wrap sec faq">
