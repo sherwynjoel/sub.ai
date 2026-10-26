@@ -15,6 +15,7 @@ import SubtitleReveal from "@/components/SubtitleReveal";
 import LookControls from "@/components/LookControls";
 import StyledCaption from "@/components/StyledCaption";
 import Timeline from "@/components/Timeline";
+import WordStrip, { type WordRef } from "@/components/WordStrip";
 import "@/app/caption-styles.css";
 
 type Job = {
@@ -38,6 +39,13 @@ const ICON: Record<string, string> = {
   add: "M12 5v14M5 12h14",
   delete: "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3",
   save: "M5 12l5 5L20 7",
+  text: "M4 7V5h16v2M12 5v14M9 19h6",
+  mark: "m9 11-5 5v3h3l5-5M14 6l4 4-6 6-4-4z",
+  clock: "M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0",
+  title: "M5 6h14M12 6v12M8 18h8",
+  style: "M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.6 0-1.2-1-1.4-1-2.4 0-.8.7-1.5 1.5-1.5H17a4 4 0 0 0 4-4c0-4.7-4-8.5-9-8.5zM7.5 12h.01M10 7.5h.01M15 7.5h.01",
+  lang: "M4 5h8M8 3v2M6 5c0 4 2 7 5 8M10 5c-1 4-3 7-6 8M13 20l4-9 4 9M14.5 17h5",
+  play: "M7 4v16l13-8z",
 };
 const Icon = ({ name }: { name: string }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICON[name]} /></svg>;
 const RATIO = { "9:16": 9 / 16, "4:5": 4 / 5, "1:1": 1, "16:9": 16 / 9 } as const;
@@ -48,10 +56,12 @@ const EMOJIS = ["😀", "😂", "🔥", "❤️", "👍", "🎉", "✨", "💯",
 const FRAME = 1 / 30;
 
 /** The styled caption over the player, redrawn every frame while the video plays so word timing is smooth. */
-function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, onMove, onResize }: {
+function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, picked, editing, onMove, onResize, onTap, onEditOpen, onEditDone }: {
   video: React.RefObject<HTMLVideoElement | null>; cues: Cue[]; styleId: string; custom: CaptionCustom; portrait: boolean; view: View; selected: number;
+  picked: (start: number) => boolean; editing: string | null;
   onMove: (i: number, x: number, y: number) => void;
   onResize: (i: number, size: number) => void;
+  onTap: (start: number) => void; onEditOpen: () => void; onEditDone: (text: string | null) => void;
 }) {
   const [t, setT] = useState(0);
   const [sizing, setSizing] = useState<number | null>(null); // the size shown while the corner is dragged
@@ -85,6 +95,8 @@ function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, o
     const frame = video.current?.parentElement?.getBoundingClientRect();
     if (!frame) return;
     e.preventDefault();
+    video.current?.pause();
+    onTap(c.start); // tapping a caption on the video picks it (and its tools come up under the video)
     follow(e, frame, (x, y) => { video.current?.pause(); onMove(i, x, y); }, 0.05);
   };
   // The corner dot resizes: the caption grows as the pointer moves away from its centre (Size, 40–260%).
@@ -110,13 +122,20 @@ function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, o
   };
   const line = view === "en" ? "en" : "ta";
   return (
-    <div className={`overlay styled${free ? " free" : ""}${ghost ? " ghost" : ""}`} style={place}>
-      <div className="drag-handle" onPointerDown={drag} title="Drag to move the subtitle">
+    <div className={`overlay styled${free ? " free" : ""}${ghost ? " ghost" : ""}${picked(c.start) ? " picked" : ""}`} style={place}>
+      {editing !== null ? (
+        <textarea className="cap-inline" lang={line === "ta" ? undefined : "en"} defaultValue={editing} autoFocus rows={2} aria-label="Caption text"
+          onFocus={(e) => e.currentTarget.select()}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.currentTarget.blur(); } if (e.key === "Escape") onEditDone(null); }}
+          onBlur={(e) => onEditDone(e.target.value)} />
+      ) : (
+      <div className="drag-handle" onPointerDown={drag} onDoubleClick={onEditOpen} title="Tap to pick, drag to move, double-click to edit the text">
         <StyledCaption styleId={styleId} custom={own} text={main} sub={view === "both" ? c.en : undefined} start={c.start} end={c.end} time={ghost ? c.end - 0.01 : t}
           starts={line === "en" ? c.we : c.w} colors={line === "en" ? c.wce : c.wc} />
         {video.current?.paused !== false && <span className="rs-handle" onPointerDown={resize} title="Drag to resize the subtitle" aria-hidden="true" />}
         {sizing !== null && <span className="rs-size">{Math.round(sizing * 100)}%</span>}
       </div>
+      )}
     </div>
   );
 }
@@ -228,6 +247,10 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [portrait, setPortrait] = useState(false);
   const [ratio, setRatio] = useState(16 / 9);
   const [showZones, setShowZones] = useState(false);
+  // Editing on the video: the word picked in the strip, the caption's text open over the video, the timing nudges.
+  const [pickedWord, setPickedWord] = useState<WordRef | null>(null);
+  const [inline, setInline] = useState(false);
+  const [nudging, setNudging] = useState(false);
   const language = languageOf(job.language);
   const short = shortCode(job.language);
   const tamil = short === "ta" || initial.cues.some((c) => /[\u0B80-\u0BFF]/.test(c.ta)); // Tamil letters get their own font
@@ -428,6 +451,49 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     editCue(i, out);
   }
 
+  // ---------- editing on the video ----------
+  /** The word of caption i at time t (the one being said). */
+  const wordAt = (i: number, t: number) => { const st = startsOf(cues[i], line); let j = 0; while (j + 1 < st.length && st[j + 1] <= t + 0.01) j++; return j; };
+  /** A caption tapped on the video: pick it (by its time: the English view groups captions differently). */
+  function tapCaption(start: number) {
+    const t = Math.max(start, now);
+    let i = cues.findIndex((c) => t >= c.start - 0.01 && t < c.end);
+    if (i < 0) i = cues.findIndex((c) => c.end > start);
+    if (i < 0) return;
+    if (i !== selected) { setInline(false); setNudging(false); }
+    select(i);
+    setPickedWord({ cue: i, j: wordAt(i, Math.max(now, cues[i].start)) });
+  }
+  function pickWord(w: WordRef, start: number) {
+    video.current?.pause();
+    seek(start + 0.01);
+    if (w.cue !== selected) { setInline(false); setNudging(false); }
+    select(w.cue);
+    setPickedWord(w);
+  }
+  const editWord = (w: WordRef, text: string) => { editCue(w.cue, setWord(cues[w.cue], line, w.j, { text })); setPickedWord(null); };
+  /** Make the picked word pop (the style's accent colour), or back to normal. */
+  function highlight() {
+    if (selected < 0) return;
+    const c = cues[selected];
+    const j = pickedWord?.cue === selected ? pickedWord.j : wordAt(selected, now);
+    if (!wordsOf(c[line])[j]) return;
+    const has = !!(line === "en" ? c.wce : c.wc)?.[j];
+    editCue(selected, setWord(c, line, j, { color: has ? null : custom.accent ?? "#FFD60A" }));
+  }
+  /** Move the selected caption's start or end by d seconds (not over its neighbours, at least 0.2 s long). */
+  function nudge(edge: "start" | "end", d: number) {
+    const c = cues[selected];
+    if (!c) return;
+    if (edge === "start") editCue(selected, { ...c, start: Math.max(cues[selected - 1]?.end ?? 0, Math.min(c.start + d, c.end - 0.2)) });
+    else editCue(selected, { ...c, end: Math.min(cues[selected + 1]?.start ?? duration, Math.max(c.end + d, c.start + 0.2)) });
+  }
+  function inlineDone(text: string | null) {
+    setInline(false);
+    const c = cues[selected];
+    if (text !== null && c && text.trim() !== c[line]) editCue(selected, setText(c, line, text.trim()));
+  }
+
   // ---------- keyboard ----------
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -451,7 +517,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       }
       else if (k === "+" || k === "=") setZoom((z) => Math.min(600, z * 1.25));
       else if (k === "-" || k === "_") setZoom((z) => Math.max(10, z / 1.25));
-      else if (k === "Escape") setSelected(-1);
+      else if (k === "Escape") { setSelected(-1); setPickedWord(null); setNudging(false); }
+      else if (k === "Enter" && selected >= 0) { e.preventDefault(); video.current?.pause(); setInline(true); }
     };
     const onLeave = (e: BeforeUnloadEvent) => { if (dirty) e.preventDefault(); };
     addEventListener("keydown", onKey);
@@ -572,13 +639,50 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   style={{ left: `${custom.logo.x * 100}%`, top: `${custom.logo.y * 100}%`, width: `${custom.logo.size * 100}%`, opacity: custom.logo.opacity }}
                   onPointerDown={(e) => { setTab("layers"); dragIn(e, (x, y) => tweak({ logo: { ...custom.logo!, x, y } })); }} />
               )}
+              {!playing && (
+                <>
+                  <button className="play-big" onClick={togglePlay} aria-label="Play"><Icon name="play" /></button>
+                  <div className="vrail" role="toolbar" aria-label="Add and change">
+                    <button onClick={() => { addLayer("Your text"); openPane("layers"); }} title="Add a title"><Icon name="title" />Add title</button>
+                    <button onClick={() => { openPane("style"); document.querySelector(".ed-side")?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }} title="Caption style"><Icon name="style" />Caption style</button>
+                    <button onClick={() => setRetype(typeOf(initial))} title="Caption type: language and script"><Icon name="lang" />Caption type</button>
+                  </div>
+                </>
+              )}
               <LiveCaption video={video} cues={view === "en" && cues.some((c) => c.ta) ? englishCues(cues) : cues} styleId={styleId} custom={custom} portrait={portrait} view={view} selected={selected}
+                // The picked caption gets a dashed box (in the English view captions are regrouped: the one holding it).
+                picked={(start) => !playing && !!sel && (view === "en" ? start <= sel.start + 0.01 && now >= sel.start - 0.01 && now < sel.end : Math.abs(start - sel.start) < 0.001)}
+                editing={inline && sel ? sel[line] : null}
+                onTap={tapCaption} onEditOpen={() => { setInline(true); }} onEditDone={inlineDone}
                 onMove={(i, x, y) => { if (tab === "caption" && i === selected) styleCue(i, { x, y }); else tweak({ x, y }); }}
                 onResize={(i, size) => { if (tab === "caption" && i === selected) styleCue(i, { size }); else tweak({ size }); }} />
             </div>
           ) : (
             <div className="player gone"><p>The video was removed after 7 days. Your subtitles are still here.</p></div>
           )}
+          {sel && !playing && (
+            <div className="vtools" role="toolbar" aria-label="This caption">
+              {nudging ? (
+                <>
+                  <span className="vt-label">Start <b className="tnum">{tc(sel.start).slice(3)}</b></span>
+                  <button onClick={() => nudge("start", -0.1)} aria-label="Start 0.1 s earlier">−0.1</button>
+                  <button onClick={() => nudge("start", 0.1)} aria-label="Start 0.1 s later">+0.1</button>
+                  <span className="vt-label">End <b className="tnum">{tc(sel.end).slice(3)}</b></span>
+                  <button onClick={() => nudge("end", -0.1)} aria-label="End 0.1 s earlier">−0.1</button>
+                  <button onClick={() => nudge("end", 0.1)} aria-label="End 0.1 s later">+0.1</button>
+                  <button className="vt-done" onClick={() => setNudging(false)}>Done</button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => setInline(true)}><Icon name="text" />Edit text</button>
+                  <button onClick={highlight}><Icon name="mark" />Highlight</button>
+                  <button onClick={() => setNudging(true)}><Icon name="clock" />Timing</button>
+                  <button onClick={() => remove(selected)}><Icon name="delete" />Delete</button>
+                </>
+              )}
+            </div>
+          )}
+          <WordStrip cues={cues} line={line} now={now} picked={pickedWord} lang={line === "ta" ? short : "en"} onPick={pickWord} onEdit={editWord} />
           <div className="ed-transport" role="toolbar" aria-label="Playback and editing">
             <button className="btn small" onClick={togglePlay} title="Play / pause (Space)">{playing ? "Pause" : "Play"}</button>
             <span className="tnum ed-time"><span className="t-long">{tc(now)} / {tc(duration)}</span><span className="t-short">{mmss(now)} / {mmss(duration)}</span></span>
