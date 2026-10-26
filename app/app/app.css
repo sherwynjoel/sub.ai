@@ -614,3 +614,13 @@ a.signout { text-decoration: none; }
 /* the word row scrolls inside the stage; it mustn't widen the stage's column */
 .ed-stage { grid-template-columns: minmax(0, 1fr); }
 .wstrip, .vtools { min-width: 0; max-width: 100%; }
+/* Phones: all six section tabs fit on screen (Export was hidden off the right edge). */
+@media (max-width: 720px) {
+  .ed-mnav button { flex: 1 1 0; min-width: 0; padding: 0 2px; font-size: .76rem; letter-spacing: -.01em; }
+  /* The pinned video area stays short where the section needs the room: the caption tools and the word strip
+     only show with the captions (Captions, Edit). */
+  .ed[data-pane="style"] .vtools, .ed[data-pane="layers"] .vtools, .ed[data-pane="export"] .vtools, .ed[data-pane="timeline"] .vtools,
+  .ed[data-pane="style"] .wstrip, .ed[data-pane="layers"] .wstrip, .ed[data-pane="export"] .wstrip, .ed[data-pane="timeline"] .wstrip { display: none; }
+  /* a caption picked on the video scrolls into view below the pinned video, not under it */
+  .ed-list > li { scroll-margin-top: calc(28svh + 250px); scroll-margin-bottom: 100px; }
+}
