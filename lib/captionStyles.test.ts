@@ -93,6 +93,11 @@ test("stack styles: a few words a piece, small / big / small, English on the bot
   assert.equal(stackChunks("a b c d e f g h i", "", 0, 1.5).length, 1, "a short cue keeps one piece on screen long enough to read");
   const ass = buildAss([{ start: 0, end: 3, ta: "நான் எப்பவுமே சூப்பரான", en: "I always" }], { styleId: "trending-1", lang: "both", width: 1080, height: 1920 });
   assert.match(ass, /\\fnAnton/); assert.match(ass, /எப்பவுமே/); assert.match(ass, /always/);
+  // A word the user coloured (Highlight) keeps its colour in its piece: here the big word and a small one.
+  assert.deepEqual(p.map((c) => c.idx), [[[0], 1, [2]], [[3], 4, []]]);
+  const hl = buildAss([{ start: 0, end: 3, ta: "a bb ccc", en: "", wc: [null, "#00FF00", "#FF0000"] }], { styleId: "trending-1", lang: "ta", width: 1080, height: 1920 });
+  assert.match(hl, /\\1c&H00FF00&[^}]*}bb/, "the big word in its own colour");
+  assert.match(hl, /\\1c&H0000FF&}ccc/, "a small word in its own colour");
   assert.ok(stackBig("பரிந்துரைக்கப்பட்டது") < stackBig("Hi"));
 });
 

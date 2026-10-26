@@ -78,7 +78,10 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   if (stacked) {
     const chunks = stackChunks(caseOf(s, text), sub ?? "", start, end);
     const k = Math.max(0, chunks.findIndex((c) => time < c.e)), [a, b, d] = chunks[k]?.parts ?? ["", "", ""];
-    body = <>{a && <span className="stack-small">{a}</span>}<span key={k} className="stack-big" style={{ color: s.stack!.big, fontFamily: stack(s.stack!.font, s.fontTa), fontWeight: 400, fontSize: `${stackBig(b)}em` }}>{b}</span>{d && <span className="stack-small">{d}</span>}</>;
+    const idx = chunks[k]?.idx ?? [[], -1, []];
+    // A word the user coloured keeps its colour in its piece (as in the MP4).
+    const small = (text: string, at: number[]) => text.split(" ").map((w, n) => [n ? " " : null, colors?.[at[n]] ? <span key={n} style={{ color: colors[at[n]]! }}>{w}</span> : w]);
+    body = <>{a && <span className="stack-small">{small(a, idx[0])}</span>}<span key={k} className="stack-big" style={{ color: colors?.[idx[1]] ?? s.stack!.big, fontFamily: stack(s.stack!.font, s.fontTa), fontWeight: 400, fontSize: `${stackBig(b)}em` }}>{b}</span>{d && <span className="stack-small">{idx[2].length ? small(d, idx[2]) : d}</span>}</>;
   } else if (s.effect === "typewriter") {
     const chars = [...breakLines(caseOf(s, text), s.lines)];
     body = <>{chars.slice(0, Math.max(1, Math.ceil(chars.length * Math.min(1, p / 0.8)))).join("")}<span className="caret">_</span></>;

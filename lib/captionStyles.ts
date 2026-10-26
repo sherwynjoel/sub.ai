@@ -320,7 +320,8 @@ function runs<T>(list: T[], k: number) {
 /**
  * "stack" styles (and the panel's Trending templates, plugin/subs.js partsChunks): a caption cut into pieces of up
  * to 3 words (2 when English takes the bottom line), each shown as small line / big word / small line, timed by
- * length and at least `minDur` seconds long.
+ * length and at least `minDur` seconds long. `idx` holds the index (in `main`) of each part's words, so a word's
+ * own colour can follow it into its piece.
  */
 export function stackChunks(main: string, sub: string, start: number, end: number, minDur = 1) {
   const words = main.split(/\s+/).filter(Boolean), en = sub.split(/\s+/).filter(Boolean);
@@ -328,13 +329,16 @@ export function stackChunks(main: string, sub: string, start: number, end: numbe
   const k = Math.max(1, Math.min(Math.ceil(words.length / (en.length ? 2 : 3)), Math.floor((end - start) / minDur)));
   const groups = runs(words, k), ens = runs(en, k);
   const total = groups.reduce((n, g) => n + g.join(" ").length + 1, 0);
-  let t = start;
+  let t = start, at = 0;
   return groups.map((g, i) => {
-    const s = t, mid = g.length === 2 ? 1 : Math.floor((g.length - 1) / 2);
+    const s = t, mid = g.length === 2 ? 1 : Math.floor((g.length - 1) / 2), from = at;
     t += ((end - start) * (g.join(" ").length + 1)) / total;
+    at += g.length;
+    const span = (a: number, b: number) => Array.from({ length: Math.max(0, b - a) }, (_, k) => from + a + k);
     const parts: [string, string, string] = en.length ? [g.slice(0, -1).join(" "), g[g.length - 1], ens[i].join(" ")]
       : [g.slice(0, mid).join(" "), g[mid], g.slice(mid + 1).join(" ")];
-    return { s, e: i === groups.length - 1 ? end : t, parts };
+    const idx: [number[], number, number[]] = en.length ? [span(0, g.length - 1), from + g.length - 1, []] : [span(0, mid), from + mid, span(mid + 1, g.length)];
+    return { s, e: i === groups.length - 1 ? end : t, parts, idx };
   });
 }
 
@@ -507,10 +511,12 @@ export function buildAss(cues: Cue[], o: Opts) {
 
     if (s.effect === "stack" && s.stack) {
       const small = "\\fscx60\\fscy60";
+      // A small line word by word, so a word the user coloured keeps its colour (then back to the line's own).
+      const smallLine = (text: string, idx: number[]) => text.split(" ").map((w, k) => colors?.[idx[k]] ? `{\\1c${colorOnly(colors[idx[k]]!)}}${esc(w)}{\\r${small}}` : esc(w)).join(" ");
       for (const p of stackChunks(caseOf(s, main), sub, c.start, c.end)) {
-        const [a, b, d] = p.parts.map(esc);
+        const a = smallLine(p.parts[0], p.idx[0]), b = esc(p.parts[1]), d = p.idx[2].length ? smallLine(p.parts[2], p.idx[2]) : esc(p.parts[2]);
         const z = stackBig(p.parts[1]); // a long word gets smaller instead of running off the frame
-        const big = `{\\r\\fn${s.stack.font}\\b0\\1c${colorOnly(s.stack.big)}\\fscx${Math.round(z * 40)}\\fscy${Math.round(z * 40)}\\t(0,220,\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)})}${b}`;
+        const big = `{\\r\\fn${s.stack.font}\\b0\\1c${colorOnly(colors?.[p.idx[1]] ?? s.stack.big)}\\fscx${Math.round(z * 40)}\\fscy${Math.round(z * 40)}\\t(0,220,\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)})}${b}`;
         add(p.s, p.e, pos + `{\\q2\\fad(120,0)}` + (a ? `{${small}}${a}\\N` : "") + big + (d ? `\\N{\\r${small}}${d}` : ""), 0, wrapM, wrapM);
       }
       continue;
