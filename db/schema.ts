@@ -1,5 +1,5 @@
 import type { CaptionCustom } from "@/lib/captionStyles";
-import { pgTable, text, uuid, integer, real, boolean, timestamp, jsonb, date, bigserial, index } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, integer, real, boolean, timestamp, jsonb, date, bigserial, index, bigint } from "drizzle-orm/pg-core";
 
 /**
  * `ta` is the line in the project's language (see lib/languages.ts); `en` is English. `w` / `we`: when each word of
@@ -40,7 +40,9 @@ export const jobs = pgTable("jobs", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   filename: text("filename").notNull(),
-  filePath: text("file_path"), // null once purged
+  filePath: text("file_path"), // null once purged (or while the video is still arriving, see videoTotal)
+  audioPath: text("audio_path"), // the sound alone, sent first from phones (lib/audioTrack.ts): captions start from it
+  videoTotal: bigint("video_total", { mode: "number" }), // size of a video still arriving in pieces (api/jobs/[id]/video); null when it's here
   mime: text("mime").notNull().default("video/mp4"),
   language: text("language").notNull().default("ta-IN"), // subtitle language code
   script: text("script").notNull().default("mixed"), // how the main line is written: mixed | roman | native | translated (lib/captionTypes.ts)

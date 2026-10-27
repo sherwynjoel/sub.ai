@@ -11,6 +11,7 @@ import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
 import { MAX_REDOS, typeLabel, typeOf, type CaptionType } from "@/lib/captionTypes";
 import CaptionTypePicker from "@/components/CaptionTypePicker";
+import { localVideo, progressOf, sendVideo, subscribeUploads, uploadsVersion } from "@/lib/videoUpload";
 import SubtitleReveal from "@/components/SubtitleReveal";
 import LookControls from "@/components/LookControls";
 import StyledCaption from "@/components/StyledCaption";
@@ -20,7 +21,7 @@ import "@/app/caption-styles.css";
 
 type Job = {
   id: string; filename: string; language: string; status: string; progress: number; error: string | null;
-  hasMedia: boolean; provider: string | null; model: string | null; cues: Cue[]; speech?: [number, number][]; script: string; redos: number;
+  hasMedia: boolean; videoTotal?: number | null; provider: string | null; model: string | null; cues: Cue[]; speech?: [number, number][]; script: string; redos: number;
   captionStyle: string; captionCustom: CaptionCustom; renderStatus: string | null; renderProgress: number; renderError: string | null; renderLang: string;
 };
 type View = "ta" | "en" | "both";
@@ -239,6 +240,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const bgVideo = useRef<HTMLVideoElement>(null);
   const [tab, setTab] = useState<Tab>("caption");
   const inBrowser = useSyncExternalStore(noop, () => true, () => false); // false while rendered on the server
+  // A video still arriving after its sound: play the phone's own copy meanwhile (lib/videoUpload.ts).
+  useSyncExternalStore(subscribeUploads, uploadsVersion, () => 0);
+  const local = inBrowser ? localVideo(initial.id) : undefined;
+  const src = mediaUrl ?? local?.url ?? (job.hasMedia ? `/api/jobs/${job.id}/media` : undefined);
+  const videoHere = job.hasMedia || local?.state === "done"; // on the server (exports need it there)
+  const coming = !videoHere && !!job.videoTotal;
   // Phones show one section at a time under the video (desktop shows them all).
   const [pane, setPane] = useState<Pane>("list");
   const [zoom, setZoom] = useState(80); // timeline px per second
@@ -559,7 +566,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           </>
         ) : (
           <>
-            <SubtitleReveal src={job.hasMedia || mediaUrl ? mediaUrl ?? `/api/jobs/${job.id}/media` : undefined} progress={job.progress} queued={job.status === "queued"} />
+            <SubtitleReveal src={src} progress={job.progress} queued={job.status === "queued"} />
             <div className="bar big" role="progressbar" aria-valuenow={job.progress} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${Math.max(job.progress, 3)}%` }} /></div>
             <p className="muted">{job.status === "queued" ? "Waiting in line…" : `${job.progress}% done.`} You can leave this page; we&apos;ll keep working.</p>
           </>
@@ -606,7 +613,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
         <div className="ed-tools" role="toolbar" aria-label="Edit">
           <button className="btn ghost small" onClick={undo} disabled={!past.length} title="Undo (⌘Z)">Undo</button>
           <button className="btn ghost small" onClick={redo} disabled={!future.length} title="Redo (⇧⌘Z)">Redo</button>
-          <span className="muted save-msg" aria-live="polite">{msg || (dirty ? "Unsaved changes" : "All changes saved")}</span>
+          <span className="muted save-msg" aria-live="polite">{msg || (dirty ? "Unsaved changes" : "All changes saved")}{local?.state === "sending" ? ` · Video uploading ${progressOf(local)}%` : ""}</span>
           <button className="btn" onClick={save} disabled={!dirty || saving} title="Save (⌘S)">{saving ? "Saving…" : "Save"}</button>
         </div>
       </div>
@@ -641,6 +648,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             <button className="ib-round" onClick={undo} disabled={!past.length} aria-label="Undo"><Icon name="undo" /></button>
             <button className="ib-round" onClick={redo} disabled={!future.length} aria-label="Redo"><Icon name="redo" /></button>
             <span className="ib-gap" />
+            {local?.state === "sending" && <span className="ib-up" title="The video is uploading; you can edit meanwhile">Video {progressOf(local)}%</span>}
             <button className={`ib-save${dirty ? " on" : ""}`} onClick={save} disabled={!dirty || saving}>{saving ? "Saving…" : dirty ? "Save" : "Saved"}</button>
             <button className="ib-export" onClick={() => openPane("export")}>Export</button>
           </div>
@@ -657,10 +665,10 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               )}
             </div>
           )}
-          {job.hasMedia || mediaUrl ? (
+          {src ? (
             <div className="player" style={{ aspectRatio: frameRatio, "--ar": frameRatio, width: `min(100%, ${(56 * frameRatio).toFixed(2)}vh)`, background: shaped && cv!.fit === "fit" && cv!.bg !== "blur" ? cv!.bg : undefined } as React.CSSProperties}>
-              {shaped && cv!.fit === "fit" && cv!.bg === "blur" && <video ref={bgVideo} className="bg-blur" src={mediaUrl ?? `/api/jobs/${job.id}/media`} muted playsInline preload="metadata" aria-hidden="true" />}
-              <video ref={video} src={mediaUrl ?? `/api/jobs/${job.id}/media`} preload="metadata" playsInline onClick={togglePlay} style={shaped ? { objectFit: cv!.fit === "fill" ? "cover" : "contain" } : undefined}
+              {shaped && cv!.fit === "fit" && cv!.bg === "blur" && <video ref={bgVideo} className="bg-blur" src={src} muted playsInline preload="metadata" aria-hidden="true" />}
+              <video ref={video} src={src} preload="metadata" playsInline onClick={togglePlay} style={shaped ? { objectFit: cv!.fit === "fill" ? "cover" : "contain" } : undefined}
                 onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
                 onLoadedMetadata={(e) => metadata(e.currentTarget)} />
               {showZones && (["top", "right", "bottom", "left"] as const).map((k) => <i key={k} className={`zone zone-${k}`} style={{ [k === "top" || k === "bottom" ? "height" : "width"]: `${look.safe[k] * 100}%` }} />)}
@@ -692,7 +700,13 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 onResize={(i, size) => { if (tab === "caption" && i === selected) styleCue(i, { size }); else tweak({ size }); }} />
             </div>
           ) : (
-            <div className="player gone"><p>The video was removed after 7 days. Your subtitles are still here.</p></div>
+            coming ? (
+              // The page was reopened before the video finished: the same file finishes it (from where it stopped).
+              <div className="player gone"><p>The video didn&apos;t finish uploading. Choose the same file to finish it; the captions are ready.</p>
+                <label className="btn small">Choose the video<input type="file" hidden accept="video/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) sendVideo(job.id, f); }} /></label>
+                {local?.state === "failed" && <p className="error">{local.error}</p>}
+              </div>
+            ) : <div className="player gone"><p>The video was removed after 7 days. Your subtitles are still here.</p></div>
           )}
           </div>
           {!playing && target() >= 0 && (
@@ -944,12 +958,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 </div>
               ) : (
                 <div className="insp-actions">
-                  <button className="btn" onClick={render} disabled={!job.hasMedia}>{dirty ? "Save and export MP4" : "Export MP4"}</button>
+                  <button className="btn" onClick={render} disabled={!videoHere}>{coming ? `Video uploading · ${local ? progressOf(local) : 0}%` : dirty ? "Save and export MP4" : "Export MP4"}</button>
                   {job.renderStatus === "done" && <a className="btn ghost" href={`/api/jobs/${job.id}/render`} download>Download MP4</a>}
                 </div>
               )}
               {job.renderStatus === "failed" && <p className="error">{job.renderError}</p>}
-              <p className="muted small">Burns in {view === "both" ? `${language.name} + English` : view === "en" ? "English" : language.name} (the language shown under the video), with every caption&apos;s own look. {!job.hasMedia && "The video was removed after 7 days, so it can't be exported."}</p>
+              <p className="muted small">Burns in {view === "both" ? `${language.name} + English` : view === "en" ? "English" : language.name} (the language shown under the video), with every caption&apos;s own look. {coming ? "The MP4 can be made once the video has finished uploading (keep this tab open)." : !videoHere && "The video was removed after 7 days, so it can't be exported."}</p>
 
               <h3>Subtitle files</h3>
               <div className="export-row">

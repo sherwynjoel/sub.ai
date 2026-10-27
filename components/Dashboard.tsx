@@ -1,18 +1,20 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { DEFAULT_LANGUAGE, LANGUAGES, languageOf } from "@/lib/languages";
 import { typeLabel, typeSettings, type CaptionType } from "@/lib/captionTypes";
 import CaptionTypePicker from "@/components/CaptionTypePicker";
 import TetrisLoader from "@/components/TetrisLoader";
 import GlassFolder, { type FolderFile } from "@/components/GlassFolder";
 import { SAFE_ZONES } from "@/lib/captionStyles";
+import { extractAudio } from "@/lib/audioTrack";
+import { localVideo, progressOf, sendingVideos, sendVideo, subscribeUploads, uploadsVersion } from "@/lib/videoUpload";
 
 type Job = {
   id: string; filename: string; durationSec: number; status: string; progress: number;
   error: string | null; createdAt: string; cueCount: number; language: string; script: string; captionCustom?: { show?: "ta" | "en" | "both" };
-  hasMedia: boolean; renderStatus?: string | null;
+  hasMedia: boolean; renderStatus?: string | null; videoTotal?: number | null;
 };
 
 const mins = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
@@ -44,8 +46,13 @@ function ProjectFolder({ job, index }: { job: Job; index: number }) {
           { name: "Edit captions", meta: `${job.cueCount} subtitles`, href: open, art: "aurora" as const },
         ];
   const type = typeLabel({ script: job.script, captionCustom: job.captionCustom }, languageOf(job.language).name);
+  useSyncExternalStore(subscribeUploads, uploadsVersion, () => 0);
+  const local = width > 0 ? localVideo(job.id) : undefined; // width > 0: only in the browser
+  const coming = !!job.videoTotal && local?.state !== "done";
   const meta = busy ? (job.status === "queued" ? "Waiting in line" : `Making subtitles ${job.progress}%`)
-    : job.status === "failed" ? "Failed" : `${type} · ${mins(job.durationSec)}`;
+    : job.status === "failed" ? "Failed"
+    : coming ? (local?.state === "sending" ? `Video uploading ${progressOf(local)}%` : "Video upload paused")
+    : `${type} · ${mins(job.durationSec)}`;
   const arts = ["dusk", "glacier", "verdant", "aurora", "ember"] as const;
   return (
     <div ref={box} className="folder-cell" title={job.filename}>
@@ -53,7 +60,7 @@ function ProjectFolder({ job, index }: { job: Job; index: number }) {
         <GlassFolder
           key={`${job.id}:${job.status}:${job.renderStatus}`} // a new state brings a new set of files
           label={job.filename} meta={meta} width={width}
-          video={job.hasMedia ? `/api/jobs/${job.id}/media` : undefined}
+          video={local?.url ?? (job.hasMedia ? `/api/jobs/${job.id}/media` : undefined)}
           art={arts[(job.id.charCodeAt(0) + job.id.charCodeAt(1)) % arts.length]} seed={job.id.charCodeAt(2)}
           files={files} action="none" appearDelay={Math.min(index, 8) * 70}
         />
@@ -65,7 +72,10 @@ function ProjectFolder({ job, index }: { job: Job; index: number }) {
 export default function Dashboard() {
   const router = useRouter();
   const [jobs, setJobs] = useState<Job[] | null>(null);
-  const [upload, setUpload] = useState<{ name: string; pct: number } | null>(null);
+  const [upload, setUpload] = useState<{ name: string; pct: number; note?: string } | null>(null);
+  useSyncExternalStore(subscribeUploads, uploadsVersion, () => 0);
+  const inBrowser = useSyncExternalStore(subscribeUploads, () => true, () => false);
+  const sending = inBrowser ? sendingVideos() : [];
   const [error, setError] = useState("");
   const [drag, setDrag] = useState(false);
   const [language, setLanguage] = useState<string>(DEFAULT_LANGUAGE);
@@ -79,6 +89,12 @@ export default function Dashboard() {
   }, []);
 
   useEffect(load, [load]);
+  // When a video finishes arriving, the project list learns it has its video.
+  const doneCount = useRef(0);
+  useEffect(() => subscribeUploads(() => {
+    const n = [...(jobs ?? [])].filter((j) => localVideo(j.id)?.state === "done").length;
+    if (n > doneCount.current) { doneCount.current = n; load(); }
+  }));
   const busy = jobs?.some((j) => j.status === "queued" || j.status === "processing");
   useEffect(() => {
     if (!busy) return;
@@ -89,23 +105,34 @@ export default function Dashboard() {
   const q = query.trim().toLowerCase();
   const shown = (jobs ?? []).filter((j) => !q || j.filename.toLowerCase().includes(q));
 
-  function send(file: File) {
+  /**
+   * Phones' MP4 / MOV: the sound goes first (about 1 MB a minute, pulled out without re-encoding) so the captions
+   * start right away; the video, untouched, follows in pieces in the background (lib/videoUpload.ts) while the
+   * editor plays the phone's own copy. Anything else is sent whole, as before.
+   */
+  async function send(file: File) {
     setError("");
-    setUpload({ name: file.name, pct: 0 });
-    const xhr = new XMLHttpRequest();
+    setUpload({ name: file.name, pct: 0, note: "Getting the sound ready…" });
     const { script, show, english } = typeSettings(ctype.type, ctype.withEnglish);
-    xhr.open("POST", `/api/upload?name=${encodeURIComponent(file.name)}&lang=${language}&script=${script}&english=${english ? 1 : 0}&show=${show}&safe=${safe}`);
-    xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
-    xhr.upload.onprogress = (e) => e.lengthComputable && setUpload({ name: file.name, pct: Math.round((e.loaded / e.total) * 100) });
+    const base = `/api/upload?name=${encodeURIComponent(file.name)}&lang=${language}&script=${script}&english=${english ? 1 : 0}&show=${show}&safe=${safe}`;
+    const audio = /\.(mp4|m4v|mov)$/i.test(file.name) || /^video\/(mp4|quicktime|x-m4v)$/.test(file.type) ? await extractAudio(file) : null;
+    const body: Blob = audio ? audio.adts : file;
+    const url = audio ? `${base}&audio=1&videoBytes=${file.size}&videoType=${encodeURIComponent(file.type || "video/mp4")}` : base;
+    setUpload({ name: file.name, pct: 0, note: audio ? "Sending the sound first…" : undefined });
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.setRequestHeader("content-type", audio ? "audio/aac" : file.type || "application/octet-stream");
+    xhr.upload.onprogress = (e) => e.lengthComputable && setUpload((u) => u && { ...u, pct: Math.round((e.loaded / e.total) * 100) });
     xhr.onload = () => {
       setUpload(null);
       const data = JSON.parse(xhr.responseText || "{}");
       if (xhr.status >= 300) return setError(data.error || "Upload failed.");
+      if (audio) sendVideo(data.id, file); // the video follows; captions are already being made
       load();
       router.refresh(); // update minutes left in the header
     };
     xhr.onerror = () => { setUpload(null); setError("Upload failed. Check your connection and try again."); };
-    xhr.send(file);
+    xhr.send(body);
   }
 
   return (
@@ -122,7 +149,7 @@ export default function Dashboard() {
               <TetrisLoader columns={8} rows={14} cellSize={7} gap={2} label={`Uploading ${upload.name}`} />
               <strong>Uploading {upload.name}</strong>
               <div className="bar" role="progressbar" aria-valuenow={upload.pct} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${upload.pct}%` }} /></div>
-              <span className="muted">{upload.pct}%{upload.pct >= 100 ? ". Starting your subtitles…" : ". Keep this tab open until it finishes."}</span>
+              <span className="muted">{upload.note ? `${upload.note} ` : ""}{upload.pct}%{upload.pct >= 100 ? ". Starting your subtitles…" : ". Keep this tab open until it finishes."}</span>
             </div>
           ) : (
             <div className="drop-inner">
@@ -150,6 +177,12 @@ export default function Dashboard() {
         </aside>
       </section>
       {error && <p className="error" role="alert">{error} {error.includes("Upgrade") && <Link href="/app/billing">See plans</Link>}</p>}
+      {sending.map((u) => (
+        <div key={u.jobId} className="video-sending" role="status">
+          <span className="bar"><i style={{ width: `${progressOf(u)}%` }} /></span>
+          <span><strong>Sending the video · {progressOf(u)}%</strong> <span className="muted">Captions are already being made. You can open <Link href={`/app/jobs/${u.jobId}`}>{u.name}</Link> and edit now; keep this tab open until the video is sent.</span></span>
+        </div>
+      ))}
 
       <section className="projects" aria-live="polite">
         <div className="projects-head">

@@ -14,6 +14,7 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!u) return unauthorized();
   const j = await ownJob((await params).id, u);
   if (!j) return json({ error: "Not found" }, 404);
+  if (!j.filePath && j.videoTotal) return json({ error: "The video is still uploading. Export once it's finished." }, 409);
   if (!j.filePath) return json({ error: "The video was removed after 7 days, so it can't be rendered." }, 410);
   if (j.status !== "done" || !j.cues?.length) return json({ error: "Subtitles aren't ready yet." }, 409);
   if (j.renderStatus === "queued" || j.renderStatus === "rendering") return json({ error: "A render is already running." }, 409);
