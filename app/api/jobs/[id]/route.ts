@@ -4,7 +4,7 @@ import { db, jobs, type Cue } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { ownJob, publicJob } from "@/lib/jobs";
 import { CAPTION_STYLES, ownLook, sanitizeCustom } from "@/lib/captionStyles";
-import { LEVEL_FRAME, loudness } from "@/lib/media";
+import { LEVEL_FRAME, loudness, removeUploads } from "@/lib/media";
 import { withWordTimes } from "@/lib/subtitles";
 import { speechRegions } from "@/lib/timing";
 import { logoPath } from "@/lib/render";
@@ -18,8 +18,9 @@ export async function GET(_: Request, { params }: Ctx) {
   if (!j) return json({ error: "Not found" }, 404);
   // Jobs from before word timing (or edited since) and the timing check: measure the audio once, while the upload is kept.
   const needWords = !!j.cues?.length && !j.cues.some((c) => c.w || c.we);
-  if (j.status === "done" && j.filePath && (needWords || !j.speech)) {
-    const level = await loudness(j.filePath);
+  const sound = j.audioPath ?? j.filePath;
+  if (j.status === "done" && sound && (needWords || !j.speech)) {
+    const level = await loudness(sound);
     if (level) {
       if (needWords) j.cues = withWordTimes(j.cues!, level, LEVEL_FRAME);
       j.speech = speechRegions(level, LEVEL_FRAME);
@@ -77,7 +78,8 @@ export async function DELETE(_: Request, { params }: Ctx) {
   if (!j) return json({ error: "Not found" }, 404);
   if (j.status === "processing") return json({ error: "Wait until processing finishes." }, 409);
   // The upload and its styled MP4; a render still running notices the job is gone and removes its own file.
-  for (const f of [j.filePath, j.renderPath, j.captionCustom?.logo && logoPath(j.id, j.captionCustom.logo.ext)]) if (f) await unlink(f).catch(() => {});
+  await removeUploads(j);
+  for (const f of [j.renderPath, j.captionCustom?.logo && logoPath(j.id, j.captionCustom.logo.ext)]) if (f) await unlink(f).catch(() => {});
   await db.delete(jobs).where(eq(jobs.id, j.id));
   return json({ ok: true });
 }

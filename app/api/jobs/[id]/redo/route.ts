@@ -35,7 +35,7 @@ export async function POST(req: Request, { params }: Ctx) {
     await db.update(jobs).set({ cues: englishCues(cues), captionCustom: { ...j.captionCustom, show: "en" } }).where(eq(jobs.id, j.id));
     return json({ ok: true, redone: false });
   }
-  if (!j.filePath) return json({ error: "The video was removed after 7 days, so the captions can't be made again. Upload it again to change the caption type." }, 409);
+  if (!j.filePath && !j.audioPath) return json({ error: "The video was removed after 7 days, so the captions can't be made again. Upload it again to change the caption type." }, 409);
   if (j.redos >= MAX_REDOS) return json({ error: `You've changed this project's caption type ${MAX_REDOS} times. Upload the video again for another type.` }, 429);
   if (j.renderPath) await unlink(j.renderPath).catch(() => {});
   await db.update(jobs).set({

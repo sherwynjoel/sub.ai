@@ -5,10 +5,10 @@
 import { mkdtemp, readdir, readFile, rm, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { and, eq, lt, isNotNull, sql } from "drizzle-orm";
+import { and, eq, lt, isNotNull, or, sql } from "drizzle-orm";
 import { db, jobs, settings, users, type Cue } from "./db";
 import { getAiConfig, transcribe, type Script } from "./lib/ai";
-import { extractChunks, LEVEL_FRAME, loudness, probe, STORAGE } from "./lib/media";
+import { extractChunks, LEVEL_FRAME, loudness, probe, removeUploads, STORAGE } from "./lib/media";
 import { speechRegions } from "./lib/timing";
 import { ALIGN_LANGS, alignCues } from "./lib/align";
 import { translateLines } from "./lib/ai/translate";
@@ -32,7 +32,8 @@ async function processJob(job: typeof jobs.$inferSelect) {
   await db.update(jobs).set({ provider: cfg.provider, model: cfg.model }).where(eq(jobs.id, job.id));
   const dir = await mkdtemp(join(tmpdir(), "vasanam-"));
   try {
-    const files = await extractChunks(job.filePath!, dir);
+    const source = job.audioPath ?? job.filePath!; // phones send the sound first; the video may still be arriving
+    const files = await extractChunks(source, dir);
     let done = 0, offset = 0;
     const plan = [];
     for (const f of files) {
@@ -63,8 +64,8 @@ async function processJob(job: typeof jobs.$inferSelect) {
     // nearby pause, and record when every word starts. Without readable audio the estimates stay.
     // Where the word-timing model knows the language, every word is placed in the audio first (lib/align.ts);
     // windows it can't place keep the loudness estimates.
-    const level = await loudness(job.filePath!), merged = mergeChunks(results);
-    const timed = ALIGN_LANGS.includes(job.language) && !translated ? await alignCues(job.filePath!, merged) : merged;
+    const level = await loudness(source), merged = mergeChunks(results);
+    const timed = ALIGN_LANGS.includes(job.language) && !translated ? await alignCues(source, merged) : merged;
     const cues = level
       ? withWordTimes(mergeShort(snapToPauses(retimeWindows(timed, level, LEVEL_FRAME), level, LEVEL_FRAME)), level, LEVEL_FRAME)
       : mergeShort(timed).map(dropAnchor);
@@ -120,11 +121,11 @@ async function fail(job: typeof jobs.$inferSelect, err: unknown) {
 }
 
 async function purgeOld() {
-  const old = await db.select().from(jobs).where(and(isNotNull(jobs.filePath), lt(jobs.createdAt, new Date(Date.now() - KEEP_DAYS * 864e5))));
+  const old = await db.select().from(jobs).where(and(or(isNotNull(jobs.filePath), isNotNull(jobs.audioPath), isNotNull(jobs.videoTotal)), lt(jobs.createdAt, new Date(Date.now() - KEEP_DAYS * 864e5))));
   for (const j of old) {
-    await unlink(j.filePath!).catch(() => {});
+    await removeUploads(j);
     if (j.renderPath) await unlink(j.renderPath).catch(() => {});
-    await db.update(jobs).set({ filePath: null, renderPath: null, renderStatus: null }).where(eq(jobs.id, j.id));
+    await db.update(jobs).set({ filePath: null, audioPath: null, videoTotal: null, renderPath: null, renderStatus: null }).where(eq(jobs.id, j.id));
   }
   // Styled MP4s whose project no longer exists (deleted before deletes removed them too). Safe only because
   // this runs between renders in the same loop: a render in progress has no renderPath yet.

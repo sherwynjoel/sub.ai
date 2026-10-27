@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { rm } from "node:fs/promises";
 import { promisify } from "node:util";
 import { join, resolve } from "node:path";
 
@@ -16,6 +17,21 @@ export const bin = (name: string) => (process.env.FFMPEG_DIR ? join(process.env.
 
 export const STORAGE = resolve(/*turbopackIgnore: true*/ process.env.STORAGE_DIR || "./storage");
 export const CHUNK_SECONDS = 300; // shorter chunks = tighter AI timestamps
+
+/** Raw AAC (ADTS, from lib/audioTrack.ts) into an M4A: a copy, not a re-encode, so its length is exact. */
+export async function remuxAudio(src: string, dst: string) {
+  await run(bin("ffmpeg"), ["-y", "-v", "error", "-i", src, "-c", "copy", dst]);
+}
+
+/** A video arriving in pieces: the file being filled, and a folder with one marker per piece received. */
+export const VIDEO_PIECE = 8 * 1024 * 1024;
+export const videoPart = (dir: string, jobId: string) => ({ file: join(dir, `${jobId}.part`), got: join(dir, `${jobId}.got`) });
+
+/** Remove a job's uploaded files: the video, the sound sent first, and a video still arriving in pieces. */
+export async function removeUploads(j: { id: string; userId: string; filePath: string | null; audioPath: string | null }) {
+  const part = videoPart(join(STORAGE, "uploads", j.userId), j.id);
+  for (const f of [j.filePath, j.audioPath, part.file, part.got]) if (f) await rm(f, { recursive: true, force: true }).catch(() => {});
+}
 
 /** Duration in seconds, or null if the file has no audio stream / isn't media. */
 export async function probe(file: string): Promise<number | null> {

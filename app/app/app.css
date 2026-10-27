@@ -757,3 +757,9 @@ a.signout { text-decoration: none; }
 }
 .insp-canvas { display: grid; gap: 12px; }
 @media (max-width: 720px) { .insp-canvas { order: 9; } } /* phones: the styles first (like SUBTL), the canvas further down */
+/* A video still on its way after its sound (lib/videoUpload.ts) */
+.video-sending { display: grid; gap: 6px; margin: 12px 0 0; padding: 12px 14px; border-radius: 14px; background: var(--glass-strong); border: 1px solid var(--line); font-size: .9rem; }
+.video-sending .bar { display: block; height: 6px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.video-sending .bar i { display: block; height: 100%; background: var(--black); transition: width .3s; }
+.ib-up { display: none; }
+@media (max-width: 720px) { .ib-up { display: inline-flex; align-items: center; height: 30px; padding: 0 10px; border-radius: 999px; background: rgb(255 255 255 / .14); color: #fff; font: 600 .75rem var(--font-body); } }

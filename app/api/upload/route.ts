@@ -1,5 +1,5 @@
 import { createWriteStream } from "node:fs";
-import { mkdir, unlink } from "node:fs/promises";
+import { mkdir, open, unlink } from "node:fs/promises";
 import { join, extname } from "node:path";
 import { randomUUID } from "node:crypto";
 import { Readable, Transform } from "node:stream";
@@ -7,7 +7,7 @@ import { pipeline } from "node:stream/promises";
 import { and, eq, sql } from "drizzle-orm";
 import { db, jobs, users } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
-import { probe, STORAGE } from "@/lib/media";
+import { probe, remuxAudio, STORAGE, videoPart } from "@/lib/media";
 import { DEFAULT_LANGUAGE, isLanguage } from "@/lib/languages";
 import { JOB_SCRIPTS, type JobScript } from "@/lib/captionTypes";
 import { DEFAULT_STYLE, SAFE_ZONES, STYLE_CHOICES } from "@/lib/captionStyles";
@@ -15,7 +15,11 @@ import { effectivePlan, PLANS, secondsLeft } from "@/lib/plans";
 
 const MAX_BYTES = 4 * 1024 ** 3; // 4 GB
 
-/** Raw-body upload: `POST /api/upload?name=clip.mp4&lang=ta-IN` with the file as the body (streamed to disk). */
+/**
+ * Raw-body upload: `POST /api/upload?name=clip.mp4&lang=ta-IN` with the file as the body (streamed to disk).
+ * Phones send the sound first: `&audio=1&videoBytes=N&videoType=video/quicktime` with the AAC track as the body
+ * (lib/audioTrack.ts); captioning starts from it and the video follows in pieces (api/jobs/[id]/video).
+ */
 export async function POST(req: Request) {
   const u = await currentUser();
   if (!u) return unauthorized();
@@ -35,7 +39,10 @@ export async function POST(req: Request) {
   const captionCustom = { ...(safe in SAFE_ZONES && safe !== "none" && safe !== "custom" ? { safe: safe as keyof typeof SAFE_ZONES } : {}), ...(show ? { show } : {}) };
   const dir = join(STORAGE, "uploads", u.id);
   await mkdir(dir, { recursive: true });
-  const path = join(dir, randomUUID() + (extname(name).toLowerCase().replace(/[^.a-z0-9]/g, "") || ".mp4"));
+  const audioFirst = q.get("audio") === "1";
+  const videoBytes = Number(q.get("videoBytes"));
+  if (audioFirst && !(videoBytes > 0 && videoBytes <= MAX_BYTES)) return json({ error: "File is larger than 4 GB." }, 400);
+  const path = join(dir, randomUUID() + (audioFirst ? ".aac" : extname(name).toLowerCase().replace(/[^.a-z0-9]/g, "") || ".mp4"));
 
   let bytes = 0;
   const limit = new Transform({
@@ -51,9 +58,16 @@ export async function POST(req: Request) {
     return json({ error: bytes > MAX_BYTES ? "File is larger than 4 GB." : "Upload interrupted." }, 400);
   }
 
-  const duration = await probe(path);
-  if (!duration) {
+  let source = path;
+  if (audioFirst) { // raw AAC has no exact length: repackage it (a copy)
+    source = path.replace(/\.aac$/, ".m4a");
+    const ok = await remuxAudio(path, source).then(() => true, () => false);
     await unlink(path).catch(() => {});
+    if (!ok) return json({ error: "That file has no audio track we can read." }, 400);
+  }
+  const duration = await probe(source);
+  if (!duration) {
+    await unlink(source).catch(() => {});
     return json({ error: "That file has no audio track we can read." }, 400);
   }
   // Charge minutes atomically so two parallel uploads can't overspend the quota.
@@ -65,10 +79,20 @@ export async function POST(req: Request) {
     .where(and(eq(users.id, u.id), sql`${users.secondsUsed} + ${secs} <= ${quota}`))
     .returning({ id: users.id });
   if (!charged.length) {
-    await unlink(path).catch(() => {});
+    await unlink(source).catch(() => {});
     return json({ error: `This video is ${Math.ceil(duration / 60)} min but you have ${Math.floor(secondsLeft(u) / 60)} min left. Upgrade to continue.` }, 402);
   }
-  const mime = req.headers.get("content-type")?.startsWith("video/") || req.headers.get("content-type")?.startsWith("audio/") ? req.headers.get("content-type")! : "video/mp4";
-  const [job] = await db.insert(jobs).values({ userId: u.id, filename: name, filePath: path, durationSec: duration, mime, language: lang, script, withEnglish, captionStyle, captionCustom }).returning();
+  const type = audioFirst ? q.get("videoType") ?? "" : req.headers.get("content-type") ?? "";
+  const mime = type.startsWith("video/") || type.startsWith("audio/") ? type : "video/mp4";
+  const [job] = await db.insert(jobs).values({
+    userId: u.id, filename: name, durationSec: duration, mime, language: lang, script, withEnglish, captionStyle, captionCustom,
+    ...(audioFirst ? { audioPath: source, videoTotal: videoBytes } : { filePath: path }),
+  }).returning();
+  if (audioFirst) { // the file the pieces are written into, at full size up front (sparse) so they can land in any order
+    const { file } = videoPart(dir, job.id);
+    const h = await open(file, "w");
+    await h.truncate(videoBytes);
+    await h.close();
+  }
   return json({ id: job.id, durationSec: duration }, 201);
 }
