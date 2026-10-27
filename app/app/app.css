@@ -721,3 +721,39 @@ a.signout { text-decoration: none; }
   .ed-stage .vtools .vt-label b { font-size: .78rem; }
   .ed-stage .vtools:has(.vt-done) button { min-width: 0; min-height: 44px; padding: 0 9px; font-size: .8rem; }
 }
+
+/* ---- Phones, round 2: everything stays on black (like SUBTL). No white panels: Caption style, Titles and
+   Export open as a dark sheet under the video with just a title and Done. ---- */
+.ed-sheethead { display: none; }
+.vr-glyph { font: 700 .95rem/24px var(--font-body); height: 24px; }
+@media (max-width: 720px) {
+  .ed[data-sheet] .ed-stage .ed-transport, .ed[data-sheet] .ed-stage .ed-mnav { display: none !important; }
+  .ed[data-sheet] .ed-stage { bottom: 56svh; }
+  .ed[data-sheet] .ed-sheethead { display: flex; flex: none; align-items: center; justify-content: space-between; padding: 4px 16px 2px; color: #fff; }
+  .ed-sheethead strong { font-size: 1.05rem; }
+  .ed-sheethead button { border: 0; background: none; color: #4C93FF; font: 700 1rem var(--font-body); padding: 8px 0 8px 16px; }
+
+  /* the sheet itself: dark, edge to edge */
+  .ed[data-sheet] :is(.ed-list, .ed-side, .ed-timeline) {
+    height: 56svh; padding-top: 6px; background: #000; color: #fff;
+    --bg: #000; --bg-2: rgb(255 255 255 / .06); --surface: rgb(255 255 255 / .06); --ink: #fff; --ink-2: rgb(255 255 255 / .82); --muted: rgb(255 255 255 / .6);
+    --line: rgb(255 255 255 / .12); --line-2: rgb(255 255 255 / .08); --line-hi: rgb(255 255 255 / .3); --raise: rgb(255 255 255 / .1);
+    --glass: rgb(255 255 255 / .07); --glass-strong: rgb(255 255 255 / .1); --glass-edge: rgb(255 255 255 / .14); --glass-shadow: none; --primary: #fff;
+  }
+  .ed[data-sheet] .ed-side :is(h3, label, .muted, p) { color: inherit; }
+  .ed[data-sheet] .ed-side .muted { color: rgb(255 255 255 / .6); }
+  .ed[data-sheet] .ed-side :is(input:not([type="color"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]), select, textarea) { background: #1c1c22; color: #fff; border-color: rgb(255 255 255 / .16); }
+  .ed[data-sheet] .ed-side .style-chip { background: #16161c; border-color: rgb(255 255 255 / .1); color: #fff; }
+  .ed[data-sheet] .ed-side .style-chip[aria-checked="true"] { border-color: #2E7BFF; box-shadow: 0 0 0 2px #2E7BFF; }
+  .ed[data-sheet] .ed-side .seg { background: rgb(255 255 255 / .1); }
+  .ed[data-sheet] .ed-side .seg button { color: #fff; }
+  .ed[data-sheet] .ed-side .seg button[aria-pressed="true"] { background: #fff; color: var(--black); }
+  .ed[data-sheet] .ed-side :is(.btn) { background: #fff; color: var(--black); border-color: #fff; }
+  .ed[data-sheet] .ed-side .btn.ghost { background: rgb(255 255 255 / .1); color: #fff; border-color: rgb(255 255 255 / .16); }
+  .ed[data-sheet] .ed-side .btn.danger { background: transparent; color: #ff6b6b; border-color: #ff6b6b; }
+  .ed[data-sheet] .ed-side kbd { background: #222; color: #fff; }
+  .ed[data-sheet] .ed-list > li { background: #111; border-color: rgb(255 255 255 / .1); }
+  .ed[data-sheet] .ed-list > li.sel { border-color: #2E7BFF; }
+}
+.insp-canvas { display: grid; gap: 12px; }
+@media (max-width: 720px) { .insp-canvas { order: 9; } } /* phones: the styles first (like SUBTL), the canvas further down */
