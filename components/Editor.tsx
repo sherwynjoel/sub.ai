@@ -46,6 +46,8 @@ const ICON: Record<string, string> = {
   style: "M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.6 0-1.2-1-1.4-1-2.4 0-.8.7-1.5 1.5-1.5H17a4 4 0 0 0 4-4c0-4.7-4-8.5-9-8.5zM7.5 12h.01M10 7.5h.01M15 7.5h.01",
   lang: "M4 5h8M8 3v2M6 5c0 4 2 7 5 8M10 5c-1 4-3 7-6 8M13 20l4-9 4 9M14.5 17h5",
   play: "M7 4v16l13-8z",
+  back: "M15 5l-7 7 7 7",
+  list: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01",
 };
 const Icon = ({ name }: { name: string }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICON[name]} /></svg>;
 const RATIO = { "9:16": 9 / 16, "4:5": 4 / 5, "1:1": 1, "16:9": 16 / 9 } as const;
@@ -251,6 +253,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [pickedWord, setPickedWord] = useState<WordRef | null>(null);
   const [inline, setInline] = useState(false);
   const [nudging, setNudging] = useState(false);
+  // Phones: the video fills the screen; the sections open as a sheet from the bottom, the video above it.
+  const [sheet, setSheet] = useState(false);
   const language = languageOf(job.language);
   const short = shortCode(job.language);
   const tamil = short === "ta" || initial.cues.some((c) => /[\u0B80-\u0BFF]/.test(c.ta)); // Tamil letters get their own font
@@ -406,6 +410,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   /** Phones: show one section; the inspector ones open their tab (Edit opens the caption under the playhead). */
   function openPane(k: Pane) {
     setPane(k);
+    setSheet(true);
     if (k === "caption" || k === "style" || k === "layers" || k === "export") setTab(k);
     if (k === "caption" && selected < 0 && activeIdx >= 0) setSelected(activeIdx);
   }
@@ -473,25 +478,32 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   }
   const editWord = (w: WordRef, text: string) => { editCue(w.cue, setWord(cues[w.cue], line, w.j, { text })); setPickedWord(null); };
   /** Make the picked word pop (the style's accent colour), or back to normal. */
+  /** The caption the tools under the video work on: the selected one, else the one under the playhead (selected then). */
+  function current() {
+    if (selected >= 0) return selected;
+    if (activeIdx >= 0) setSelected(activeIdx);
+    return activeIdx;
+  }
   function highlight() {
-    if (selected < 0) return;
-    const c = cues[selected];
-    const j = pickedWord?.cue === selected ? pickedWord.j : wordAt(selected, now);
+    const i = current();
+    if (i < 0) return;
+    const c = cues[i];
+    const j = pickedWord?.cue === i ? pickedWord.j : wordAt(i, now);
     if (!wordsOf(c[line])[j]) return;
     const has = !!(line === "en" ? c.wce : c.wc)?.[j];
-    editCue(selected, setWord(c, line, j, { color: has ? null : custom.accent ?? "#FFD60A" }));
+    editCue(i, setWord(c, line, j, { color: has ? null : custom.accent ?? "#FFD60A" }));
   }
   /** Move the selected caption's start or end by d seconds (not over its neighbours, at least 0.2 s long). */
   function nudge(edge: "start" | "end", d: number) {
-    const c = cues[selected];
+    const i = target(), c = cues[i];
     if (!c) return;
-    if (edge === "start") editCue(selected, { ...c, start: Math.max(cues[selected - 1]?.end ?? 0, Math.min(c.start + d, c.end - 0.2)) });
-    else editCue(selected, { ...c, end: Math.min(cues[selected + 1]?.start ?? duration, Math.max(c.end + d, c.start + 0.2)) });
+    if (edge === "start") editCue(i, { ...c, start: Math.max(cues[i - 1]?.end ?? 0, Math.min(c.start + d, c.end - 0.2)) });
+    else editCue(i, { ...c, end: Math.min(cues[i + 1]?.start ?? duration, Math.max(c.end + d, c.start + 0.2)) });
   }
   function inlineDone(text: string | null) {
     setInline(false);
-    const c = cues[selected];
-    if (text !== null && c && text.trim() !== c[line]) editCue(selected, setText(c, line, text.trim()));
+    const i = target(), c = cues[i];
+    if (text !== null && c && text.trim() !== c[line]) editCue(i, setText(c, line, text.trim()));
   }
 
   // ---------- keyboard ----------
@@ -518,7 +530,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       else if (k === "+" || k === "=") setZoom((z) => Math.min(600, z * 1.25));
       else if (k === "-" || k === "_") setZoom((z) => Math.max(10, z / 1.25));
       else if (k === "Escape") { setSelected(-1); setPickedWord(null); setNudging(false); }
-      else if (k === "Enter" && selected >= 0) { e.preventDefault(); video.current?.pause(); setInline(true); }
+      else if (k === "Enter" && target() >= 0) { e.preventDefault(); video.current?.pause(); current(); setInline(true); }
     };
     const onLeave = (e: BeforeUnloadEvent) => { if (dirty) e.preventDefault(); };
     addEventListener("keydown", onKey);
@@ -563,7 +575,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const own = sel?.style ?? {};
 
   return (
-    <div className="editor ed" data-pane={pane}>
+    <div className="editor ed" data-pane={pane} data-sheet={sheet || undefined}>
       <div className="ed-top">
         <div className="ed-title">
           <Link href="/app" className="muted">Projects</Link>
@@ -623,10 +635,27 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
         </ol>
 
         <div className="ed-stage">
+          <div className="ed-ibar" role="toolbar" aria-label="Editor">
+            <Link href="/app" className="ib-round" aria-label="Back to projects"><Icon name="back" /></Link>
+            <button className="ib-round" onClick={undo} disabled={!past.length} aria-label="Undo"><Icon name="undo" /></button>
+            <button className="ib-round" onClick={redo} disabled={!future.length} aria-label="Redo"><Icon name="redo" /></button>
+            <span className="ib-gap" />
+            <button className={`ib-save${dirty ? " on" : ""}`} onClick={save} disabled={!dirty || saving}>{saving ? "Saving…" : dirty ? "Save" : "Saved"}</button>
+            <button className="ib-export" onClick={() => openPane("export")}>Export</button>
+          </div>
+          <div className="ed-frame">
+          {!playing && !sheet && (
+            <div className="vrail vrail-phone" role="toolbar" aria-label="Add and change">
+              <button onClick={() => { addLayer("Your text"); openPane("layers"); }}><Icon name="title" />Add title</button>
+              <button onClick={() => openPane("style")}><Icon name="style" />Caption style</button>
+              <button onClick={() => setRetype(typeOf(initial))}><Icon name="lang" />Translate</button>
+              <button onClick={() => openPane("list")}><Icon name="list" />All captions</button>
+            </div>
+          )}
           {job.hasMedia || mediaUrl ? (
             <div className="player" style={{ aspectRatio: frameRatio, "--ar": frameRatio, width: `min(100%, ${(56 * frameRatio).toFixed(2)}vh)`, background: shaped && cv!.fit === "fit" && cv!.bg !== "blur" ? cv!.bg : undefined } as React.CSSProperties}>
               {shaped && cv!.fit === "fit" && cv!.bg === "blur" && <video ref={bgVideo} className="bg-blur" src={mediaUrl ?? `/api/jobs/${job.id}/media`} muted playsInline preload="metadata" aria-hidden="true" />}
-              <video ref={video} src={mediaUrl ?? `/api/jobs/${job.id}/media`} preload="metadata" onClick={togglePlay} style={shaped ? { objectFit: cv!.fit === "fill" ? "cover" : "contain" } : undefined}
+              <video ref={video} src={mediaUrl ?? `/api/jobs/${job.id}/media`} preload="metadata" playsInline onClick={togglePlay} style={shaped ? { objectFit: cv!.fit === "fill" ? "cover" : "contain" } : undefined}
                 onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
                 onLoadedMetadata={(e) => metadata(e.currentTarget)} />
               {showZones && (["top", "right", "bottom", "left"] as const).map((k) => <i key={k} className={`zone zone-${k}`} style={{ [k === "top" || k === "bottom" ? "height" : "width"]: `${look.safe[k] * 100}%` }} />)}
@@ -642,7 +671,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               {!playing && (
                 <>
                   <button className="play-big" onClick={togglePlay} aria-label="Play"><Icon name="play" /></button>
-                  <div className="vrail" role="toolbar" aria-label="Add and change">
+                  <div className="vrail vrail-desk" role="toolbar" aria-label="Add and change">
                     <button onClick={() => { addLayer("Your text"); openPane("layers"); }} title="Add a title"><Icon name="title" />Add title</button>
                     <button onClick={() => { openPane("style"); document.querySelector(".ed-side")?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }} title="Caption style"><Icon name="style" />Caption style</button>
                     <button onClick={() => setRetype(typeOf(initial))} title="Caption type: language and script"><Icon name="lang" />Caption type</button>
@@ -652,7 +681,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               <LiveCaption video={video} cues={view === "en" && cues.some((c) => c.ta) ? englishCues(cues) : cues} styleId={styleId} custom={custom} portrait={portrait} view={view} selected={selected}
                 // The picked caption gets a dashed box (in the English view captions are regrouped: the one holding it).
                 picked={(start) => !playing && !!sel && (view === "en" ? start <= sel.start + 0.01 && now >= sel.start - 0.01 && now < sel.end : Math.abs(start - sel.start) < 0.001)}
-                editing={inline && sel ? sel[line] : null}
+                editing={inline && cues[target()] ? cues[target()][line] : null}
                 onTap={tapCaption} onEditOpen={() => { setInline(true); }} onEditDone={inlineDone}
                 onMove={(i, x, y) => { if (tab === "caption" && i === selected) styleCue(i, { x, y }); else tweak({ x, y }); }}
                 onResize={(i, size) => { if (tab === "caption" && i === selected) styleCue(i, { size }); else tweak({ size }); }} />
@@ -660,7 +689,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           ) : (
             <div className="player gone"><p>The video was removed after 7 days. Your subtitles are still here.</p></div>
           )}
-          {sel && !playing && (
+          </div>
+          {!playing && target() >= 0 && (
             <div className="vtools" role="toolbar" aria-label="This caption">
               {nudging ? (
                 <>
@@ -674,10 +704,13 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 </>
               ) : (
                 <>
-                  <button onClick={() => setInline(true)}><Icon name="text" />Edit text</button>
+                  <button onClick={() => { current(); setInline(true); }}><Icon name="text" />Edit text</button>
                   <button onClick={highlight}><Icon name="mark" />Highlight</button>
-                  <button onClick={() => setNudging(true)}><Icon name="clock" />Timing</button>
-                  <button onClick={() => remove(selected)}><Icon name="delete" />Delete</button>
+                  <button onClick={() => { current(); setNudging(true); }}><Icon name="clock" />Timing</button>
+                  <button onClick={() => remove(target())}><Icon name="delete" />Delete</button>
+                  <button className="vt-more" onClick={split}><Icon name="split" />Split</button>
+                  <button className="vt-more" onClick={merge}><Icon name="merge" />Merge</button>
+                  <button className="vt-more" onClick={add}><Icon name="add" />Add</button>
                 </>
               )}
             </div>
@@ -705,6 +738,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             {PANES.map(([k, l]) => (
               <button key={k} aria-pressed={pane === k} onClick={() => openPane(k)}>{l}</button>
             ))}
+            <button className="ed-mdone" onClick={() => setSheet(false)}>Done</button>
           </nav>
         </div>
 

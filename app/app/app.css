@@ -624,3 +624,100 @@ a.signout { text-decoration: none; }
   /* a caption picked on the video scrolls into view below the pinned video, not under it */
   .ed-list > li { scroll-margin-top: calc(28svh + 250px); scroll-margin-bottom: 100px; }
 }
+
+/* =====================================================================================================
+   Phones: a full-screen editor (like SUBTL). The video fills the screen with the captions on it; a bar on
+   top (back, undo, redo, save, export), a rail on the right (title, style, translate, all captions), the
+   tools and the word strip at the bottom. Captions, Edit, Timeline, Style, Layers and Export open as a
+   sheet from the bottom with the video still playing above it.
+   ===================================================================================================== */
+.ed-ibar, .vrail-phone, .vtools .vt-more, .ed-mdone { display: none; }
+.ed-frame { display: contents; }
+@media (max-width: 720px) {
+  .ed { transform: none !important; animation: none !important; padding-bottom: 0; } /* a transform would trap the fixed layers */
+  body:has(.ed) { overflow: hidden; }
+  .ed-top, .ed-mbar, .vrail-desk { display: none !important; }
+
+  .ed-stage { position: fixed; inset: 0; z-index: 60; margin: 0; padding: env(safe-area-inset-top) 0 calc(10px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; background: #000; box-shadow: none; }
+  .ed[data-sheet] .ed-stage { bottom: 54svh; padding-bottom: 6px; gap: 6px; }
+
+  /* top bar, over the video */
+  .ed-ibar { display: flex; align-items: center; gap: 8px; position: absolute; z-index: 6; left: 0; right: 0; top: 0; padding: calc(10px + env(safe-area-inset-top)) 12px 18px; background: linear-gradient(rgb(0 0 0 / .5), transparent); pointer-events: none; }
+  .ed-ibar > * { pointer-events: auto; }
+  .ib-gap { flex: 1; }
+  .ib-round { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; border: 0; background: rgb(40 40 46 / .72); color: #fff; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .ib-round svg { width: 22px; height: 22px; }
+  .ib-round:disabled { opacity: .4; }
+  .ib-save { height: 38px; padding: 0 14px; border-radius: 999px; border: 0; background: rgb(40 40 46 / .72); color: rgb(255 255 255 / .75); font: 600 .85rem var(--font-body); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .ib-save.on { background: var(--lime); color: var(--black); }
+  .ib-export { height: 42px; padding: 0 20px; border-radius: 999px; border: 0; background: #2E7BFF; color: #fff; font: 700 1rem var(--font-body); }
+
+  /* the video, as big as the screen allows */
+  .ed-frame { display: grid; place-items: center; position: relative; flex: 1; min-height: 0; container-type: size; }
+  .ed-stage .ed-frame .player { width: min(100cqw, calc(100cqh * var(--ar, 1.78))) !important; max-width: none; max-height: 100cqh; border-radius: 0; }
+  .ed[data-sheet] .ed-frame .player { border-radius: 10px; }
+
+  /* rail on the right, labelled */
+  .vrail-phone { display: grid; position: absolute; z-index: 5; right: 10px; top: calc(70px + env(safe-area-inset-top)); gap: 4px; padding: 6px; border-radius: 20px; background: rgb(60 60 70 / .45); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .ed-frame > .vrail-phone button { width: 66px; padding: 8px 2px; font-size: .68rem; gap: 4px; display: grid; justify-items: center; border: 0; border-radius: 14px; background: transparent; color: #fff; font-weight: 600; line-height: 1.15; }
+  .ed-frame > .vrail-phone svg { width: 24px; height: 24px; }
+
+  /* the tools, the word strip */
+  .ed-stage .vtools { flex: none; flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; padding: 0 10px; gap: 8px; }
+  .ed-stage .vtools::-webkit-scrollbar { display: none; }
+  .ed-stage .vtools button { flex: 0 0 auto; display: grid; justify-items: center; align-content: center; gap: 4px; min-width: 74px; min-height: 60px; padding: 6px 10px; border-radius: 16px; border: 1px solid rgb(255 255 255 / .12); background: rgb(255 255 255 / .1); color: #fff; font-size: .78rem; }
+  .ed-stage .vtools button svg { width: 22px; height: 22px; }
+  .ed-stage .vtools .vt-more { display: grid; }
+  .ed-stage .vtools .vt-label { color: rgb(255 255 255 / .75); flex: none; }
+  .ed-stage .vtools .vt-label b { color: #fff; }
+  .ed-stage .vtools:has(.vt-done) { flex-wrap: nowrap; }
+  .ed-stage .vtools:has(.vt-done) button { min-width: 52px; min-height: 44px; padding: 0 10px; display: inline-flex; }
+  .ed-stage .vtools .vt-done { background: var(--lime); color: var(--black); }
+  .ed-stage .wstrip { flex: none; padding: 14px 0 2px; }
+  .ed-stage .wstrip-mark { top: 0; font-size: 12px; }
+  .ed-stage .wpill { padding: 9px 16px; font-size: .95rem; background: rgb(255 255 255 / .1); border-color: rgb(255 255 255 / .12); color: #fff; }
+  .ed-stage .wpill.on { background: #2E7BFF; border-color: #2E7BFF; }
+  .ed-stage .wpill.editing { background: #fff; color: var(--black); }
+
+  /* play controls and section tabs: only with the sheet (they head it) */
+  .ed-stage .ed-transport, .ed-stage .ed-mnav { display: none; }
+  .ed[data-sheet] .ed-stage .ed-transport { display: flex; flex: none; padding: 0 10px; }
+  .ed[data-sheet] .ed-stage .ed-mnav { display: flex; flex: none; margin: 0 10px; width: auto; background: rgb(255 255 255 / .12); }
+  .ed-stage .ed-transport .btn { background: #fff; color: var(--black); }
+  .ed-stage .ed-transport .ed-time { color: #fff; }
+  .ed-stage .ed-transport .seg { background: rgb(255 255 255 / .12); }
+  .ed-stage .ed-transport .seg button { color: #fff; }
+  .ed-stage .ed-transport .seg button[aria-pressed="true"] { background: #fff; color: var(--black); }
+  .ed-stage .timing-next { color: #fff; border-color: rgb(255 255 255 / .3); }
+  .ed-stage .ed-mnav button { color: rgb(255 255 255 / .8); }
+  .ed-stage .ed-mnav button[aria-pressed="true"] { background: #fff; color: var(--black); }
+  .ed-stage .ed-mnav .ed-mdone { display: block; flex: 0 0 auto; background: var(--lime); color: var(--black); padding: 0 12px; }
+  .ed[data-sheet] .ed-stage .vtools, .ed[data-sheet] .ed-stage .wstrip { display: none; }
+
+  /* the sheet: the open section, under the video */
+  .ed:not([data-sheet]) :is(.ed-list, .ed-side, .ed-timeline) { display: none !important; }
+  .ed[data-sheet] :is(.ed-list, .ed-side, .ed-timeline) { position: fixed; z-index: 61; left: 0; right: 0; bottom: 0; height: 54svh; margin: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 16px calc(20px + env(safe-area-inset-bottom)); border-radius: 0; background: var(--bg, #f6f5fb); border: 0; box-shadow: none; }
+  .ed-list > li { scroll-margin-top: 12px; scroll-margin-bottom: 12px; }
+
+  /* messages: at the top, under the bar */
+  .ed-mtoast { top: calc(66px + env(safe-area-inset-top)); bottom: auto; z-index: 70; }
+}
+@media (max-width: 720px) {
+  .modal-back { z-index: 80; } /* dialogs over the full-screen editor */
+  /* with the sheet closed, the tools and strip show whatever section was last open */
+  .ed:not([data-sheet]) .ed-stage .vtools { display: flex; }
+  .ed:not([data-sheet]) .ed-stage .wstrip { display: block; }
+}
+@media (max-width: 720px) {
+  /* the sheet's tabs scroll sideways; Done stays at the right */
+  .ed-stage .ed-mnav { overflow-x: auto; }
+  .ed-stage .ed-mnav button { flex: 0 0 auto; padding: 0 11px; font-size: .8rem; }
+  .ed-stage .ed-mnav .ed-mdone { position: sticky; right: 0; margin-left: auto; box-shadow: -8px 0 10px -4px rgb(0 0 0 / .6); }
+}
+@media (max-width: 720px) {
+  /* Timing fits one row: the times stacked under their names, small −/+ keys, Done */
+  .ed-stage .vtools:has(.vt-done) { gap: 5px; justify-content: center; padding: 0 6px; }
+  .ed-stage .vtools .vt-label { display: grid; font-size: .7rem; line-height: 1.2; margin: 0 2px; text-align: center; }
+  .ed-stage .vtools .vt-label b { font-size: .78rem; }
+  .ed-stage .vtools:has(.vt-done) button { min-width: 0; min-height: 44px; padding: 0 9px; font-size: .8rem; }
+}
