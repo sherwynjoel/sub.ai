@@ -411,6 +411,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   function openPane(k: Pane) {
     setPane(k);
     setSheet(true);
+    setTimeout(() => document.querySelectorAll(".ed-side, .ed-list, .ed-timeline").forEach((e) => { e.scrollTop = 0; }), 0); // each section opens at its top
     if (k === "caption" || k === "style" || k === "layers" || k === "export") setTab(k);
     if (k === "caption" && selected < 0 && activeIdx >= 0) setSelected(activeIdx);
   }
@@ -649,7 +650,11 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               <button onClick={() => { addLayer("Your text"); openPane("layers"); }}><Icon name="title" />Add title</button>
               <button onClick={() => openPane("style")}><Icon name="style" />Caption style</button>
               <button onClick={() => setRetype(typeOf(initial))}><Icon name="lang" />Translate</button>
-              <button onClick={() => openPane("list")}><Icon name="list" />All captions</button>
+              {views.length > 1 && (
+                <button onClick={() => setView(views[(views.indexOf(view) + 1) % views.length])} title="Which language the captions show (tap to change)">
+                  <span className="vr-glyph" aria-hidden="true">அA</span>{view === "ta" ? language.native : view === "en" ? "English" : "Both"}
+                </button>
+              )}
             </div>
           )}
           {job.hasMedia || mediaUrl ? (
@@ -733,6 +738,10 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 ))}
               </div>
             </>}
+          </div>
+          <div className="ed-sheethead">
+            <strong>{({ list: "Captions", caption: "Edit caption", timeline: "Timeline", style: "Caption style", layers: "Titles and logo", export: "Export" } as Record<Pane, string>)[pane]}</strong>
+            <button onClick={() => setSheet(false)}>Done</button>
           </div>
           <nav className="ed-mnav" aria-label="Editor sections">
             {PANES.map(([k, l]) => (
@@ -852,6 +861,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
           {tab === "style" && (
             <div className="insp">
+              <div className="insp-canvas">
               <h3>Canvas</h3>
               <label>Video shape
                 <select value={cv?.ratio ?? "source"} onChange={(e) => tweak({ canvas: { ratio: e.target.value as CanvasRatio, fit: cv?.fit ?? "fit", bg: cv?.bg ?? "blur" } })}>
@@ -869,6 +879,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   {cv!.bg !== "blur" && <input type="color" aria-label="Background colour" value={cv!.bg} onChange={(e) => tweak({ canvas: { ...cv!, bg: e.target.value } })} />}
                 </div>}
               </>}
+              </div>
 
               <h3>Project style</h3>
               <p className="muted small">{styleOf(styleId).blurb} Applies to every caption without its own look.</p>
