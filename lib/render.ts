@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import type { Cue } from "@/db";
 import { buildAss, canvasSize, type CaptionCustom } from "@/lib/captionStyles";
-import { bin, STORAGE, videoSize } from "@/lib/media";
+import { audioCodec, bin, STORAGE, videoSize } from "@/lib/media";
 import { englishCues } from "@/lib/subtitles";
 
 const FONTS = resolve(/*turbopackIgnore: true*/ process.cwd(), "public", "caption-fonts");
@@ -33,6 +33,8 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
       ? ["-i", job.filePath]
       : ["-f", "lavfi", "-i", `color=c=0x0c0c14:s=${width}x${height}:r=30`, "-i", job.filePath, "-shortest"];
     const audio = size ? "0:a?" : "1:a?";
+    // Phone videos' sound is AAC already: copied as it is (no quality lost, less work); anything else is encoded.
+    const copyAudio = !!size && (await audioCodec(job.filePath)) === "aac";
     const logo = await logoFile(job);
     const graph = [frame(canvas, width, height, !!size)];
     let last = "framed";
@@ -50,8 +52,10 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
     const args = [
       "-y", "-v", "error", "-nostats", "-progress", "pipe:1", ...input,
       "-filter_complex", graph.join(";"), "-map", "[out]", "-map", audio,
-      "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
-      "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out,
+      // superfast at CRF 22: measured on a 1080x1920 phone clip on the server, 35% faster than veryfast/CRF 20 at
+      // the same picture quality (SSIM 0.9797 vs 0.9794 against the lossless render), files ~30% larger.
+      "-c:v", "libx264", "-preset", "superfast", "-crf", "22", "-pix_fmt", "yuv420p",
+      ...(copyAudio ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", "160k"]), "-movflags", "+faststart", out,
     ];
     await new Promise<void>((ok, fail) => {
       const p = spawn(bin("ffmpeg"), args, { cwd: dir });
