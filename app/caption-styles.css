@@ -11,6 +11,8 @@
 @font-face { font-family: "Meera Inimai"; src: url("/caption-fonts/MeeraInimai-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Noto Emoji"; src: url("/caption-fonts/NotoEmoji.ttf") format("truetype"); font-weight: 100 900; font-display: swap; unicode-range: U+00A9, U+00AE, U+203C-3299, U+1F000-1FAFF; }
 @font-face { font-family: "Satisfy"; src: url("/caption-fonts/Satisfy-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Inter Bold"; src: url("/caption-fonts/Inter-Bold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Nunito ExtraBold"; src: url("/caption-fonts/Nunito-ExtraBold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Inter"; src: url("/caption-fonts/Inter-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Inter Italic"; src: url("/caption-fonts/Inter-Italic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Montserrat SemiBold"; src: url("/caption-fonts/Montserrat-SemiBold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
@@ -44,3 +46,6 @@
 /* Roll Away (crawl): tilts away and rolls up as the line plays (--p 0 to 1) */
 .fx-crawl { perspective: 30cqmin; }
 .fx-crawl .cap-main { transform: rotateX(50deg) translateY(calc(var(--p) * -28cqmin)); transform-origin: 50% 100%; opacity: calc(1.7 - var(--p)); }
+/* "hook": each line its own size and colour (lib/captionStyles.ts hookChunks) */
+.fx-hook .cap-main { display: grid; justify-items: center; }
+.hook-line { display: block; line-height: 1.02; white-space: nowrap; }

@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { hookChunks, hookFit } from "./captionStyles";
 import { assColor, buildAss, CAPTION_STYLES, DEFAULT_STYLE, STYLE_CHOICES, STYLE_GROUPS, keywordIndex, resolveStyle, SAFE_ZONES, sanitizeCustom, stackBig, stackChunks, styleOf, tamilRuns, wordTimes } from "./captionStyles";
 
 test("assColor converts #RRGGBB[AA] to ASS &HAABBGGRR with inverted alpha", () => {
@@ -143,9 +144,34 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
   assert.match(ass, /Style: L1,Poppins ExtraBold,122,/, "the layer's own size");
 });
 
-test("styles on offer: the chosen 20, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 20);
+test("styles on offer: the chosen 20 and the template pack's 16, with the default among them", () => {
+  assert.equal(STYLE_CHOICES.length, 36);
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 16);
+  assert.equal(STYLE_GROUPS[0], "Templates");
   assert.ok(STYLE_CHOICES.some((s) => s.id === DEFAULT_STYLE));
   assert.ok(!STYLE_GROUPS.includes("Playful"), "a group with nothing on offer isn't shown");
   assert.equal(styleOf("minimal").name, "Plain Bold", "projects on a style no longer offered keep it");
+});
+
+test("template pack: hooks cut a caption into pieces of lines that take the sizes and colours in turn", () => {
+  const p = hookChunks("You might be missing this part today", 0, 4);
+  assert.equal(p.length, 2);
+  assert.deepEqual(p[0].lines.map((l) => l.text), ["You", "might", "be", "missing"].slice(0, p[0].lines.length));
+  assert.deepEqual(p.flatMap((x) => x.lines.flatMap((l) => l.idx)), [0, 1, 2, 3, 4, 5, 6]);
+  assert.equal(hookFit("missing", 2, 99), 2);
+  assert.ok(hookFit("a very long line of words here", 2, 10) < 1, "a long line shrinks to fit");
+  const ass = buildAss([{ start: 0, end: 2, ta: "You might be missing", en: "" }], { styleId: "tpl-hook-yellow", lang: "ta", width: 1080, height: 1920 });
+  assert.match(ass, /\\fscx150\\fscy150\\1c&H00EDFF&/, "the third line big and in the hook's yellow");
+  assert.match(ass, /\\t\(120,300,\\alpha&H00&/, "lines come in one after another");
+});
+
+test("template pack: new entrances in the MP4", () => {
+  const ass = (anim: string) => buildAss([{ start: 0, end: 2, ta: "hello there world", en: "" }], { styleId: "minimal", custom: { anim: anim as never }, lang: "ta", width: 1080, height: 1920 });
+  assert.match(ass("blur"), /\\blur[\d.]+\\t\(0,\d+,\\blur0\)/);
+  assert.match(ass("flicker"), /\\t\(50,51,\\alpha&H00&\)/);
+  assert.match(ass("snap"), /\\fscx150\\fscy150/);
+  assert.match(ass("bouncyout"), /\\fad\(0,250\)/, "fades out at the end");
+  assert.match(ass("wordin"), /\\alpha&HFF&\\blur[\d.]+\\t\(0,160/, "each word blurs in");
+  const rgb = buildAss([{ start: 0, end: 2, ta: "it rewards strategy", en: "" }], { styleId: "tpl-reels-rgb", lang: "ta", width: 1080, height: 1920 });
+  assert.equal((rgb.match(/^Dialogue/gm) ?? []).length % 3, 0, "the big word in red and cyan behind it");
 });

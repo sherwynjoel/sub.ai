@@ -7,15 +7,18 @@
 import type { Cue } from "@/db";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
 
-export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack";
-/** How a caption comes in. */
-export const ANIMS = { none: "None", fade: "Fade in", pop: "Pop", slide: "Slide up", bounce: "Bounce", zoom: "Zoom in" } as const;
+export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook";
+/** How a caption comes in (the last few from the Premiere template pack's presets). */
+export const ANIMS = {
+  none: "None", fade: "Fade in", pop: "Pop", slide: "Slide up", bounce: "Bounce", zoom: "Zoom in",
+  blur: "Blur in", flicker: "Flicker", flicker2: "Strong flicker", ramp: "Ramp up", snap: "Snap", bouncyout: "Bounce, fade out", wordin: "Word by word",
+} as const;
 export type Anim = keyof typeof ANIMS;
 /** How the word being said stands out. */
 export const HIGHLIGHTS = { style: "The style's own", none: "None", color: "Colour", box: "Box", underline: "Underline", grow: "Grow" } as const;
 export type Highlight = keyof typeof HIGHLIGHTS;
 export type CaptionStyle = {
-  id: string; name: string; group: "Premiere" | "Bold" | "Soft" | "Simple" | "Playful"; blurb: string;
+  id: string; name: string; group: "Templates" | "Premiere" | "Bold" | "Soft" | "Simple" | "Playful"; blurb: string;
   font: string; size?: number; bold?: boolean; italic?: boolean; caps?: boolean; lower?: boolean;
   fontTa?: string;               // font for Tamil letters (the Latin fonts have none); unset = Noto Sans Tamil
   color: string;                 // spoken and already-spoken words
@@ -28,7 +31,8 @@ export type CaptionStyle = {
   shadow?: number;
   box?: string;                  // solid card behind the line
   effect?: Effect;
-  stack?: { big: string; font: string }; // "stack": colour and font of the big middle word
+  stack?: { big: string; font: string; glow?: boolean; rgb?: boolean }; // "stack": the big middle word's colour and font, glowing / split into colours
+  hook?: { sizes: number[]; colors: string[]; fonts?: (string | undefined)[] }; // "hook": each line's size (em), colour and font, in turn
   spacing?: number;              // letter spacing, em
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
@@ -40,8 +44,27 @@ export type CaptionStyle = {
 };
 
 const GOLD = "#FFC83D", BUTTER = "#FFE58A", CREAM = "#FFF4D6", INK = "#141414", HL = "#FFE14D";
+const W = "#FFFFFF";
 
 export const CAPTION_STYLES: CaptionStyle[] = [
+  // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
+  // Helvetica / Neue Haas Grotesk (commercial) become Inter Bold, Helvetica Rounded becomes Nunito ExtraBold.
+  { id: "tpl-blur", name: "Blur Animation", group: "Templates", blurb: "Bold orange that sharpens out of a blur.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF7800", shadow: 0.05, anim: "blur" },
+  { id: "tpl-bounce", name: "Bounce Text", group: "Templates", blurb: "Bold red that bounces in.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF0000", shadow: 0.05, anim: "bounce" },
+  { id: "tpl-bouncy-fadeout", name: "Bouncy Fadeout", group: "Templates", blurb: "Rounded pink that bounces in and fades away.", font: "Nunito ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FE006C", shadow: 0.05, anim: "bouncyout" },
+  { id: "tpl-fade-up", name: "Fade Animation", group: "Templates", blurb: "Bold orange that fades up into place.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF7800", shadow: 0.05, anim: "slide" },
+  { id: "tpl-flicker", name: "Flicker Text", group: "Templates", blurb: "Clean white that flickers on.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.06, anim: "flicker" },
+  { id: "tpl-ramp-up", name: "Ramp Up", group: "Templates", blurb: "Bold purple that shoots up into place.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#8100EF", shadow: 0.08, shadowColor: "#FFFFFF", anim: "ramp" },
+  { id: "tpl-snapping", name: "Snapping Text", group: "Templates", blurb: "Red that snaps into place.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: "#FF0000", shadow: 0.06, anim: "snap" },
+  { id: "tpl-strong-flicker", name: "Strong Flicker", group: "Templates", blurb: "Bold red that flickers hard before it settles.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF0000", shadow: 0.05, anim: "flicker2" },
+  { id: "tpl-word-by-word", name: "Word by Word", group: "Templates", blurb: "Bold red, each word blurring in as it's said.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF0000", shadow: 0.05, anim: "wordin" },
+  { id: "tpl-reels-glow", name: "Reels Glow", group: "Templates", blurb: "Small white words around one big red word that glows.", font: "Inter", fontTa: "Hind Madurai", color: W, shadow: 0.04, effect: "stack", stack: { big: "#FA0404", font: "Inter Bold", glow: true } },
+  { id: "tpl-reels-rgb", name: "Reels RGB", group: "Templates", blurb: "The glowing red word, split into colours.", font: "Inter", fontTa: "Hind Madurai", color: W, shadow: 0.04, effect: "stack", stack: { big: "#FA0404", font: "Inter Bold", glow: true, rgb: true } },
+  { id: "tpl-reels-simple", name: "Reels Simple", group: "Templates", blurb: "Small white words around one big red word.", font: "Inter", fontTa: "Hind Madurai", color: W, shadow: 0.04, effect: "stack", stack: { big: "#FA0404", font: "Inter Bold" } },
+  { id: "tpl-hook-yellow", name: "Hook Yellow", group: "Templates", blurb: "Hook lines in four sizes, one in yellow, popping in one by one.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", color: W, shadow: 0.05, effect: "hook", hook: { sizes: [0.6, 2, 1.5, 0.8], colors: [W, W, "#FFED00", W] } },
+  { id: "tpl-hook-cyan", name: "Hook Cyan", group: "Templates", blurb: "Hook lines in white, cyan and lime, popping in one by one.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", color: W, shadow: 0.05, effect: "hook", hook: { sizes: [1.2, 2, 0.7, 1.1], colors: [W, "#00FFD7", W, "#F0FF00"] } },
+  { id: "tpl-hook-neon", name: "Hook Neon", group: "Templates", blurb: "Hook lines in cyan, white, yellow and red.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", color: W, shadow: 0.05, effect: "hook", hook: { sizes: [0.7, 1.6, 1.1, 0.85], colors: ["#00FFE6", W, "#F3FF00", "#FF2A2A"] } },
+  { id: "tpl-hook-big-start", name: "Hook Big Start", group: "Templates", blurb: "A huge first word, then cyan, white and a yellow script line.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", color: W, shadow: 0.05, effect: "hook", hook: { sizes: [2.6, 1.4, 0.7, 1.3], colors: [W, "#00F9FF", W, "#F3FF00"], fonts: [undefined, undefined, undefined, "Playfair Display Bold Italic"] } },
   // The Premiere Pro panel's templates, made from the web styles' parts (fonts, colours, glow, motion).
   { id: "pr-butter-up", name: "Butter Up", group: "Premiere", blurb: "Flowing white script that slides up into place.", font: "Satisfy", fontTa: "Kavivanar", size: 1.3, color: "#FFFFFF", shadow: 0.06, anim: "slide" },
   { id: "pr-cracked", name: "Cracked", group: "Premiere", blurb: "Heavy silver letters with a red glow; the keyword hits red.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.2, caps: true, color: "#E9E9EE", glow: "#FF1E2D", keyword: { color: "#FF2A2A", grow: true }, anim: "pop" },
@@ -93,6 +116,8 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
+  "tpl-blur", "tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker",
+  "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-rgb", "tpl-reels-simple", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
   "setup-punch", "comic-pop", "butter-serif", "handwritten", "trending-1", "trending-2", "trending-3", "neon-aura",
   "editorial-cut", "center-stage", "marker-swipe", "spotlight", "highlighter-paper", "highlighter-clean",
@@ -100,7 +125,7 @@ const OFFERED = [
 ];
 export const STYLE_CHOICES = CAPTION_STYLES.filter((s) => OFFERED.includes(s.id));
 /** The groups that have styles on offer, in order. */
-export const STYLE_GROUPS = (["Premiere", "Bold", "Soft", "Simple", "Playful"] as const).filter((g) => STYLE_CHOICES.some((s) => s.group === g));
+export const STYLE_GROUPS = (["Templates", "Premiere", "Bold", "Soft", "Simple", "Playful"] as const).filter((g) => STYLE_CHOICES.some((s) => s.group === g));
 
 export const DEFAULT_STYLE = "tall-caps";
 
@@ -109,6 +134,7 @@ export const CAPTION_FONTS = [
   "Poppins", "Poppins ExtraBold", "Anton", "Roboto Black", "Satisfy",
   // from the Premiere MOGRT pack (Drive): the free ones, as fixed styles
   "Inter", "Inter Italic", "Montserrat SemiBold", "Playfair Display Italic", "Playfair Display Bold Italic",
+  "Inter Bold", "Nunito ExtraBold", // stand-ins for the pack's commercial Helvetica / Neue Haas and Helvetica Rounded
 ] as const;
 
 /** Fonts for Tamil letters (bundled in public/caption-fonts; Noto Sans Tamil is also installed on the server). */
@@ -344,8 +370,44 @@ export function stackChunks(main: string, sub: string, start: number, end: numbe
   });
 }
 
+/**
+ * "hook" styles (the template pack's hooks): a caption cut into pieces of up to 6 words (timed by length, at least
+ * `minDur` long), each laid out on up to 4 lines that take the style's sizes and colours in turn. `idx` is each
+ * line's words' index in `main`.
+ */
+export function hookChunks(main: string, start: number, end: number, minDur = 1.2) {
+  const words = main.split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const k = Math.max(1, Math.min(Math.ceil(words.length / 6), Math.floor((end - start) / minDur)));
+  const groups = runs(words, k);
+  const total = groups.reduce((n, g) => n + g.join(" ").length + 1, 0);
+  let t = start, at = 0;
+  return groups.map((g, i) => {
+    const s = t, from = at;
+    t += ((end - start) * (g.join(" ").length + 1)) / total;
+    at += g.length;
+    let w = from;
+    const lines = runs(g, Math.min(4, g.length)).map((ws) => { const idx = ws.map((_, n) => w + n); w += ws.length; return { text: ws.join(" "), idx }; });
+    return { s, e: i === groups.length - 1 ? end : t, lines };
+  });
+}
+/** Width of a letter in the bold caption fonts, as a share of the font size (a little generous, so lines fit). */
+export const HOOK_LETTER = 0.62;
+/** A hook line's size (em of the caption font): its style size, smaller when that wouldn't fit `widthEm`. */
+export const hookFit = (text: string, size: number, widthEm: number) => Math.round(Math.min(size, widthEm / Math.max(1, [...text].length * HOOK_LETTER)) * 100) / 100;
+/** Each hook line comes in this long after the one before (seconds). */
+export const HOOK_STEP = 0.12;
+
 /** Scale of a "stack" style's big word: 1.35× the font, less for a word longer than 10 letters. */
 export const stackBig = (word: string) => Math.round(135 * Math.min(1, 10 / Math.max(1, [...word].length))) / 100;
+
+/** Flicker patterns: [ms, visible] steps from the caption's start, then steady. */
+export const FLICKER: [number, boolean][] = [[0, false], [50, true], [100, false], [150, true], [210, false], [260, true]];
+export const FLICKER2: [number, boolean][] = [[0, false], [40, true], [80, false], [140, true], [180, false], [230, true], [290, false], [330, true], [400, false], [440, true], [520, false], [560, true]];
+/** The pattern as ASS tags (each step a 1 ms switch). */
+const flickerTags = (steps: [number, boolean][]) => "\\alpha&HFF&" + steps.map(([ms, on]) => `\\t(${ms},${ms + 1},\\alpha&H${on ? "00" : "FF"}&)`).join("");
+/** Whether a flicker shows at `ms` into the caption. */
+export const flickerOn = (steps: [number, boolean][], ms: number) => { let on = true; for (const [t, v] of steps) if (ms >= t) on = v; return ms < 0 ? false : on; };
 
 /** #RRGGBB[AA] with its opacity multiplied by o. */
 export function withOpacity(hex: string, o: number) {
@@ -439,7 +501,12 @@ export function buildAss(cues: Cue[], o: Opts) {
      */
     const entrance = (dur: number): [string, string] => {
       const a = s.anim, t = Math.round(Math.min(250, dur * 400));
-      if (!a || a === "none") return ["", ""];
+      if (!a || a === "none" || a === "wordin") return ["", ""];
+      if (a === "blur") return [`{\\fad(${t},0)}`, `\\blur${px(0.5)}\\t(0,${Math.round(t * 1.4)},\\blur0)`];
+      if (a === "flicker" || a === "flicker2") return ["", flickerTags(a === "flicker2" ? FLICKER2 : FLICKER)];
+      if (a === "ramp") return [`{\\fad(${Math.round(t * 0.5)},0)}`, `\\fscx118\\fscy0\\t(0,${t},0.5,\\fscx100\\fscy100)`];
+      if (a === "snap") return [`{\\fad(60,0)}`, `\\fscx150\\fscy150\\t(0,90,\\fscx100\\fscy100)`];
+      if (a === "bouncyout") return ["", `\\fscx40\\fscy40\\t(0,${Math.round(t * 0.6)},\\fscx118\\fscy118)\\t(${Math.round(t * 0.6)},${t},\\fscx100\\fscy100)`];
       if (a === "fade") return [`{\\fad(${t},0)}`, ""];
       if (a === "pop") return ["", `\\fscx60\\fscy60\\t(0,${t},\\fscx100\\fscy100)`];
       if (a === "zoom") return ["", `\\fscx0\\fscy0\\t(0,${t},\\fscx100\\fscy100)`];
@@ -447,7 +514,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       const d = Math.round(fs * 0.6), an = s.x !== undefined ? 5 : align; // slide up
       return [`{\\an${an}\\move(${Math.round(ax)},${Math.round(ay + d)},${Math.round(ax)},${Math.round(ay)},0,${t})\\fad(${Math.round(t * 0.6)},0)}`, ""];
     };
-    return { name, s, px, align, posAt, pos: posAt(0), marginL, marginR, wrapM, line, entrance };
+    return { name, s, fs, px, align, posAt, pos: posAt(0), marginL, marginR, wrapM, line, entrance };
   };
   const base = lookOf(o.custom, "Main");
   const looks = [base];
@@ -469,7 +536,7 @@ export function buildAss(cues: Cue[], o: Opts) {
     const main = (o.lang === "en" ? c.en : c.ta).trim();
     if (!main) continue;
     const look = lookFor(c);
-    const { s, px, pos, posAt, wrapM, marginL, marginR, entrance } = look;
+    const { s, fs, px, pos, posAt, wrapM, marginL, marginR, entrance } = look;
     const glowTag = s.glow ? (s.outline ? `\\3c${colorOnly(s.glow)}\\bord${px(0.1)}\\blur${px(0.12)}` : `\\blur${px(0.12)}`) : ""; // glow: a soft border
     cur = look.name;
     fonts[cur] = s.font;
@@ -505,6 +572,10 @@ export function buildAss(cues: Cue[], o: Opts) {
         if (s.keyword.italic) t += "\\i1";
         if (s.keyword.grow) t += state === "active" ? "\\t(0,180,\\fscx118\\fscy118)" : "\\fscx118\\fscy118";
       }
+      if (s.anim === "wordin") { // each word blurs in as it's said; the ones to come are hidden
+        if (state === "future") t += "\\alpha&HFF&";
+        if (state === "active") t += `\\alpha&HFF&\\blur${px(0.3)}\\t(0,160,\\alpha&H00&\\blur0)`;
+      }
       if (s.effect === "wobble") t += `\\frz${j % 2 ? -4 : 3}`;
       if (s.activeGrow && state === "active") t += "\\t(0,120,\\fscx115\\fscy115)";
       if (colors?.[j] && state !== "future") t += `\\1c${colorOnly(colors[j]!)}`;
@@ -518,8 +589,32 @@ export function buildAss(cues: Cue[], o: Opts) {
       for (const p of stackChunks(caseOf(s, main), sub, c.start, c.end)) {
         const a = smallLine(p.parts[0], p.idx[0]), b = esc(p.parts[1]), d = p.idx[2].length ? smallLine(p.parts[2], p.idx[2]) : esc(p.parts[2]);
         const z = stackBig(p.parts[1]); // a long word gets smaller instead of running off the frame
-        const big = `{\\r\\fn${s.stack.font}\\b0\\1c${colorOnly(colors?.[p.idx[1]] ?? s.stack.big)}\\fscx${Math.round(z * 40)}\\fscy${Math.round(z * 40)}\\t(0,220,\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)})}${b}`;
-        add(p.s, p.e, pos + `{\\q2\\fad(120,0)}` + (a ? `{${small}}${a}\\N` : "") + big + (d ? `\\N{\\r${small}}${d}` : ""), 0, wrapM, wrapM);
+        const bigCol = colors?.[p.idx[1]] ?? s.stack.big;
+        const glowBig = s.stack.glow ? `\\3c${colorOnly(bigCol)}\\3a&H60&\\bord${px(0.07)}\\blur${px(0.22)}` : "";
+        const grow = `\\fscx${Math.round(z * 40)}\\fscy${Math.round(z * 40)}\\t(0,220,\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)})`;
+        const big = `{\\r\\fn${s.stack.font}\\b0\\1c${colorOnly(bigCol)}${glowBig}${grow}}${b}`;
+        const layout = (bigPart: string, smallAlpha = "") => pos + `{\\q2\\fad(120,0)}` + (a ? `{${small}${smallAlpha}}${a}\\N` : "") + bigPart + (d ? `\\N{\\r${small}${smallAlpha}}${d}` : "");
+        if (s.stack.rgb) { // the big word again in red and cyan, nudged apart behind it (the small lines invisible)
+          const dx = Math.max(2, Math.round(px(0.05)));
+          for (const [col, ml, mr] of [["#FF2040", wrapM + 2 * dx, wrapM], ["#00E5FF", wrapM, wrapM + 2 * dx]] as const)
+            add(p.s, p.e, layout(`{\\r\\fn${s.stack.font}\\b0\\1c${colorOnly(col)}\\1a&H50&\\bord0\\shad0${grow}}${b}`, "\\alpha&HFF&"), 0, ml, mr);
+        }
+        add(p.s, p.e, layout(big), 1, wrapM, wrapM);
+      }
+      continue;
+    }
+    if (s.effect === "hook" && s.hook) {
+      const h = s.hook, widthEm = (o.width - marginL - marginR) * 0.9 / fs;
+      for (const p of hookChunks(caseOf(s, main), c.start, c.end)) {
+        const text = p.lines.map((ln, j) => {
+          const z = hookFit(ln.text, h.sizes[j % h.sizes.length], widthEm), at = Math.round(j * HOOK_STEP * 1000);
+          const col = h.colors[j % h.colors.length], f = h.fonts?.[j % h.colors.length];
+          const head = `\\r\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)}\\1c${colorOnly(col)}${f ? `\\fn${f}` : ""}`;
+          const reveal = `\\alpha&HFF&\\blur${px(0.15)}\\t(${at},${at + 180},\\alpha&H00&\\blur0)`;
+          // a word the user coloured keeps its colour
+          return ln.text.split(" ").map((w, n) => `{${head}${colors?.[ln.idx[n]] ? `\\1c${colorOnly(colors[ln.idx[n]]!)}` : ""}${reveal}}${esc(w)}`).join(" ");
+        }).join("\\N");
+        add(p.s, p.e, pos + "{\\q2}" + text + tail, 0, wrapM, wrapM);
       }
       continue;
     }
@@ -561,7 +656,9 @@ export function buildAss(cues: Cue[], o: Opts) {
         text = `{\\fscx55\\fscy55}${setup.replace(/\{\\r/g, "{\\r\\fscx55\\fscy55")}\\N{\\r\\fscx140\\fscy140}${punch.replace(/\{\\r/g, "{\\r\\fscx140\\fscy140")}`;
       } else {
         // The first event brings the caption in (a slide places it itself).
-        const [ev, each] = i === 0 ? entrance(c.end - c.start) : ["", ""];
+        const [ev0, each] = i === 0 ? entrance(c.end - c.start) : ["", ""];
+        // "Bounce, fade out": the caption's last event fades away.
+        const ev = i === words.length - 1 && s.anim === "bouncyout" ? ev0 + "{\\fad(0,250)}" : ev0;
         text = words.map((_, j) => glue(j) + word(j, i, each)).join("");
         const sub = each && tail ? tail.replace("}", each + "}") : tail;
         add(wt.s, end, (ev.includes("\\move") ? "" : pos) + ev + q + text + sub, 0, wrapM, wrapM);
