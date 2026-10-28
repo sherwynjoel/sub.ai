@@ -25,7 +25,7 @@ async function pending(ctx: Ctx) {
   const dir = join(STORAGE, "uploads", u.id);
   return { j, total: j.videoTotal, count: Math.ceil(j.videoTotal / VIDEO_PIECE), ...videoPart(dir, j.id) };
 }
-const received = async (got: string) => (await readdir(got).catch(() => [] as string[])).map(Number).filter(Number.isInteger).sort((a, b) => a - b);
+const received = async (got: string) => (await readdir(/*turbopackIgnore: true*/ got).catch(() => [] as string[])).map(Number).filter(Number.isInteger).sort((a, b) => a - b);
 
 export async function GET(_req: Request, ctx: Ctx) {
   const p = await pending(ctx);
@@ -41,10 +41,10 @@ export async function PUT(req: Request, ctx: Ctx) {
   const want = Math.min(VIDEO_PIECE, p.total - i * VIDEO_PIECE);
   const body = new Uint8Array(await req.arrayBuffer());
   if (body.length !== want) return json({ error: `Piece ${i} should be ${want} bytes, got ${body.length}.` }, 400);
-  const h = await open(p.file, "r+");
+  const h = await open(/*turbopackIgnore: true*/ p.file, "r+");
   try { await h.write(body, 0, body.length, i * VIDEO_PIECE); } finally { await h.close(); }
-  await mkdir(p.got, { recursive: true });
-  await writeFile(join(p.got, String(i)), ""); // marked only once written
+  await mkdir(/*turbopackIgnore: true*/ p.got, { recursive: true });
+  await writeFile(/*turbopackIgnore: true*/ join(/*turbopackIgnore: true*/ p.got, String(i)), ""); // marked only once written
   return json({ ok: true });
 }
 
@@ -54,9 +54,9 @@ export async function POST(_req: Request, ctx: Ctx) {
   const have = await received(p.got);
   if (have.length !== p.count) return json({ error: "Some pieces are missing.", have }, 409);
   const ext = extname(p.j.filename).toLowerCase().replace(/[^.a-z0-9]/g, "") || ".mp4";
-  const path = join(dirname(p.file), `${p.j.id}${ext}`);
-  await rename(p.file, path);
-  await rm(p.got, { recursive: true, force: true });
+  const path = join(/*turbopackIgnore: true*/ dirname(p.file), `${p.j.id}${ext}`);
+  await rename(/*turbopackIgnore: true*/ p.file, path);
+  await rm(/*turbopackIgnore: true*/ p.got, { recursive: true, force: true });
   await db.update(jobs).set({ filePath: path, videoTotal: null }).where(eq(jobs.id, p.j.id));
   return json({ ok: true });
 }
