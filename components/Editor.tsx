@@ -59,7 +59,7 @@ const projectOnly = (c: CaptionCustom): CaptionCustom => Object.fromEntries(Obje
 const EMOJIS = ["😀", "😂", "🔥", "❤️", "👍", "🎉", "✨", "💯", "😍", "🙏", "👀", "⭐"];
 const FRAME = 1 / 30;
 /** Fonts added from the Premiere template pack: marked "New" in the font row. */
-const NEW_FONTS: string[] = ["Inter", "Inter Italic", "Montserrat SemiBold", "Playfair Display Italic", "Playfair Display Bold Italic"];
+const NEW_FONTS: string[] = ["Inter", "Inter Bold", "Inter Italic", "Montserrat SemiBold", "Playfair Display Italic", "Playfair Display Bold Italic", "Nunito ExtraBold"];
 
 /** The styled caption over the player, redrawn every frame while the video plays so word timing is smooth. */
 function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, picked, editing, onMove, onResize, onTap, onEditOpen, onEditDone }: {

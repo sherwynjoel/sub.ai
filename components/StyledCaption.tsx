@@ -1,5 +1,5 @@
 "use client";
-import { caseOf, keywordIndex, resolveStyle, stackBig, stackChunks, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { caseOf, FLICKER, FLICKER2, flickerOn, HOOK_LETTER, HOOK_STEP, hookChunks, hookFit, keywordIndex, resolveStyle, stackBig, stackChunks, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
 
 type Props = {
@@ -42,6 +42,15 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   else if (s.anim === "zoom") enter.transform = `scale(${ease})`;
   else if (s.anim === "bounce") enter.transform = `scale(${k < 0.6 ? 0.4 + (1.18 - 0.4) * (k / 0.6) : 1.18 - 0.18 * ((k - 0.6) / 0.4)})`;
   else if (s.anim === "slide") { enter.transform = `translateY(${(1 - ease) * 0.6}em)`; enter.opacity = Math.min(1, k / 0.6); }
+  const ms = (time - start) * 1000, t = Math.min(250, (end - start) * 400);
+  if (s.anim === "blur") { const b = Math.min(1, ms / (t * 1.4)); enter.filter = `blur(${((1 - b) * 0.5).toFixed(3)}em)`; enter.opacity = Math.min(1, ms / t); }
+  else if (s.anim === "flicker" || s.anim === "flicker2") enter.opacity = flickerOn(s.anim === "flicker2" ? FLICKER2 : FLICKER, ms) ? 1 : 0;
+  else if (s.anim === "ramp") { const r = 1 - Math.pow(1 - Math.min(1, ms / t), 2); enter.transform = `scale(${1.18 - 0.18 * r}, ${r})`; enter.opacity = Math.min(1, ms / (t * 0.5)); }
+  else if (s.anim === "snap") { enter.transform = `scale(${1.5 - 0.5 * Math.min(1, ms / 90)})`; enter.opacity = Math.min(1, ms / 60); }
+  else if (s.anim === "bouncyout") {
+    enter.transform = `scale(${k < 0.6 ? 0.4 + (1.18 - 0.4) * (k / 0.6) : 1.18 - 0.18 * ((k - 0.6) / 0.4)})`;
+    enter.opacity = Math.min(1, Math.max(0, (end - time) / 0.25)); // fades away at the end
+  }
   const wrap: React.CSSProperties = {
     ...enter,
     opacity: Number(enter.opacity ?? 1) * (s.opacity ?? 1),
@@ -67,6 +76,10 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       if (s.keyword.italic) st.fontStyle = "italic";
       if (s.keyword.grow) st.transform = "scale(1.18)";
     }
+    if (s.anim === "wordin") { // each word blurs in as it's said; the ones to come are hidden
+      if (state === "future") st.visibility = "hidden";
+      if (state === "active") { const w = Math.min(1, Math.max(0, (time - words[j].s) / 0.16)); st.opacity = w; st.filter = `blur(${((1 - w) * 0.3).toFixed(3)}em)`; }
+    }
     if (s.effect === "wobble") st.transform = `${st.transform ?? ""} rotate(${j % 2 ? -4 : 3}deg)`;
     if (colors?.[j] && state !== "future") st.color = colors[j]!;
     return <span key={j} className="cw" style={st}>{words[j].w}</span>;
@@ -81,7 +94,24 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     const idx = chunks[k]?.idx ?? [[], -1, []];
     // A word the user coloured keeps its colour in its piece (as in the MP4).
     const small = (text: string, at: number[]) => text.split(" ").map((w, n) => [n ? " " : null, colors?.[at[n]] ? <span key={n} style={{ color: colors[at[n]]! }}>{w}</span> : w]);
-    body = <>{a && <span className="stack-small">{small(a, idx[0])}</span>}<span key={k} className="stack-big" style={{ color: colors?.[idx[1]] ?? s.stack!.big, fontFamily: stack(s.stack!.font, s.fontTa), fontWeight: 400, fontSize: `${stackBig(b)}em` }}>{b}</span>{d && <span className="stack-small">{idx[2].length ? small(d, idx[2]) : d}</span>}</>;
+    const big = colors?.[idx[1]] ?? s.stack!.big;
+    // glow: a soft halo of its own colour; rgb: red and cyan copies nudged apart (as in the MP4)
+    const halo = [s.stack!.glow ? `0 0 .12em ${big}, 0 0 .3em ${big}99` : "", s.stack!.rgb ? `-.05em 0 #00E5FFB0, .05em 0 #FF2040B0` : ""].filter(Boolean).join(", ") || undefined;
+    body = <>{a && <span className="stack-small">{small(a, idx[0])}</span>}<span key={k} className="stack-big" style={{ color: big, fontFamily: stack(s.stack!.font, s.fontTa), fontWeight: 400, fontSize: `${stackBig(b)}em`, textShadow: halo }}>{b}</span>{d && <span className="stack-small">{idx[2].length ? small(d, idx[2]) : d}</span>}</>;
+  } else if (s.effect === "hook" && s.hook) {
+    const h = s.hook, pieces = hookChunks(caseOf(s, text), start, end);
+    const piece = pieces[Math.max(0, pieces.findIndex((c) => time < c.e))];
+    // the MP4 fits a line in 90% of the space between the side margins; here 88cqw of the player
+    body = piece?.lines.map((ln, j) => {
+      const at = time - piece.s - j * HOOK_STEP, v = Math.min(1, Math.max(0, at / 0.18));
+      const size = h.sizes[j % h.sizes.length], f = h.fonts?.[j % h.colors.length];
+      return (
+        <span key={`${piece.s}-${j}`} className="hook-line" style={{
+          fontSize: `min(${hookFit(ln.text, size, 99)}em, ${(88 / Math.max(1, [...ln.text].length * HOOK_LETTER)).toFixed(2)}cqw)`,
+          color: h.colors[j % h.colors.length], fontFamily: f ? stack(f, s.fontTa) : undefined, opacity: v, filter: v < 1 ? `blur(${((1 - v) * 0.15).toFixed(3)}em)` : undefined,
+        }}>{ln.text.split(" ").map((w, n) => [n ? " " : null, colors?.[ln.idx[n]] ? <span key={n} style={{ color: colors[ln.idx[n]]! }}>{w}</span> : w])}</span>
+      );
+    });
   } else if (s.effect === "typewriter") {
     const chars = [...breakLines(caseOf(s, text), s.lines)];
     body = <>{chars.slice(0, Math.max(1, Math.ceil(chars.length * Math.min(1, p / 0.8)))).join("")}<span className="caret">_</span></>;
