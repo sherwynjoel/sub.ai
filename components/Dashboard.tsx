@@ -8,7 +8,7 @@ import CaptionTypePicker from "@/components/CaptionTypePicker";
 import TetrisLoader from "@/components/TetrisLoader";
 import GlassFolder, { type FolderFile } from "@/components/GlassFolder";
 import { SAFE_ZONES } from "@/lib/captionStyles";
-import { extractAudio } from "@/lib/audioTrack";
+import { extractAudio, type AudioTrack } from "@/lib/audioTrack";
 import { localVideo, progressOf, sendingVideos, sendVideo, subscribeUploads, uploadsVersion } from "@/lib/videoUpload";
 
 type Job = {
@@ -18,6 +18,21 @@ type Job = {
 };
 
 const mins = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+/** Minutes as charged (whole seconds), one decimal: 312 s → "5.2". */
+const minsUsed = (s: number) => (Math.ceil(s) / 60).toFixed(1);
+
+/** A video's length from the browser itself (formats the phone can play), or null. */
+function lengthOf(file: File) {
+  return new Promise<number | null>((resolve) => {
+    const v = document.createElement("video"), url = URL.createObjectURL(file);
+    const done = (d: number | null) => { URL.revokeObjectURL(url); resolve(d); };
+    v.preload = "metadata";
+    v.onloadedmetadata = () => done(Number.isFinite(v.duration) && v.duration > 0 ? v.duration : null);
+    v.onerror = () => done(null);
+    setTimeout(() => done(null), 6000);
+    v.src = url;
+  });
+}
 
 /** A folder as wide as its grid cell (it draws at a fixed width, so it's measured), at most 340 px. */
 function ProjectFolder({ job, index }: { job: Job; index: number }) {
@@ -73,6 +88,8 @@ export default function Dashboard() {
   const router = useRouter();
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [upload, setUpload] = useState<{ name: string; pct: number; note?: string } | null>(null);
+  // A picked video, its length and the minutes left: shown before anything is sent.
+  const [check, setCheck] = useState<{ file: File; audio: AudioTrack | null; seconds: number; left: number } | null>(null);
   useSyncExternalStore(subscribeUploads, uploadsVersion, () => 0);
   const inBrowser = useSyncExternalStore(subscribeUploads, () => true, () => false);
   const sending = inBrowser ? sendingVideos() : [];
@@ -110,12 +127,26 @@ export default function Dashboard() {
    * start right away; the video, untouched, follows in pieces in the background (lib/videoUpload.ts) while the
    * editor plays the phone's own copy. Anything else is sent whole, as before.
    */
-  async function send(file: File) {
+  /** A file picked: read its length and the minutes left, and show what it will use before sending anything. */
+  async function pick(file: File) {
     setError("");
-    setUpload({ name: file.name, pct: 0, note: "Getting the sound ready…" });
+    setCheck(null);
+    setUpload({ name: file.name, pct: 0, note: "Checking the video…" });
+    const audio = /\.(mp4|m4v|mov)$/i.test(file.name) || /^video\/(mp4|quicktime|x-m4v)$/.test(file.type) ? await extractAudio(file) : null;
+    const [seconds, me] = await Promise.all([
+      audio?.seconds || lengthOf(file),
+      fetch("/api/me").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ]);
+    setUpload(null);
+    if (seconds && me && typeof me.secondsLeft === "number") setCheck({ file, audio, seconds, left: me.secondsLeft });
+    else send(file, audio); // length unknown here: the server checks it as before
+  }
+
+  async function send(file: File, audio: AudioTrack | null) {
+    setError("");
+    setCheck(null);
     const { script, show, english } = typeSettings(ctype.type, ctype.withEnglish);
     const base = `/api/upload?name=${encodeURIComponent(file.name)}&lang=${language}&script=${script}&english=${english ? 1 : 0}&show=${show}&safe=${safe}`;
-    const audio = /\.(mp4|m4v|mov)$/i.test(file.name) || /^video\/(mp4|quicktime|x-m4v)$/.test(file.type) ? await extractAudio(file) : null;
     const body: Blob = audio ? audio.adts : file;
     const url = audio ? `${base}&audio=1&videoBytes=${file.size}&videoType=${encodeURIComponent(file.type || "video/mp4")}&shift=${audio.shift.toFixed(4)}` : base;
     setUpload({ name: file.name, pct: 0, note: audio ? "Sending the sound first…" : undefined });
@@ -142,7 +173,7 @@ export default function Dashboard() {
           className={`drop${drag ? " over" : ""}${upload ? " uploading" : ""}`}
           onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
           onDragLeave={() => setDrag(false)}
-          onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f && !upload) send(f); }}
+          onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f && !upload) pick(f); }}
         >
           {upload ? (
             <div className="drop-inner uploading-inner">
@@ -151,6 +182,29 @@ export default function Dashboard() {
               <div className="bar" role="progressbar" aria-valuenow={upload.pct} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${upload.pct}%` }} /></div>
               <span className="muted">{upload.note ? `${upload.note} ` : ""}{upload.pct}%{upload.pct >= 100 ? ". Starting your subtitles…" : ". Keep this tab open until it finishes."}</span>
             </div>
+          ) : check ? (
+            // What this video will use, before anything is sent.
+            <div className="drop-inner cost-check" role="dialog" aria-label="Minutes this video uses">
+              <strong className="cc-name" title={check.file.name}>{check.file.name}</strong>
+              <span className="cc-len">{mins(check.seconds)} long</span>
+              {Math.ceil(check.seconds) <= check.left ? (
+                <>
+                  <span>Uses <b>{minsUsed(check.seconds)} min</b> of your <b>{minsUsed(check.left)} min</b> left.</span>
+                  <div className="cc-actions">
+                    <button className="btn" onClick={() => send(check.file, check.audio)}>Upload</button>
+                    <button className="btn ghost" onClick={() => setCheck(null)}>Cancel</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <span className="cc-short">This video needs <b>{minsUsed(check.seconds)} min</b>; you have <b>{minsUsed(check.left)} min</b> left.</span>
+                  <div className="cc-actions">
+                    <Link className="btn" href="/app/billing">See plans</Link>
+                    <button className="btn ghost" onClick={() => setCheck(null)}>Choose another</button>
+                  </div>
+                </>
+              )}
+            </div>
           ) : (
             <div className="drop-inner">
               <strong>Drop a video here</strong>
@@ -158,7 +212,7 @@ export default function Dashboard() {
               <button className="btn" onClick={() => input.current?.click()}>Choose a file</button>
             </div>
           )}
-          <input ref={input} type="file" accept="video/*,audio/*,.mkv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) send(f); e.target.value = ""; }} />
+          <input ref={input} type="file" accept="video/*,audio/*,.mkv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) pick(f); e.target.value = ""; }} />
         </div>
         <aside className="composer-side">
           <h2>New project</h2>
