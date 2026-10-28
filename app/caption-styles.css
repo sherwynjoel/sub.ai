@@ -11,6 +11,7 @@
 @font-face { font-family: "Meera Inimai"; src: url("/caption-fonts/MeeraInimai-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Noto Emoji"; src: url("/caption-fonts/NotoEmoji.ttf") format("truetype"); font-weight: 100 900; font-display: swap; unicode-range: U+00A9, U+00AE, U+203C-3299, U+1F000-1FAFF; }
 @font-face { font-family: "Satisfy"; src: url("/caption-fonts/Satisfy-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Open Sauce Sans Black"; src: url("/caption-fonts/OpenSauceSans-Black.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Inter Bold"; src: url("/caption-fonts/Inter-Bold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Nunito ExtraBold"; src: url("/caption-fonts/Nunito-ExtraBold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Inter"; src: url("/caption-fonts/Inter-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
@@ -49,3 +50,7 @@
 /* "hook": each line its own size and colour (lib/captionStyles.ts hookChunks) */
 .fx-hook .cap-main { display: grid; justify-items: center; }
 .hook-line { display: block; line-height: 1.02; white-space: nowrap; }
+/* CINECUT typography: pairs pinned to a block's edges; a last word small under the line's right end */
+.corners { display: inline-grid; grid-template-columns: auto auto; column-gap: 1.2em; line-height: 1.15; }
+.cine { display: inline-grid; justify-items: center; }
+.cine-last { justify-self: end; font-size: .55em; line-height: 1; }

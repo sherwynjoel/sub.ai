@@ -1,5 +1,6 @@
 "use client";
-import { caseOf, FLICKER, FLICKER2, flickerOn, HOOK_LETTER, HOOK_STEP, hookChunks, hookFit, keywordIndex, resolveStyle, stackBig, stackChunks, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { byLetters, caseOf, nameOrKeyword, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
 
 type Props = {
@@ -18,7 +19,7 @@ const stack = (font: string, tamil?: string) => `"${font}", ${tamil ? `"${tamil}
 export default function StyledCaption({ styleId, custom, text, sub, start, end, time, starts, colors }: Props) {
   const s = resolveStyle(styleId, custom);
   const words = wordTimes(caseOf(s, text), start, end, starts);
-  const kw = keywordIndex(words.map((w) => w.w));
+  const kw = s.keyword?.line ? nameOrKeyword(wordTimes(text, start, end).map((w) => w.w)) : keywordIndex(words.map((w) => w.w));
   const brk = lineBreaks(words.map((w) => w.w), s.lines);
   let i = words.findIndex((w) => time < w.e);
   if (i < 0) i = words.length - 1;
@@ -47,6 +48,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   else if (s.anim === "flicker" || s.anim === "flicker2") enter.opacity = flickerOn(s.anim === "flicker2" ? FLICKER2 : FLICKER, ms) ? 1 : 0;
   else if (s.anim === "ramp") { const r = 1 - Math.pow(1 - Math.min(1, ms / t), 2); enter.transform = `scale(${1.18 - 0.18 * r}, ${r})`; enter.opacity = Math.min(1, ms / (t * 0.5)); }
   else if (s.anim === "snap") { enter.transform = `scale(${1.5 - 0.5 * Math.min(1, ms / 90)})`; enter.opacity = Math.min(1, ms / 60); }
+  else if (s.anim === "cinematic") { const c = Math.min(1, ms / 420), e2 = 1 - Math.pow(1 - c, 3); enter.filter = `blur(${((1 - c) * 0.25).toFixed(3)}em)`; enter.transform = `scale(${1.12 - 0.12 * e2})`; enter.opacity = Math.min(1, ms / 300); }
   else if (s.anim === "bouncyout") {
     enter.transform = `scale(${k < 0.6 ? 0.4 + (1.18 - 0.4) * (k / 0.6) : 1.18 - 0.18 * ((k - 0.6) / 0.4)})`;
     enter.opacity = Math.min(1, Math.max(0, (end - time) / 0.25)); // fades away at the end
@@ -75,16 +77,35 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       if (s.keyword.font) st.fontFamily = stack(s.keyword.font, s.fontTa);
       if (s.keyword.italic) st.fontStyle = "italic";
       if (s.keyword.grow) st.transform = "scale(1.18)";
+      if (s.keyword.scale) st.fontSize = `${s.keyword.scale}em`;
     }
+    if (s.effect === "typo") st.fontSize = `${typoSize(j)}em`;
     if (s.anim === "wordin") { // each word blurs in as it's said; the ones to come are hidden
       if (state === "future") st.visibility = "hidden";
       if (state === "active") { const w = Math.min(1, Math.max(0, (time - words[j].s) / 0.16)); st.opacity = w; st.filter = `blur(${((1 - w) * 0.3).toFixed(3)}em)`; }
     }
     if (s.effect === "wobble") st.transform = `${st.transform ?? ""} rotate(${j % 2 ? -4 : 3}deg)`;
     if (colors?.[j] && state !== "future") st.color = colors[j]!;
+    if (s.reveal || s.effect === "typo") {
+      // Each word (or letter) comes in as it's said, in its final place (as the MP4's layers).
+      const reveal = s.reveal ?? "rise";
+      const look = (t0: number): React.CSSProperties => {
+        const since = time - t0;
+        if (since < 0) return { visibility: "hidden" };
+        if (reveal === "flicker") return { opacity: flickerOn(FLICKER2, since * 1000) ? 1 : 0 };
+        const v = Math.min(1, since / RISE);
+        return v >= 1 ? {} : { display: "inline-block", opacity: v, transform: `translateY(${((1 - v) * RISE_DY).toFixed(3)}em)` };
+      };
+      if (reveal === "letters" && byLetters(words[j].w)) {
+        const units = revealUnits([words[j]], true);
+        return <span key={j} className="cw" style={{ ...st, visibility: undefined }}>{[...words[j].w].map((ch, k) => <span key={k} style={look(units[k].s)}>{ch}</span>)}</span>;
+      }
+      return <span key={j} className="cw" style={{ ...st, visibility: undefined, ...look(words[j].s) }}>{words[j].w}</span>;
+    }
     return <span key={j} className="cw" style={st}>{words[j].w}</span>;
   };
-  const join = (from: number, to: number) => words.slice(from, to).flatMap((_, k) => [k ? (brk.has(from + k - 1) ? <br key={`br${from + k}`} /> : " ") : null, word(from + k)]);
+  const breakBefore = (j: number) => brk.has(j - 1) || !!s.wordLines || (s.effect === "typo" && typoBreak(j - 1, words.length)) || (!!s.keyword?.line && (j === kw || j === kw + 1));
+  const join = (from: number, to: number) => words.slice(from, to).flatMap((_, k) => [k ? (breakBefore(from + k) ? <br key={`br${from + k}`} /> : " ") : null, word(from + k)]);
 
   let body: React.ReactNode;
   const stacked = s.effect === "stack" && s.stack;
@@ -107,11 +128,23 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       const size = h.sizes[j % h.sizes.length], f = h.fonts?.[j % h.colors.length];
       return (
         <span key={`${piece.s}-${j}`} className="hook-line" style={{
-          fontSize: `min(${hookFit(ln.text, size, 99)}em, ${(88 / Math.max(1, [...ln.text].length * HOOK_LETTER)).toFixed(2)}cqw)`,
+          fontSize: `min(${size}em, calc(88cqw / ${Math.max(0.5, textWidth(ln.text, f ?? s.font)).toFixed(3)}))`,
           color: h.colors[j % h.colors.length], fontFamily: f ? stack(f, s.fontTa) : undefined, opacity: v, filter: v < 1 ? `blur(${((1 - v) * 0.15).toFixed(3)}em)` : undefined,
         }}>{ln.text.split(" ").map((w, n) => [n ? " " : null, colors?.[ln.idx[n]] ? <span key={n} style={{ color: colors[ln.idx[n]]! }}>{w}</span> : w])}</span>
       );
     });
+  } else if (s.effect === "oneword") {
+    // one word at a time, filling ~87% of the frame's width at most (its advance width 94%, as the MP4)
+    body = <span style={{ fontSize: `min(1em, calc(94cqw / ${Math.max(0.3, textWidth(words[i].w, s.font)).toFixed(3)}))` }}>{word(i)}</span>;
+  } else if (s.effect === "corners") {
+    const rows = cornerRows(words.map((_, j) => j));
+    body = <span className="corners">{rows.flatMap((r) => r.map((j, side) => <span key={j} style={{ justifySelf: side ? "end" : "start", visibility: time < words[j].s ? "hidden" : undefined }}>{word(j)}</span>))}</span>;
+  } else if (s.effect === "cine" && words.length > 1) {
+    const last = words.length - 1, since = time - words[last].s, v = Math.min(1, Math.max(0, since / RISE));
+    body = <span className="cine">
+      <span>{join(0, last)}</span>
+      <span className="cine-last" style={{ visibility: since < 0 ? "hidden" : undefined, opacity: v, transform: `translateY(${((1 - v) * RISE_DY).toFixed(3)}em)` }}>{word(last)}</span>
+    </span>;
   } else if (s.effect === "typewriter") {
     const chars = [...breakLines(caseOf(s, text), s.lines)];
     body = <>{chars.slice(0, Math.max(1, Math.ceil(chars.length * Math.min(1, p / 0.8)))).join("")}<span className="caret">_</span></>;

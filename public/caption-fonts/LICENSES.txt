@@ -10,3 +10,5 @@ https://github.com/google/fonts (ofl/inter, ofl/montserrat, ofl/playfairdisplay)
 with fontTools (instancer) and given their own family names (e.g. "Inter Italic"), so the video renderer can pick them by name.
 Inter Bold (from Inter, above) and Nunito ExtraBold (SIL OFL 1.1, https://github.com/google/fonts ofl/nunito), made the same
 way: stand-ins for the template pack's commercial Helvetica / Neue Haas Grotesk and Helvetica Rounded.
+Open Sauce Sans Black: SIL Open Font License 1.1, from https://github.com/marcologous/Open-Sauce-Fonts (the CINECUT project's
+keyword font), given its own family name the same way.
