@@ -11,6 +11,11 @@
 @font-face { font-family: "Meera Inimai"; src: url("/caption-fonts/MeeraInimai-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Noto Emoji"; src: url("/caption-fonts/NotoEmoji.ttf") format("truetype"); font-weight: 100 900; font-display: swap; unicode-range: U+00A9, U+00AE, U+203C-3299, U+1F000-1FAFF; }
 @font-face { font-family: "Satisfy"; src: url("/caption-fonts/Satisfy-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Inter"; src: url("/caption-fonts/Inter-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Inter Italic"; src: url("/caption-fonts/Inter-Italic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Montserrat SemiBold"; src: url("/caption-fonts/Montserrat-SemiBold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Playfair Display Italic"; src: url("/caption-fonts/PlayfairDisplay-Italic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Playfair Display Bold Italic"; src: url("/caption-fonts/PlayfairDisplay-BoldItalic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 
 .cap { display: grid; justify-items: center; gap: .25em; text-align: center; line-height: 1.25; pointer-events: none; }
 .cap-main { display: inline-block; max-width: 100%; paint-order: stroke fill; overflow-wrap: anywhere; }

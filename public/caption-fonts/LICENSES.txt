@@ -5,3 +5,6 @@ Satisfy (https://github.com/google/fonts).
 Tamil fonts, SIL Open Font License 1.1, from https://github.com/google/fonts: Mukta Malar, Hind Madurai, Kavivanar,
 Pavanam, Meera Inimai; Noto Sans Tamil from https://github.com/notofonts.
 Noto Emoji (one-colour emoji), SIL Open Font License 1.1, from https://github.com/google/fonts.
+Inter (Regular, Italic), Montserrat (SemiBold), Playfair Display (Italic, Bold Italic): SIL Open Font License 1.1, from
+https://github.com/google/fonts (ofl/inter, ofl/montserrat, ofl/playfairdisplay). Fixed styles made from the variable fonts
+with fontTools (instancer) and given their own family names (e.g. "Inter Italic"), so the video renderer can pick them by name.
