@@ -800,3 +800,11 @@ a.signout { text-decoration: none; }
 .guides.cx .g-read { background: #1f9d55; }
 .vrail button[aria-pressed="true"] { background: rgb(255 255 255 / .22); }
 @media (max-width: 720px) { .ed-frame .guides .g-read { top: calc(68px + env(safe-area-inset-top)); } } /* below the top bar */
+/* Fonts, each written in itself (Style → Font) */
+.font-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: none; }
+.font-chips::-webkit-scrollbar { display: none; }
+.font-chips button { position: relative; flex: none; display: grid; justify-items: center; gap: 4px; width: 92px; padding: 10px 6px 8px; border-radius: 14px; border: 1px solid var(--line); background: var(--glass-strong); color: var(--ink); cursor: pointer; }
+.font-chips button[aria-checked="true"] { border-color: #2E7BFF; box-shadow: 0 0 0 2px #2E7BFF; }
+.font-chips span { font-size: 1.6rem; line-height: 1.1; }
+.font-chips small { font: 600 .66rem/1.2 var(--font-body); text-align: center; color: var(--ink-2); }
+.font-chips .fc-new { position: absolute; top: 4px; right: 4px; padding: 1px 5px; border-radius: 6px; background: var(--lime); color: var(--black); font: 700 .55rem var(--font-body); font-style: normal; }

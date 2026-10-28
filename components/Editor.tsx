@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { createPortal } from "react-dom";
 import type { Cue } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
-import { CANVAS_RATIOS, CAPTION_STYLES, mergeCustom, STYLE_CHOICES, STYLE_GROUPS, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
+import { CANVAS_RATIOS, CAPTION_FONTS, CAPTION_STYLES, mergeCustom, STYLE_CHOICES, STYLE_GROUPS, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
 import { insertAt, mergeCues, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
@@ -58,6 +58,8 @@ const PROJECT_KEYS: string[] = ["safe", "safeCustom", "canvas", "layers", "logo"
 const projectOnly = (c: CaptionCustom): CaptionCustom => Object.fromEntries(Object.entries(c).filter(([k]) => PROJECT_KEYS.includes(k)));
 const EMOJIS = ["😀", "😂", "🔥", "❤️", "👍", "🎉", "✨", "💯", "😍", "🙏", "👀", "⭐"];
 const FRAME = 1 / 30;
+/** Fonts added from the Premiere template pack: marked "New" in the font row. */
+const NEW_FONTS: string[] = ["Inter", "Inter Italic", "Montserrat SemiBold", "Playfair Display Italic", "Playfair Display Bold Italic"];
 
 /** The styled caption over the player, redrawn every frame while the video plays so word timing is smooth. */
 function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, picked, editing, onMove, onResize, onTap, onEditOpen, onEditDone }: {
@@ -979,6 +981,20 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   {cv!.bg !== "blur" && <input type="color" aria-label="Background colour" value={cv!.bg} onChange={(e) => tweak({ canvas: { ...cv!, bg: e.target.value } })} />}
                 </div>}
               </>}
+              </div>
+
+              <h3>Font</h3>
+              {/* Every font, written in itself: one tap sets it for the captions (the style's own font is "Style's"). */}
+              <div className="font-chips" role="radiogroup" aria-label="Font">
+                <button role="radio" aria-checked={!custom.font} onClick={() => tweak({ font: undefined })}>
+                  <span style={{ fontFamily: look.font }}>Aa</span><small>Style&apos;s</small>
+                </button>
+                {[...NEW_FONTS, ...CAPTION_FONTS.filter((f) => !NEW_FONTS.includes(f))].map((f) => ( // the new ones first
+                  <button key={f} role="radio" aria-checked={custom.font === f} onClick={() => tweak({ font: f })}>
+                    <span style={{ fontFamily: `"${f}"` }}>Aa</span><small>{f}</small>
+                    {NEW_FONTS.includes(f) && <i className="fc-new">New</i>}
+                  </button>
+                ))}
               </div>
 
               <h3>Project style</h3>
