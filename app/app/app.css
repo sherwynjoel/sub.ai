@@ -776,3 +776,27 @@ a.signout { text-decoration: none; }
 }
 .rs-handle.rs-left { right: auto; left: -7px; cursor: nesw-resize; }
 @media (pointer: coarse) { .rs-handle.rs-left { left: -10px; } }
+
+/* Centring guides: centre lines, a ruler on two edges, the caption's box and where it sits */
+.guides { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.guides[hidden] { display: none; }
+.guides .g-v, .guides .g-h { position: absolute; background: rgb(255 72 160 / .9); box-shadow: 0 0 0 .5px rgb(0 0 0 / .35); }
+.guides .g-v { left: 50%; top: 0; bottom: 0; width: 1px; transform: translateX(-.5px); }
+.guides .g-h { top: 50%; left: 0; right: 0; height: 1px; transform: translateY(-.5px); opacity: .55; }
+.guides.cx .g-v { background: #32e07a; width: 2px; transform: translateX(-1px); }
+.guides .g-ruler { position: absolute; }
+.guides .g-top { left: 0; right: 0; top: 0; height: 12px; }
+.guides .g-left { top: 0; bottom: 0; left: 0; width: 12px; }
+.guides .g-ruler b { position: absolute; background: rgb(255 255 255 / .75); font: 600 8px/1 var(--font-body); color: #fff; text-shadow: 0 0 2px #000; }
+.guides .g-top b { top: 0; width: 1px; height: 5px; }
+.guides .g-top b.major { height: 9px; }
+.guides .g-left b { left: 0; height: 1px; width: 5px; }
+.guides .g-left b.major { width: 9px; }
+.guides .g-ruler b:not(:empty) { background: none; width: auto; height: auto; transform: translate(-50%, 9px); }
+.guides .g-left b:not(:empty) { transform: translate(10px, -50%); }
+.guides .g-box { position: absolute; outline: 1px dashed rgb(255 72 160 / .9); outline-offset: 2px; }
+.guides.cx .g-box { outline-color: #32e07a; }
+.guides .g-read { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); padding: 4px 10px; border-radius: 999px; background: rgb(0 0 0 / .72); color: #fff; font: 600 .74rem var(--font-body); white-space: nowrap; }
+.guides.cx .g-read { background: #1f9d55; }
+.vrail button[aria-pressed="true"] { background: rgb(255 255 255 / .22); }
+@media (max-width: 720px) { .ed-frame .guides .g-read { top: calc(68px + env(safe-area-inset-top)); } } /* below the top bar */

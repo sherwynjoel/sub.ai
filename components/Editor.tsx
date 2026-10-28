@@ -48,6 +48,7 @@ const ICON: Record<string, string> = {
   lang: "M4 5h8M8 3v2M6 5c0 4 2 7 5 8M10 5c-1 4-3 7-6 8M13 20l4-9 4 9M14.5 17h5",
   play: "M7 4v16l13-8z",
   back: "M15 5l-7 7 7 7",
+  guides: "M12 3v18M3 12h18M7 3v2M17 3v2M3 7h2M3 17h2",
   list: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01",
 };
 const Icon = ({ name }: { name: string }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICON[name]} /></svg>;
@@ -106,20 +107,21 @@ function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, p
   const resize = (e: React.PointerEvent<HTMLSpanElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    const box = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
+    const handle = e.currentTarget.parentElement as HTMLElement, box = handle.getBoundingClientRect();
     const cx = box.left + box.width / 2, cy = box.top + box.height / 2;
     const d0 = Math.max(8, Math.hypot(e.clientX - cx, e.clientY - cy)), s0 = size ?? 1;
     let moving = false;
     const at = (ev: PointerEvent) => {
       const d = Math.hypot(ev.clientX - cx, ev.clientY - cy);
       if (!moving && Math.abs(d - d0) < 4) return;
+      if (!moving) guideStart(handle);
       moving = true;
       video.current?.pause();
       const next = Math.round(Math.min(2.6, Math.max(0.4, (s0 * d) / d0)) * 20) / 20; // steps of 5%
       setSizing(next);
       onResize(i, next);
     };
-    const stop = () => { setSizing(null); removeEventListener("pointermove", at); removeEventListener("pointerup", stop); };
+    const stop = () => { setSizing(null); if (moving) guideEnd(); removeEventListener("pointermove", at); removeEventListener("pointerup", stop); };
     addEventListener("pointermove", at);
     addEventListener("pointerup", stop);
   };
@@ -150,17 +152,18 @@ function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, p
 function resizeFrom(e: React.PointerEvent, size0: number, min: number, max: number, step: number, onSize: (s: number) => void, onEnd?: () => void) {
   e.preventDefault();
   e.stopPropagation();
-  const box = ((e.currentTarget as HTMLElement).parentElement as HTMLElement).getBoundingClientRect();
+  const thing = (e.currentTarget as HTMLElement).parentElement as HTMLElement, box = thing.getBoundingClientRect();
   const cx = box.left + box.width / 2, cy = box.top + box.height / 2;
   const d0 = Math.max(8, Math.hypot(e.clientX - cx, e.clientY - cy));
   let moving = false;
   const at = (ev: PointerEvent) => {
     const d = Math.hypot(ev.clientX - cx, ev.clientY - cy);
     if (!moving && Math.abs(d - d0) < 4) return;
+    if (!moving) guideStart(thing);
     moving = true;
     onSize(Math.round(Math.min(max, Math.max(min, (size0 * d) / d0)) / step) * step);
   };
-  const stop = () => { onEnd?.(); removeEventListener("pointermove", at); removeEventListener("pointerup", stop); };
+  const stop = () => { onEnd?.(); if (moving) guideEnd(); removeEventListener("pointermove", at); removeEventListener("pointerup", stop); };
   addEventListener("pointermove", at);
   addEventListener("pointerup", stop);
 }
@@ -195,13 +198,60 @@ function dragIn(e: React.PointerEvent, onMove: (x: number, y: number) => void) {
   follow(e, frame, onMove, 0.02);
 }
 
+/* ---------- centring guides ---------- */
+/** What's being dragged or resized, for the guides; the player shows them meanwhile (class "guiding"). */
+let guideTarget: HTMLElement | null = null;
+const guideStart = (el: HTMLElement) => { guideTarget = el; el.closest(".player")?.classList.add("guiding"); };
+const guideEnd = () => { guideTarget?.closest(".player")?.classList.remove("guiding"); guideTarget = null; };
+
+/**
+ * Centre lines, a ruler along the top and left edges, and a readout of where the caption (or whatever is being
+ * dragged) sits: "Centred ✓" or how far off, and how far from the bottom. Shown while dragging or resizing, or
+ * all the time when switched on. Measured every frame straight from the page (no re-rendering).
+ */
+function Guides({ on }: { on: boolean }) {
+  const root = useRef<HTMLDivElement>(null), box = useRef<HTMLSpanElement>(null), read = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    let raf = 0;
+    const tick = () => {
+      raf = requestAnimationFrame(tick);
+      const g = root.current, player = g?.parentElement;
+      if (!g || !player) return;
+      const active = on || player.classList.contains("guiding");
+      g.hidden = !active;
+      if (!active) return;
+      const target = guideTarget ?? player.querySelector<HTMLElement>(".overlay.styled .drag-handle");
+      const f = player.getBoundingClientRect(), r = target?.getBoundingClientRect();
+      if (!r || !r.width) { box.current!.hidden = true; read.current!.textContent = "No caption here"; g.classList.remove("cx"); return; }
+      const cx = (r.left + r.width / 2 - f.left) / f.width, bottom = (f.bottom - r.bottom) / f.height;
+      const off = cx - 0.5, centred = Math.abs(off) < 0.005;
+      g.classList.toggle("cx", centred);
+      Object.assign(box.current!.style, { left: `${((r.left - f.left) / f.width) * 100}%`, width: `${(r.width / f.width) * 100}%`, top: `${((r.top - f.top) / f.height) * 100}%`, height: `${(r.height / f.height) * 100}%` });
+      box.current!.hidden = false;
+      read.current!.textContent = `${centred ? "Centred ✓" : `${Math.abs(off * 100).toFixed(1)}% ${off < 0 ? "left" : "right"} of centre`} · ${Math.round(bottom * 100)}% from the bottom`;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [on]);
+  const ticks = Array.from({ length: 19 }, (_, i) => (i + 1) * 5);
+  return (
+    <div ref={root} className="guides" aria-hidden="true" hidden>
+      <i className="g-v" /><i className="g-h" />
+      <span className="g-ruler g-top">{ticks.map((t) => <b key={t} className={t % 25 ? "" : "major"} style={{ left: `${t}%` }}>{t % 25 ? "" : t}</b>)}</span>
+      <span className="g-ruler g-left">{ticks.map((t) => <b key={t} className={t % 25 ? "" : "major"} style={{ top: `${t}%` }}>{t % 25 ? "" : t}</b>)}</span>
+      <span ref={box} className="g-box" hidden />
+      <span ref={read} className="g-read" />
+    </div>
+  );
+}
+
 /**
  * Move something placed by its centre (a caption, layer or logo) with the pointer: by how far the pointer moves, not
  * to where it is (grabbing a caption by its left end used to pull its centre there), only once it has moved a few
  * pixels (a click or a shaky tap leaves it where it is), and snapping to the middle of the frame when near it.
  */
 function follow(e: React.PointerEvent, frame: DOMRect, onMove: (x: number, y: number) => void, edge: number) {
-  const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const el = e.currentTarget as HTMLElement, box = el.getBoundingClientRect();
   const x0 = (box.left + box.width / 2 - frame.left) / frame.width, y0 = (box.top + box.height / 2 - frame.top) / frame.height;
   const sx = e.clientX, sy = e.clientY;
   let moving = false;
@@ -209,11 +259,12 @@ function follow(e: React.PointerEvent, frame: DOMRect, onMove: (x: number, y: nu
   const at = (ev: PointerEvent) => {
     const dx = ev.clientX - sx, dy = ev.clientY - sy;
     if (!moving && Math.hypot(dx, dy) < 6) return;
+    if (!moving) guideStart(el);
     moving = true;
     const x = x0 + dx / frame.width;
     onMove(clamp(Math.abs(x - 0.5) < 0.03 ? 0.5 : x), clamp(y0 + dy / frame.height));
   };
-  const stop = () => { removeEventListener("pointermove", at); removeEventListener("pointerup", stop); };
+  const stop = () => { if (moving) guideEnd(); removeEventListener("pointermove", at); removeEventListener("pointerup", stop); };
   addEventListener("pointermove", at);
   addEventListener("pointerup", stop);
 }
@@ -280,6 +331,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [portrait, setPortrait] = useState(false);
   const [ratio, setRatio] = useState(16 / 9);
   const [showZones, setShowZones] = useState(false);
+  const [guides, setGuides] = useState(false); // centring guides kept on (they also show while dragging)
   // Editing on the video: the word picked in the strip, the caption's text open over the video, the timing nudges.
   const [pickedWord, setPickedWord] = useState<WordRef | null>(null);
   const [inline, setInline] = useState(false);
@@ -561,6 +613,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       }
       else if (k === "+" || k === "=") setZoom((z) => Math.min(600, z * 1.25));
       else if (k === "-" || k === "_") setZoom((z) => Math.max(10, z / 1.25));
+      else if (k === "g" || k === "G") setGuides((g) => !g);
       else if (k === "Escape") { setSelected(-1); setPickedWord(null); setNudging(false); }
       else if (k === "Enter" && target() >= 0) { e.preventDefault(); video.current?.pause(); current(); setInline(true); }
     };
@@ -682,6 +735,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               <button onClick={() => { addLayer("Your text"); openPane("layers"); }}><Icon name="title" />Add title</button>
               <button onClick={() => openPane("style")}><Icon name="style" />Caption style</button>
               <button onClick={() => setRetype(typeOf(initial))}><Icon name="lang" />Translate</button>
+              <button onClick={() => setGuides((g) => !g)} aria-pressed={guides} title="Centring guides"><Icon name="guides" />Guides</button>
               {views.length > 1 && (
                 <button onClick={() => setView(views[(views.indexOf(view) + 1) % views.length])} title="Which language the captions show (tap to change)">
                   <span className="vr-glyph" aria-hidden="true">அA</span>{view === "ta" ? language.native : view === "en" ? "English" : "Both"}
@@ -695,6 +749,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               <video ref={video} src={src} preload="metadata" playsInline onClick={togglePlay} style={shaped ? { objectFit: cv!.fit === "fill" ? "cover" : "contain" } : undefined}
                 onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
                 onLoadedMetadata={(e) => metadata(e.currentTarget)} />
+              <Guides on={guides} />
               {showZones && (["top", "right", "bottom", "left"] as const).map((k) => <i key={k} className={`zone zone-${k}`} style={{ [k === "top" || k === "bottom" ? "height" : "width"]: `${look.safe[k] * 100}%` }} />)}
               <LayerViews layers={layers} t={now} paused={!playing} styleId={styleId} custom={custom} selected={tab === "layers" ? selLayer : -1}
                 onSelect={(i) => { setSelLayer(i); setTab("layers"); }} onMove={(i, x, y) => editLayer(i, { x, y })}
@@ -718,6 +773,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                     <button onClick={() => { addLayer("Your text"); openPane("layers"); }} title="Add a title"><Icon name="title" />Add title</button>
                     <button onClick={() => { openPane("style"); document.querySelector(".ed-side")?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }} title="Caption style"><Icon name="style" />Caption style</button>
                     <button onClick={() => setRetype(typeOf(initial))} title="Caption type: language and script"><Icon name="lang" />Caption type</button>
+                    <button onClick={() => setGuides((g) => !g)} aria-pressed={guides} title="Centring guides (G)"><Icon name="guides" />Guides</button>
                   </div>
                 </>
               )}
@@ -1061,7 +1117,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 }
 
 function ShortcutHelp() {
-  const keys: [string, string][] = [["Space", "Play / pause"], ["← →", "One frame (with ⇧: one second)"], ["↑ ↓", "Previous / next caption"], ["S", "Split at the playhead"], ["M", "Merge with the next"], ["A", "Add a caption at the playhead"], ["Delete", "Delete the caption"], ["⌘Z / ⇧⌘Z", "Undo / redo"], ["⌘S", "Save"], ["+ / −", "Zoom the timeline"]];
+  const keys: [string, string][] = [["Space", "Play / pause"], ["← →", "One frame (with ⇧: one second)"], ["↑ ↓", "Previous / next caption"], ["S", "Split at the playhead"], ["M", "Merge with the next"], ["A", "Add a caption at the playhead"], ["Delete", "Delete the caption"], ["⌘Z / ⇧⌘Z", "Undo / redo"], ["⌘S", "Save"], ["+ / −", "Zoom the timeline"], ["G", "Centring guides on / off"]];
   return (
     <dl className="keys">
       {keys.map(([k, v]) => <div key={k}><dt><kbd>{k}</kbd></dt><dd>{v}</dd></div>)}
