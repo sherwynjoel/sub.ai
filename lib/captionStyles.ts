@@ -107,6 +107,8 @@ export const DEFAULT_STYLE = "tall-caps";
 /** Fonts users can pick (bundled in public/caption-fonts): the Premiere templates' fonts that are free for the web. */
 export const CAPTION_FONTS = [
   "Poppins", "Poppins ExtraBold", "Anton", "Roboto Black", "Satisfy",
+  // from the Premiere MOGRT pack (Drive): the free ones, as fixed styles
+  "Inter", "Inter Italic", "Montserrat SemiBold", "Playfair Display Italic", "Playfair Display Bold Italic",
 ] as const;
 
 /** Fonts for Tamil letters (bundled in public/caption-fonts; Noto Sans Tamil is also installed on the server). */
