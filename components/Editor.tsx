@@ -385,7 +385,14 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const saveLook = (body: object) =>
     fetch(`/api/jobs/${job.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => {});
   // A new style starts from its own look; the project's layers, logo, canvas, safe zone, languages and lines stay.
+  /** Every caption back on the project's look (one undo step). */
+  const ownLooks = cues.filter((c) => c.style).length;
+  function sameLook() {
+    if (ownLooks) commit(cues.map((c) => { if (!c.style) return c; const out = { ...c }; delete out.style; return out; }));
+  }
+  // A new style is for every caption: the ones with their own look take it too.
   function pickStyle(id: string) {
+    sameLook();
     const kept = projectOnly(custom);
     setStyleId(id);
     setCustom(kept);
@@ -400,6 +407,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     return () => clearTimeout(t);
   }, [custom]); // eslint-disable-line react-hooks/exhaustive-deps
   const tweak = (patch: CaptionCustom) => setCustom((c) => ({ ...c, ...patch }));
+  // Look changes go to every caption unless "Only this caption" is picked.
+  const [onlyThis, setOnlyThis] = useState(false);
   const setView = (v: View) => { setViewState(v); setLang(v); tweak({ show: v }); };
   const look = resolveStyle(styleId, custom, portrait);
   const layers = custom.layers ?? [];
@@ -531,6 +540,23 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     if (i < 0) return;
     commit(cues.filter((_, j) => j !== i));
     setSelected(Math.min(i, cues.length - 2));
+  }
+  /**
+   * Change the look of every caption: the project's look, and the same settings taken off any caption that had its
+   * own (else that caption would keep showing its old value and the change would seem to reach only some captions).
+   */
+  function lookAll(patch: CaptionCustom) {
+    tweak(patch);
+    const keys = Object.keys(patch) as (keyof CaptionCustom)[];
+    if (!cues.some((c) => c.style && keys.some((k) => k in c.style!))) return;
+    commit(cues.map((c) => {
+      if (!c.style || !keys.some((k) => k in c.style!)) return c;
+      const st = { ...c.style };
+      for (const k of keys) delete st[k];
+      const out: Cue = { ...c };
+      if (Object.keys(st).length) out.style = st; else delete out.style;
+      return out;
+    }));
   }
   /** Change the selected caption's own look; an empty look falls back to the project's. */
   function styleCue(i: number, patch: CaptionCustom | null) {
@@ -784,8 +810,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 picked={(start) => !playing && !!sel && (view === "en" ? start <= sel.start + 0.01 && now >= sel.start - 0.01 && now < sel.end : Math.abs(start - sel.start) < 0.001)}
                 editing={inline && cues[target()] ? cues[target()][line] : null}
                 onTap={tapCaption} onEditOpen={() => { setInline(true); }} onEditDone={inlineDone}
-                onMove={(i, x, y) => { if (tab === "caption" && i === selected) styleCue(i, { x, y }); else tweak({ x, y }); }}
-                onResize={(i, size) => { if (tab === "caption" && i === selected) styleCue(i, { size }); else tweak({ size }); }} />
+                onMove={(i, x, y) => { if (onlyThis && i === selected) styleCue(i, { x, y }); else lookAll({ x, y }); }}
+                onResize={(i, size) => { if (onlyThis && i === selected) styleCue(i, { size }); else lookAll({ size }); }} />
             </div>
           ) : (
             coming ? (
@@ -874,10 +900,18 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               {hasEnglish && <label className="insp-field">English<textarea rows={2} value={sel.en} onChange={(e) => editCue(selected, setText(sel, "en", e.target.value))} /></label>}
 
               <div className="insp-head">
-                <h3>This caption&apos;s look</h3>
-                <button className="btn ghost small" onClick={() => styleCue(selected, null)} disabled={!sel.style}>Use project style</button>
+                <h3>Look</h3>
+                {onlyThis && <button className="btn ghost small" onClick={() => styleCue(selected, null)} disabled={!sel.style}>Use project style</button>}
               </div>
-              <LookControls look={selLook} own={own} set={(patch) => styleCue(selected, patch)} tamil={tamil} project={look} />
+              {/* Every caption by default: changing one caption's look is the exception, picked on purpose. */}
+              <div className="seg look-scope" role="group" aria-label="Apply look changes to">
+                <button aria-pressed={!onlyThis} onClick={() => setOnlyThis(false)}>All captions</button>
+                <button aria-pressed={onlyThis} onClick={() => setOnlyThis(true)}>Only this caption</button>
+              </div>
+              <p className="muted small">{onlyThis ? "Changes here, and dragging or resizing this caption on the video, change only this caption." : "Changes here, and dragging or resizing a caption on the video, change every caption."}</p>
+              {onlyThis
+                ? <LookControls look={selLook} own={own} set={(patch) => styleCue(selected, patch)} tamil={tamil} project={look} />
+                : <LookControls look={look} own={custom} set={lookAll} tamil={tamil} />}
 
               <h3>Words</h3>
               <p className="muted small">Edit a word, its start time (or drag it on the timeline) and its colour.</p>
@@ -997,6 +1031,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 ))}
               </div>
 
+              {ownLooks > 0 && (
+                <div className="own-looks" role="status">
+                  <span>{ownLooks} caption{ownLooks === 1 ? " has" : "s have"} a look of {ownLooks === 1 ? "its" : "their"} own, so changes here don&apos;t reach {ownLooks === 1 ? "it" : "them"}.</span>
+                  <button className="btn small" onClick={sameLook}>Make all captions the same</button>
+                </div>
+              )}
               <h3>Project style</h3>
               <p className="muted small">{styleOf(styleId).blurb} Applies to every caption without its own look.</p>
               {/* The styles on offer, plus this project's own if it's one no longer offered (so it still shows as picked). */}
@@ -1015,9 +1055,9 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               ))}
               <div className="insp-head">
                 <h3>Customize</h3>
-                <button className="btn ghost small" onClick={() => setCustom((c) => projectOnly(c))} disabled={Object.keys(custom).every((k) => PROJECT_KEYS.includes(k))}>Reset to {styleOf(styleId).name}</button>
+                <button className="btn ghost small" onClick={() => { sameLook(); setCustom((c) => projectOnly(c)); }} disabled={Object.keys(custom).every((k) => PROJECT_KEYS.includes(k)) && !ownLooks}>Reset to {styleOf(styleId).name}</button>
               </div>
-              <LookControls look={look} own={custom} set={tweak} tamil={tamil} />
+              <LookControls look={look} own={custom} set={lookAll} tamil={tamil} />
               <div className="cz-grid">
                 <div className="cz-field">
                   <span>Lines</span>
