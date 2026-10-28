@@ -86,7 +86,27 @@ function findEsds(v: DataView, stsd: Box): Box | null {
   return null;
 }
 
-export type AudioTrack = { adts: Blob; frames: number; seconds: number };
+/**
+ * Where the sound starts in the video: its edit list can leave a gap before it (an empty edit) and skip the
+ * start of the stream (the encoder's priming). Seconds to move the raw stream by to line up with the video:
+ * positive = later. 0 for phone recordings; e.g. -0.046 for some editors' exports.
+ */
+function editShift(v: DataView, trak: Box, mdhdScale: number, movieScale: number) {
+  const elst = path(v, trak, "edts", "elst");
+  if (!elst || !movieScale || !mdhdScale) return 0;
+  const p0 = elst.start + elst.head, ver = v.getUint8(p0), n = v.getUint32(p0 + 4);
+  let empty = 0;
+  for (let i = 0; i < n; i++) {
+    const at = p0 + 8 + i * (ver ? 20 : 12);
+    const dur = ver ? Number(v.getBigUint64(at)) : v.getUint32(at);
+    const start = ver ? Number(v.getBigInt64(at + 8)) : v.getInt32(at + 4);
+    if (start === -1) { empty += dur; continue; }
+    return empty / movieScale - start / mdhdScale;
+  }
+  return 0;
+}
+
+export type AudioTrack = { adts: Blob; frames: number; seconds: number; shift: number };
 
 /** The file's AAC sound as an ADTS stream, or null (see the top). */
 export async function extractAudio(file: Blob): Promise<AudioTrack | null> {
@@ -154,7 +174,10 @@ export async function extractAudio(file: Blob): Promise<AudioTrack | null> {
       }
       const timescale = moov.getUint32(mdhd.start + mdhd.head + (moov.getUint8(mdhd.start + mdhd.head) === 1 ? 20 : 12));
       const dur = moov.getUint8(mdhd.start + mdhd.head) === 1 ? Number(moov.getBigUint64(mdhd.start + mdhd.head + 24)) : moov.getUint32(mdhd.start + mdhd.head + 16);
-      return { adts: new Blob(parts, { type: "audio/aac" }), frames: count, seconds: timescale ? dur / timescale : 0 };
+      const mvhd = child(moov, { type: "moov", start: 0, size: moov.byteLength, head: 8 }, "mvhd");
+      const movieScale = mvhd ? moov.getUint32(mvhd.start + mvhd.head + (moov.getUint8(mvhd.start + mvhd.head) === 1 ? 20 : 12)) : 0;
+      const shift = Math.max(-5, Math.min(5, editShift(moov, trak, timescale, movieScale))); // anything bigger is a strange file
+      return { adts: new Blob(parts, { type: "audio/aac" }), frames: count, seconds: timescale ? dur / timescale : 0, shift };
     }
     return null;
   } catch {

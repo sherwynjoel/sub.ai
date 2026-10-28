@@ -21,6 +21,8 @@ for (const name of ["tone.mp4", "tone.mov"]) test(`the sound of ${name}, without
   const rate = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350][(buf[2] >> 2) & 15];
   assert.ok(Math.abs((frames * 1024) / rate - a.seconds) < 0.1, "frames add up to the track's length");
   assert.ok(Math.abs(a.seconds - 2) < 0.1, "two seconds");
+  // ffmpeg's AAC skips its priming through the edit list: the sound moves a little earlier (as the video plays it)
+  assert.ok(a.shift < 0 && a.shift > -0.1, `edit-list shift ${a.shift}`);
 });
 
 test("not an MP4: null (the whole file is sent instead)", async () => {
