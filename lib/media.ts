@@ -77,6 +77,16 @@ export async function videoSize(file: string) {
   }
 }
 
+/** The codec of a file's first audio stream ("aac", "opus", …), or null. */
+export async function audioCodec(file: string) {
+  try {
+    const { stdout } = await run(bin("ffprobe"), ["-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name", "-of", "csv=p=0", file]);
+    return stdout.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 export const LEVEL_FRAME = 0.02; // seconds per loudness value
 
 /** Loudness of the whole file in dB, one value per LEVEL_FRAME, or null if it can't be read. Streamed, so hours of audio stay small. */
