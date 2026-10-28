@@ -808,3 +808,7 @@ a.signout { text-decoration: none; }
 .font-chips span { font-size: 1.6rem; line-height: 1.1; }
 .font-chips small { font: 600 .66rem/1.2 var(--font-body); text-align: center; color: var(--ink-2); }
 .font-chips .fc-new { position: absolute; top: 4px; right: 4px; padding: 1px 5px; border-radius: 6px; background: var(--lime); color: var(--black); font: 700 .55rem var(--font-body); font-style: normal; }
+/* Look changes reach every caption; captions with a look of their own are pointed out */
+.look-scope { margin: 2px 0 0; }
+.own-looks { display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--accent-soft, #eef8c8); color: var(--ink); font-size: .85rem; }
+.own-looks .btn { justify-self: start; }
