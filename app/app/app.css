@@ -344,9 +344,10 @@ kbd { font: 600 .75rem/1 var(--font-body); padding: 3px 6px; border: 1px solid v
 .tl-layer .tl-text { padding: 4px 8px; }
 .player .bg-blur { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(18px) brightness(.85); transform: scale(1.12); pointer-events: none; }
 .player > video:not(.bg-blur) { position: relative; }
-.layer-view { position: absolute; transform: translate(-50%, -50%); width: max-content; max-width: 92%; cursor: move; z-index: 3; }
+.layer-view { position: absolute; transform: translate(-50%, -50%); width: max-content; max-width: 92%; cursor: move; z-index: 3; touch-action: none; }
 .layer-view.on { outline: 1px dashed rgba(255, 255, 255, .8); outline-offset: 4px; }
-.logo-view { position: absolute; transform: translate(-50%, -50%); cursor: move; z-index: 4; user-select: none; -webkit-user-drag: none; }
+.logo-view { position: absolute; transform: translate(-50%, -50%); cursor: move; z-index: 4; user-select: none; -webkit-user-drag: none; touch-action: none; }
+.logo-view img { display: block; width: 100%; height: auto; pointer-events: none; }
 .logo-view.on { outline: 1px dashed rgba(255, 255, 255, .8); outline-offset: 3px; }
 .layer-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .layer-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--r-sm); cursor: pointer; }
@@ -769,3 +770,9 @@ a.signout { text-decoration: none; }
 .cost-check .cc-len { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; }
 .cost-check .cc-short { color: var(--bad); }
 .cost-check .cc-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
+@media (max-width: 720px) {
+  /* the rail sits mid-right (as in SUBTL): the corners stay free for a logo */
+  .vrail-phone { top: 50%; transform: translateY(-50%); }
+}
+.rs-handle.rs-left { right: auto; left: -7px; cursor: nesw-resize; }
+@media (pointer: coarse) { .rs-handle.rs-left { left: -10px; } }

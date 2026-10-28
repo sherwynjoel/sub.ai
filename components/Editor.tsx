@@ -143,10 +143,32 @@ function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, p
   );
 }
 
+/**
+ * The corner dot: drag it away from the centre to grow the thing, towards it to shrink it (by the change in
+ * distance from the centre). Reports the new size, kept within [min, max] in steps of `step`.
+ */
+function resizeFrom(e: React.PointerEvent, size0: number, min: number, max: number, step: number, onSize: (s: number) => void, onEnd?: () => void) {
+  e.preventDefault();
+  e.stopPropagation();
+  const box = ((e.currentTarget as HTMLElement).parentElement as HTMLElement).getBoundingClientRect();
+  const cx = box.left + box.width / 2, cy = box.top + box.height / 2;
+  const d0 = Math.max(8, Math.hypot(e.clientX - cx, e.clientY - cy));
+  let moving = false;
+  const at = (ev: PointerEvent) => {
+    const d = Math.hypot(ev.clientX - cx, ev.clientY - cy);
+    if (!moving && Math.abs(d - d0) < 4) return;
+    moving = true;
+    onSize(Math.round(Math.min(max, Math.max(min, (size0 * d) / d0)) / step) * step);
+  };
+  const stop = () => { onEnd?.(); removeEventListener("pointermove", at); removeEventListener("pointerup", stop); };
+  addEventListener("pointermove", at);
+  addEventListener("pointerup", stop);
+}
+
 /** Text layers over the video at time t (the selected one also while paused outside its time, so it can be placed). */
-function LayerViews({ layers, t, paused, styleId, custom, selected, onSelect, onMove }: {
+function LayerViews({ layers, t, paused, styleId, custom, selected, onSelect, onMove, onResize }: {
   layers: TextLayer[]; t: number; paused: boolean; styleId: string; custom: CaptionCustom; selected: number;
-  onSelect: (i: number) => void; onMove: (i: number, x: number, y: number) => void;
+  onSelect: (i: number) => void; onMove: (i: number, x: number, y: number) => void; onResize: (i: number, size: number) => void;
 }) {
   return <>{layers.map((l, i) => {
     const on = t >= l.start && t < l.end;
@@ -157,6 +179,8 @@ function LayerViews({ layers, t, paused, styleId, custom, selected, onSelect, on
       <div key={i} className={`layer-view${i === selected ? " on" : ""}`} style={{ left: `${l.x * 100}%`, top: `${l.y * 100}%` }}
         onPointerDown={(e) => { onSelect(i); dragIn(e, (x, y) => onMove(i, x, y)); }}>
         <StyledCaption styleId={styleId} custom={own} text={l.text} start={l.start} end={l.end} time={on ? t : l.end - 0.01} starts={words.map(() => l.start)} />
+        {i === selected && <span className="rs-handle" title="Drag to resize" aria-hidden="true"
+          onPointerDown={(e) => resizeFrom(e, resolveStyle(styleId, own).size ?? 1, 0.4, 2.6, 0.05, (s) => onResize(i, s))} />}
       </div>
     );
   })}</>;
@@ -673,13 +697,19 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 onLoadedMetadata={(e) => metadata(e.currentTarget)} />
               {showZones && (["top", "right", "bottom", "left"] as const).map((k) => <i key={k} className={`zone zone-${k}`} style={{ [k === "top" || k === "bottom" ? "height" : "width"]: `${look.safe[k] * 100}%` }} />)}
               <LayerViews layers={layers} t={now} paused={!playing} styleId={styleId} custom={custom} selected={tab === "layers" ? selLayer : -1}
-                onSelect={(i) => { setSelLayer(i); setTab("layers"); }} onMove={(i, x, y) => editLayer(i, { x, y })} />
+                onSelect={(i) => { setSelLayer(i); setTab("layers"); }} onMove={(i, x, y) => editLayer(i, { x, y })}
+                onResize={(i, size) => editLayer(i, { style: { ...layers[i].style, size } })} />
               {custom.logo && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img className={`logo-view${tab === "layers" ? " on" : ""}`} alt="Logo" src={`/api/jobs/${job.id}/logo?v=${logoVer}`} draggable={false}
-                  onError={() => { if (logoVer < 3) setTimeout(() => setLogoVer((v) => v + 1), 800); }}
+                <div className={`logo-view${tab === "layers" ? " on" : ""}`}
                   style={{ left: `${custom.logo.x * 100}%`, top: `${custom.logo.y * 100}%`, width: `${custom.logo.size * 100}%`, opacity: custom.logo.opacity }}
-                  onPointerDown={(e) => { setTab("layers"); dragIn(e, (x, y) => tweak({ logo: { ...custom.logo!, x, y } })); }} />
+                  onPointerDown={(e) => { setTab("layers"); dragIn(e, (x, y) => tweak({ logo: { ...custom.logo!, x, y } })); }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img alt="Logo" src={`/api/jobs/${job.id}/logo?v=${logoVer}`} draggable={false}
+                    onError={() => { if (logoVer < 3) setTimeout(() => setLogoVer((v) => v + 1), 800); }} />
+                  {/* the dot on the left corner when the right one would be off the video */}
+                  {tab === "layers" && <span className={`rs-handle${custom.logo.x + custom.logo.size / 2 > 0.95 ? " rs-left" : ""}`} title="Drag to resize" aria-hidden="true"
+                    onPointerDown={(e) => resizeFrom(e, custom.logo!.size, 0.03, 0.6, 0.005, (size) => tweak({ logo: { ...custom.logo!, size } }))} />}
+                </div>
               )}
               {!playing && (
                 <>
