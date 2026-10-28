@@ -6,19 +6,21 @@
  */
 import type { Cue } from "@/db";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
+import { lineScale, textWidth } from "@/lib/fontWidths";
 
-export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook";
+export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine";
 /** How a caption comes in (the last few from the Premiere template pack's presets). */
 export const ANIMS = {
   none: "None", fade: "Fade in", pop: "Pop", slide: "Slide up", bounce: "Bounce", zoom: "Zoom in",
   blur: "Blur in", flicker: "Flicker", flicker2: "Strong flicker", ramp: "Ramp up", snap: "Snap", bouncyout: "Bounce, fade out", wordin: "Word by word",
+  cinematic: "Cinematic (zoom out of a blur)",
 } as const;
 export type Anim = keyof typeof ANIMS;
 /** How the word being said stands out. */
 export const HIGHLIGHTS = { style: "The style's own", none: "None", color: "Colour", box: "Box", underline: "Underline", grow: "Grow" } as const;
 export type Highlight = keyof typeof HIGHLIGHTS;
 export type CaptionStyle = {
-  id: string; name: string; group: "Templates" | "Premiere" | "Bold" | "Soft" | "Simple" | "Playful"; blurb: string;
+  id: string; name: string; group: "Typography" | "Templates" | "Premiere" | "Bold" | "Soft" | "Simple" | "Playful"; blurb: string;
   font: string; size?: number; bold?: boolean; italic?: boolean; caps?: boolean; lower?: boolean;
   fontTa?: string;               // font for Tamil letters (the Latin fonts have none); unset = Noto Sans Tamil
   color: string;                 // spoken and already-spoken words
@@ -26,7 +28,9 @@ export type CaptionStyle = {
   active?: string;               // the word being spoken
   mark?: string;                 // highlighter swipe behind the word being spoken
   underline?: boolean;           // underline the word being spoken
-  keyword?: { color?: string; grow?: boolean; font?: string; italic?: boolean };
+  keyword?: { color?: string; grow?: boolean; font?: string; italic?: boolean; scale?: number; line?: boolean }; // scale: size (em); line: on a line of its own
+  reveal?: "rise" | "letters" | "flicker";
+  wordLines?: boolean;           // every word on a line of its own // each word (or letter) comes in as it's said, in its final place: rising, rising letter by letter, flickering
   outline?: [string, number];    // colour, width
   shadow?: number;
   box?: string;                  // solid card behind the line
@@ -47,6 +51,16 @@ const GOLD = "#FFC83D", BUTTER = "#FFE58A", CREAM = "#FFF4D6", INK = "#141414", 
 const W = "#FFFFFF";
 
 export const CAPTION_STYLES: CaptionStyle[] = [
+  // The CINECUT short-form typography project (Premiere), matched frame by frame: its Helvetica Neue becomes Inter,
+  // its Open Sauce Sans Black (OFL) is bundled.
+  { id: "cc-word-cut", name: "Word Cut", group: "Typography", blurb: "One big word at a time, cut on the beat.", font: "Inter", fontTa: "Hind Madurai", size: 3.5, color: W, shadow: 0.04, effect: "oneword" },
+  { id: "cc-cinematic", name: "Cinematic", group: "Typography", blurb: "Clean white that settles out of a soft blur.", font: "Inter", fontTa: "Hind Madurai", size: 1.28, color: W, shadow: 0.04, anim: "cinematic", effect: "cine" },
+  { id: "cc-rise", name: "Rise Up", group: "Typography", blurb: "Each word fades in, rising into place as it's said.", font: "Inter", fontTa: "Hind Madurai", size: 0.98, color: W, shadow: 0.04, reveal: "rise" },
+  { id: "cc-rise-spaced", name: "Rise Spaced", group: "Typography", blurb: "Airy, spaced-out words rising in one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.92, color: W, shadow: 0.04, spacing: 0.05, reveal: "rise" },
+  { id: "cc-corners", name: "Corner Block", group: "Typography", blurb: "Small capitals pinned to a block's edges, popping on one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.88, caps: true, color: W, shadow: 0.04, effect: "corners" },
+  { id: "cc-bold-flicker", name: "Bold Flicker", group: "Typography", blurb: "Big capitals that strobe on, word by word.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.68, caps: true, color: W, shadow: 0.04, reveal: "flicker", wordLines: true },
+  { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Letters rise in one by one around a huge black keyword.", font: "Inter", fontTa: "Hind Madurai", size: 0.75, color: W, shadow: 0.04, reveal: "letters", keyword: { font: "Open Sauce Sans Black", scale: 2.3, line: true } },
+  { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small and big words mixed in a block, each rising in.", font: "Inter", fontTa: "Hind Madurai", size: 1.05, color: W, shadow: 0.04, effect: "typo", reveal: "rise" },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
   // Helvetica / Neue Haas Grotesk (commercial) become Inter Bold, Helvetica Rounded becomes Nunito ExtraBold.
   { id: "tpl-blur", name: "Blur Animation", group: "Templates", blurb: "Bold orange that sharpens out of a blur.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF7800", shadow: 0.05, anim: "blur" },
@@ -116,6 +130,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
+  "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-spaced", "cc-corners", "cc-bold-flicker", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker",
   "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-rgb", "tpl-reels-simple", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
@@ -125,7 +140,7 @@ const OFFERED = [
 ];
 export const STYLE_CHOICES = CAPTION_STYLES.filter((s) => OFFERED.includes(s.id));
 /** The groups that have styles on offer, in order. */
-export const STYLE_GROUPS = (["Templates", "Premiere", "Bold", "Soft", "Simple", "Playful"] as const).filter((g) => STYLE_CHOICES.some((s) => s.group === g));
+export const STYLE_GROUPS = (["Typography", "Templates", "Premiere", "Bold", "Soft", "Simple", "Playful"] as const).filter((g) => STYLE_CHOICES.some((s) => s.group === g));
 
 export const DEFAULT_STYLE = "tall-caps";
 
@@ -135,6 +150,7 @@ export const CAPTION_FONTS = [
   // from the Premiere MOGRT pack (Drive): the free ones, as fixed styles
   "Inter", "Inter Italic", "Montserrat SemiBold", "Playfair Display Italic", "Playfair Display Bold Italic",
   "Inter Bold", "Nunito ExtraBold", // stand-ins for the pack's commercial Helvetica / Neue Haas and Helvetica Rounded
+  "Open Sauce Sans Black", // the CINECUT project's keyword font
 ] as const;
 
 /** Fonts for Tamil letters (bundled in public/caption-fonts; Noto Sans Tamil is also installed on the server). */
@@ -337,6 +353,11 @@ export function keywordIndex(words: string[]) {
   words.forEach((w, i) => { if (w.length >= words[k].length) k = i; });
   return k;
 }
+/** A name stands out first (a word with two or more capitals: "EveryCut", "AI"), else the longest word. */
+export function nameOrKeyword(words: string[]) {
+  const named = words.findIndex((w) => (w.match(/\p{Lu}/gu) ?? []).length >= 2);
+  return named >= 0 ? named : keywordIndex(words);
+}
 
 /** Split n items into k runs of near-equal size. */
 function runs<T>(list: T[], k: number) {
@@ -391,12 +412,30 @@ export function hookChunks(main: string, start: number, end: number, minDur = 1.
     return { s, e: i === groups.length - 1 ? end : t, lines };
   });
 }
-/** Width of a letter in the bold caption fonts, as a share of the font size (a little generous, so lines fit). */
-export const HOOK_LETTER = 0.62;
-/** A hook line's size (em of the caption font): its style size, smaller when that wouldn't fit `widthEm`. */
-export const hookFit = (text: string, size: number, widthEm: number) => Math.round(Math.min(size, widthEm / Math.max(1, [...text].length * HOOK_LETTER)) * 100) / 100;
+/** A hook line's size (em of the caption font): its style size, smaller when its real width wouldn't fit `widthEm`. */
+export const hookFit = (text: string, size: number, widthEm: number, font = "Inter Bold") => Math.round(Math.min(size, widthEm / Math.max(0.5, textWidth(text, font))) * 100) / 100;
 /** Each hook line comes in this long after the one before (seconds). */
 export const HOOK_STEP = 0.12;
+
+/** Revealing words (or letters) as they're said: how long each takes to come in, and how far it rises (em). */
+export const RISE = 0.27, RISE_DY = 0.25, LETTER_STEP = 0.05;
+/** Letters only in plain Latin words: splitting other scripts would break their shaping. */
+export const byLetters = (w: string) => /^[\x21-\x7E]+$/.test(w);
+/** What comes in, in order: each word, or each letter of the Latin words, with when it starts. */
+export function revealUnits(words: { w: string; s: number; e: number }[], letters: boolean) {
+  return words.flatMap((w, j) => {
+    if (!letters || !byLetters(w.w)) return [{ j, k: null as number | null, s: w.s }];
+    const step = Math.min(LETTER_STEP, (w.e - w.s) / Math.max(1, w.w.length));
+    return [...w.w].map((_, k) => ({ j, k: k as number | null, s: w.s + k * step }));
+  });
+}
+/** "typo": small and big words in turn (small, big, small, small, big, big, small, small, …), as in the reference. */
+const TYPO = [0.55, 1.5, 0.55, 0.55, 1.5, 1.5, 0.55, 0.55];
+export const typoSize = (j: number) => TYPO[j % TYPO.length];
+/** "typo": a new line after each run of big words (as the reference: "sometimes this / is the best way / to start."). */
+export const typoBreak = (j: number, n: number) => j + 1 < n && typoSize(j) > 1 && typoSize(j + 1) < 1;
+/** "corners": words in pairs, the first pinned to the block's left edge, the second to its right. */
+export const cornerRows = <T,>(words: T[]) => Array.from({ length: Math.ceil(words.length / 2) }, (_, r) => words.slice(2 * r, 2 * r + 2));
 
 /** Scale of a "stack" style's big word: 1.35× the font, less for a word longer than 10 letters. */
 export const stackBig = (word: string) => Math.round(135 * Math.min(1, 10 / Math.max(1, [...word].length))) / 100;
@@ -443,22 +482,30 @@ const EMOJI_FONT = "Noto Emoji"; // one-colour emoji (libass can't draw colour o
  * a style font without Tamil letters picks a font per run, and a word on its own can lose its conjuncts (ப்ப drawn
  * as ப + a dotted circle).
  */
-export function tamilRuns(text: string, fonts: Record<string, string>, style: string, tamil = TAMIL_FONT, spacing = 0) {
+export function tamilRuns(text: string, fonts: Record<string, string>, style: string, tamil = TAMIL_FONT, spacing = 0, ems?: Record<string, number>) {
   type Run = "latin" | "ta" | "emoji";
-  let font = fonts[style], out = "", run: Run = "latin";
+  let font = fonts[style], out = "", run: Run = "latin", cur = style;
   const fontOf = (r: Run) => (r === "ta" ? tamil : r === "emoji" ? EMOJI_FONT : font);
+  // With the styles' em sizes: every font drawn em × its line height (libass sizes by the line, the editor by the em).
+  const fsOf = (f: string) => (ems?.[cur] ? `\\fs${Math.round(ems[cur] * lineScale(f) * 10) / 10}` : "");
   for (let i = 0; i < text.length; ) {
     if (text[i] === "{") { // override block: follow \fn and \r[Style]
       const end = text.indexOf("}", i), block = text.slice(i, end + 1);
-      for (const m of block.matchAll(/\\(fn|r)([^\\}]*)/g)) font = m[1] === "fn" ? m[2] || fonts[style] : fonts[m[2]] ?? fonts[style];
+      let changed = false;
+      for (const m of block.matchAll(/\\(fn|r)([^\\}]*)/g)) {
+        if (m[1] === "r") cur = fonts[m[2]] ? m[2] : style;
+        font = m[1] === "fn" ? m[2] || fonts[style] : fonts[m[2]] ?? fonts[style];
+        changed = true;
+      }
       out += block; i = end + 1;
-      if (run !== "latin") out += `{\\fn${fontOf(run)}${spacing ? "\\fsp0" : ""}}`; // a block inside a run may have reset the font
+      if (run !== "latin") out += `{\\fn${fontOf(run)}${fsOf(fontOf(run))}${spacing ? "\\fsp0" : ""}}`; // a block inside a run may have reset the font
+      else if (changed && ems && font !== fonts[cur]) out += `{${fsOf(font)}}`; // a word in another font (a keyword, a big word)
       continue;
     }
     const cp = text.codePointAt(i)!, ch = String.fromCodePoint(cp);
     const kind: Run = /[\u0B80-\u0BFF\u200C\u200D]/.test(ch) ? "ta" : /\p{Extended_Pictographic}/u.test(ch) ? "emoji" : /[\uFE0F\u{1F3FB}-\u{1F3FF}]/u.test(ch) ? run : "latin";
     // Letter spacing pulls Tamil letters apart in libass (ப்ப drawn as ப ் ப): none inside Tamil or emoji.
-    if (kind !== run && (kind !== "latin" || !/\s/.test(ch))) { out += `{\\fn${fontOf(kind)}${spacing ? `\\fsp${kind === "latin" ? spacing : 0}` : ""}}`; run = kind; }
+    if (kind !== run && (kind !== "latin" || !/\s/.test(ch))) { out += `{\\fn${fontOf(kind)}${fsOf(fontOf(kind))}${spacing ? `\\fsp${kind === "latin" ? spacing : 0}` : ""}}`; run = kind; }
     out += ch;
     i += ch.length;
   }
@@ -473,7 +520,8 @@ export function buildAss(cues: Cue[], o: Opts) {
   // Everything a look needs, for the project's style ("Main") and for each caption that has its own ("C<n>").
   const lookOf = (custom: CaptionCustom | undefined, name: string) => {
     const s = resolveStyle(o.styleId, custom, o.height > o.width);
-    const fs = Math.round(short * 0.075 * (s.size ?? 1));
+    // em: the editor's font size (7.5% of the short side × size); the ASS size is em × the font's line height.
+    const fs = Math.round(short * 0.075 * (s.size ?? 1) * 10) / 10, assFs = Math.round(fs * lineScale(s.font) * 10) / 10;
     const px = (f = 0) => Math.round(f * fs * 10) / 10;
     const marginV = Math.round(o.height * s.offset);
     const align = s.position === "top" ? 8 : s.position === "middle" ? 5 : 2;
@@ -487,7 +535,7 @@ export function buildAss(cues: Cue[], o: Opts) {
     const fade = (hex: string) => withOpacity(hex, s.opacity ?? 1);
     const shadowColor = s.shadowColor ? s.shadowColor + "99" : "#00000099";
     const line = [
-      name, s.font, fs, assColor(fade(s.color)), assColor(fade(s.color)),
+      name, s.font, assFs, assColor(fade(s.color)), assColor(fade(s.color)),
       assColor(fade(box ? s.box! : s.glow && !s.outline ? s.glow + "B0" : s.outline?.[0] ?? "#000000")), assColor(fade(box ? s.box! : shadowColor)),
       s.bold ? -1 : 0, s.italic ? -1 : 0, 0, 0, 100, 100, px(s.spacing), -(s.rotate ?? 0),
       box ? 3 : 1, box ? px(s.boxPad ?? 0.28) : s.glow && !s.outline ? px(0.12) : px(s.outline?.[1]), box ? 0 : px(s.shadow), align, marginL, marginR, marginV, 1,
@@ -506,6 +554,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       if (a === "flicker" || a === "flicker2") return ["", flickerTags(a === "flicker2" ? FLICKER2 : FLICKER)];
       if (a === "ramp") return [`{\\fad(${Math.round(t * 0.5)},0)}`, `\\fscx118\\fscy0\\t(0,${t},0.5,\\fscx100\\fscy100)`];
       if (a === "snap") return [`{\\fad(60,0)}`, `\\fscx150\\fscy150\\t(0,90,\\fscx100\\fscy100)`];
+      if (a === "cinematic") return [`{\\fad(300,0)}`, `\\blur${px(0.25)}\\fscx112\\fscy112\\t(0,420,\\blur0\\fscx100\\fscy100)`];
       if (a === "bouncyout") return ["", `\\fscx40\\fscy40\\t(0,${Math.round(t * 0.6)},\\fscx118\\fscy118)\\t(${Math.round(t * 0.6)},${t},\\fscx100\\fscy100)`];
       if (a === "fade") return [`{\\fad(${t},0)}`, ""];
       if (a === "pop") return ["", `\\fscx60\\fscy60\\t(0,${t},\\fscx100\\fscy100)`];
@@ -514,7 +563,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       const d = Math.round(fs * 0.6), an = s.x !== undefined ? 5 : align; // slide up
       return [`{\\an${an}\\move(${Math.round(ax)},${Math.round(ay + d)},${Math.round(ax)},${Math.round(ay)},0,${t})\\fad(${Math.round(t * 0.6)},0)}`, ""];
     };
-    return { name, s, fs, px, align, posAt, pos: posAt(0), marginL, marginR, wrapM, line, entrance };
+    return { name, s, fs, px, align, posAt, pos: posAt(0), marginL, marginR, wrapM, line, entrance, ax, ay };
   };
   const base = lookOf(o.custom, "Main");
   const looks = [base];
@@ -524,22 +573,26 @@ export function buildAss(cues: Cue[], o: Opts) {
     looks.push(l);
     return l;
   };
-  const second = ["Second", "Poppins", Math.round(short * 0.075 * 0.55), "&H00FFFFFF&", "&H00FFFFFF&", "&H00000000&", "&H99000000&", 0, 0, 0, 0, 100, 100, 0, 0, 1, base.px(0.04), base.px(0.04), base.align, base.marginL, base.marginR, Math.round(o.height * base.s.offset), 1].join(",");
+  // The English line: 4.1% of the short side in the editor (.cap-sub), in the caption's font (sized as it switches).
+  const secondEm = Math.round(short * 0.041 * 10) / 10;
+  const second = ["Second", "Poppins", Math.round(secondEm * lineScale("Poppins") * 10) / 10, "&H00FFFFFF&", "&H00FFFFFF&", "&H00000000&", "&H99000000&", 0, 0, 0, 0, 100, 100, 0, 0, 1, base.px(0.04), base.px(0.04), base.align, base.marginL, base.marginR, Math.round(o.height * base.s.offset), 1].join(",");
 
   const events: string[] = [];
   const fonts: Record<string, string> = { Second: "Poppins" }, tamil: Record<string, string> = {}, spaced: Record<string, number> = {};
+  const ems: Record<string, number> = { Second: secondEm }; // each style's editor em, so every font switch is sized
   let cur = "Main";
   const add = (start: number, end: number, text: string, layer = 0, ml = 0, mr = 0, st = cur) =>
-    end > start && events.push(`Dialogue: ${layer},${assTime(start)},${assTime(end)},${st},,${ml},${mr},0,,${tamilRuns(text, fonts, st, tamil[st], spaced[st])}`);
+    end > start && events.push(`Dialogue: ${layer},${assTime(start)},${assTime(end)},${st},,${ml},${mr},0,,${tamilRuns(text, fonts, st, tamil[st], spaced[st], ems)}`);
 
   for (const c of cues) {
     const main = (o.lang === "en" ? c.en : c.ta).trim();
     if (!main) continue;
     const look = lookFor(c);
-    const { s, fs, px, pos, posAt, wrapM, marginL, marginR, entrance } = look;
+    const { s, fs, px, pos, posAt, wrapM, marginL, marginR, entrance, ax, ay, align } = look;
     const glowTag = s.glow ? (s.outline ? `\\3c${colorOnly(s.glow)}\\bord${px(0.1)}\\blur${px(0.12)}` : `\\blur${px(0.12)}`) : ""; // glow: a soft border
     cur = look.name;
     fonts[cur] = s.font;
+    ems[cur] = fs;
     if (s.fontTa) tamil[cur] = s.fontTa;
     if (s.spacing) spaced[cur] = px(s.spacing);
     const colors = o.lang === "en" ? c.wce : c.wc; // the user's colour for single words
@@ -547,7 +600,8 @@ export function buildAss(cues: Cue[], o: Opts) {
     // English in the caption's font, turned and spaced like it.
     const tail = sub ? `\\N{\\rSecond\\fn${s.font}${s.rotate ? `\\frz${-s.rotate}` : ""}${s.spacing ? `\\fsp${px(s.spacing * 0.55)}` : ""}}${esc(breakLines(sub, s.lines))}` : "";
     const words = wordTimes(caseOf(s, main), c.start, c.end, o.lang === "en" ? c.we : c.w);
-    const kw = keywordIndex(words.map((w) => w.w));
+    // A keyword on a line of its own (Letter Rise) is a name when there is one, as in the reference ("EveryCut").
+    const kw = s.keyword?.line ? nameOrKeyword(wordTimes(main, c.start, c.end).map((w) => w.w)) : keywordIndex(words.map((w) => w.w));
     const brk = lineBreaks(words.map((w) => w.w), s.lines);
     const glue = (j: number) => (j ? (brk.has(j - 1) ? "\\N" : " ") : "");
     const q = s.lines === 1 ? "{\\q2}" : ""; // one line: no auto-wrap
@@ -571,6 +625,7 @@ export function buildAss(cues: Cue[], o: Opts) {
         if (s.keyword.font) t += `\\fn${s.keyword.font}`;
         if (s.keyword.italic) t += "\\i1";
         if (s.keyword.grow) t += state === "active" ? "\\t(0,180,\\fscx118\\fscy118)" : "\\fscx118\\fscy118";
+        if (s.keyword.scale) t += `\\fscx${Math.round(s.keyword.scale * 100)}\\fscy${Math.round(s.keyword.scale * 100)}`;
       }
       if (s.anim === "wordin") { // each word blurs in as it's said; the ones to come are hidden
         if (state === "future") t += "\\alpha&HFF&";
@@ -582,6 +637,58 @@ export function buildAss(cues: Cue[], o: Opts) {
       return `{${t}}${w}`;
     };
 
+    // A word on its own line ("Letter Rise"'s keyword).
+    const glueK = (j: number) => (j ? (brk.has(j - 1) || s.wordLines || (s.effect === "typo" && typoBreak(j - 1, words.length)) || (s.keyword?.line && (j === kw || j === kw + 1)) ? "\\N" : " ") : "");
+    if (s.effect === "oneword") { // one big word at a time, cut on; a long word shrinks to fit
+      words.forEach((wt, i) => { // filling ~87% of the frame's width at most (as the reference), never bigger than the style
+        const z = Math.round(Math.min(1, (0.94 * o.width) / (Math.max(0.3, textWidth(wt.w, s.font)) * fs)) * 100); // advance width; the ink is ~0.87
+        add(wt.s, i === words.length - 1 ? c.end : words[i + 1].s, pos + "{\\q2}" + word(i, i).replace("}", `\\fscx${z}\\fscy${z}}`) + tail, 0, wrapM, wrapM);
+      });
+      continue;
+    }
+    if (s.effect === "cine" && words.length > 1) {
+      // The words but the last zoom out of a blur; the last comes in as it's said, small, under the line's right end.
+      const head = words.slice(0, -1), last = words[words.length - 1], [ev, each] = entrance(c.end - c.start);
+      const lineW = textWidth(head.map((w) => w.w).join(" "), s.font) * fs;
+      add(c.start, c.end, (ev.includes("\\move") ? "" : pos) + ev + q + head.map((_, j) => glueK(j) + word(j, j, each)).join("") + tail, 0, wrapM, wrapM);
+      // its top just under the line's bottom (bottom-placed: the line ends at the anchor; middle: half a line below; top: a line below)
+      const x = Math.round(ax + lineW / 2), y = Math.round(s.y !== undefined || align === 5 ? ay + fs * 0.55 : align === 8 ? ay + fs * 1.15 : ay - fs * 0.1);
+      add(last.s, c.end, `{\\an9\\move(${x},${y + Math.round(px(RISE_DY))},${x},${y},0,${Math.round(RISE * 1000)})\\fad(${Math.round(RISE * 1000)},0)}` + word(words.length - 1, words.length - 1).replace("}", "\\fscx55\\fscy55}"), 0, 0, 0);
+      continue;
+    }
+    if (s.effect === "corners") {
+      // Pairs of words pinned to a block's left and right edges (block as wide as its widest pair), each popping on as
+      // it's said; the English under the block.
+      const rows = cornerRows(words.map((w, j) => ({ ...w, j }))), lineH = fs * 1.15, gap = fs * 1.2;
+      const wid = (w: string) => textWidth(w, s.font) * fs;
+      const blockW = Math.min(o.width * 0.9, Math.max(...rows.map((r) => wid(r[0].w) + (r[1] ? gap + wid(r[1].w) : 0))));
+      const top = align === 8 && s.y === undefined ? ay : align === 5 || s.y !== undefined ? ay - (rows.length * lineH) / 2 : ay - rows.length * lineH;
+      rows.forEach((r, n) => r.forEach((w, side) => {
+        const x = Math.round(ax + (side ? blockW / 2 : -blockW / 2)), y = Math.round(top + n * lineH);
+        add(w.s, c.end, `{\\an${side ? 9 : 7}\\pos(${x},${y})}` + word(w.j, w.j), 0, 0, 0);
+      }));
+      if (tail) add(c.start, c.end, `{\\an8\\pos(${Math.round(ax)},${Math.round(top + rows.length * lineH + fs * 0.2)})}` + tail.replace(/^\\N/, ""), 0, 0, 0);
+      continue;
+    }
+    if (s.reveal || s.effect === "typo") {
+      // Each word (or letter) in a layer of its own: the same caption text in every layer (so it lands exactly in
+      // place), only that word visible, coming in as it's said; the English stays in one still layer.
+      const reveal = s.reveal ?? "rise", letters = reveal === "letters", ms = Math.round(RISE * 1000);
+      const sized = (j: number) => (s.effect === "typo" ? `\\fscx${Math.round(typoSize(j) * 100)}\\fscy${Math.round(typoSize(j) * 100)}` : "");
+      const body = (on: (j: number, k: number | null) => boolean, tags: string) => words.map((w, j) => {
+        const base = word(j, j).match(/^\{([^}]*)\}/)![1] + sized(j); // the word's look, settled
+        const part = (txt: string, k: number | null) => `{${base}${on(j, k) ? tags : "\\alpha&HFF&"}}${esc(txt)}`;
+        return glueK(j) + (letters && byLetters(w.w) ? [...w.w].map((ch, k) => part(ch, k)).join("") : part(w.w, null));
+      }).join("");
+      const hiddenTail = tail.replace("}", "\\alpha&HFF&}");
+      const an = s.x !== undefined ? 5 : align, dy = Math.round(px(RISE_DY));
+      const rise = (t0: string) => `{\\an${an}\\move(${Math.round(ax)},${Math.round(ay + dy)},${Math.round(ax)},${Math.round(ay)},0,${ms})}` + t0;
+      const tagsFor = reveal === "flicker" ? flickerTags(FLICKER2) : `\\alpha&HFF&\\t(0,${ms},\\alpha&H00&)`;
+      for (const u of revealUnits(words, letters))
+        add(u.s, c.end, (reveal === "flicker" ? pos : rise("")) + q + body((j, k) => j === u.j && (u.k === null || k === u.k), tagsFor) + hiddenTail, 1, wrapM, wrapM);
+      if (tail) add(c.start, c.end, pos + body(() => false, "") + tail, 0, wrapM, wrapM);
+      continue;
+    }
     if (s.effect === "stack" && s.stack) {
       const small = "\\fscx60\\fscy60";
       // A small line word by word, so a word the user coloured keeps its colour (then back to the line's own).
@@ -607,8 +714,8 @@ export function buildAss(cues: Cue[], o: Opts) {
       const h = s.hook, widthEm = (o.width - marginL - marginR) * 0.9 / fs;
       for (const p of hookChunks(caseOf(s, main), c.start, c.end)) {
         const text = p.lines.map((ln, j) => {
-          const z = hookFit(ln.text, h.sizes[j % h.sizes.length], widthEm), at = Math.round(j * HOOK_STEP * 1000);
           const col = h.colors[j % h.colors.length], f = h.fonts?.[j % h.colors.length];
+          const z = hookFit(ln.text, h.sizes[j % h.sizes.length], widthEm, f ?? s.font), at = Math.round(j * HOOK_STEP * 1000);
           const head = `\\r\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)}\\1c${colorOnly(col)}${f ? `\\fn${f}` : ""}`;
           const reveal = `\\alpha&HFF&\\blur${px(0.15)}\\t(${at},${at + 180},\\alpha&H00&\\blur0)`;
           // a word the user coloured keeps its colour
@@ -674,6 +781,7 @@ export function buildAss(cues: Cue[], o: Opts) {
     looks.push(look);
     cur = look.name;
     fonts[cur] = look.s.font;
+    ems[cur] = look.fs;
     if (look.s.fontTa) tamil[cur] = look.s.fontTa;
     if (look.s.spacing) spaced[cur] = look.px(look.s.spacing);
     const [ev, each] = look.entrance(l.end - l.start);
@@ -685,7 +793,7 @@ export function buildAss(cues: Cue[], o: Opts) {
 ScriptType: v4.00+
 PlayResX: ${o.width}
 PlayResY: ${o.height}
-WrapStyle: 0
+WrapStyle: 1
 ScaledBorderAndShadow: yes
 
 [V4+ Styles]

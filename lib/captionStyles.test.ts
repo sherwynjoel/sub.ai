@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { hookChunks, hookFit } from "./captionStyles";
+import { cornerRows, hookChunks, hookFit, revealUnits, typoSize } from "./captionStyles";
 import { assColor, buildAss, CAPTION_STYLES, DEFAULT_STYLE, STYLE_CHOICES, STYLE_GROUPS, keywordIndex, resolveStyle, SAFE_ZONES, sanitizeCustom, stackBig, stackChunks, styleOf, tamilRuns, wordTimes } from "./captionStyles";
 
 test("assColor converts #RRGGBB[AA] to ASS &HAABBGGRR with inverted alpha", () => {
@@ -97,7 +97,7 @@ test("stack styles: a few words a piece, small / big / small, English on the bot
   // A word the user coloured (Highlight) keeps its colour in its piece: here the big word and a small one.
   assert.deepEqual(p.map((c) => c.idx), [[[0], 1, [2]], [[3], 4, []]]);
   const hl = buildAss([{ start: 0, end: 3, ta: "a bb ccc", en: "", wc: [null, "#00FF00", "#FF0000"] }], { styleId: "trending-1", lang: "ta", width: 1080, height: 1920 });
-  assert.match(hl, /\\1c&H00FF00&[^}]*}bb/, "the big word in its own colour");
+  assert.match(hl, /\\1c&H00FF00&[^}]*}(\{\\fs[\d.]+\})?bb/, "the big word in its own colour (its font sized as it switches)");
   assert.match(hl, /\\1c&H0000FF&}ccc/, "a small word in its own colour");
   assert.ok(stackBig("பரிந்துரைக்கப்பட்டது") < stackBig("Hi"));
 });
@@ -140,14 +140,15 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
   const layer = ass.split("\n").find((l) => l.startsWith("Dialogue"))!;
   assert.match(layer, /^Dialogue: 5,0:00:01\.00,0:00:03\.00,L1,/);
   assert.match(layer, /\\pos\(216,324\)/);
-  assert.match(layer, /\\fnNoto Emoji\}🔥/, "emoji in the one-colour emoji font");
-  assert.match(ass, /Style: L1,Poppins ExtraBold,122,/, "the layer's own size");
+  assert.match(layer, /\\fnNoto Emoji(\\fs[\d.]+)?\}🔥/, "emoji in the one-colour emoji font");
+  assert.match(ass, new RegExp(`Style: L1,Poppins ExtraBold,${Math.round(1080 * 0.075 * 1.5 * 1.762 * 10) / 10},`), "the layer's own size (em × the font's line height)");
 });
 
-test("styles on offer: the chosen 20 and the template pack's 16, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 36);
+test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 8, with the default among them", () => {
+  assert.equal(STYLE_CHOICES.length, 44);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 16);
-  assert.equal(STYLE_GROUPS[0], "Templates");
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 8);
+  assert.equal(STYLE_GROUPS[0], "Typography");
   assert.ok(STYLE_CHOICES.some((s) => s.id === DEFAULT_STYLE));
   assert.ok(!STYLE_GROUPS.includes("Playful"), "a group with nothing on offer isn't shown");
   assert.equal(styleOf("minimal").name, "Plain Bold", "projects on a style no longer offered keep it");
@@ -174,4 +175,28 @@ test("template pack: new entrances in the MP4", () => {
   assert.match(ass("wordin"), /\\alpha&HFF&\\blur[\d.]+\\t\(0,160/, "each word blurs in");
   const rgb = buildAss([{ start: 0, end: 2, ta: "it rewards strategy", en: "" }], { styleId: "tpl-reels-rgb", lang: "ta", width: 1080, height: 1920 });
   assert.equal((rgb.match(/^Dialogue/gm) ?? []).length % 3, 0, "the big word in red and cyan behind it");
+});
+
+test("CINECUT typography: words (or letters) come in each in a layer of its own, in place", () => {
+  const cue = [{ start: 0, end: 3, ta: "slide up effect", en: "" }];
+  const dlg = (id: string) => buildAss(cue, { styleId: id, lang: "ta", width: 1080, height: 1920 }).split("\n").filter((l) => l.startsWith("Dialogue"));
+  const rise = dlg("cc-rise");
+  assert.equal(rise.length, 3, "a layer a word");
+  assert.ok(rise.every((l) => /\\move\(540,\d+,540,\d+,0,270\)/.test(l)), "each rises into place");
+  assert.ok(rise.every((l) => l.replace(/\{[^}]*\}/g, "") .endsWith("slide up effect")), "the same text in every layer");
+  assert.equal(dlg("cc-letter-rise").length, "slideupeffect".length, "a layer a letter");
+  assert.ok(dlg("cc-bold-flicker").every((l) => /\\t\(40,41,\\alpha&H00&\)/.test(l)), "each word flickers on");
+  const corners = dlg("cc-corners");
+  assert.deepEqual(corners.map((l) => l.match(/\\an(\d)/)![1]), ["7", "9", "7"], "pairs pinned left and right");
+  assert.equal(dlg("cc-word-cut").length, 3, "one word at a time");
+  assert.deepEqual(revealUnits([{ w: "hi", s: 1, e: 2 }, { w: "வணக்கம்", s: 2, e: 3 }], true).map((u) => [u.j, u.k]), [[0, 0], [0, 1], [1, null]], "letters only in Latin words");
+  assert.deepEqual([0, 1, 2, 3, 4].map(typoSize), [0.55, 1.5, 0.55, 0.55, 1.5]);
+  assert.deepEqual(cornerRows([1, 2, 3]), [[1, 2], [3]]);
+});
+
+test("the MP4 draws every font at the editor's size: its ASS size is em × the font's line height", () => {
+  const ass = buildAss([{ start: 0, end: 2, ta: "இந்த song", en: "" }], { styleId: "tall-caps", lang: "ta", width: 1080, height: 1920 });
+  const em = Math.round(1080 * 0.075 * 1.25 * 10) / 10; // tall-caps: size 1.25, Anton
+  assert.match(ass, new RegExp(`Style: Main,Anton,${Math.round(em * 1.733 * 10) / 10},`), "Anton sized by its line height");
+  assert.match(ass, new RegExp(`\\\\fnMukta Malar ExtraBold\\\\fs${Math.round(em * 1.662 * 10) / 10}`), "the Tamil letters by their font's");
 });
