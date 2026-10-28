@@ -763,3 +763,9 @@ a.signout { text-decoration: none; }
 .video-sending .bar i { display: block; height: 100%; background: var(--black); transition: width .3s; }
 .ib-up { display: none; }
 @media (max-width: 720px) { .ib-up { display: inline-flex; align-items: center; height: 30px; padding: 0 10px; border-radius: 999px; background: rgb(255 255 255 / .14); color: #fff; font: 600 .75rem var(--font-body); } }
+/* What a video will use, before it's sent */
+.cost-check { gap: 8px; }
+.cost-check .cc-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cost-check .cc-len { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; }
+.cost-check .cc-short { color: var(--bad); }
+.cost-check .cc-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
