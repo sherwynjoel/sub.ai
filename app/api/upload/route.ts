@@ -61,7 +61,8 @@ export async function POST(req: Request) {
   let source = path;
   if (audioFirst) { // raw AAC has no exact length: repackage it (a copy)
     source = path.replace(/\.aac$/, ".m4a");
-    const ok = await remuxAudio(path, source).then(() => true, () => false);
+    const shift = Math.max(-5, Math.min(5, Number(q.get("shift")) || 0)); // the video's edit list (lib/audioTrack.ts)
+    const ok = await remuxAudio(path, source, shift).then(() => true, () => false);
     await unlink(path).catch(() => {});
     if (!ok) return json({ error: "That file has no audio track we can read." }, 400);
   }

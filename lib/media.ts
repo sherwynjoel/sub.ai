@@ -18,9 +18,15 @@ export const bin = (name: string) => (process.env.FFMPEG_DIR ? join(process.env.
 export const STORAGE = resolve(/*turbopackIgnore: true*/ process.env.STORAGE_DIR || "./storage");
 export const CHUNK_SECONDS = 300; // shorter chunks = tighter AI timestamps
 
-/** Raw AAC (ADTS, from lib/audioTrack.ts) into an M4A: a copy, not a re-encode, so its length is exact. */
-export async function remuxAudio(src: string, dst: string) {
-  await run(bin("ffmpeg"), ["-y", "-v", "error", "-i", src, "-c", "copy", dst]);
+/**
+ * Raw AAC (ADTS, from lib/audioTrack.ts) into an M4A with an exact length: a copy, or, when the video's edit list
+ * moves its sound (`shift` seconds, see audioTrack), this listening copy re-encoded with the gap added or the
+ * skipped start cut, so captions line up with the video as it plays. The video itself is never touched.
+ */
+export async function remuxAudio(src: string, dst: string, shift = 0) {
+  const ms = Math.round(shift * 1000);
+  const fx = ms > 0 ? ["-af", `adelay=${ms}:all=1`] : ms < 0 ? ["-af", `atrim=start=${(-ms / 1000).toFixed(3)},asetpts=PTS-STARTPTS`] : [];
+  await run(bin("ffmpeg"), ["-y", "-v", "error", "-i", src, ...(fx.length ? [...fx, "-c:a", "aac", "-b:a", "128k"] : ["-c", "copy"]), dst]);
 }
 
 /** A video arriving in pieces: the file being filled, and a folder with one marker per piece received. */

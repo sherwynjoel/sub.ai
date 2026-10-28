@@ -117,7 +117,7 @@ export default function Dashboard() {
     const base = `/api/upload?name=${encodeURIComponent(file.name)}&lang=${language}&script=${script}&english=${english ? 1 : 0}&show=${show}&safe=${safe}`;
     const audio = /\.(mp4|m4v|mov)$/i.test(file.name) || /^video\/(mp4|quicktime|x-m4v)$/.test(file.type) ? await extractAudio(file) : null;
     const body: Blob = audio ? audio.adts : file;
-    const url = audio ? `${base}&audio=1&videoBytes=${file.size}&videoType=${encodeURIComponent(file.type || "video/mp4")}` : base;
+    const url = audio ? `${base}&audio=1&videoBytes=${file.size}&videoType=${encodeURIComponent(file.type || "video/mp4")}&shift=${audio.shift.toFixed(4)}` : base;
     setUpload({ name: file.name, pct: 0, note: audio ? "Sending the sound first…" : undefined });
     const xhr = new XMLHttpRequest();
     xhr.open("POST", url);
