@@ -10,7 +10,7 @@ import { db, jobs, settings, users, type Cue } from "./db";
 import { getAiConfig, transcribe, type Script } from "./lib/ai";
 import { extractChunks, LEVEL_FRAME, loudness, probe, removeUploads, STORAGE } from "./lib/media";
 import { speechRegions } from "./lib/timing";
-import { ALIGN_LANGS, alignCues } from "./lib/align";
+import { alignCues } from "./lib/align";
 import { translateLines } from "./lib/ai/translate";
 import { renderStyled } from "./lib/render";
 import { dropAnchor, englishCues, mergeChunks, mergeShort, retimeWindows, snapToPauses, withWordTimes } from "./lib/subtitles";
@@ -65,7 +65,8 @@ async function processJob(job: typeof jobs.$inferSelect) {
     // Where the word-timing model knows the language, every word is placed in the audio first (lib/align.ts);
     // windows it can't place keep the loudness estimates.
     const level = await loudness(source), merged = mergeChunks(results);
-    const timed = ALIGN_LANGS.includes(job.language) && !translated ? await alignCues(source, merged) : merged;
+    // Words placed in the audio (lib/align.ts): what was said is the main line, or the English for "Translate to …".
+    const timed = await alignCues(source, merged, job.language, translated ? "en" : "ta");
     const cues = level
       ? withWordTimes(mergeShort(snapToPauses(retimeWindows(timed, level, LEVEL_FRAME), level, LEVEL_FRAME)), level, LEVEL_FRAME)
       : mergeShort(timed).map(dropAnchor);

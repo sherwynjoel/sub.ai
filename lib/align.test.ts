@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { fillGaps, forcedAlign, placeCues, toTamilLetters, wordTokens } from "./align";
+import { ENGLISH, MODELS, fillGaps, forcedAlign, placeCues, toIndicLetters, toTamilLetters, wordTokens } from "./align";
+import english from "./ctc-vocab/english.json";
 
 test("Latin words are written in Tamil letters by sound", () => {
   assert.equal(toTamilLetters("vanakkam"), "வனக்கம்");
@@ -34,4 +35,25 @@ test("captions come up with their first word and stay until the next, or briefly
   assert.deepEqual(out[0].w, [0.5, 1]);
   assert.ok(out.every((c) => c.aligned));
   assert.equal(placeCues([{ start: 0, end: 1, ta: "a", en: "" }], [{ start: 0.2, end: 0.6 }], 0.8)[0].end, 0.8, "not past the next window");
+});
+
+test("every language's letters become its model's tokens (Tamil exactly as before)", () => {
+  // the old built-in Tamil table: letter i at token i + 5
+  const OLD = "ஃஅஆஇஈஉஊஎஏஐஒஓஔகஙசஜஞடணதநனபமயரறலளழவஶஷஸஹாிீுூெேைொோௌ்";
+  for (const w of ["வணக்கம்", "கொண்டு", "website", "Indha"]) {
+    const letters = /[஀-௿]/.test(w) ? w : toTamilLetters(w);
+    assert.deepEqual(wordTokens(w, MODELS["ta-IN"]), [...letters].map((c) => OLD.indexOf(c) + 5).filter((t) => t >= 5));
+  }
+  assert.ok(wordTokens("नमस्ते", MODELS["hi-IN"]).length === 6, "Hindi letters");
+  assert.ok(wordTokens("క్షమించండి", MODELS["te-IN"]).length > 5, "Telugu letters");
+  assert.deepEqual(wordTokens("क़", MODELS["hi-IN"]).length, 2, "a letter the model writes in parts (क + ़)");
+});
+
+test("Latin words: written as they sound in the model's script, as they are for English", () => {
+  assert.equal(toIndicLetters("website", 0x0900), "वेब्सिटे");
+  assert.equal(toIndicLetters("namaste", 0x0c00), "నమస్టే"); // Telugu, by the parallel block
+  assert.ok(wordTokens("website", MODELS["hi-IN"]).length >= 6);
+  assert.ok(wordTokens("website", MODELS["kn-IN"]).length >= 6, "Kannada too");
+  assert.deepEqual(wordTokens("Hello", ENGLISH), [..."hello"].map((c) => (english as Record<string, number>)[c]));
+  assert.deepEqual(wordTokens("vanakkam", MODELS["ur-IN"]), [], "Urdu has no Latin mapping: left to the neighbours");
 });

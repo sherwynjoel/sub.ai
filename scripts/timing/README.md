@@ -62,3 +62,21 @@ scp tamil-ctc.onnx ubuntu@<server>:/opt/vasanam/models/tamil-ctc.onnx
 
 Without the file the worker keeps the loudness estimates. On the test clips the two models (MMS and Vakyansh) agree
 on word starts within 0.02 s (median), which is also how the answer keys were checked.
+
+### More languages and English
+
+Every language with a Vakyansh model is wired up in `lib/align.ts` (`MODELS`), with its alphabet in
+`lib/ctc-vocab/<id>.json`: tamil, hindi, telugu, malayalam, kannada, bengali, marathi, gujarati, punjabi, odia,
+urdu, assamese, nepali, maithili, sanskrit, dogri, and english (Indian English, used for stretches spoken in
+English and for "Translate to …" projects). A language is timed word by word as soon as its model file is on
+the server; until then it keeps the estimates. To add one (`<id>`, `<repo>` from `Harveenchadha/vakyansh-wav2vec2-*`):
+
+```bash
+mkdir -p src/<id> && for f in config.json vocab.json preprocessor_config.json pytorch_model.bin; do
+  curl -sL -o src/<id>/$f https://huggingface.co/Harveenchadha/<repo>/resolve/main/$f; done
+venv/bin/python -I export_onnx.py src/<id> <id>-ctc.onnx
+scp <id>-ctc.onnx ubuntu@<server>:/opt/vasanam/models/
+```
+
+The `.bin` weights are a pickle (they run code when loaded): fetch them from the official repos only, and
+check each model on a clip of its language (`timing-check.ts`) before relying on it.
