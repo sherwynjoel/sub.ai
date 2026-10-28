@@ -1,5 +1,5 @@
 "use client";
-import { byLetters, caseOf, nameOrKeyword, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { byLetters, caseOf, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
 
@@ -128,23 +128,31 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       const size = h.sizes[j % h.sizes.length], f = h.fonts?.[j % h.colors.length];
       return (
         <span key={`${piece.s}-${j}`} className="hook-line" style={{
-          fontSize: `min(${size}em, calc(88cqw / ${Math.max(0.5, textWidth(ln.text, f ?? s.font)).toFixed(3)}))`,
+          fontSize: `min(${size}em, calc(88cqw / ${Math.max(0.5, textWidth(ln.text, f ?? s.font, s.fontTa)).toFixed(3)}))`,
           color: h.colors[j % h.colors.length], fontFamily: f ? stack(f, s.fontTa) : undefined, opacity: v, filter: v < 1 ? `blur(${((1 - v) * 0.15).toFixed(3)}em)` : undefined,
         }}>{ln.text.split(" ").map((w, n) => [n ? " " : null, colors?.[ln.idx[n]] ? <span key={n} style={{ color: colors[ln.idx[n]]! }}>{w}</span> : w])}</span>
       );
     });
   } else if (s.effect === "oneword") {
-    // one word at a time, filling ~87% of the frame's width at most (its advance width 94%, as the MP4)
-    body = <span style={{ fontSize: `min(1em, calc(94cqw / ${Math.max(0.3, textWidth(words[i].w, s.font)).toFixed(3)}))` }}>{word(i)}</span>;
+    // one word at a time, filling ~85% of the frame's width at most (its advance width 90%, as the MP4)
+    body = <span style={{ fontSize: `min(1em, calc(90cqw / ${Math.max(0.3, textWidth(words[i].w, s.font, s.fontTa)).toFixed(3)}))` }}>{word(i)}</span>;
   } else if (s.effect === "corners") {
-    const rows = cornerRows(words.map((_, j) => j));
+    // four words (two rows) at a time, as the MP4
+    const groups = wordGroups(words, 4, end), g = groups[Math.max(0, groups.findIndex((x) => time < x.e))];
+    const rows = cornerRows(words.slice(g.from, g.to).map((_, n) => g.from + n));
     body = <span className="corners">{rows.flatMap((r) => r.map((j, side) => <span key={j} style={{ justifySelf: side ? "end" : "start", visibility: time < words[j].s ? "hidden" : undefined }}>{word(j)}</span>))}</span>;
-  } else if (s.effect === "cine" && words.length > 1) {
+  } else if (s.effect === "cine" && words.length > 1 && textWidth(words.slice(0, -1).map((w) => w.w).join(" "), s.font, s.fontTa) * (s.size ?? 1) * 7.5 <= 86) {
+    // (the MP4's rule: the words before the last fit on one line, ≈86% of the frame at 7.5% of its short side an em)
     const last = words.length - 1, since = time - words[last].s, v = Math.min(1, Math.max(0, since / RISE));
     body = <span className="cine">
       <span>{join(0, last)}</span>
       <span className="cine-last" style={{ visibility: since < 0 ? "hidden" : undefined, opacity: v, transform: `translateY(${((1 - v) * RISE_DY).toFixed(3)}em)` }}>{word(last)}</span>
     </span>;
+  } else if (s.wordLines) {
+    // a word a line, three words at a time (as the MP4)
+    const groups = wordGroups(words, 3, end), g = groups[Math.max(0, groups.findIndex((x) => time < x.e))];
+    // a long word shrinks to fit the width (as the MP4)
+    body = words.slice(g.from, g.to).flatMap((w, n) => [n ? <br key={`br${n}`} /> : null, <span key={`w${n}`} style={{ fontSize: `min(1em, calc(85cqw / ${Math.max(0.3, textWidth(w.w, s.font, s.fontTa)).toFixed(3)}))` }}>{word(g.from + n)}</span>]);
   } else if (s.effect === "typewriter") {
     const chars = [...breakLines(caseOf(s, text), s.lines)];
     body = <>{chars.slice(0, Math.max(1, Math.ceil(chars.length * Math.min(1, p / 0.8)))).join("")}<span className="caret">_</span></>;

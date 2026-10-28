@@ -413,7 +413,7 @@ export function hookChunks(main: string, start: number, end: number, minDur = 1.
   });
 }
 /** A hook line's size (em of the caption font): its style size, smaller when its real width wouldn't fit `widthEm`. */
-export const hookFit = (text: string, size: number, widthEm: number, font = "Inter Bold") => Math.round(Math.min(size, widthEm / Math.max(0.5, textWidth(text, font))) * 100) / 100;
+export const hookFit = (text: string, size: number, widthEm: number, font = "Inter Bold", fontTa?: string) => Math.round(Math.min(size, widthEm / Math.max(0.5, textWidth(text, font, fontTa))) * 100) / 100;
 /** Each hook line comes in this long after the one before (seconds). */
 export const HOOK_STEP = 0.12;
 
@@ -434,6 +434,19 @@ const TYPO = [0.55, 1.5, 0.55, 0.55, 1.5, 1.5, 0.55, 0.55];
 export const typoSize = (j: number) => TYPO[j % TYPO.length];
 /** "typo": a new line after each run of big words (as the reference: "sometimes this / is the best way / to start."). */
 export const typoBreak = (j: number, n: number) => j + 1 < n && typoSize(j) > 1 && typoSize(j + 1) < 1;
+/**
+ * Long captions in layouts made for a few words (Corner Block, Bold Flicker): shown `max` words at a time, each
+ * group from its first word to the next group's (the last to the caption's end).
+ */
+export function wordGroups<T extends { s: number }>(words: T[], max: number, end: number) {
+  const k = Math.max(1, Math.ceil(words.length / max)), out: { from: number; to: number; s: number; e: number }[] = [];
+  for (let i = 0, from = 0; i < k; i++) {
+    const to = Math.round((words.length * (i + 1)) / k);
+    out.push({ from, to, s: words[from].s, e: to < words.length ? words[to].s : end });
+    from = to;
+  }
+  return out;
+}
 /** "corners": words in pairs, the first pinned to the block's left edge, the second to its right. */
 export const cornerRows = <T,>(words: T[]) => Array.from({ length: Math.ceil(words.length / 2) }, (_, r) => words.slice(2 * r, 2 * r + 2));
 
@@ -641,15 +654,17 @@ export function buildAss(cues: Cue[], o: Opts) {
     const glueK = (j: number) => (j ? (brk.has(j - 1) || s.wordLines || (s.effect === "typo" && typoBreak(j - 1, words.length)) || (s.keyword?.line && (j === kw || j === kw + 1)) ? "\\N" : " ") : "");
     if (s.effect === "oneword") { // one big word at a time, cut on; a long word shrinks to fit
       words.forEach((wt, i) => { // filling ~87% of the frame's width at most (as the reference), never bigger than the style
-        const z = Math.round(Math.min(1, (0.94 * o.width) / (Math.max(0.3, textWidth(wt.w, s.font)) * fs)) * 100); // advance width; the ink is ~0.87
-        add(wt.s, i === words.length - 1 ? c.end : words[i + 1].s, pos + "{\\q2}" + word(i, i).replace("}", `\\fscx${z}\\fscy${z}}`) + tail, 0, wrapM, wrapM);
+        const z = Math.round(Math.min(1, (0.9 * o.width) / (Math.max(0.3, textWidth(wt.w, s.font, s.fontTa)) * fs)) * 100); // advance width; the ink is ~0.85
+        add(wt.s, i === words.length - 1 ? c.end : words[i + 1].s, pos + word(i, i).replace("}", `\\fscx${z}\\fscy${z}}`) + tail, 0, wrapM, wrapM);
       });
       continue;
     }
-    if (s.effect === "cine" && words.length > 1) {
+    // Cinematic's small last word needs the words before it on one line (a short phrase, as the reference).
+    const cineFits = (ws: { w: string }[], room: number) => textWidth(ws.map((w) => w.w).join(" "), s.font, s.fontTa) * fs <= room;
+    if (s.effect === "cine" && words.length > 1 && cineFits(words.slice(0, -1), (o.width - marginL - marginR) * 0.95)) {
       // The words but the last zoom out of a blur; the last comes in as it's said, small, under the line's right end.
       const head = words.slice(0, -1), last = words[words.length - 1], [ev, each] = entrance(c.end - c.start);
-      const lineW = textWidth(head.map((w) => w.w).join(" "), s.font) * fs;
+      const lineW = textWidth(head.map((w) => w.w).join(" "), s.font, s.fontTa) * fs;
       add(c.start, c.end, (ev.includes("\\move") ? "" : pos) + ev + q + head.map((_, j) => glueK(j) + word(j, j, each)).join("") + tail, 0, wrapM, wrapM);
       // its top just under the line's bottom (bottom-placed: the line ends at the anchor; middle: half a line below; top: a line below)
       const x = Math.round(ax + lineW / 2), y = Math.round(s.y !== undefined || align === 5 ? ay + fs * 0.55 : align === 8 ? ay + fs * 1.15 : ay - fs * 0.1);
@@ -659,34 +674,50 @@ export function buildAss(cues: Cue[], o: Opts) {
     if (s.effect === "corners") {
       // Pairs of words pinned to a block's left and right edges (block as wide as its widest pair), each popping on as
       // it's said; the English under the block.
-      const rows = cornerRows(words.map((w, j) => ({ ...w, j }))), lineH = fs * 1.15, gap = fs * 1.2;
-      const wid = (w: string) => textWidth(w, s.font) * fs;
-      const blockW = Math.min(o.width * 0.9, Math.max(...rows.map((r) => wid(r[0].w) + (r[1] ? gap + wid(r[1].w) : 0))));
-      const top = align === 8 && s.y === undefined ? ay : align === 5 || s.y !== undefined ? ay - (rows.length * lineH) / 2 : ay - rows.length * lineH;
-      rows.forEach((r, n) => r.forEach((w, side) => {
-        const x = Math.round(ax + (side ? blockW / 2 : -blockW / 2)), y = Math.round(top + n * lineH);
-        add(w.s, c.end, `{\\an${side ? 9 : 7}\\pos(${x},${y})}` + word(w.j, w.j), 0, 0, 0);
-      }));
-      if (tail) add(c.start, c.end, `{\\an8\\pos(${Math.round(ax)},${Math.round(top + rows.length * lineH + fs * 0.2)})}` + tail.replace(/^\\N/, ""), 0, 0, 0);
+      // Four words (two rows) at a time, as the reference; the English kept inside the frame, under the block.
+      const lineH = fs * 1.15, gap = fs * 1.2, wid = (w: string) => textWidth(w, s.font, s.fontTa) * fs;
+      const subLines = sub ? Math.max(1, Math.ceil((textWidth(sub, s.font, s.fontTa) * secondEm) / ((o.width - marginL - marginR) * 0.95))) : 0;
+      const subH = subLines * secondEm * 1.45;
+      for (const g of wordGroups(words, 4, c.end)) {
+        const rows = cornerRows(words.slice(g.from, g.to).map((w, n) => ({ ...w, j: g.from + n })));
+        const blockW = Math.min(o.width * 0.9, Math.max(...rows.map((r) => wid(r[0].w) + (r[1] ? gap + wid(r[1].w) : 0))));
+        const h = rows.length * lineH, bottomPlaced = align === 2 && s.y === undefined;
+        const top = align === 8 && s.y === undefined ? ay : bottomPlaced ? ay - subH - h : ay - (h + subH) / 2;
+        rows.forEach((r, n) => r.forEach((w, side) => {
+          const x = Math.round(ax + (side ? blockW / 2 : -blockW / 2)), y = Math.round(top + n * lineH);
+          add(w.s, g.e, `{\\an${side ? 9 : 7}\\pos(${x},${y})}` + word(w.j, w.j), 0, 0, 0);
+        }));
+        if (tail) add(g.s, g.e, `{\\an8\\pos(${Math.round(ax)},${Math.round(top + h + fs * 0.15)})}` + tail.replace(/^\\N/, ""), 0, marginL, marginR);
+      }
       continue;
     }
     if (s.reveal || s.effect === "typo") {
       // Each word (or letter) in a layer of its own: the same caption text in every layer (so it lands exactly in
       // place), only that word visible, coming in as it's said; the English stays in one still layer.
       const reveal = s.reveal ?? "rise", letters = reveal === "letters", ms = Math.round(RISE * 1000);
-      const sized = (j: number) => (s.effect === "typo" ? `\\fscx${Math.round(typoSize(j) * 100)}\\fscy${Math.round(typoSize(j) * 100)}` : "");
-      const body = (on: (j: number, k: number | null) => boolean, tags: string) => words.map((w, j) => {
+      // typo: its sizes; a word a line: each word shrunk to fit the width when it's long ("PROFESSIONAL")
+      const fitLine = (j: number) => Math.min(1, ((o.width - marginL - marginR) * 0.92) / (Math.max(0.3, textWidth(caseOf(s, words[j].w), s.font, s.fontTa)) * fs));
+      const sized = (j: number) => {
+        const z = s.effect === "typo" ? typoSize(j) : s.wordLines ? fitLine(j) : 1;
+        return z === 1 ? "" : `\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)}`;
+      };
+      // A word a line (Bold Flicker): three words at a time, so a long caption doesn't run off the frame.
+      const groups = s.wordLines ? wordGroups(words, 3, c.end) : [{ from: 0, to: words.length, s: c.start, e: c.end }];
+      const body = (on: (j: number, k: number | null) => boolean, tags: string, g = groups[0]) => words.slice(g.from, g.to).map((w, n) => {
+        const j = g.from + n;
         const base = word(j, j).match(/^\{([^}]*)\}/)![1] + sized(j); // the word's look, settled
         const part = (txt: string, k: number | null) => `{${base}${on(j, k) ? tags : "\\alpha&HFF&"}}${esc(txt)}`;
-        return glueK(j) + (letters && byLetters(w.w) ? [...w.w].map((ch, k) => part(ch, k)).join("") : part(w.w, null));
+        return (n ? glueK(j) : "") + (letters && byLetters(w.w) ? [...w.w].map((ch, k) => part(ch, k)).join("") : part(w.w, null));
       }).join("");
       const hiddenTail = tail.replace("}", "\\alpha&HFF&}");
       const an = s.x !== undefined ? 5 : align, dy = Math.round(px(RISE_DY));
       const rise = (t0: string) => `{\\an${an}\\move(${Math.round(ax)},${Math.round(ay + dy)},${Math.round(ax)},${Math.round(ay)},0,${ms})}` + t0;
       const tagsFor = reveal === "flicker" ? flickerTags(FLICKER2) : `\\alpha&HFF&\\t(0,${ms},\\alpha&H00&)`;
-      for (const u of revealUnits(words, letters))
-        add(u.s, c.end, (reveal === "flicker" ? pos : rise("")) + q + body((j, k) => j === u.j && (u.k === null || k === u.k), tagsFor) + hiddenTail, 1, wrapM, wrapM);
-      if (tail) add(c.start, c.end, pos + body(() => false, "") + tail, 0, wrapM, wrapM);
+      for (const g of groups) {
+        for (const u of revealUnits(words.slice(g.from, g.to), letters))
+          add(Math.max(g.s, u.s), g.e, (reveal === "flicker" ? pos : rise("")) + q + body((j, k) => j === g.from + u.j && (u.k === null || k === u.k), tagsFor, g) + hiddenTail, 1, wrapM, wrapM);
+        if (tail) add(g.s, g.e, pos + body(() => false, "", g) + tail, 0, wrapM, wrapM);
+      }
       continue;
     }
     if (s.effect === "stack" && s.stack) {
@@ -703,25 +734,27 @@ export function buildAss(cues: Cue[], o: Opts) {
         const layout = (bigPart: string, smallAlpha = "") => pos + `{\\q2\\fad(120,0)}` + (a ? `{${small}${smallAlpha}}${a}\\N` : "") + bigPart + (d ? `\\N{\\r${small}${smallAlpha}}${d}` : "");
         if (s.stack.rgb) { // the big word again in red and cyan, nudged apart behind it (the small lines invisible)
           const dx = Math.max(2, Math.round(px(0.05)));
-          for (const [col, ml, mr] of [["#FF2040", wrapM + 2 * dx, wrapM], ["#00E5FF", wrapM, wrapM + 2 * dx]] as const)
+          // nudged by margins (an event margin of 0 means the style's, so start from the real ones)
+          const L = wrapM || marginL, R = wrapM || marginR;
+          for (const [col, ml, mr] of [["#FF2040", L + 2 * dx, R], ["#00E5FF", L, R + 2 * dx]] as const)
             add(p.s, p.e, layout(`{\\r\\fn${s.stack.font}\\b0\\1c${colorOnly(col)}\\1a&H50&\\bord0\\shad0${grow}}${b}`, "\\alpha&HFF&"), 0, ml, mr);
         }
-        add(p.s, p.e, layout(big), 1, wrapM, wrapM);
+        add(p.s, p.e, layout(big), 1, wrapM || marginL, wrapM || marginR);
       }
       continue;
     }
     if (s.effect === "hook" && s.hook) {
-      const h = s.hook, widthEm = (o.width - marginL - marginR) * 0.9 / fs;
+      const h = s.hook, widthEm = (o.width - marginL - marginR) * 0.86 / fs;
       for (const p of hookChunks(caseOf(s, main), c.start, c.end)) {
         const text = p.lines.map((ln, j) => {
           const col = h.colors[j % h.colors.length], f = h.fonts?.[j % h.colors.length];
-          const z = hookFit(ln.text, h.sizes[j % h.sizes.length], widthEm, f ?? s.font), at = Math.round(j * HOOK_STEP * 1000);
+          const z = hookFit(ln.text, h.sizes[j % h.sizes.length], widthEm, f ?? s.font, s.fontTa), at = Math.round(j * HOOK_STEP * 1000);
           const head = `\\r\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)}\\1c${colorOnly(col)}${f ? `\\fn${f}` : ""}`;
           const reveal = `\\alpha&HFF&\\blur${px(0.15)}\\t(${at},${at + 180},\\alpha&H00&\\blur0)`;
           // a word the user coloured keeps its colour
           return ln.text.split(" ").map((w, n) => `{${head}${colors?.[ln.idx[n]] ? `\\1c${colorOnly(colors[ln.idx[n]]!)}` : ""}${reveal}}${esc(w)}`).join(" ");
         }).join("\\N");
-        add(p.s, p.e, pos + "{\\q2}" + text + tail, 0, wrapM, wrapM);
+        add(p.s, p.e, pos + text + tail, 0, wrapM, wrapM); // lines fitted already; the English below wraps
       }
       continue;
     }
