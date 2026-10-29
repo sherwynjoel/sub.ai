@@ -71,6 +71,13 @@
       "when": 1793128106958,
       "tag": "0009_fast_upload",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793258655282,
+      "tag": "0010_trial_guard",
+      "breakpoints": true
     }
   ]
 }

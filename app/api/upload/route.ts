@@ -7,7 +7,7 @@ import { pipeline } from "node:stream/promises";
 import { and, eq, sql } from "drizzle-orm";
 import { db, jobs, users } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
-import { probe, remuxAudio, STORAGE, videoPart } from "@/lib/media";
+import { probe, remuxAudio, soundLength, STORAGE, videoPart } from "@/lib/media";
 import { DEFAULT_LANGUAGE, isLanguage } from "@/lib/languages";
 import { JOB_SCRIPTS, type JobScript } from "@/lib/captionTypes";
 import { DEFAULT_STYLE, SAFE_ZONES, STYLE_CHOICES } from "@/lib/captionStyles";
@@ -66,7 +66,9 @@ export async function POST(req: Request) {
     await unlink(path).catch(() => {});
     if (!ok) return json({ error: "That file has no audio track we can read." }, 400);
   }
-  const duration = await probe(source);
+  // The longer of what the file states and its sound counted out (a file can state less than it holds).
+  const stated = await probe(source), counted = stated ? await soundLength(source) : null;
+  const duration = stated && Math.max(stated, counted ?? 0);
   if (!duration) {
     await unlink(source).catch(() => {});
     return json({ error: "That file has no audio track we can read." }, 400);

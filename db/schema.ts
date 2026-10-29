@@ -27,8 +27,9 @@ export const users = pgTable("users", {
   subscriptionId: text("subscription_id").unique(),
   subscriptionStatus: text("subscription_status"),
   isAdmin: boolean("is_admin").notNull().default(false),
+  signupIp: text("signup_ip"), // limits how many free trials one connection can start (api/auth/signup)
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [index("users_signup_ip_idx").on(t.signupIp, t.createdAt)]);
 
 export const sessions = pgTable("sessions", {
   id: text("id").primaryKey(), // sha256 of the cookie token
