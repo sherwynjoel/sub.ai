@@ -116,7 +116,8 @@ test("text controls and entrances reach the MP4", () => {
   });
   const style = ass.split("\n").find((l) => l.startsWith("Style: Main"))!.split(",");
   assert.equal(style[7], "-1", "bold");
-  assert.equal(style[13], String(Math.round(0.1 * 81 * 10) / 10), "letter spacing");
+  const fs = Math.round(1080 * 0.075 * resolveStyle("minimal").size! * 10) / 10; // the editor's em, in pixels
+  assert.equal(style[13], String(Math.round(0.1 * fs * 10) / 10), "letter spacing");
   assert.equal(style[14], "-10", "rotation");
   assert.match(style[3], /^&H(7F|80)/, "half opacity");
   const first = ass.split("\n").find((l) => l.startsWith("Dialogue"))!;
@@ -141,7 +142,8 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
   assert.match(layer, /^Dialogue: 5,0:00:01\.00,0:00:03\.00,L1,/);
   assert.match(layer, /\\pos\(216,324\)/);
   assert.match(layer, /\\fnNoto Emoji(\\fs[\d.]+)?\}🔥/, "emoji in the one-colour emoji font");
-  assert.match(ass, new RegExp(`Style: L1,Poppins ExtraBold,${Math.round(1080 * 0.075 * 1.5 * 1.762 * 10) / 10},`), "the layer's own size (em × the font's line height)");
+  const em = Math.round(1080 * 0.075 * resolveStyle("minimal", { size: 1.5 }).size! * 10) / 10; // 150% of the standard
+  assert.match(ass, new RegExp(`Style: L1,Poppins ExtraBold,${Math.round(em * 1.762 * 10) / 10},`), "the layer's own size (em × the font's line height)");
 });
 
 test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 8, with the default among them", () => {
@@ -162,7 +164,8 @@ test("template pack: hooks cut a caption into pieces of lines that take the size
   assert.equal(hookFit("missing", 2, 99), 2);
   assert.ok(hookFit("a very long line of words here", 2, 10) < 1, "a long line shrinks to fit");
   const ass = buildAss([{ start: 0, end: 2, ta: "You might be missing", en: "" }], { styleId: "tpl-hook-yellow", lang: "ta", width: 1080, height: 1920 });
-  assert.match(ass, /\\fscx150\\fscy150\\1c&H00EDFF&/, "the third line big and in the hook's yellow");
+  const third = Math.round(styleOf("tpl-hook-yellow").hook!.sizes[2] * 100);
+  assert.match(ass, new RegExp(`\\\\fscx${third}\\\\fscy${third}\\\\1c&H00EDFF&`), "the third line big and in the hook's yellow");
   assert.match(ass, /\\t\(120,300,\\alpha&H00&/, "lines come in one after another");
 });
 
@@ -196,7 +199,23 @@ test("CINECUT typography: words (or letters) come in each in a layer of its own,
 
 test("the MP4 draws every font at the editor's size: its ASS size is em × the font's line height", () => {
   const ass = buildAss([{ start: 0, end: 2, ta: "இந்த song", en: "" }], { styleId: "tall-caps", lang: "ta", width: 1080, height: 1920 });
-  const em = Math.round(1080 * 0.075 * 1.25 * 10) / 10; // tall-caps: size 1.25, Anton
+  const em = Math.round(1080 * 0.075 * styleOf("tall-caps").size! * 10) / 10; // tall-caps: Anton
   assert.match(ass, new RegExp(`Style: Main,Anton,${Math.round(em * 1.733 * 10) / 10},`), "Anton sized by its line height");
   assert.match(ass, new RegExp(`\\\\fnMukta Malar ExtraBold\\\\fs${Math.round(em * 1.662 * 10) / 10}`), "the Tamil letters by their font's");
+});
+
+test("every style starts at the standard size, in any font or case; the user's size is relative to it", async () => {
+  const { looksTall } = await import("./fontWidths");
+  const looks = (s: { font: string; caps?: boolean; size?: number }) => looksTall(s.font, s.caps) * (s.size ?? 1);
+  const standard = looksTall("Inter Bold") * 1.1;
+  for (const st of STYLE_CHOICES) {
+    const r = resolveStyle(st.id);
+    assert.ok(Math.abs(looks(r) / standard - 1) < 0.02, `${st.id} looks ${(looks(r) / standard * 100).toFixed(0)}% of standard`);
+    assert.equal(r.scale, 1);
+    const anton = resolveStyle(st.id, { font: "Anton", case: "upper" });
+    assert.ok(Math.abs(looks(anton) / standard - 1) < 0.02, `${st.id} in Anton caps`);
+    const big = resolveStyle(st.id, { size: 1.5 });
+    assert.ok(Math.abs(looks(big) / standard - 1.5) < 0.03, `${st.id} at 150%`);
+    assert.equal(big.scale, 1.5);
+  }
 });

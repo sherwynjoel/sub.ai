@@ -89,7 +89,7 @@ function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, p
   const main = view === "en" ? c.en : c.ta;
   if (!main.trim()) return null;
   const own = mergeCustom(custom, c.style);
-  const { position, offset, x, y, safe, size } = resolveStyle(styleId, own, portrait);
+  const { position, offset, x, y, safe, scale } = resolveStyle(styleId, own, portrait);
   const free = x !== undefined && y !== undefined;
   const pct = (n: number) => `${n * 100}%`;
   const sides = { left: pct(safe.left), right: pct(safe.right) };
@@ -111,7 +111,7 @@ function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, p
     e.stopPropagation();
     const handle = e.currentTarget.parentElement as HTMLElement, box = handle.getBoundingClientRect();
     const cx = box.left + box.width / 2, cy = box.top + box.height / 2;
-    const d0 = Math.max(8, Math.hypot(e.clientX - cx, e.clientY - cy)), s0 = size ?? 1;
+    const d0 = Math.max(8, Math.hypot(e.clientX - cx, e.clientY - cy)), s0 = scale; // 1 = the standard size
     let moving = false;
     const at = (ev: PointerEvent) => {
       const d = Math.hypot(ev.clientX - cx, ev.clientY - cy);
@@ -185,7 +185,7 @@ function LayerViews({ layers, t, paused, styleId, custom, selected, onSelect, on
         onPointerDown={(e) => { onSelect(i); dragIn(e, (x, y) => onMove(i, x, y)); }}>
         <StyledCaption styleId={styleId} custom={own} text={l.text} start={l.start} end={l.end} time={on ? t : l.end - 0.01} starts={words.map(() => l.start)} />
         {i === selected && <span className="rs-handle" title="Drag to resize" aria-hidden="true"
-          onPointerDown={(e) => resizeFrom(e, resolveStyle(styleId, own).size ?? 1, 0.4, 2.6, 0.05, (s) => onResize(i, s))} />}
+          onPointerDown={(e) => resizeFrom(e, resolveStyle(styleId, own).scale, 0.4, 2.6, 0.05, (s) => onResize(i, s))} />}
       </div>
     );
   })}</>;

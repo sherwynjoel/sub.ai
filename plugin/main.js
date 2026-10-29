@@ -277,7 +277,7 @@
       .then(function (r) { if (r.status !== 200) throw new Error(r.data.error || "Couldn't load the caption look."); return r.data; });
   }
   function aeLook(l) {
-    return { font: PS_FONTS[l.font] || l.font, size: l.size, color: rgb(l.color), stroke: l.outline ? rgb(l.outline[0]) : null, strokeWidth: l.outline ? l.outline[1] : 0, position: l.position, offset: l.offset, x: l.x, y: l.y, safe: l.safe };
+    return { font: PS_FONTS[l.font] || l.font, size: l.em || l.size, color: rgb(l.color), stroke: l.outline ? rgb(l.outline[0]) : null, strokeWidth: l.outline ? l.outline[1] : 0, position: l.position, offset: l.offset, x: l.x, y: l.y, safe: l.safe };
   }
   function fill(sel, items, value) {
     sel.innerHTML = "";

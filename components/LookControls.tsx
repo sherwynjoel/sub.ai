@@ -30,8 +30,8 @@ export default function LookControls({ look, own, set, tamil, project }: Props) 
             {TAMIL_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f} — தமிழ்</option>)}
           </select>
         </label>}
-        <label>Size <span className="cz-val">{Math.round((look.size ?? 1) * 100)}%</span>
-          <input type="range" min={0.4} max={2.6} step={0.05} value={look.size ?? 1} onChange={(e) => set({ size: +e.target.value })} />
+        <label>Size <span className="cz-val">{Math.round(look.scale * 100)}%</span>
+          <input type="range" min={0.4} max={2.6} step={0.05} value={look.scale} onChange={(e) => set({ size: +e.target.value })} title="100% is the standard size every style starts at" />
         </label>
         <div className="look-row">
           <div className="seg" role="group" aria-label="Weight and slant">

@@ -6,7 +6,7 @@
  */
 import type { Cue } from "@/db";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
-import { lineScale, textWidth } from "@/lib/fontWidths";
+import { lineScale, looksTall, textWidth } from "@/lib/fontWidths";
 
 export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine";
 /** How a caption comes in (the last few from the Premiere template pack's presets). */
@@ -53,76 +53,76 @@ const W = "#FFFFFF";
 export const CAPTION_STYLES: CaptionStyle[] = [
   // The CINECUT short-form typography project (Premiere), matched frame by frame: its Helvetica Neue becomes Inter,
   // its Open Sauce Sans Black (OFL) is bundled.
-  { id: "cc-word-cut", name: "Word Cut", group: "Typography", blurb: "One big word at a time, cut on the beat.", font: "Inter", fontTa: "Hind Madurai", size: 3.5, color: W, shadow: 0.04, effect: "oneword" },
-  { id: "cc-cinematic", name: "Cinematic", group: "Typography", blurb: "Clean white that settles out of a soft blur.", font: "Inter", fontTa: "Hind Madurai", size: 1.28, color: W, shadow: 0.04, anim: "cinematic", effect: "cine" },
-  { id: "cc-rise", name: "Rise Up", group: "Typography", blurb: "Each word fades in, rising into place as it's said.", font: "Inter", fontTa: "Hind Madurai", size: 0.98, color: W, shadow: 0.04, reveal: "rise" },
-  { id: "cc-rise-spaced", name: "Rise Spaced", group: "Typography", blurb: "Airy, spaced-out words rising in one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.92, color: W, shadow: 0.04, spacing: 0.05, reveal: "rise" },
-  { id: "cc-corners", name: "Corner Block", group: "Typography", blurb: "Small capitals pinned to a block's edges, popping on one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.88, caps: true, color: W, shadow: 0.04, effect: "corners" },
-  { id: "cc-bold-flicker", name: "Bold Flicker", group: "Typography", blurb: "Big capitals that strobe on, word by word.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.68, caps: true, color: W, shadow: 0.04, reveal: "flicker", wordLines: true },
-  { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Letters rise in one by one around a huge black keyword.", font: "Inter", fontTa: "Hind Madurai", size: 0.75, color: W, shadow: 0.04, reveal: "letters", keyword: { font: "Open Sauce Sans Black", scale: 2.3, line: true } },
-  { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small and big words mixed in a block, each rising in.", font: "Inter", fontTa: "Hind Madurai", size: 1.05, color: W, shadow: 0.04, effect: "typo", reveal: "rise" },
+  { id: "cc-word-cut", name: "Word Cut", group: "Typography", blurb: "One big word at a time, cut on the beat.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, effect: "oneword" },
+  { id: "cc-cinematic", name: "Cinematic", group: "Typography", blurb: "Clean white that settles out of a soft blur.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, anim: "cinematic", effect: "cine" },
+  { id: "cc-rise", name: "Rise Up", group: "Typography", blurb: "Each word fades in, rising into place as it's said.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, reveal: "rise" },
+  { id: "cc-rise-spaced", name: "Rise Spaced", group: "Typography", blurb: "Airy, spaced-out words rising in one by one.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, spacing: 0.05, reveal: "rise" },
+  { id: "cc-corners", name: "Corner Block", group: "Typography", blurb: "Small capitals pinned to a block's edges, popping on one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.96, caps: true, color: W, shadow: 0.04, effect: "corners" },
+  { id: "cc-bold-flicker", name: "Bold Flicker", group: "Typography", blurb: "Big capitals that strobe on, word by word.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 0.96, caps: true, color: W, shadow: 0.04, reveal: "flicker", wordLines: true },
+  { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Letters rise in one by one around a huge black keyword.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, reveal: "letters", keyword: { font: "Open Sauce Sans Black", scale: 1.57, line: true } },
+  { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small and big words mixed in a block, each rising in.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, effect: "typo", reveal: "rise" },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
   // Helvetica / Neue Haas Grotesk (commercial) become Inter Bold, Helvetica Rounded becomes Nunito ExtraBold.
   { id: "tpl-blur", name: "Blur Animation", group: "Templates", blurb: "Bold orange that sharpens out of a blur.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF7800", shadow: 0.05, anim: "blur" },
   { id: "tpl-bounce", name: "Bounce Text", group: "Templates", blurb: "Bold red that bounces in.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF0000", shadow: 0.05, anim: "bounce" },
-  { id: "tpl-bouncy-fadeout", name: "Bouncy Fadeout", group: "Templates", blurb: "Rounded pink that bounces in and fades away.", font: "Nunito ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FE006C", shadow: 0.05, anim: "bouncyout" },
+  { id: "tpl-bouncy-fadeout", name: "Bouncy Fadeout", group: "Templates", blurb: "Rounded pink that bounces in and fades away.", font: "Nunito ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.16, color: "#FE006C", shadow: 0.05, anim: "bouncyout" },
   { id: "tpl-fade-up", name: "Fade Animation", group: "Templates", blurb: "Bold orange that fades up into place.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF7800", shadow: 0.05, anim: "slide" },
   { id: "tpl-flicker", name: "Flicker Text", group: "Templates", blurb: "Clean white that flickers on.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.06, anim: "flicker" },
   { id: "tpl-ramp-up", name: "Ramp Up", group: "Templates", blurb: "Bold purple that shoots up into place.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#8100EF", shadow: 0.08, shadowColor: "#FFFFFF", anim: "ramp" },
   { id: "tpl-snapping", name: "Snapping Text", group: "Templates", blurb: "Red that snaps into place.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: "#FF0000", shadow: 0.06, anim: "snap" },
   { id: "tpl-strong-flicker", name: "Strong Flicker", group: "Templates", blurb: "Bold red that flickers hard before it settles.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF0000", shadow: 0.05, anim: "flicker2" },
   { id: "tpl-word-by-word", name: "Word by Word", group: "Templates", blurb: "Bold red, each word blurring in as it's said.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF0000", shadow: 0.05, anim: "wordin" },
-  { id: "tpl-reels-glow", name: "Reels Glow", group: "Templates", blurb: "Small white words around one big red word that glows.", font: "Inter", fontTa: "Hind Madurai", color: W, shadow: 0.04, effect: "stack", stack: { big: "#FA0404", font: "Inter Bold", glow: true } },
-  { id: "tpl-reels-rgb", name: "Reels RGB", group: "Templates", blurb: "The glowing red word, split into colours.", font: "Inter", fontTa: "Hind Madurai", color: W, shadow: 0.04, effect: "stack", stack: { big: "#FA0404", font: "Inter Bold", glow: true, rgb: true } },
-  { id: "tpl-reels-simple", name: "Reels Simple", group: "Templates", blurb: "Small white words around one big red word.", font: "Inter", fontTa: "Hind Madurai", color: W, shadow: 0.04, effect: "stack", stack: { big: "#FA0404", font: "Inter Bold" } },
-  { id: "tpl-hook-yellow", name: "Hook Yellow", group: "Templates", blurb: "Hook lines in four sizes, one in yellow, popping in one by one.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", color: W, shadow: 0.05, effect: "hook", hook: { sizes: [0.6, 2, 1.5, 0.8], colors: [W, W, "#FFED00", W] } },
-  { id: "tpl-hook-cyan", name: "Hook Cyan", group: "Templates", blurb: "Hook lines in white, cyan and lime, popping in one by one.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", color: W, shadow: 0.05, effect: "hook", hook: { sizes: [1.2, 2, 0.7, 1.1], colors: [W, "#00FFD7", W, "#F0FF00"] } },
-  { id: "tpl-hook-neon", name: "Hook Neon", group: "Templates", blurb: "Hook lines in cyan, white, yellow and red.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", color: W, shadow: 0.05, effect: "hook", hook: { sizes: [0.7, 1.6, 1.1, 0.85], colors: ["#00FFE6", W, "#F3FF00", "#FF2A2A"] } },
-  { id: "tpl-hook-big-start", name: "Hook Big Start", group: "Templates", blurb: "A huge first word, then cyan, white and a yellow script line.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", color: W, shadow: 0.05, effect: "hook", hook: { sizes: [2.6, 1.4, 0.7, 1.3], colors: [W, "#00F9FF", W, "#F3FF00"], fonts: [undefined, undefined, undefined, "Playfair Display Bold Italic"] } },
+  { id: "tpl-reels-glow", name: "Reels Glow", group: "Templates", blurb: "Small white words around one big red word that glows.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, effect: "stack", stack: { big: "#FA0404", font: "Inter Bold", glow: true } },
+  { id: "tpl-reels-rgb", name: "Reels RGB", group: "Templates", blurb: "The glowing red word, split into colours.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, effect: "stack", stack: { big: "#FA0404", font: "Inter Bold", glow: true, rgb: true } },
+  { id: "tpl-reels-simple", name: "Reels Simple", group: "Templates", blurb: "Small white words around one big red word.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, effect: "stack", stack: { big: "#FA0404", font: "Inter Bold" } },
+  { id: "tpl-hook-yellow", name: "Hook Yellow", group: "Templates", blurb: "Hook lines in four sizes, one in yellow, popping in one by one.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: W, shadow: 0.05, effect: "hook", hook: { sizes: [0.49, 1.63, 1.22, 0.65], colors: [W, W, "#FFED00", W] } },
+  { id: "tpl-hook-cyan", name: "Hook Cyan", group: "Templates", blurb: "Hook lines in white, cyan and lime, popping in one by one.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: W, shadow: 0.05, effect: "hook", hook: { sizes: [0.96, 1.6, 0.56, 0.88], colors: [W, "#00FFD7", W, "#F0FF00"] } },
+  { id: "tpl-hook-neon", name: "Hook Neon", group: "Templates", blurb: "Hook lines in cyan, white, yellow and red.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: W, shadow: 0.05, effect: "hook", hook: { sizes: [0.66, 1.51, 1.04, 0.8], colors: ["#00FFE6", W, "#F3FF00", "#FF2A2A"] } },
+  { id: "tpl-hook-big-start", name: "Hook Big Start", group: "Templates", blurb: "A huge first word, then cyan, white and a yellow script line.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: W, shadow: 0.05, effect: "hook", hook: { sizes: [1.73, 0.93, 0.47, 0.87], colors: [W, "#00F9FF", W, "#F3FF00"], fonts: [undefined, undefined, undefined, "Playfair Display Bold Italic"] } },
   // The Premiere Pro panel's templates, made from the web styles' parts (fonts, colours, glow, motion).
-  { id: "pr-butter-up", name: "Butter Up", group: "Premiere", blurb: "Flowing white script that slides up into place.", font: "Satisfy", fontTa: "Kavivanar", size: 1.3, color: "#FFFFFF", shadow: 0.06, anim: "slide" },
-  { id: "pr-cracked", name: "Cracked", group: "Premiere", blurb: "Heavy silver letters with a red glow; the keyword hits red.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.2, caps: true, color: "#E9E9EE", glow: "#FF1E2D", keyword: { color: "#FF2A2A", grow: true }, anim: "pop" },
-  { id: "pr-energetic-1", name: "Energetic 1", group: "Premiere", blurb: "Bold white with a soft glow; each caption bounces in.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFFFFF", glow: "#FFFFFF", anim: "bounce" },
-  { id: "pr-energetic-2", name: "Energetic 2", group: "Premiere", blurb: "Bold white that pops in, the spoken word grows.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFFFFF", shadow: 0.06, anim: "pop", activeGrow: true },
-  { id: "pr-energetic-3", name: "Energetic 3", group: "Premiere", blurb: "Bold white that zooms in with a drop shadow.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFFFFF", shadow: 0.08, anim: "zoom" },
-  { id: "pr-god-rays", name: "God Rays", group: "Premiere", blurb: "Bright green with a green glow, fading in like light.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#3BE04A", glow: "#3BE04A", anim: "fade" },
-  { id: "pr-santhosham", name: "Santhosham", group: "Premiere", blurb: "Big heavy white with a deep shadow, zooming in.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.3, color: "#F2F2F2", shadow: 0.12, anim: "zoom" },
-  { id: "pr-text-break", name: "Text Break", group: "Premiere", blurb: "Red condensed caps that break in and shake.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.2, caps: true, color: "#E8202A", outline: ["#FFFFFF", 0.04], shadow: 0.07, anim: "bounce", effect: "wobble" },
-  { id: "pr-typewriter", name: "Typewriter", group: "Premiere", blurb: "Bold white typed out letter by letter (Typewriter 01–07).", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: "#FFFFFF", shadow: 0.05, effect: "typewriter" },
-  { id: "pr-typewriter-lime", name: "Typewriter Lime", group: "Premiere", blurb: "Typed out in glowing lime (Typewriter 08).", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: "#C6FF1A", glow: "#C6FF1A", effect: "typewriter" },
-  { id: "pr-typewriter-pink", name: "Typewriter Pink", group: "Premiere", blurb: "Typed out in glowing pink (Typewriter 09 and 12).", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: "#FF2E7E", glow: "#FF2E7E", effect: "typewriter" },
-  { id: "pr-typewriter-sky", name: "Typewriter Sky", group: "Premiere", blurb: "Typed out in glowing sky blue (Typewriter 10 and 14).", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: "#5BC8FF", glow: "#2EE6FF", effect: "typewriter" },
-  { id: "pr-typewriter-green", name: "Typewriter Green", group: "Premiere", blurb: "Typed out in glowing green (Typewriter 11 and 13).", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: "#39FF14", glow: "#39FF14", effect: "typewriter" },
-  { id: "pr-zoom-in", name: "Zoom In", group: "Premiere", blurb: "Heavy cyan with a bright glow, zooming in.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.3, color: "#2EE6FF", glow: "#2EE6FF", anim: "zoom" },
-  { id: "setup-punch", name: "Setup & Punch", group: "Bold", blurb: "A quiet lead-in, then the last words land big, one by one.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFFFFF", future: null, shadow: 0.05, effect: "punch" },
-  { id: "comic-pop", name: "Comic Pop", group: "Bold", blurb: "Comic caps with a black ring; the keyword turns gold and grows.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.2, caps: true, color: "#FFFFFF", outline: ["#000000", 0.09], keyword: { color: GOLD, grow: true } },
-  { id: "butter-serif", name: "Butter Script", group: "Bold", blurb: "Soft script with a hairline edge and a butter-yellow keyword.", font: "Satisfy", fontTa: "Kavivanar", color: "#FFFFFF", outline: ["#000000", 0.03], keyword: { color: BUTTER } },
-  { id: "word-box", name: "Word Box", group: "Bold", blurb: "One dark box; words fill in left to right, keyword in gold.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.2, caps: true, color: "#FFFFFF", future: null, box: "#0B0B0BE6", keyword: { color: GOLD } },
-  { id: "handwritten", name: "Handwritten", group: "Bold", blurb: "Warm script in a single butter tone that brightens as it's said.", font: "Satisfy", fontTa: "Kavivanar", size: 1.3, bold: true, color: BUTTER, future: "#FFE58A66", shadow: 0.04 },
-  { id: "retro-vhs", name: "Tape Glitch", group: "Bold", blurb: "RGB-split tape look with a little tracking jitter.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.1, caps: true, color: "#FFFFFF", effect: "vhs" },
-  { id: "trending-1", name: "Trending 1", group: "Bold", blurb: "A few words at a time: one big blue word between small orange lines.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FF8A1F", shadow: 0.06, effect: "stack", stack: { big: "#2E8BFF", font: "Anton" } },
-  { id: "trending-2", name: "Trending 2", group: "Bold", blurb: "A big blue script word with heavy orange words above and below.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", color: "#FF7A00", shadow: 0.06, effect: "stack", stack: { big: "#3D7BFF", font: "Satisfy" } },
-  { id: "trending-3", name: "Trending 3", group: "Bold", blurb: "Small white lines around one big red word.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFFFFF", shadow: 0.06, effect: "stack", stack: { big: "#FF2D2D", font: "Poppins ExtraBold" } },
-  { id: "editorial-cut", name: "Golden Hour", group: "Soft", blurb: "Warm script, every word set; the spoken one wakes up.", font: "Satisfy", fontTa: "Kavivanar", color: "#FFF1E0", future: "#FFF1E073", active: "#FFD9A0", shadow: 0.04 },
-  { id: "soft-display", name: "Soft Display", group: "Soft", blurb: "Lowercase script. Soft, cinematic, premium.", font: "Satisfy", fontTa: "Kavivanar", lower: true, color: "#F6F0E6", shadow: 0.06 },
-  { id: "center-stage", name: "Center Stage", group: "Soft", blurb: "One word at a time, tall and heavy, with the last word above.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.6, caps: true, color: "#FFFFFF", shadow: 0.05, effect: "solo" },
-  { id: "marker-swipe", name: "Marker Swipe", group: "Soft", blurb: "Marker type; the spoken word gets a yellow swipe.", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", caps: true, color: "#FFFFFF", active: INK, mark: HL, shadow: 0.04 },
-  { id: "spotlight", name: "Sunbeam", group: "Soft", blurb: "A warm beam sweeps across the line as it's spoken.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFE2B0", future: "#FFFFFF59", shadow: 0.05 },
-  { id: "highlighter-paper", name: "Notebook", group: "Soft", blurb: "Heavy type on cream paper, underlined as you go.", font: "Satisfy", fontTa: "Kavivanar", color: INK, future: "#14141480", underline: true, box: CREAM },
-  { id: "highlighter-clean", name: "Yellow Swipe", group: "Soft", blurb: "Same swipe, no paper: white before, ink after.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFFFFF", active: INK, mark: HL, shadow: 0.04 },
-  { id: "minimal", name: "Plain Bold", group: "Simple", blurb: "Bold geometric white with a soft shadow. Stays out of the shot.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", color: "#FFFFFF", shadow: 0.06 },
-  { id: "editorial-mix", name: "Script Twist", group: "Simple", blurb: "Heavy sans; the keyword switches to a script.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", color: "#FFFFFF", shadow: 0.05, keyword: { font: "Satisfy", italic: true } },
-  { id: "tall-caps", name: "Tall Caps", group: "Simple", blurb: "Tall condensed caps with a blue bar under the spoken word.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.25, caps: true, color: "#FFFFFF", mark: "#2F6BFF", shadow: 0.04 },
-  { id: "typewriter", name: "Keystrokes", group: "Simple", blurb: "Types itself out, cursor and all.", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: "#FFFFFF", shadow: 0.05, effect: "typewriter" },
-  { id: "eight-bit", name: "Arcade", group: "Playful", blurb: "Tall arcade caps with a thick outline.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FFFFFF", outline: ["#000000", 0.12], keyword: { color: HL } },
-  { id: "doodle-card", name: "Sketch Card", group: "Playful", blurb: "Marker on a paper card; words sit at playful angles.", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: INK, box: CREAM, effect: "wobble" },
-  { id: "doodle-clean", name: "Sticker", group: "Playful", blurb: "Same marker, sticker edge, no card; keyword in marker yellow.", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", color: "#FFFFFF", outline: ["#000000", 0.07], keyword: { color: HL }, effect: "wobble" },
-  { id: "crawl", name: "Roll Away", group: "Playful", blurb: "Opening-crawl lines rolling off into the distance.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.1, caps: true, color: HL, effect: "crawl" },
-  { id: "mass-title", name: "Mass Title", group: "Bold", blurb: "Big yellow caps with a thick black edge, bouncing in; the keyword hits red.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 1.35, caps: true, color: "#FFD60A", outline: ["#000000", 0.1], shadow: 0.08, keyword: { color: "#FF2A2A", grow: true }, anim: "bounce" },
-  { id: "neon-aura", name: "Neon Aura", group: "Bold", blurb: "White letters in a violet haze; the keyword glows pink and grows.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.15, color: "#FFFFFF", glow: "#A855F7", keyword: { color: "#FF6AD5", grow: true }, anim: "pop" },
-  { id: "frost-glass", name: "Frost Glass", group: "Soft", blurb: "Calm white type on a see-through frosted card.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: "#FFFFFF", box: "#FFFFFF38", boxPad: 0.34, anim: "fade" },
-  { id: "flip-card", name: "Flip Card", group: "Simple", blurb: "White with a black edge; the spoken word flips to black on white.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FFFFFF", outline: ["#000000", 0.06], mark: "#FFFFFF", active: INK },
-  { id: "lavender-pill", name: "Lavender Pill", group: "Simple", blurb: "Soft lavender card with ink type; the spoken word turns violet.", font: "Poppins", fontTa: "Hind Madurai", bold: true, color: INK, active: "#6D28D9", box: "#E9DDFF", anim: "slide" },
+  { id: "pr-butter-up", name: "Butter Up", group: "Premiere", blurb: "Flowing white script that slides up into place.", font: "Satisfy", fontTa: "Kavivanar", size: 1.24, color: "#FFFFFF", shadow: 0.06, anim: "slide" },
+  { id: "pr-cracked", name: "Cracked", group: "Premiere", blurb: "Heavy silver letters with a red glow; the keyword hits red.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 0.99, caps: true, color: "#E9E9EE", glow: "#FF1E2D", keyword: { color: "#FF2A2A", grow: true }, anim: "pop" },
+  { id: "pr-energetic-1", name: "Energetic 1", group: "Premiere", blurb: "Bold white with a soft glow; each caption bounces in.", font: "Poppins", fontTa: "Hind Madurai", size: 1.11, bold: true, color: "#FFFFFF", glow: "#FFFFFF", anim: "bounce" },
+  { id: "pr-energetic-2", name: "Energetic 2", group: "Premiere", blurb: "Bold white that pops in, the spoken word grows.", font: "Poppins", fontTa: "Hind Madurai", size: 1.11, bold: true, color: "#FFFFFF", shadow: 0.06, anim: "pop", activeGrow: true },
+  { id: "pr-energetic-3", name: "Energetic 3", group: "Premiere", blurb: "Bold white that zooms in with a drop shadow.", font: "Poppins", fontTa: "Hind Madurai", size: 1.11, bold: true, color: "#FFFFFF", shadow: 0.08, anim: "zoom" },
+  { id: "pr-god-rays", name: "God Rays", group: "Premiere", blurb: "Bright green with a green glow, fading in like light.", font: "Poppins", fontTa: "Hind Madurai", size: 1.11, bold: true, color: "#3BE04A", glow: "#3BE04A", anim: "fade" },
+  { id: "pr-santhosham", name: "Santhosham", group: "Premiere", blurb: "Big heavy white with a deep shadow, zooming in.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: "#F2F2F2", shadow: 0.12, anim: "zoom" },
+  { id: "pr-text-break", name: "Text Break", group: "Premiere", blurb: "Red condensed caps that break in and shake.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 0.82, caps: true, color: "#E8202A", outline: ["#FFFFFF", 0.04], shadow: 0.07, anim: "bounce", effect: "wobble" },
+  { id: "pr-typewriter", name: "Typewriter", group: "Premiere", blurb: "Bold white typed out letter by letter (Typewriter 01–07).", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: "#FFFFFF", shadow: 0.05, effect: "typewriter" },
+  { id: "pr-typewriter-lime", name: "Typewriter Lime", group: "Premiere", blurb: "Typed out in glowing lime (Typewriter 08).", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: "#C6FF1A", glow: "#C6FF1A", effect: "typewriter" },
+  { id: "pr-typewriter-pink", name: "Typewriter Pink", group: "Premiere", blurb: "Typed out in glowing pink (Typewriter 09 and 12).", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: "#FF2E7E", glow: "#FF2E7E", effect: "typewriter" },
+  { id: "pr-typewriter-sky", name: "Typewriter Sky", group: "Premiere", blurb: "Typed out in glowing sky blue (Typewriter 10 and 14).", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: "#5BC8FF", glow: "#2EE6FF", effect: "typewriter" },
+  { id: "pr-typewriter-green", name: "Typewriter Green", group: "Premiere", blurb: "Typed out in glowing green (Typewriter 11 and 13).", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: "#39FF14", glow: "#39FF14", effect: "typewriter" },
+  { id: "pr-zoom-in", name: "Zoom In", group: "Premiere", blurb: "Heavy cyan with a bright glow, zooming in.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: "#2EE6FF", glow: "#2EE6FF", anim: "zoom" },
+  { id: "setup-punch", name: "Setup & Punch", group: "Bold", blurb: "A quiet lead-in, then the last words land big, one by one.", font: "Poppins", fontTa: "Hind Madurai", size: 1.11, bold: true, color: "#FFFFFF", future: null, shadow: 0.05, effect: "punch" },
+  { id: "comic-pop", name: "Comic Pop", group: "Bold", blurb: "Comic caps with a black ring; the keyword turns gold and grows.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 0.99, caps: true, color: "#FFFFFF", outline: ["#000000", 0.09], keyword: { color: GOLD, grow: true } },
+  { id: "butter-serif", name: "Butter Script", group: "Bold", blurb: "Soft script with a hairline edge and a butter-yellow keyword.", font: "Satisfy", fontTa: "Kavivanar", size: 1.24, color: "#FFFFFF", outline: ["#000000", 0.03], keyword: { color: BUTTER } },
+  { id: "word-box", name: "Word Box", group: "Bold", blurb: "One dark box; words fill in left to right, keyword in gold.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 0.82, caps: true, color: "#FFFFFF", future: null, box: "#0B0B0BE6", keyword: { color: GOLD } },
+  { id: "handwritten", name: "Handwritten", group: "Bold", blurb: "Warm script in a single butter tone that brightens as it's said.", font: "Satisfy", fontTa: "Kavivanar", size: 1.24, bold: true, color: BUTTER, future: "#FFE58A66", shadow: 0.04 },
+  { id: "retro-vhs", name: "Tape Glitch", group: "Bold", blurb: "RGB-split tape look with a little tracking jitter.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 0.82, caps: true, color: "#FFFFFF", effect: "vhs" },
+  { id: "trending-1", name: "Trending 1", group: "Bold", blurb: "A few words at a time: one big blue word between small orange lines.", font: "Poppins", fontTa: "Hind Madurai", size: 1.11, bold: true, color: "#FF8A1F", shadow: 0.06, effect: "stack", stack: { big: "#2E8BFF", font: "Anton" } },
+  { id: "trending-2", name: "Trending 2", group: "Bold", blurb: "A big blue script word with heavy orange words above and below.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: "#FF7A00", shadow: 0.06, effect: "stack", stack: { big: "#3D7BFF", font: "Satisfy" } },
+  { id: "trending-3", name: "Trending 3", group: "Bold", blurb: "Small white lines around one big red word.", font: "Poppins", fontTa: "Hind Madurai", size: 1.11, bold: true, color: "#FFFFFF", shadow: 0.06, effect: "stack", stack: { big: "#FF2D2D", font: "Poppins ExtraBold" } },
+  { id: "editorial-cut", name: "Golden Hour", group: "Soft", blurb: "Warm script, every word set; the spoken one wakes up.", font: "Satisfy", fontTa: "Kavivanar", size: 1.24, color: "#FFF1E0", future: "#FFF1E073", active: "#FFD9A0", shadow: 0.04 },
+  { id: "soft-display", name: "Soft Display", group: "Soft", blurb: "Lowercase script. Soft, cinematic, premium.", font: "Satisfy", fontTa: "Kavivanar", size: 1.24, lower: true, color: "#F6F0E6", shadow: 0.06 },
+  { id: "center-stage", name: "Center Stage", group: "Soft", blurb: "One word at a time, tall and heavy, with the last word above.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 0.82, caps: true, color: "#FFFFFF", shadow: 0.05, effect: "solo" },
+  { id: "marker-swipe", name: "Marker Swipe", group: "Soft", blurb: "Marker type; the spoken word gets a yellow swipe.", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", size: 0.99, caps: true, color: "#FFFFFF", active: INK, mark: HL, shadow: 0.04 },
+  { id: "spotlight", name: "Sunbeam", group: "Soft", blurb: "A warm beam sweeps across the line as it's spoken.", font: "Poppins", fontTa: "Hind Madurai", size: 1.11, bold: true, color: "#FFE2B0", future: "#FFFFFF59", shadow: 0.05 },
+  { id: "highlighter-paper", name: "Notebook", group: "Soft", blurb: "Heavy type on cream paper, underlined as you go.", font: "Satisfy", fontTa: "Kavivanar", size: 1.24, color: INK, future: "#14141480", underline: true, box: CREAM },
+  { id: "highlighter-clean", name: "Yellow Swipe", group: "Soft", blurb: "Same swipe, no paper: white before, ink after.", font: "Poppins", fontTa: "Hind Madurai", size: 1.11, bold: true, color: "#FFFFFF", active: INK, mark: HL, shadow: 0.04 },
+  { id: "minimal", name: "Plain Bold", group: "Simple", blurb: "Bold geometric white with a soft shadow. Stays out of the shot.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: "#FFFFFF", shadow: 0.06 },
+  { id: "editorial-mix", name: "Script Twist", group: "Simple", blurb: "Heavy sans; the keyword switches to a script.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: "#FFFFFF", shadow: 0.05, keyword: { font: "Satisfy", italic: true } },
+  { id: "tall-caps", name: "Tall Caps", group: "Simple", blurb: "Tall condensed caps with a blue bar under the spoken word.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 0.82, caps: true, color: "#FFFFFF", mark: "#2F6BFF", shadow: 0.04 },
+  { id: "typewriter", name: "Keystrokes", group: "Simple", blurb: "Types itself out, cursor and all.", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: "#FFFFFF", shadow: 0.05, effect: "typewriter" },
+  { id: "eight-bit", name: "Arcade", group: "Playful", blurb: "Tall arcade caps with a thick outline.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 0.88, color: "#FFFFFF", outline: ["#000000", 0.12], keyword: { color: HL } },
+  { id: "doodle-card", name: "Sketch Card", group: "Playful", blurb: "Marker on a paper card; words sit at playful angles.", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: INK, box: CREAM, effect: "wobble" },
+  { id: "doodle-clean", name: "Sticker", group: "Playful", blurb: "Same marker, sticker edge, no card; keyword in marker yellow.", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: "#FFFFFF", outline: ["#000000", 0.07], keyword: { color: HL }, effect: "wobble" },
+  { id: "crawl", name: "Roll Away", group: "Playful", blurb: "Opening-crawl lines rolling off into the distance.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 0.82, caps: true, color: HL, effect: "crawl" },
+  { id: "mass-title", name: "Mass Title", group: "Bold", blurb: "Big yellow caps with a thick black edge, bouncing in; the keyword hits red.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 0.82, caps: true, color: "#FFD60A", outline: ["#000000", 0.1], shadow: 0.08, keyword: { color: "#FF2A2A", grow: true }, anim: "bounce" },
+  { id: "neon-aura", name: "Neon Aura", group: "Bold", blurb: "White letters in a violet haze; the keyword glows pink and grows.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: "#FFFFFF", glow: "#A855F7", keyword: { color: "#FF6AD5", grow: true }, anim: "pop" },
+  { id: "frost-glass", name: "Frost Glass", group: "Soft", blurb: "Calm white type on a see-through frosted card.", font: "Poppins", fontTa: "Hind Madurai", size: 1.11, bold: true, color: "#FFFFFF", box: "#FFFFFF38", boxPad: 0.34, anim: "fade" },
+  { id: "flip-card", name: "Flip Card", group: "Simple", blurb: "White with a black edge; the spoken word flips to black on white.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: "#FFFFFF", outline: ["#000000", 0.06], mark: "#FFFFFF", active: INK },
+  { id: "lavender-pill", name: "Lavender Pill", group: "Simple", blurb: "Soft lavender card with ink type; the spoken word turns violet.", font: "Poppins", fontTa: "Hind Madurai", size: 1.11, bold: true, color: INK, active: "#6D28D9", box: "#E9DDFF", anim: "slide" },
 ];
 
 /**
@@ -191,7 +191,8 @@ export function canvasSize(c: Canvas | undefined, w: number, h: number) {
   const [width, height] = sizes[c.ratio];
   return { width, height };
 }
-export type Placement = { position: "top" | "middle" | "bottom"; offset: number; lines?: 1 | 2 | 3; x?: number; y?: number; safe: Margins };
+/** `scale`: the user's size, 1 = the standard size every style starts at (see STANDARD). */
+export type Placement = { position: "top" | "middle" | "bottom"; offset: number; lines?: 1 | 2 | 3; x?: number; y?: number; safe: Margins; scale: number };
 
 const m = (top: number, right: number, bottom: number, left: number): Margins => ({ top, right, bottom, left });
 /** Areas each platform covers with its own buttons and captions on a vertical video (commonly published guides). */
@@ -274,9 +275,9 @@ export function ownLook(input: unknown): CaptionCustom {
 export function resolveStyle(id: string | null | undefined, custom: CaptionCustom = {}, portrait = false): CaptionStyle & Placement {
   const s: CaptionStyle = { ...styleOf(id), keyword: styleOf(id).keyword && { ...styleOf(id).keyword } };
   const c = custom;
+  const tall0 = looksTall(s.font, s.caps);
   if (c.font) s.font = c.font;
   if (c.fontTa) s.fontTa = c.fontTa;
-  if (c.size !== undefined) s.size = c.size;
   if (c.color) {
     s.color = c.color;
     if (typeof s.future === "string") s.future = c.color + "66"; // dimmed version of the new colour
@@ -294,6 +295,8 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   if (c.shadow === false) s.shadow = 0;
   else if (c.shadow === true && !s.shadow) s.shadow = 0.05;
   if (c.case) { s.caps = c.case === "upper"; s.lower = c.case === "lower"; }
+  // Every style starts at the standard size, in any font or case; the user's size is relative to it (1 = 100%).
+  s.size = Math.round((s.size ?? 1) * (tall0 / looksTall(s.font, s.caps)) * (c.size ?? 1) * 1000) / 1000;
   if (c.bold !== undefined) s.bold = c.bold;
   if (c.italic !== undefined) s.italic = c.italic;
   if (c.spacing !== undefined) s.spacing = c.spacing;
@@ -320,7 +323,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   const position = c.position ?? "bottom";
   const offset = Math.max(c.offset ?? (portrait ? 0.2 : 0.09), position === "top" ? safe.top : safe.bottom);
   const inside = (v: number | undefined, lo: number, hi: number) => (v === undefined ? undefined : Math.min(hi, Math.max(lo, v)));
-  return { ...s, position, offset, lines: c.lines, x: inside(c.x, safe.left, 1 - safe.right), y: inside(c.y, safe.top, 1 - safe.bottom), safe };
+  return { ...s, position, offset, lines: c.lines, x: inside(c.x, safe.left, 1 - safe.right), y: inside(c.y, safe.top, 1 - safe.bottom), safe, scale: c.size ?? 1 };
 }
 /** The project's customisation with one caption's own on top (a caption given a position drops the project's drag point). */
 export function mergeCustom(project: CaptionCustom = {}, own?: CaptionCustom): CaptionCustom {

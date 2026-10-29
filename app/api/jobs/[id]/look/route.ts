@@ -14,7 +14,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     styleId: j.captionStyle,
     custom: j.captionCustom,
     look: {
-      font: s.font, size: s.size ?? 1, color: s.color, accent: s.mark ?? s.keyword?.color ?? s.active ?? null,
+      font: s.font, size: s.scale, em: s.size ?? 1, // size: the control (1 = standard); em: what text layers get color: s.color, accent: s.mark ?? s.keyword?.color ?? s.active ?? null,
       outline: s.outline ?? null, box: s.box ?? null, caps: !!s.caps, lower: !!s.lower,
       position: s.position, offset: s.offset, lines: s.lines ?? null, x: s.x ?? null, y: s.y ?? null,
       safe: s.safe, safeId: j.captionCustom.safe ?? "none",
