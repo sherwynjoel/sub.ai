@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { and, eq, lt, isNotNull, or, sql } from "drizzle-orm";
 import { db, jobs, settings, users, type Cue } from "./db";
 import { getAiConfig, transcribe, type Script } from "./lib/ai";
+import { effectivePlan, PLANS } from "./lib/plans";
 import { extractChunks, LEVEL_FRAME, loudness, probe, removeUploads, STORAGE } from "./lib/media";
 import { speechRegions } from "./lib/timing";
 import { alignCues } from "./lib/align";
@@ -41,6 +42,7 @@ async function processJob(job: typeof jobs.$inferSelect) {
       plan.push({ f, offset, duration });
       offset += duration;
     }
+    await chargeExtra(job, offset);
     const results: { offset: number; duration: number; cues: Cue[] }[] = [];
     // "Translate to <language>" (English speech): Sarvam writes down the English, which is translated below; the
     // LLM providers translate as they listen (English speech becomes <language> in their main line).
@@ -112,6 +114,24 @@ async function processRender(job: typeof jobs.$inferSelect) {
     console.error(`render ${job.id} failed`, e);
     await db.update(jobs).set({ renderStatus: "failed", renderError: "Couldn't render the styled video. Try again, or pick another style." }).where(eq(jobs.id, job.id));
   }
+}
+
+/**
+ * The sound as prepared for the AI is the true length (a file can state less, and timestamps can be wrong when its
+ * sample rate changes midway). More than was charged at upload: charge the rest now, or stop before the AI hears it
+ * (fail() then gives back what was charged).
+ */
+async function chargeExtra(job: typeof jobs.$inferSelect, heard: number) {
+  const extra = Math.ceil(heard) - Math.ceil(job.durationSec);
+  if (extra <= 2) return; // rounding between formats
+  const [u] = await db.select().from(users).where(eq(users.id, job.userId));
+  const quota = u ? PLANS[effectivePlan(u)].minutes * 60 : 0;
+  const ok = await db.update(users).set({ secondsUsed: sql`${users.secondsUsed} + ${extra}` })
+    .where(and(eq(users.id, job.userId), sql`${users.secondsUsed} + ${extra} <= ${quota}`)).returning({ id: users.id });
+  if (!ok.length) throw new Error(`This file has ${Math.ceil(heard / 60)} min of sound, more than its stated length, and there aren't enough minutes left for all of it. Your minutes for it were given back.`);
+  job.durationSec = heard; // so a later failure gives back everything charged
+  await db.update(jobs).set({ durationSec: heard }).where(eq(jobs.id, job.id));
+  console.log(`job ${job.id}: ${extra}s more sound than stated, charged`);
 }
 
 async function fail(job: typeof jobs.$inferSelect, err: unknown) {

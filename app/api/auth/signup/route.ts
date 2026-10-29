@@ -1,6 +1,8 @@
 import { and, eq, gt, sql } from "drizzle-orm";
 import { db, users } from "@/db";
 import { clientIp, hashPassword, json, rateLimited, startSession } from "@/lib/auth";
+import { emailReady } from "@/lib/email";
+import { sendConfirmation } from "@/lib/verify";
 import { EMAIL_KEY_SQL, emailKey, throwawayEmail, TRIALS_PER_IP_PER_DAY } from "@/lib/trial";
 
 export async function POST(req: Request) {
@@ -26,5 +28,6 @@ export async function POST(req: Request) {
     .returning();
   if (!u) return json({ error: "An account with this email already exists." }, 409);
   await startSession(u.id);
+  if (await emailReady()) await sendConfirmation(u).catch((e) => console.error("confirm email", e)); // can be sent again from the app
   return json({ ok: true });
 }

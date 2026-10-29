@@ -1,3 +1,4 @@
+import ConfirmEmail from "@/components/ConfirmEmail";
 import Dashboard from "@/components/Dashboard";
 
 export default function Page() {
@@ -7,6 +8,7 @@ export default function Page() {
         <h1 className="page-title">Projects</h1>
         <p className="muted">Upload a video, choose how the captions read, then edit and export.</p>
       </header>
+      <ConfirmEmail />
       <Dashboard />
     </>
   );
