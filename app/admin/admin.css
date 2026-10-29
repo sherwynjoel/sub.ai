@@ -49,16 +49,6 @@
 .inline-form input, .inline-form select { width: auto; }
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* Connections */
-.conn { display: grid; gap: 4px; padding: 16px 0; border-top: 1px solid var(--line); }
-.conn:first-of-type { border-top: 0; padding-top: 4px; }
-.conn-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
-.conn-head strong { font-weight: 600; }
-.conn .now { font-size: .9rem; color: var(--ink-2); overflow-wrap: anywhere; }
-.conn form { display: flex; gap: 8px; margin-top: 6px; }
-.conn form input { flex: 1; min-width: 0; }
-.test-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
-.test-row .result { font-size: .92rem; }
 .copy { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .copy code { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-sm); padding: .45em .7em; font-size: .88rem; overflow-wrap: anywhere; }
 
@@ -71,7 +61,7 @@
 .spaced { margin-top: 16px; }
 .notice-panel { background: var(--accent-soft); box-shadow: 0 0 0 1px var(--black); }
 .notice-panel ul { margin: 0 0 16px; padding-left: 1.2em; display: grid; gap: 4px; }
-.test-row .result, .action .error { white-space: normal; }
+.action .error { white-space: normal; }
 .plan-form label { min-width: 0; }
 
 /* Status as a glass pill: word + shape + colour */

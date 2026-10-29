@@ -1,5 +1,7 @@
 /**
- * API keys and connection settings, editable from /admin → Connections.
+ * API keys and connection settings. Set on the server in .env.local (then `pm2 restart vasanam-web vasanam-worker`).
+ * Values saved from the old admin Connections page (encrypted in the settings table) still count when the
+ * server has none, so nothing set up earlier stops working.
  * Stored AES-256-GCM encrypted in the settings table; the env var of the same name is the fallback.
  * The encryption key lives in SETTINGS_SECRET, or is generated once into storage/.settings-key.
  */
@@ -61,30 +63,23 @@ export function decrypt(blob: string) {
   return Buffer.concat([d.update(body), d.final()]).toString("utf8");
 }
 
-/** Admin value if set, else the env var, else "". */
+/** The server's value (.env.local) if set, else one saved earlier from the old admin page, else "". */
 export async function getSecret(name: ConnectionName): Promise<string> {
+  if (process.env[name]) return process.env[name]!;
   const [row] = await db.select().from(settings).where(eq(settings.key, PREFIX + name));
   if (row) {
     try {
       return decrypt(row.value);
     } catch {
-      console.error(`Can't decrypt ${name}: the settings key changed. Re-enter it in /admin.`);
+      console.error(`Can't decrypt ${name}: the settings key changed. Set it in the server's .env.local.`);
     }
   }
-  return process.env[name] ?? "";
-}
-
-/** Empty value removes the admin value (falls back to env). */
-export async function setSecret(name: ConnectionName, value: string) {
-  const key = PREFIX + name;
-  if (!value) return db.delete(settings).where(eq(settings.key, key));
-  const v = encrypt(value);
-  await db.insert(settings).values({ key, value: v }).onConflictDoUpdate({ target: settings.key, set: { value: v } });
+  return "";
 }
 
 const mask = (v: string) => (v.length <= 8 ? "••••" : `${v.slice(0, 4)}••••${v.slice(-4)}`);
 
-/** What the admin UI may see: where each value comes from, masked for secrets. */
+/** Which settings are set and where from (the admin overview's setup list), masked for secrets. */
 export async function connectionStatus() {
   const rows = await db.select().from(settings).where(like(settings.key, `${PREFIX}%`));
   const stored = new Map(rows.map((r) => [r.key.slice(PREFIX.length), r.value]));
@@ -92,10 +87,10 @@ export async function connectionStatus() {
     const meta = CONNECTIONS[name];
     let value = "";
     let source: "admin" | "env" | null = null;
-    if (stored.has(name)) {
+    if (process.env[name]) { value = process.env[name]!; source = "env"; }
+    else if (stored.has(name)) {
       try { value = decrypt(stored.get(name)!); source = "admin"; } catch { /* unreadable → treat as unset */ }
     }
-    if (!source && process.env[name]) { value = process.env[name]!; source = "env"; }
     return { name, ...meta, source, display: value ? (meta.secret ? mask(value) : value) : "" };
   });
 }

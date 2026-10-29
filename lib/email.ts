@@ -5,7 +5,7 @@ import { BUSINESS } from "@/lib/brand";
 /**
  * Emails (password resets) go through Resend when its key and sender are saved, which needs a verified domain;
  * otherwise through a Gmail account with an app password, which works without a domain (about 500 a day).
- * Both are saved in /admin → Connections → Email.
+ * Both are set in the server's .env.local (GMAIL_USER / GMAIL_APP_PASSWORD, or RESEND_API_KEY / EMAIL_FROM).
  */
 async function route() {
   const [key, from] = [await getSecret("RESEND_API_KEY"), await getSecret("EMAIL_FROM")];
@@ -23,7 +23,7 @@ export async function emailReady() {
 /** Sends one plain-text email. Throws with the service's reason when it is refused. */
 export async function sendEmail(to: string, subject: string, text: string) {
   const r = await route();
-  if (!r) throw new Error("Email isn't set up: add a Gmail app password (or a Resend key) in Connections.");
+  if (!r) throw new Error("Email isn't set up: set GMAIL_APP_PASSWORD (or RESEND_API_KEY) in the server's .env.local.");
   if (r.kind === "resend") {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",

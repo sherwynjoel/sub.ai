@@ -1,7 +1,8 @@
 import Link from "next/link";
+import AdminAi from "@/components/AdminAi";
 import { desc, eq } from "drizzle-orm";
 import { db, jobs, users } from "@/db";
-import { getAiConfig } from "@/lib/ai";
+import { DEFAULT_MODELS, getAiConfig, PROVIDERS } from "@/lib/ai";
 import { inr, mins, overview, when } from "@/lib/admin";
 import { PLANS, PAID } from "@/lib/plans";
 import { connectionStatus } from "@/lib/secrets";
@@ -18,9 +19,8 @@ export default async function Overview() {
   const aiKey = { gemini: "GEMINI_API_KEY", sarvam: "SARVAM_API_KEY", openai: "OPENAI_API_KEY", groq: "GROQ_API_KEY", custom: "AI_API_KEY" }[cfg.provider] ?? "";
   const todo = [
     !has(aiKey) && `Add the ${cfg.provider} API key so videos can be subtitled.`,
-    !has("RAZORPAY_KEY_ID") || !has("RAZORPAY_KEY_SECRET") ? "Add your Razorpay keys so users can subscribe." : null,
-    PAID.some((p) => !has(`RAZORPAY_PLAN_${p.toUpperCase()}`)) && "Add the three Razorpay plan IDs.",
-    !has("RAZORPAY_WEBHOOK_SECRET") && "Add the Razorpay webhook secret so renewals update automatically.",
+    !has("RAZORPAY_KEY_ID") || !has("RAZORPAY_KEY_SECRET") ? "Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET so users can pay." : null,
+    !has("RAZORPAY_WEBHOOK_SECRET") && "Set RAZORPAY_WEBHOOK_SECRET (the secret on the Razorpay webhook) as the backup for payments.",
   ].filter(Boolean) as string[];
 
   return (
@@ -31,7 +31,7 @@ export default async function Overview() {
         <section className="panel notice-panel">
           <h2>Finish setup</h2>
           <ul>{todo.map((t) => <li key={t}>{t}</li>)}</ul>
-          <Link href="/admin/connections" className="btn small">Open Connections</Link>
+          <p className="muted small">Keys are set on the server in <code>/opt/vasanam/.env.local</code>, then <code>pm2 restart vasanam-web vasanam-worker</code>.</p>
         </section>
       )}
 
@@ -61,6 +61,12 @@ export default async function Overview() {
       {!o.worker.online && (
         <p className="error">The worker isn&apos;t running, so uploads will wait in the queue. Start it with <code>npm run worker</code> (or <code>pm2 restart vasanam-worker</code> on the server).</p>
       )}
+
+      <section className="panel">
+        <h2>Subtitle AI</h2>
+        <p className="muted">Which service writes the subtitles. New uploads use this right away; each project records what made it. Its key is set on the server.</p>
+        <AdminAi current={cfg} providers={[...PROVIDERS]} defaults={DEFAULT_MODELS} />
+      </section>
 
       <section className="panel">
         <h2>Recent failures</h2>

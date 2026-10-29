@@ -8,7 +8,6 @@ const LINKS = [
   ["/admin/users", "Users"],
   ["/admin/billing", "Subscriptions"],
   ["/admin/traffic", "Traffic"],
-  ["/admin/connections", "Connections"],
 ];
 
 export default function AdminNav() {
