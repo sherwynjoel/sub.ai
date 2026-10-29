@@ -417,11 +417,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const layers = custom.layers ?? [];
   const setLayers = (next: TextLayer[]) => tweak({ layers: next });
   const editLayer = (i: number, patch: Partial<TextLayer>) => setLayers(layers.map((l, j) => (j === i ? { ...l, ...patch } : l)));
-  function addLayer(text: string) {
-    const start = Math.max(0, Math.min(now, duration - 0.5));
+  function addLayer(text: string, at = now) {
+    const start = Math.max(0, Math.min(at, duration - 0.5));
     setLayers([...layers, { text, start, end: Math.min(duration, start + 3), x: 0.5, y: text.length <= 3 ? 0.4 : 0.25 }]);
     setSelLayer(layers.length);
     setTab("layers");
+    return layers.length;
   }
   async function uploadLogo(file: File) {
     const res = await fetch(`/api/jobs/${job.id}/logo`, { method: "POST", headers: { "content-type": file.type }, body: file });
@@ -1142,10 +1143,19 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
       <div className="ed-timeline">
         <div className="ed-tl-bar">
-          <span className="muted small">Timeline: drag the empty track to move along it (or scroll), pinch or Ctrl + scroll to zoom. Drag a caption to move it, its edges to retime it.</span>
+          <span className="muted small">Timeline: double-click an empty spot to add a caption (top row) or text over the video (bottom row), double-click one to edit its words. Drag the empty track or scroll to move along; pinch or Ctrl + scroll to zoom.</span>
         </div>
         <Timeline cues={cues} duration={duration} now={now} selected={selected} zoom={zoom} line={line} playing={playing}
           onSeek={seek} onSelect={select} onZoom={setZoom}
+          onAddCaption={(t) => { // a caption where the timeline was double-clicked (or the playhead), typed into there
+            const r = insertAt(cues, t, duration);
+            if (r.index < 0) { setMsg("No room for a caption there. Pick a gap between captions."); return -1; }
+            commit(r.cues); select(r.index); seek(r.cues[r.index].start + 0.01);
+            return r.index;
+          }}
+          onAddText={(t) => { const i = addLayer("Your text", t); seek(Math.max(0, Math.min(t, duration - 0.5)) + 0.01); return i; }}
+          onCaptionText={(i, text) => { const c = cues[i]; if (c && text.trim() !== c[line]) editCue(i, setText(c, line, text.trim())); }}
+          onLayerText={(i, text) => editLayer(i, { text: text.trim() || "Your text" })}
           layers={layers.map((l) => ({ start: l.start, end: l.end, label: l.text }))} selectedLayer={selLayer}
           onSelectLayer={(i) => { setSelLayer(i); setTab("layers"); }} onDragLayer={(i, span) => editLayer(i, span)}
           onDrag={(i, patch) => { if (!dragFrom.current) dragFrom.current = cues; setCuesRaw((cs) => cs.map((c, j) => (j === i ? { ...c, ...patch } : c))); }}

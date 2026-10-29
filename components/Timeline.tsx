@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Cue } from "@/db/schema";
 import { wordTimes } from "@/lib/captionStyles";
 
@@ -19,6 +19,12 @@ type Props = {
   onDragLayer?: (i: number, span: { start: number; end: number }) => void;
   /** Zoom (px per second), from the timeline's own −/+ and pinch / Ctrl+scroll. */
   onZoom?: (zoom: number) => void;
+  /** Add a caption / a text layer at a time; the index of the new one (-1: no room). */
+  onAddCaption?: (t: number) => number;
+  onAddText?: (t: number) => number;
+  /** Text typed into a caption / a text layer on the timeline. */
+  onCaptionText?: (i: number, text: string) => void;
+  onLayerText?: (i: number, text: string) => void;
 };
 
 export const ZOOM_MIN = 10, ZOOM_MAX = 600;
@@ -41,7 +47,14 @@ const rescale = (t: number[] | undefined, s0: number, e0: number, s1: number, e1
  * Caption blocks on a timeline: click to select and move the playhead, drag a block to move it, drag its edges to
  * change when it starts or ends, drag the word marks of the selected caption to retime its words.
  */
-export default function Timeline({ cues, duration, now, selected, zoom, line, playing, onSeek, onSelect, onDrag, onDragEnd, layers = [], selectedLayer = -1, onSelectLayer, onDragLayer, onZoom }: Props) {
+export default function Timeline({ cues, duration, now, selected, zoom, line, playing, onSeek, onSelect, onDrag, onDragEnd, layers = [], selectedLayer = -1, onSelectLayer, onDragLayer, onZoom, onAddCaption, onAddText, onCaptionText, onLayerText }: Props) {
+  // A caption or text layer being typed into, right on the timeline.
+  const [typing, setTyping] = useState<{ kind: "cue" | "layer"; i: number } | null>(null);
+  /** Add one at t (an empty spot double-clicked, or the playhead) and start typing into it. */
+  const addAt = (kind: "cue" | "layer", t: number) => {
+    const i = (kind === "cue" ? onAddCaption : onAddText)?.(t) ?? -1;
+    if (i >= 0) setTyping({ kind, i });
+  };
   const scroller = useRef<HTMLDivElement>(null);
   const width = Math.max(duration, 1) * zoom + 40;
   const st = step(zoom);
@@ -217,7 +230,10 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
 
   return (
     <div className="tl-wrap">
-    <div className="tl-zoom" role="group" aria-label="Timeline zoom">
+    <div className="tl-zoom" role="group" aria-label="Add text and zoom">
+      <button className="tl-addb" onClick={() => addAt("cue", now)} title="Add a caption at the playhead (or double-click an empty spot in the caption row)">+ Caption</button>
+      <button className="tl-addb" onClick={() => addAt("layer", now)} title="Add text over the video at the playhead (or double-click the text row)">+ Text</button>
+      <i className="tl-sep" />
       <button onClick={() => zoomBy(1 / 1.4)} disabled={zoom <= ZOOM_MIN} aria-label="Zoom out (−)" title="Zoom out (−, or pinch / Ctrl + scroll)">−</button>
       <button onClick={fit} className="tl-fit" title="Show the whole video">Fit</button>
       <button onClick={() => zoomBy(1.4)} disabled={zoom >= ZOOM_MAX} aria-label="Zoom in (+)" title="Zoom in (+, or pinch / Ctrl + scroll)">+</button>
@@ -227,11 +243,15 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
         <div className="tl-ruler" onPointerDown={scrub}>
           {ticks.map((t) => <span key={t} className="tl-tick" style={{ left: t * zoom }}>{label(t)}</span>)}
         </div>
-        <div className="tl-track" onPointerDown={pan}>
+        <div className="tl-track" onPointerDown={pan} onDoubleClick={(e) => { if (e.target === e.currentTarget) addAt("cue", timeAt(e.clientX)); }}
+          title="Double-click an empty spot to add a caption there">
           {cues.map((c, i) => (
-            <div key={i} className={`tl-block${i === selected ? " on" : ""}`} style={{ left: c.start * zoom, width: Math.max(4, (c.end - c.start) * zoom) }}
-              onPointerDown={(e) => grab(e, i, "move")} title={`${(line === "en" ? c.en : c.ta) || "(empty)"}\nDrag to move · drag the edges to retime`}>
-              <span className="tl-text">{(line === "en" ? c.en : c.ta) || "…"}</span>
+            <div key={i} className={`tl-block${i === selected ? " on" : ""}${typing?.kind === "cue" && typing.i === i ? " typing" : ""}`} style={{ left: c.start * zoom, width: Math.max(4, (c.end - c.start) * zoom) }}
+              onPointerDown={(e) => grab(e, i, "move")} onDoubleClick={() => setTyping({ kind: "cue", i })}
+              title={`${(line === "en" ? c.en : c.ta) || "(empty)"}\nDrag to move · drag the edges to retime · double-click to edit the text`}>
+              {typing?.kind === "cue" && typing.i === i
+                ? <TypeIn value={line === "en" ? c.en : c.ta} onDone={(v) => { setTyping(null); if (v !== null) onCaptionText?.(i, v); }} />
+                : <span className="tl-text">{(line === "en" ? c.en : c.ta) || "…"}</span>}
               <i className="tl-edge l" onPointerDown={(e) => grab(e, i, "start")} />
               <i className="tl-edge r" onPointerDown={(e) => grab(e, i, "end")} />
             </div>
@@ -246,11 +266,16 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
             ))}
           </div>
         )}
-        <div className="tl-layers" style={{ height: laneCount * 32 + 4 }} onPointerDown={pan}>
+        <div className="tl-layers" style={{ height: laneCount * 32 + 4 }} onPointerDown={pan} onDoubleClick={(e) => { if (e.target === e.currentTarget) addAt("layer", timeAt(e.clientX)); }}
+          title="Text over the video: double-click an empty spot to add some there">
+          {!layers.length && <span className="tl-row-hint">Text over the video — double-click here (or + Text) to add</span>}
           {layers.map((l, i) => (
-            <div key={i} className={`tl-block tl-layer${i === selectedLayer ? " on" : ""}`} style={{ left: l.start * zoom, width: Math.max(4, (l.end - l.start) * zoom), top: 4 + lanes[i] * 32 }}
-              onPointerDown={(e) => grabLayer(e, i, "move")} title={`${l.label}\nText layer: drag to move · drag the edges to retime`}>
-              <span className="tl-text">{l.label}</span>
+            <div key={i} className={`tl-block tl-layer${i === selectedLayer ? " on" : ""}${typing?.kind === "layer" && typing.i === i ? " typing" : ""}`} style={{ left: l.start * zoom, width: Math.max(4, (l.end - l.start) * zoom), top: 4 + lanes[i] * 32 }}
+              onPointerDown={(e) => grabLayer(e, i, "move")} onDoubleClick={() => setTyping({ kind: "layer", i })}
+              title={`${l.label}\nText layer: drag to move · drag the edges to retime · double-click to edit the text`}>
+              {typing?.kind === "layer" && typing.i === i
+                ? <TypeIn value={l.label} onDone={(v) => { setTyping(null); if (v !== null) onLayerText?.(i, v); }} />
+                : <span className="tl-text">{l.label}</span>}
               <i className="tl-edge l" onPointerDown={(e) => grabLayer(e, i, "start")} />
               <i className="tl-edge r" onPointerDown={(e) => grabLayer(e, i, "end")} />
             </div>
@@ -260,5 +285,16 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
       </div>
     </div>
     </div>
+  );
+}
+
+/** Typing into a block on the timeline: Enter (or clicking away) keeps it, Esc leaves it as it was. */
+function TypeIn({ value, onDone }: { value: string; onDone: (v: string | null) => void }) {
+  return (
+    <input className="tl-type" defaultValue={value} autoFocus aria-label="Text"
+      onPointerDown={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}
+      onFocus={(e) => e.currentTarget.select()}
+      onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") { e.currentTarget.dataset.cancel = "1"; e.currentTarget.blur(); } }}
+      onBlur={(e) => onDone(e.currentTarget.dataset.cancel ? null : e.currentTarget.value)} />
   );
 }
