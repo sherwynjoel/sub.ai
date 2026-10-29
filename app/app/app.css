@@ -827,3 +827,10 @@ a.signout { text-decoration: none; }
 .guides .g-q { position: absolute; background: rgb(50 224 122 / .85); box-shadow: 0 0 0 .5px rgb(0 0 0 / .3); }
 .guides .g-qv { top: 0; bottom: 0; width: 1px; transform: translateX(-.5px); }
 .guides .g-qh { left: 0; right: 0; height: 1px; transform: translateY(-.5px); }
+/* Adding and typing text on the timeline */
+.tl-zoom .tl-addb { padding: 0 11px; background: #d4ff3f; color: #0c0c14; font-size: .74rem; }
+.tl-zoom .tl-addb:hover { background: #e2ff7a !important; }
+.tl-zoom .tl-sep { width: 1px; margin: 5px 3px; background: rgb(255 255 255 / .2); }
+.tl-type { position: absolute; inset: 2px; width: calc(100% - 4px); min-width: 140px; padding: 0 8px; border: 2px solid #fff; border-radius: 5px; background: #fff; color: #0c0c14; font: 600 12px var(--font-body); z-index: 3; }
+.tl-block.typing { overflow: visible; z-index: 4; }
+.tl-row-hint { position: absolute; left: 10px; top: 9px; font: 500 11px var(--font-body); color: #8a8aa0; pointer-events: none; white-space: nowrap; }
