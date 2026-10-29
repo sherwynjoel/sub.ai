@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { desc, isNotNull, notLike, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, ne, notLike, or, sql } from "drizzle-orm";
 import { billingEvents, db, users } from "@/db";
 import { inr, overview, when } from "@/lib/admin";
 import { effectivePlan, PAID, PLANS } from "@/lib/plans";
 
 const STATUS: Record<string, string> = {
-  active: "good", authenticated: "wait", pending: "wait", created: "neutral", halted: "bad", cancelled: "neutral", completed: "neutral", paused: "wait",
+  active: "good", prepaid: "good", authenticated: "wait", pending: "wait", created: "neutral", halted: "bad", cancelled: "neutral", completed: "neutral", paused: "wait",
 };
 
 type Evt = { payload?: { subscription?: { entity?: { id?: string } }; payment?: { entity?: { amount?: number; method?: string } } } };
@@ -13,10 +13,11 @@ type Evt = { payload?: { subscription?: { entity?: { id?: string } }; payment?: 
 export default async function Subscriptions() {
   const [o, subs, events, [counts]] = await Promise.all([
     overview(),
-    db.select().from(users).where(isNotNull(users.subscriptionId)).orderBy(desc(users.periodEnd)).limit(200),
-    db.select().from(billingEvents).where(notLike(billingEvents.type, "checkout.%")).orderBy(desc(billingEvents.createdAt)).limit(50), // webhooks only, not checkout records
+    db.select().from(users).where(or(isNotNull(users.subscriptionId), eq(users.subscriptionStatus, "prepaid"))).orderBy(desc(users.periodEnd)).limit(200),
+    // webhooks only, not our own records of checkouts and one-time payments
+    db.select().from(billingEvents).where(and(notLike(billingEvents.type, "checkout.%"), ne(billingEvents.type, "order.applied"))).orderBy(desc(billingEvents.createdAt)).limit(50),
     db.select({
-      active: sql<number>`(count(*) filter (where ${users.subscriptionStatus} = 'active'))::int`,
+      active: sql<number>`(count(*) filter (where ${users.subscriptionStatus} in ('active', 'prepaid') and ${users.periodEnd} > now()))::int`,
       cancelled: sql<number>`(count(*) filter (where ${users.subscriptionStatus} = 'cancelled'))::int`,
       halted: sql<number>`(count(*) filter (where ${users.subscriptionStatus} = 'halted'))::int`,
     }).from(users),
@@ -27,7 +28,7 @@ export default async function Subscriptions() {
     <>
       <h1>Subscriptions</h1>
       <dl className="stats">
-        <div className="stat"><dt>Monthly recurring revenue</dt><dd>{inr(o.mrr)}</dd><span className="sub">Active subscriptions at list price</span></div>
+        <div className="stat"><dt>Monthly recurring revenue</dt><dd>{inr(o.mrr)}</dd><span className="sub">Active subscriptions and paid months, at list price</span></div>
         <div className="stat"><dt>Collected, 30 days</dt><dd>{inr(o.revenue30d)}</dd><span className="sub">{o.charges30d} charges</span></div>
         <div className="stat"><dt>Active</dt><dd>{counts.active}</dd><span className="sub">{PAID.map((p) => `${PLANS[p].name} ${o.byPlan[p] ?? 0}`).join(", ")}</span></div>
         <div className="stat"><dt>Cancelled</dt><dd>{counts.cancelled}</dd><span className="sub">Keep access until period ends</span></div>
@@ -46,7 +47,8 @@ export default async function Subscriptions() {
                   <td>{PLANS[effectivePlan(u)].name}</td>
                   <td><span className={`status ${STATUS[u.subscriptionStatus ?? ""] ?? "neutral"}`}>{u.subscriptionStatus}</span></td>
                   <td>{when(u.periodEnd)}</td>
-                  <td><a href={`https://dashboard.razorpay.com/app/subscriptions/${u.subscriptionId}`} target="_blank" rel="noreferrer">{u.subscriptionId}</a></td>
+                  <td>{u.subscriptionStatus === "prepaid" ? <span className="muted">one-time payment</span>
+                    : <a href={`https://dashboard.razorpay.com/app/subscriptions/${u.subscriptionId}`} target="_blank" rel="noreferrer">{u.subscriptionId}</a>}</td>
                 </tr>
               ))}</tbody>
             </table>

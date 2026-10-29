@@ -18,9 +18,13 @@ async function check(url: string, headers: Record<string, string>): Promise<Resu
 }
 
 async function testRazorpay(): Promise<Result> {
-  const plans: { items: { id: string; item: { name: string; amount: number } }[] } = await rzp("/plans?count=100");
-  const notes = [];
+  await rzp("/payments?count=1"); // the keys (throws when refused)
+  const notes = ["one-time payments ready"];
   let ok = true;
+  if (!(await getSecret("RAZORPAY_WEBHOOK_SECRET"))) notes.push("webhook secret not saved (payments still work; it's the backup if a buyer closes the page)");
+  // Monthly subscriptions: only once Razorpay has switched Subscriptions on for the account.
+  const plans: { items: { id: string; item: { name: string; amount: number } }[] } | null = await rzp("/plans?count=100").catch(() => null);
+  if (!plans) return { ok, message: `Keys work · ${notes.join(" · ")} · monthly subscriptions: not switched on in this Razorpay account yet` };
   for (const p of PAID) {
     const id = await razorpayPlanId(p);
     const found = plans.items.find((x) => x.id === id);
@@ -31,8 +35,7 @@ async function testRazorpay(): Promise<Result> {
       notes.push(`${PLANS[p].name}: ${found.item.name}, ₹${rupees.toLocaleString("en-IN")}${rupees !== PLANS[p].priceInr ? ` (site shows ₹${PLANS[p].priceInr})` : ""}`);
     }
   }
-  if (!(await getSecret("RAZORPAY_WEBHOOK_SECRET"))) { ok = false; notes.push("Webhook secret not saved"); }
-  return { ok, message: `Keys work. ${notes.join(" · ")}` };
+  return { ok, message: `Keys work · ${notes.join(" · ")}` };
 }
 
 /** Checks a saved connection with a harmless read-only call. */

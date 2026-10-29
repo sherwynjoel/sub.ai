@@ -1,9 +1,12 @@
 import { db, billingEvents } from "@/db";
 import { json } from "@/lib/auth";
-import { applySubscription, hmacOk } from "@/lib/razorpay";
+import { applyOrderPayment, applySubscription, hmacOk } from "@/lib/razorpay";
 import { getSecret } from "@/lib/secrets";
 
-/** Razorpay webhook (Dashboard → Webhooks → <APP_URL>/api/billing/webhook, subscription.* events). */
+/**
+ * Razorpay webhook (Dashboard → Webhooks → <APP_URL>/api/billing/webhook): subscription.* events, and order.paid for
+ * one-time payments (in case the buyer closes the page before the checkout callback reaches us).
+ */
 export async function POST(req: Request) {
   const raw = await req.text();
   if (!hmacOk(raw, req.headers.get("x-razorpay-signature"), await getSecret("RAZORPAY_WEBHOOK_SECRET"))) return json({ error: "bad signature" }, 400);
@@ -13,5 +16,7 @@ export async function POST(req: Request) {
   if (!fresh.length) return json({ ok: true, duplicate: true });
   const sub = evt.payload?.subscription?.entity;
   if (sub && String(evt.event).startsWith("subscription.")) await applySubscription(sub, evt.event === "subscription.charged");
+  const order = evt.payload?.order?.entity, payment = evt.payload?.payment?.entity;
+  if (evt.event === "order.paid" && order?.id && payment?.id) await applyOrderPayment(order.id, payment.id); // applied once either way
   return json({ ok: true });
 }
