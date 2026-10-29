@@ -14,7 +14,7 @@ import { localVideo, progressOf, sendingVideos, sendVideo, subscribeUploads, upl
 type Job = {
   id: string; filename: string; durationSec: number; status: string; progress: number;
   error: string | null; createdAt: string; cueCount: number; language: string; script: string; captionCustom?: { show?: "ta" | "en" | "both" };
-  hasMedia: boolean; renderStatus?: string | null; videoTotal?: number | null;
+  hasMedia: boolean; hasPreview?: boolean; renderStatus?: string | null; videoTotal?: number | null;
 };
 
 const mins = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
@@ -75,7 +75,7 @@ function ProjectFolder({ job, index }: { job: Job; index: number }) {
         <GlassFolder
           key={`${job.id}:${job.status}:${job.renderStatus}`} // a new state brings a new set of files
           label={job.filename} meta={meta} width={width}
-          video={local?.url ?? (job.hasMedia ? `/api/jobs/${job.id}/media` : undefined)}
+          video={local?.url ?? (job.hasMedia ? `/api/jobs/${job.id}/media${job.hasPreview ? "?preview=1" : ""}` : undefined)}
           art={arts[(job.id.charCodeAt(0) + job.id.charCodeAt(1)) % arts.length]} seed={job.id.charCodeAt(2)}
           files={files} action="none" appearDelay={Math.min(index, 8) * 70}
         />

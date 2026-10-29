@@ -21,7 +21,7 @@ import "@/app/caption-styles.css";
 
 type Job = {
   id: string; filename: string; language: string; status: string; progress: number; error: string | null;
-  hasMedia: boolean; videoTotal?: number | null; provider: string | null; model: string | null; cues: Cue[]; speech?: [number, number][]; script: string; redos: number;
+  hasMedia: boolean; hasPreview?: boolean; videoTotal?: number | null; provider: string | null; model: string | null; cues: Cue[]; speech?: [number, number][]; script: string; redos: number;
   captionStyle: string; captionCustom: CaptionCustom; renderStatus: string | null; renderProgress: number; renderError: string | null; renderLang: string;
 };
 type View = "ta" | "en" | "both";
@@ -323,7 +323,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   // A video still arriving after its sound: play the phone's own copy meanwhile (lib/videoUpload.ts).
   useSyncExternalStore(subscribeUploads, uploadsVersion, () => 0);
   const local = inBrowser ? localVideo(initial.id) : undefined;
-  const src = mediaUrl ?? local?.url ?? (job.hasMedia ? `/api/jobs/${job.id}/media` : undefined);
+  const src = mediaUrl ?? local?.url ?? (job.hasMedia ? `/api/jobs/${job.id}/media${job.hasPreview ? "?preview=1" : ""}` : undefined);
   const videoHere = job.hasMedia || local?.state === "done"; // on the server (exports need it there)
   const coming = !videoHere && !!job.videoTotal;
   // Phones show one section at a time under the video (desktop shows them all).

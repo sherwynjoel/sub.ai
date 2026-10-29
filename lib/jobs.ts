@@ -12,7 +12,7 @@ export async function ownJob(id: string, u: User) {
 export function publicJob(j: typeof jobs.$inferSelect, withCues = false) {
   return {
     id: j.id, filename: j.filename, language: j.language, script: j.script, redos: j.redos, durationSec: j.durationSec, status: j.status, progress: j.progress,
-    provider: j.provider, model: j.model, error: j.error, createdAt: j.createdAt, hasMedia: !!j.filePath, videoTotal: j.videoTotal,
+    provider: j.provider, model: j.model, error: j.error, createdAt: j.createdAt, hasMedia: !!j.filePath, hasPreview: !!j.previewPath, videoTotal: j.videoTotal,
     cueCount: j.cues?.length ?? 0,
     captionStyle: j.captionStyle, captionCustom: j.captionCustom, renderStatus: j.renderStatus, renderProgress: j.renderProgress, renderLang: j.renderLang, renderError: j.renderError, ...(withCues ? { cues: j.cues ?? [], speech: j.speech ?? [] } : {}),
   };

@@ -45,6 +45,7 @@ export const jobs = pgTable("jobs", {
   filePath: text("file_path"), // null once purged (or while the video is still arriving, see videoTotal)
   audioPath: text("audio_path"), // the sound alone, sent first from phones (lib/audioTrack.ts): captions start from it
   videoTotal: bigint("video_total", { mode: "number" }), // size of a video still arriving in pieces (api/jobs/[id]/video); null when it's here
+  previewPath: text("preview_path"), // a light copy the editor plays (lib/media.ts makePreview): null = not made yet, "" = plays the original
   mime: text("mime").notNull().default("video/mp4"),
   language: text("language").notNull().default("ta-IN"), // subtitle language code
   script: text("script").notNull().default("mixed"), // how the main line is written: mixed | roman | native | translated (lib/captionTypes.ts)
