@@ -206,6 +206,8 @@ export interface StickerSlapFooterProps {
   stickers?: StickerSpec[]
   /** `[]` hides the credits pill. */
   credits?: Credit[]
+  /** A row on the black panel under the columns (policy links, ©). */
+  bottom?: React.ReactNode
   /** Minimum height. Any definite CSS length. */
   height?: string
   /** Caps the wordmark's height so short words don't get enormous. */
@@ -359,6 +361,9 @@ const CSS =
   ".ssf-st-btn:hover .ssf-sheen{transform:translateX(130%);transition:transform .9s cubic-bezier(.4,0,.2,1)}" +
   ".ssf-ring{position:absolute;left:50%;top:50%;width:150%;aspect-ratio:1;translate:-50% -50%;border-radius:50%;border:2px solid var(--ssf-cream);opacity:0;pointer-events:none}" +
   // credits
+  ".ssf-bottom{position:relative;z-index:2;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 24px;margin:0 clamp(18px,1.8cqw,26px);padding:14px 0 clamp(14px,2cqw,26px);border-top:1px solid rgba(245,242,234,.16);font-size:clamp(13px,1cqw,15px);color:rgba(245,242,234,.62)}" +
+  ".ssf-bottom a{color:var(--ssf-cream)}" +
+  ".ssf-bottom a:hover{color:var(--ssf-accent)}" +
   ".ssf-credits{position:absolute;z-index:6;right:clamp(10px,1.2cqw,16px);bottom:clamp(10px,1.2cqw,16px)}" +
   ".ssf-pill{display:block;padding:.3em .8em .34em;border-radius:999px;background:var(--ssf-ink);color:var(--ssf-paper);font-size:clamp(12px,1cqw,14px);font-weight:600;transition:transform .4s cubic-bezier(.2,1.6,.3,1),background .2s}" +
   ".ssf-pill:hover{transform:rotate(-5deg) scale(1.06)}" +
@@ -606,6 +611,7 @@ export default function StickerSlapFooter({
   fontSans = "'DM Sans', 'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
   onStickerMove,
   className = "",
+  bottom,
 }: StickerSlapFooterProps) {
   const rootRef = React.useRef<HTMLElement>(null)
   const stageRef = React.useRef<HTMLDivElement>(null)
@@ -970,6 +976,7 @@ export default function StickerSlapFooter({
           </div>
         )}
 
+        {bottom && <div className="ssf-bottom">{bottom}</div>}
         <div className="ssf-stage">
           <div className="ssf-stage-in" ref={stageRef} style={{ marginBottom: round(-((vbH - cutH) / vbW) * 100) + "%" }}>
             <button type="button" className="ssf-wm-btn" onClick={replay} aria-label={"Write " + wordmark + " again"}>

@@ -317,12 +317,9 @@ export default function Landing() {
         wordmarkMaxHeight="40svh"
         paper="#f3f1f8" panel="#0c0c14" ink="#0c0c14" cream="#f5f2ea" accent="#d4ff3f"
         fontSans="var(--font-sans), system-ui, sans-serif"
+        // The policies stay one click away on every page (Razorpay checks for them).
+        bottom={<><LegalLinks /><Credit className="" /></>}
       />
-      {/* The policies stay one click away on every page (Razorpay checks for them). */}
-      <div className="wrap foot foot-legal">
-        <LegalLinks />
-        <Credit />
-      </div>
     </>
   );
 }
