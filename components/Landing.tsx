@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import Cube from "@/components/Cube";
 import Effects from "@/components/Effects";
-import LegalLinks from "@/components/LegalLinks";
+import LegalLinks, { Credit } from "@/components/LegalLinks";
 import StickerSlapFooter from "@/components/StickerSlapFooter";
 import FruitSticker, { MEDIA } from "@/components/FruitStickerHero";
 import HeroEditor from "@/components/HeroEditor";
@@ -321,7 +321,7 @@ export default function Landing() {
       {/* The policies stay one click away on every page (Razorpay checks for them). */}
       <div className="wrap foot foot-legal">
         <LegalLinks />
-        <span className="muted">© 2026 {BRAND.name} · Powered by <a href="https://thearktech.in" target="_blank" rel="noopener">Arktech</a></span>
+        <Credit />
       </div>
     </>
   );

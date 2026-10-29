@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BRAND } from "@/lib/brand";
 
 /** Footer links to the policy pages (every public page shows them; Razorpay checks for them). */
 export const LEGAL = [
@@ -15,4 +16,9 @@ export default function LegalLinks({ className = "" }: { className?: string }) {
       {LEGAL.map(([href, label]) => <Link key={href} href={href}>{label}</Link>)}
     </nav>
   );
+}
+
+/** The line under the links in every footer. */
+export function Credit({ className = "muted" }: { className?: string }) {
+  return <span className={className}>© 2026 {BRAND.name} · Powered by <a href="https://thearktech.in" target="_blank" rel="noopener">Arktech</a></span>;
 }
