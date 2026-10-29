@@ -53,10 +53,28 @@ export async function probe(file: string): Promise<number | null> {
   }
 }
 
-/** Extract mono 16 kHz speech-quality mp3 split into CHUNK_SECONDS pieces; returns their paths in order. */
-export async function extractChunks(file: string, outDir: string) {
+/**
+ * How long the sound really is, counted packet by packet (a copy, no decoding: seconds even for an hour). The length
+ * a file states can be made up: a raw AAC is only estimated from its first frames, so loud frames first and quiet
+ * ones after state a fraction of the real length. Charging uses the longer of the two. Null if it can't be read.
+ */
+export async function soundLength(file: string): Promise<number | null> {
+  try {
+    const { stdout } = await run(bin("ffmpeg"), ["-nostdin", "-v", "error", "-i", file, "-map", "0:a:0", "-c", "copy", "-f", "null", "-progress", "pipe:1", "-"], { maxBuffer: 1 << 26 });
+    const us = [...stdout.matchAll(/^out_time_us=(\d+)/gm)].at(-1)?.[1];
+    return us ? +us / 1e6 : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extract mono 16 kHz speech-quality mp3 split into CHUNK_SECONDS pieces; returns their paths in order. `maxSeconds`:
+ * no more than the minutes paid for are listened to, whatever the file claims.
+ */
+export async function extractChunks(file: string, outDir: string, maxSeconds?: number) {
   await run(bin("ffmpeg"), [
-    "-y", "-v", "error", "-i", file, "-vn", "-ac", "1", "-ar", "16000", "-b:a", "48k",
+    "-y", "-v", "error", "-i", file, ...(maxSeconds ? ["-t", String(maxSeconds)] : []), "-vn", "-ac", "1", "-ar", "16000", "-b:a", "48k",
     "-f", "segment", "-segment_time", String(CHUNK_SECONDS), "-reset_timestamps", "1", join(outDir, "c%04d.mp3"),
   ], { maxBuffer: 1 << 24 }).catch((e) => {
     console.error(e); // full ffmpeg command and output stay in the worker log

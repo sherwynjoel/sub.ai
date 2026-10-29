@@ -33,7 +33,7 @@ async function processJob(job: typeof jobs.$inferSelect) {
   const dir = await mkdtemp(join(tmpdir(), "vasanam-"));
   try {
     const source = job.audioPath ?? job.filePath!; // phones send the sound first; the video may still be arriving
-    const files = await extractChunks(source, dir);
+    const files = await extractChunks(source, dir, Math.ceil(job.durationSec) + 1); // only what was charged
     let done = 0, offset = 0;
     const plan = [];
     for (const f of files) {
