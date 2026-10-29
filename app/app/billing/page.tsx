@@ -2,6 +2,7 @@ import Link from "next/link";
 import BillingActions from "@/components/BillingActions";
 import { requireUser } from "@/lib/auth";
 import { effectivePlan, PLANS, secondsLeft } from "@/lib/plans";
+import { subscriptionsReady } from "@/lib/razorpay";
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
   const u = await requireUser();
@@ -20,9 +21,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
           <p className="muted">
             {plan === "free"
               ? "Trial minutes are a one-time allowance."
-              : u.subscriptionStatus === "cancelled"
-                ? `Cancelled. Your minutes stay available until ${date}.`
-                : `Renews on ${date}. Minutes reset each month.`}
+              : u.subscriptionStatus === "prepaid"
+                ? `Paid until ${date}. Pay again any time to add 30 days.`
+                : u.subscriptionStatus === "cancelled"
+                  ? `Cancelled. Your minutes stay available until ${date}.`
+                  : `Renews on ${date}. Minutes reset each month.`}
           </p>
         </div>
         <div className="usage-meter">
@@ -31,8 +34,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
           <span className="bar"><i style={{ width: `${Math.min(1, left / total) * 100}%` }} /></span>
         </div>
       </div>
-      <BillingActions current={plan} live={live} preselect={(await searchParams).plan} />
-      <p className="muted small">Monthly plans, cancel any time. See the <Link href="/refunds">refund and cancellation policy</Link> and <Link href="/terms">terms</Link>.</p>
+      <BillingActions current={plan} live={live} subscriptions={await subscriptionsReady()} preselect={(await searchParams).plan}
+        prepaidUntil={u.subscriptionStatus === "prepaid" && plan !== "free" ? date : undefined} />
+      <p className="muted small">Pay for 30 days at a time by card, UPI or netbanking; nothing renews unless you choose a monthly subscription. See the <Link href="/refunds">refund and cancellation policy</Link> and <Link href="/terms">terms</Link>.</p>
     </>
   );
 }

@@ -1,6 +1,6 @@
 import "server-only";
 import { notFound } from "next/navigation";
-import { and, eq, gt, isNotNull, ne, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { billingEvents, db, jobs, settings, users } from "@/db";
 import { currentUser, requireUser } from "@/lib/auth";
 import { PLANS, effectivePlan, type PlanId } from "@/lib/plans";
@@ -44,7 +44,8 @@ export async function overview() {
       minutes30d: sql<number>`coalesce(round(sum(${jobs.durationSec}) filter (where ${jobs.status} = 'done' and ${jobs.createdAt} > now() - interval '30 days') / 60), 0)::int`,
     }).from(jobs),
     db.select({ rupees: chargedRupees, count: sql<number>`count(*)::int` }).from(billingEvents)
-      .where(and(eq(billingEvents.type, "subscription.charged"), gt(billingEvents.createdAt, month))),
+      // renewals, and one-time payments as applied (the raw order.paid webhook is the same money: not counted)
+      .where(and(inArray(billingEvents.type, ["subscription.charged", "order.applied"]), gt(billingEvents.createdAt, month))),
     db.select().from(users).where(and(ne(users.plan, "free"), isNotNull(users.periodEnd), gt(users.periodEnd, new Date()))),
     workerStatus(),
   ]);
@@ -53,7 +54,7 @@ export async function overview() {
   for (const s of subscribers) {
     const plan = effectivePlan(s);
     byPlan[plan] = (byPlan[plan] ?? 0) + 1;
-    if (s.subscriptionStatus === "active") mrr += PLANS[plan].priceInr;
+    if (s.subscriptionStatus === "active" || s.subscriptionStatus === "prepaid") mrr += PLANS[plan].priceInr;
   }
   return { users: u, jobs: j, revenue30d: Number(rev.rupees), charges30d: rev.count, subscribers: subscribers.length, byPlan, mrr, worker };
 }
