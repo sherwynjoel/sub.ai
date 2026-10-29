@@ -65,3 +65,29 @@ export const TAMIL_WIDTHS: Record<string, number[]> = {
   "Pavanam": [0, 0, 0.0, 0.652, 0, 0.968, 1.118, 0.896, 0.588, 0.868, 1.083, 0, 0, 0, 0.63, 0.63, 0.742, 0, 0.762, 0.762, 1.598, 0.66, 0, 0, 0, 0.807, 0.588, 0, 0.742, 0, 0.953, 0.711, 0, 0, 0, 1.354, 0.66, 0, 0, 0, 0.638, 1.017, 0.641, 0, 0, 0, 0.696, 0.673, 0.524, 0.656, 0.833, 0.883, 0.696, 0.853, 0.81, 0.992, 1.038, 1.209, 0, 0, 0, 0, 0.544, 0.204, 0.0, 0.351, 0.576, 0, 0, 0, 0.688, 0.629, 0.99, 0, 1.79, 1.748, 2.173, 0.0, 0, 0, 0.762, 0, 0, 0, 0, 0, 0, 0.883, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.548, 0.66, 0.886, 0.737, 0.716, 1.005, 0.859, 0.63, 0.968, 0.976, 0.659, 0.712, 0.925, 0.783, 0.919, 1.707, 0.74, 1.278, 1.487, 0.892, 0.817, 0, 0, 0, 0, 0],
   "Meera Inimai": [0, 0, 0.589, 0.835, 0, 1.194, 1.527, 1.008, 0.7, 0.983, 1.379, 0, 0, 0, 0.872, 0.872, 0.873, 0, 0.896, 0.896, 1.795, 0.725, 0, 0, 0, 0.813, 0.666, 0, 0.873, 0, 1.119, 0.726, 0, 0, 0, 1.522, 0.74, 0, 0, 0, 0.695, 1.104, 0.682, 0, 0, 0, 0.825, 0.723, 0.616, 0.732, 0.912, 1.017, 0.84, 0.946, 0.881, 1.239, 1.14, 1.404, 0, 0, 0, 0, 0.574, 0.551, 0.496, 0.702, 1.071, 0, 0, 0, 0.775, 0.729, 0.988, 0, 1.82, 1.766, 2.04, 0.256, 0, 0, 0.877, 0, 0, 0, 0, 0, 0, 0.789, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.52, 0.715, 0.658, 0.725, 0.736, 0.783, 0.901, 0.731, 1.094, 0.93, 0.776, 0.89, 1.031, 0.814, 1.168, 2.039, 0.698, 1.079, 1.659, 1.421, 1.19, 0, 0, 0, 0, 0],
 };
+
+/**
+ * How tall each caption font's letters are, as a fraction of its font size: [capital height, x-height] (measured
+ * in the browser from the bundled fonts). Lets every style and font show text at one standard size.
+ */
+export const HEIGHTS: Record<string, [number, number]> = {
+  "Poppins": [0.702, 0.558],
+  "Poppins ExtraBold": [0.705, 0.561],
+  "Anton": [0.859, 0.733],
+  "Roboto Black": [0.711, 0.528],
+  "Satisfy": [0.727, 0.407],
+  "Inter": [0.728, 0.546],
+  "Inter Italic": [0.728, 0.546],
+  "Montserrat SemiBold": [0.7, 0.534],
+  "Playfair Display Italic": [0.708, 0.528],
+  "Playfair Display Bold Italic": [0.708, 0.531],
+  "Inter Bold": [0.728, 0.546],
+  "Nunito ExtraBold": [0.714, 0.499],
+  "Open Sauce Sans Black": [0.763, 0.567],
+};
+
+/** How big text in this font looks per em: capitals by their height, mixed case by capitals and small letters together. */
+export const looksTall = (font: string, caps = false) => {
+  const [cap, x] = HEIGHTS[font] ?? HEIGHTS.Inter;
+  return caps ? cap : (cap + x) / 2;
+};
