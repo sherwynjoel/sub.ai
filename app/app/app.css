@@ -823,3 +823,7 @@ a.signout { text-decoration: none; }
 .tl-zoom .tl-fit { font-size: .74rem; font-weight: 600; }
 .tl-zoom button:hover:not(:disabled) { background: rgb(255 255 255 / .14); }
 .tl-zoom button:disabled { opacity: .35; cursor: default; }
+/* Guides: green quarter lines at 25% and 75% (the ruler's marks) */
+.guides .g-q { position: absolute; background: rgb(50 224 122 / .85); box-shadow: 0 0 0 .5px rgb(0 0 0 / .3); }
+.guides .g-qv { top: 0; bottom: 0; width: 1px; transform: translateX(-.5px); }
+.guides .g-qh { left: 0; right: 0; height: 1px; transform: translateY(-.5px); }
