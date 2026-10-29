@@ -239,6 +239,9 @@ function Guides({ on }: { on: boolean }) {
   return (
     <div ref={root} className="guides" aria-hidden="true" hidden>
       <i className="g-v" /><i className="g-h" />
+      {/* quarter lines, matching the ruler's 25 and 75 */}
+      <i className="g-q g-qv" style={{ left: "25%" }} /><i className="g-q g-qv" style={{ left: "75%" }} />
+      <i className="g-q g-qh" style={{ top: "25%" }} /><i className="g-q g-qh" style={{ top: "75%" }} />
       <span className="g-ruler g-top">{ticks.map((t) => <b key={t} className={t % 25 ? "" : "major"} style={{ left: `${t}%` }}>{t % 25 ? "" : t}</b>)}</span>
       <span className="g-ruler g-left">{ticks.map((t) => <b key={t} className={t % 25 ? "" : "major"} style={{ top: `${t}%` }}>{t % 25 ? "" : t}</b>)}</span>
       <span ref={box} className="g-box" hidden />
