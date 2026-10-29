@@ -2,7 +2,7 @@ import Link from "next/link";
 import AppNav from "@/components/AppNav";
 import SignOut from "@/components/SignOut";
 import { requireUser } from "@/lib/auth";
-import LegalLinks from "@/components/LegalLinks";
+import LegalLinks, { Credit } from "@/components/LegalLinks";
 import { BRAND, BUSINESS } from "@/lib/brand";
 import { effectivePlan, PLANS, secondsLeft } from "@/lib/plans";
 import "./app.css";
@@ -32,6 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <footer className="wrap app-foot">
         <span className="muted small">Need help? Email <a href={`mailto:${BUSINESS.email}`}>{BUSINESS.email}</a></span>
         <LegalLinks />
+        <Credit className="muted small" />
       </footer>
     </>
   );

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import LegalLinks from "@/components/LegalLinks";
-import { BRAND, BUSINESS } from "@/lib/brand";
+import LegalLinks, { Credit } from "@/components/LegalLinks";
+import { BRAND } from "@/lib/brand";
 import "./legal.css";
 
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
@@ -20,7 +20,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
       <main className="wrap legal">{children}</main>
       <footer className="wrap legal-foot">
         <LegalLinks />
-        <span className="muted">© 2026 {BUSINESS.name}</span>
+        <Credit />
       </footer>
     </>
   );
