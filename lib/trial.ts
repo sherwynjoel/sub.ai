@@ -25,11 +25,10 @@ const THROWAWAY = new Set([
   "tempmail.net", "tempmailo.com", "tempr.email", "tmpmail.org", "tmpmail.net", "yopmail.com", "yopmail.net", "yopmail.fr",
   "throwawaymail.com", "trashmail.com", "trashmail.de", "getnada.com", "nada.email", "dispostable.com", "maildrop.cc",
   "mailnesia.com", "mintemail.com", "mohmal.com", "emailondeck.com", "fakeinbox.com", "fakemail.net", "spamgourmet.com",
-  "mailcatch.com", "moakt.com", "mail.tm", "mail.gw", "inboxkitten.com", "burnermail.io", "33mail.com", "anonaddy.me",
+  "mailcatch.com", "moakt.com", "mail.tm", "mail.gw", "inboxkitten.com",
   "mytemp.email", "tempinbox.com", "discard.email", "emailfake.com", "generator.email", "1secmail.com", "1secmail.net",
-  "1secmail.org", "byom.de", "harakirimail.com", "mailpoof.com", "crazymailing.com", "luxusmail.org", "minuteinbox.com",
-  "dropmail.me", "10mail.org", "emltmp.com", "spambox.us", "trbvm.com", "linshiyouxiang.net", "tempmail.plus", "mailto.plus",
-  "fexpost.com", "fexbox.org", "rover.info", "chitthi.in", "inbox.lv-temp.com", "zetmail.com", "vomoto.com", "tmail.ws",
+  "1secmail.org", "harakirimail.com", "mailpoof.com", "minuteinbox.com",
+  "dropmail.me", "10mail.org", "emltmp.com", "spambox.us", "tempmail.plus", "mailto.plus",
 ]);
 
 export function throwawayEmail(email: string) {
