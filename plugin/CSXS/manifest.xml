@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ExtensionManifest Version="7.0" ExtensionBundleId="com.vasanam.panel" ExtensionBundleVersion="1.0.36" ExtensionBundleName="Vasanam" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.vasanam.panel" ExtensionBundleVersion="1.0.37" ExtensionBundleName="Vasanam" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <ExtensionList>
-    <Extension Id="com.vasanam.panel.main" Version="1.0.36" />
+    <Extension Id="com.vasanam.panel.main" Version="1.0.37" />
   </ExtensionList>
   <ExecutionEnvironment>
     <HostList>
