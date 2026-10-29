@@ -59,7 +59,7 @@ export default async function Subscriptions() {
       <section className="panel">
         <h2>Payment events</h2>
         <p className="muted">Everything Razorpay has told us through the webhook, newest first.</p>
-        {events.length === 0 ? <p className="muted">No webhook events received yet. Check the webhook in Connections.</p> : (
+        {events.length === 0 ? <p className="muted">No webhook events received yet. Check the webhook in Razorpay and RAZORPAY_WEBHOOK_SECRET on the server.</p> : (
           <div className="table-wrap">
             <table>
               <thead><tr><th>Event</th><th>User</th><th className="num">Amount</th><th>Method</th><th>Received</th></tr></thead>

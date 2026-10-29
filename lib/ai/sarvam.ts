@@ -13,7 +13,7 @@ const API = "https://api.sarvam.ai/speech-to-text/job/v1";
  */
 export const sarvam: Provider = async (audio, _dur, cfg, lang, want) => {
   const key = await getSecret("SARVAM_API_KEY");
-  if (!key) throw new Error("No Sarvam API key saved. Add it in /admin → Connections.");
+  if (!key) throw new Error("No Sarvam API key: set SARVAM_API_KEY in the server's .env.local.");
   const [native, english = []] = await Promise.all(passesFor(want.script, want.english).map((mode) => batch(audio, key, cfg.model, mode, lang)));
   // Saaras windows are 10–30 s, so each paired window is cut into readable cues by sentence (English sentences matched
   // to the native sentences they translate).

@@ -7,7 +7,7 @@ import { getSecret, type ConnectionName } from "@/lib/secrets";
 
 export async function rzp(path: string, body?: unknown) {
   const [id, secret] = await Promise.all([getSecret("RAZORPAY_KEY_ID"), getSecret("RAZORPAY_KEY_SECRET")]);
-  if (!id || !secret) throw new Error("Payments aren't set up yet. Add the Razorpay keys in Admin → Connections.");
+  if (!id || !secret) throw new Error("Payments aren't set up yet: set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in the server's .env.local.");
   const auth = Buffer.from(`${id}:${secret}`).toString("base64");
   const res = await fetch(`https://api.razorpay.com/v1${path}`, {
     method: body ? "POST" : "GET",

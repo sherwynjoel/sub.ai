@@ -11,7 +11,7 @@ const MAYURA = ["bn-IN", "gu-IN", "hi-IN", "kn-IN", "ml-IN", "mr-IN", "od-IN", "
  */
 export async function translateLines(lines: string[], lang: string): Promise<string[]> {
   const key = await getSecret("SARVAM_API_KEY");
-  if (!key) throw new Error("Translation needs a Sarvam API key. Add it in /admin → Connections.");
+  if (!key) throw new Error("Translation needs a Sarvam API key: set SARVAM_API_KEY in the server's .env.local.");
   const mayura = MAYURA.includes(lang);
   const out: string[] = lines.map(() => "");
   const queue = lines.map((l, i) => i).filter((i) => lines[i].trim());
