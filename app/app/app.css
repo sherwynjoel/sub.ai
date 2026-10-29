@@ -298,7 +298,7 @@ kbd { font: 600 .75rem/1 var(--font-body); padding: 3px 6px; border: 1px solid v
 .ed-zoom { display: flex; align-items: center; gap: 6px; }
 .ed-zoom input { width: 140px; }
 .tl { overflow-x: auto; overflow-y: hidden; border-radius: 8px; background: #15151f; user-select: none; touch-action: none; }
-.tl-inner { position: relative; height: 128px; }
+.tl-inner { position: relative; height: 128px; overflow: hidden; }
 .tl-ruler { position: absolute; left: 0; right: 0; top: 0; height: 22px; border-bottom: 1px solid #2c2c3a; cursor: ew-resize; }
 .tl-tick { position: absolute; top: 0; height: 22px; border-left: 1px solid #3a3a4c; padding-left: 4px; font: 500 10px/22px var(--font-body); color: #a5a5b8; white-space: nowrap; }
 .tl-track { position: absolute; left: 0; right: 0; top: 26px; height: 52px; cursor: ew-resize; }
@@ -812,3 +812,14 @@ a.signout { text-decoration: none; }
 .look-scope { margin: 2px 0 0; }
 .own-looks { display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--accent-soft, #eef8c8); color: var(--ink); font-size: .85rem; }
 .own-looks .btn { justify-self: start; }
+/* Timeline: no scrollbar (drag the empty track or scroll to move along it), zoom keys on the timeline itself */
+.tl-wrap { position: relative; min-width: 0; } /* a grid item: keep it the page's width (the timeline scrolls inside) */
+.tl { scrollbar-width: none; }
+.tl::-webkit-scrollbar { display: none; }
+.tl-track, .tl-words, .tl-layers { cursor: grab; }
+.tl.panning, .tl.panning * { cursor: grabbing !important; }
+.tl-zoom { position: absolute; z-index: 6; right: 8px; bottom: 8px; display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgb(12 12 20 / .82); box-shadow: 0 4px 14px rgb(0 0 0 / .35); backdrop-filter: blur(6px); }
+.tl-zoom button { min-width: 30px; height: 28px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent; color: #fff; font: 700 1rem/1 var(--font-body); cursor: pointer; }
+.tl-zoom .tl-fit { font-size: .74rem; font-weight: 600; }
+.tl-zoom button:hover:not(:disabled) { background: rgb(255 255 255 / .14); }
+.tl-zoom button:disabled { opacity: .35; cursor: default; }

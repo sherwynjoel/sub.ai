@@ -1139,15 +1139,10 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
       <div className="ed-timeline">
         <div className="ed-tl-bar">
-          <span className="muted small">Timeline — drag a caption to move it, its edges to retime it, the words of the selected caption to retime them.</span>
-          <span className="ed-zoom">
-            <button className="btn ghost small" onClick={() => setZoom((z) => Math.max(10, z / 1.25))} aria-label="Zoom out (−)">−</button>
-            <input type="range" min={10} max={600} value={zoom} onChange={(e) => setZoom(+e.target.value)} aria-label="Timeline zoom" />
-            <button className="btn ghost small" onClick={() => setZoom((z) => Math.min(600, z * 1.25))} aria-label="Zoom in (+)">+</button>
-          </span>
+          <span className="muted small">Timeline: drag the empty track to move along it (or scroll), pinch or Ctrl + scroll to zoom. Drag a caption to move it, its edges to retime it.</span>
         </div>
         <Timeline cues={cues} duration={duration} now={now} selected={selected} zoom={zoom} line={line} playing={playing}
-          onSeek={seek} onSelect={select}
+          onSeek={seek} onSelect={select} onZoom={setZoom}
           layers={layers.map((l) => ({ start: l.start, end: l.end, label: l.text }))} selectedLayer={selLayer}
           onSelectLayer={(i) => { setSelLayer(i); setTab("layers"); }} onDragLayer={(i, span) => editLayer(i, span)}
           onDrag={(i, patch) => { if (!dragFrom.current) dragFrom.current = cues; setCuesRaw((cs) => cs.map((c, j) => (j === i ? { ...c, ...patch } : c))); }}

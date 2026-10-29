@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import type { Cue } from "@/db/schema";
 import { wordTimes } from "@/lib/captionStyles";
 
@@ -17,7 +17,11 @@ type Props = {
   selectedLayer?: number;
   onSelectLayer?: (i: number) => void;
   onDragLayer?: (i: number, span: { start: number; end: number }) => void;
+  /** Zoom (px per second), from the timeline's own −/+ and pinch / Ctrl+scroll. */
+  onZoom?: (zoom: number) => void;
 };
+
+export const ZOOM_MIN = 10, ZOOM_MAX = 600;
 
 const MIN = 0.2; // shortest caption, seconds
 const GAP = 0.05; // smallest gap kept between words
@@ -37,10 +41,50 @@ const rescale = (t: number[] | undefined, s0: number, e0: number, s1: number, e1
  * Caption blocks on a timeline: click to select and move the playhead, drag a block to move it, drag its edges to
  * change when it starts or ends, drag the word marks of the selected caption to retime its words.
  */
-export default function Timeline({ cues, duration, now, selected, zoom, line, playing, onSeek, onSelect, onDrag, onDragEnd, layers = [], selectedLayer = -1, onSelectLayer, onDragLayer }: Props) {
+export default function Timeline({ cues, duration, now, selected, zoom, line, playing, onSeek, onSelect, onDrag, onDragEnd, layers = [], selectedLayer = -1, onSelectLayer, onDragLayer, onZoom }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
   const width = Math.max(duration, 1) * zoom + 40;
   const st = step(zoom);
+
+  // Zoom keeps one moment in place on screen (under the cursor, or the playhead): the new scroll is set once the
+  // parent has re-rendered at the new zoom.
+  const anchor = useRef<{ t: number; x: number } | null>(null);
+  const zoomRef = useRef(zoom), nowRef = useRef(now), onZoomRef = useRef(onZoom);
+  useEffect(() => { zoomRef.current = zoom; nowRef.current = now; onZoomRef.current = onZoom; });
+  const zoomTo = (z: number, t: number, x: number) => {
+    const next = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z)) * 100) / 100;
+    if (next === zoomRef.current) return;
+    anchor.current = { t, x };
+    onZoomRef.current?.(next);
+  };
+  useLayoutEffect(() => {
+    const el = scroller.current, a = anchor.current;
+    if (el && a) { el.scrollLeft = a.t * zoom - a.x; anchor.current = null; }
+  }, [zoom]);
+  /** Zoom around the playhead (the −/+ keys and buttons). */
+  const zoomBy = (f: number) => {
+    const el = scroller.current;
+    if (!el) return;
+    const x = Math.min(el.clientWidth - 40, Math.max(40, nowRef.current * zoomRef.current - el.scrollLeft));
+    zoomTo(zoomRef.current * f, nowRef.current, x);
+  };
+  /** The whole video in view. */
+  const fit = () => { const el = scroller.current; if (el) zoomTo((el.clientWidth - 44) / Math.max(1, duration), 0, 0); };
+
+  // The wheel: scrolling (either direction) moves along the timeline; pinch or Ctrl/⌘ + scroll zooms at the cursor.
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.ctrlKey || e.metaKey) {
+        const r = el.getBoundingClientRect(), x = e.clientX - r.left;
+        zoomTo(zoomRef.current * Math.exp(-e.deltaY * 0.01), (el.scrollLeft + x) / zoomRef.current, x);
+      } else el.scrollLeft += Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    };
+    el.addEventListener("wheel", wheel, { passive: false });
+    return () => el.removeEventListener("wheel", wheel);
+  }, []);
 
   // Follow the playhead while playing.
   useEffect(() => {
@@ -124,7 +168,28 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
     addEventListener("pointercancel", up); // a touch taken over by scrolling
   }
 
-  /** Scrub: press on the ruler or empty track and drag to move the playhead. */
+  /** Grab the empty track and drag to slide the timeline; a click without moving puts the playhead there. */
+  function pan(e: React.PointerEvent) {
+    e.preventDefault();
+    const el = scroller.current!, x0 = e.clientX, s0 = el.scrollLeft;
+    let moved = false;
+    el.classList.add("panning");
+    const move = (ev: PointerEvent) => {
+      if (!moved && Math.abs(ev.clientX - x0) < 4) return;
+      moved = true;
+      el.scrollLeft = s0 - (ev.clientX - x0);
+    };
+    const up = (ev: PointerEvent) => {
+      el.classList.remove("panning");
+      removeEventListener("pointermove", move); removeEventListener("pointerup", up); removeEventListener("pointercancel", up);
+      if (!moved && ev.type === "pointerup") onSeek(timeAt(ev.clientX));
+    };
+    addEventListener("pointermove", move);
+    addEventListener("pointerup", up);
+    addEventListener("pointercancel", up);
+  }
+
+  /** Scrub: press on the ruler and drag to move the playhead. */
   function scrub(e: React.PointerEvent) {
     e.preventDefault();
     onSeek(timeAt(e.clientX));
@@ -146,17 +211,23 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
   const laneCount = Math.max(1, laneEnds.length);
 
   const ticks = [];
-  for (let t = 0; t <= duration + st; t += st) ticks.push(t);
+  for (let t = 0; t <= duration; t += st) ticks.push(t); // up to the end (a label past it would widen the strip)
   const sel = cues[selected];
   const selWords = sel ? wordTimes(line === "en" ? sel.en : sel.ta, sel.start, sel.end, line === "en" ? sel.we : sel.w) : [];
 
   return (
+    <div className="tl-wrap">
+    <div className="tl-zoom" role="group" aria-label="Timeline zoom">
+      <button onClick={() => zoomBy(1 / 1.4)} disabled={zoom <= ZOOM_MIN} aria-label="Zoom out (−)" title="Zoom out (−, or pinch / Ctrl + scroll)">−</button>
+      <button onClick={fit} className="tl-fit" title="Show the whole video">Fit</button>
+      <button onClick={() => zoomBy(1.4)} disabled={zoom >= ZOOM_MAX} aria-label="Zoom in (+)" title="Zoom in (+, or pinch / Ctrl + scroll)">+</button>
+    </div>
     <div className="tl" ref={scroller}>
       <div className="tl-inner" style={{ width, height: 132 + laneCount * 32 }}>
         <div className="tl-ruler" onPointerDown={scrub}>
           {ticks.map((t) => <span key={t} className="tl-tick" style={{ left: t * zoom }}>{label(t)}</span>)}
         </div>
-        <div className="tl-track" onPointerDown={scrub}>
+        <div className="tl-track" onPointerDown={pan}>
           {cues.map((c, i) => (
             <div key={i} className={`tl-block${i === selected ? " on" : ""}`} style={{ left: c.start * zoom, width: Math.max(4, (c.end - c.start) * zoom) }}
               onPointerDown={(e) => grab(e, i, "move")} title={`${(line === "en" ? c.en : c.ta) || "(empty)"}\nDrag to move · drag the edges to retime`}>
@@ -167,7 +238,7 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
           ))}
         </div>
         {sel && (
-          <div className="tl-words" onPointerDown={scrub}>
+          <div className="tl-words" onPointerDown={pan}>
             {selWords.map((w, j) => (
               <span key={j} className="tl-word" style={{ left: w.s * zoom, width: Math.max(2, (w.e - w.s) * zoom) }} onPointerDown={(e) => grab(e, selected, j)} title={`${w.w} — drag to retime this word`}>
                 <b>{w.w}</b>
@@ -175,7 +246,7 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
             ))}
           </div>
         )}
-        <div className="tl-layers" style={{ height: laneCount * 32 + 4 }} onPointerDown={scrub}>
+        <div className="tl-layers" style={{ height: laneCount * 32 + 4 }} onPointerDown={pan}>
           {layers.map((l, i) => (
             <div key={i} className={`tl-block tl-layer${i === selectedLayer ? " on" : ""}`} style={{ left: l.start * zoom, width: Math.max(4, (l.end - l.start) * zoom), top: 4 + lanes[i] * 32 }}
               onPointerDown={(e) => grabLayer(e, i, "move")} title={`${l.label}\nText layer: drag to move · drag the edges to retime`}>
@@ -187,6 +258,7 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
         </div>
         <i className="tl-head" style={{ left: now * zoom }} />
       </div>
+    </div>
     </div>
   );
 }
