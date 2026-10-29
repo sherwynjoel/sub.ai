@@ -834,3 +834,8 @@ a.signout { text-decoration: none; }
 .tl-type { position: absolute; inset: 2px; width: calc(100% - 4px); min-width: 140px; padding: 0 8px; border: 2px solid #fff; border-radius: 5px; background: #fff; color: #0c0c14; font: 600 12px var(--font-body); z-index: 3; }
 .tl-block.typing { overflow: visible; z-index: 4; }
 .tl-row-hint { position: absolute; left: 10px; top: 9px; font: 500 11px var(--font-body); color: #8a8aa0; pointer-events: none; white-space: nowrap; }
+/* Asking a new user to confirm their email (components/ConfirmEmail.tsx) */
+.confirm-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 0 18px; padding: 14px 18px; border-radius: var(--r-lg, 14px); background: #fff7d6; border: 1px solid #f0d77a; color: #3d3200; }
+.confirm-note p { margin: 0; }
+.confirm-note .error { flex-basis: 100%; }
+.confirm-note.ok { display: block; background: #e3f9e9; border-color: #8fdca8; color: #0f3d1d; }

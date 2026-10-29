@@ -12,6 +12,7 @@ import { DEFAULT_LANGUAGE, isLanguage } from "@/lib/languages";
 import { JOB_SCRIPTS, type JobScript } from "@/lib/captionTypes";
 import { DEFAULT_STYLE, SAFE_ZONES, STYLE_CHOICES } from "@/lib/captionStyles";
 import { effectivePlan, PLANS, secondsLeft } from "@/lib/plans";
+import { mustConfirm } from "@/lib/verify";
 
 const MAX_BYTES = 4 * 1024 ** 3; // 4 GB
 
@@ -23,6 +24,7 @@ const MAX_BYTES = 4 * 1024 ** 3; // 4 GB
 export async function POST(req: Request) {
   const u = await currentUser();
   if (!u) return unauthorized();
+  if (await mustConfirm(u)) return json({ error: `Confirm your email to start your free minutes: open the link we sent to ${u.email}.`, confirm: true }, 403);
   if (secondsLeft(u) <= 0) return json({ error: "You've used all your minutes. Upgrade your plan to continue." }, 402);
   if (!req.body) return json({ error: "No file received." }, 400);
 

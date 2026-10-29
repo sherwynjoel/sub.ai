@@ -28,6 +28,7 @@ export const users = pgTable("users", {
   subscriptionStatus: text("subscription_status"),
   isAdmin: boolean("is_admin").notNull().default(false),
   signupIp: text("signup_ip"), // limits how many free trials one connection can start (api/auth/signup)
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }), // the free minutes start once set (lib/verify.ts)
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("users_signup_ip_idx").on(t.signupIp, t.createdAt)]);
 
@@ -100,5 +101,13 @@ export const passwordResets = pgTable("password_resets", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** One-time links that confirm a user's email (lib/verify.ts). Only a hash of the link's token is kept. */
+export const emailChecks = pgTable("email_checks", {
+  tokenHash: text("token_hash").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
