@@ -587,7 +587,7 @@ a.signout { text-decoration: none; }
 
 .wstrip { position: relative; width: 100%; padding-top: 12px; }
 .wstrip-mark { position: absolute; left: 50%; top: -1px; transform: translateX(-50%); font-size: 10px; color: #2E7BFF; pointer-events: none; }
-.wstrip-row { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px 50%; scroll-padding: 0 50%; -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+.wstrip-row { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 6px 50%; margin: -4px 0; /* room for the picked word's ring (4px outside the pill): a sideways scroller clips anything outside it */ scroll-padding: 0 50%; -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
 .wstrip-row::-webkit-scrollbar { display: none; }
 .wpill { flex: none; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--glass-edge, #ddd); background: var(--glass, #fff); color: var(--ink); font: 600 .86rem var(--font-body); white-space: nowrap; cursor: pointer; transition: background .15s, color .15s; }
 .wpill.on { background: #2E7BFF; border-color: #2E7BFF; color: #fff; }
