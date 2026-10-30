@@ -3,13 +3,13 @@
  * Run alongside the web app:  npm run worker
  */
 import { mkdtemp, readdir, readFile, rm, unlink } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
-import { and, eq, lt, isNotNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { db, jobs, settings, users, type Cue } from "./db";
 import { getAiConfig, transcribe, type Script } from "./lib/ai";
 import { effectivePlan, PLANS } from "./lib/plans";
-import { extractChunks, LEVEL_FRAME, loudness, probe, removeUploads, STORAGE } from "./lib/media";
+import { extractChunks, LEVEL_FRAME, loudness, makePreview, probe, removeUploads, STORAGE } from "./lib/media";
 import { speechRegions } from "./lib/timing";
 import { alignCues } from "./lib/align";
 import { translateLines } from "./lib/ai/translate";
@@ -134,6 +134,22 @@ async function chargeExtra(job: typeof jobs.$inferSelect, heard: number) {
   console.log(`job ${job.id}: ${extra}s more sound than stated, charged`);
 }
 
+/** The next video without a playback copy (new uploads, and older projects too), after transcriptions and renders. */
+async function claimPreview() {
+  const [j] = await db.select().from(jobs).where(and(isNotNull(jobs.filePath), isNull(jobs.previewPath), ne(jobs.status, "queued"), ne(jobs.status, "processing")))
+    .orderBy(desc(jobs.createdAt)).limit(1);
+  return j ?? null;
+}
+
+async function processPreview(job: typeof jobs.$inferSelect) {
+  const out = join(dirname(job.filePath!), `${job.id}.preview.mp4`);
+  const made = await makePreview(job.filePath!, out).catch((e) => { console.error(`preview ${job.id} failed`, e); return false; });
+  // "" = plays the original (light already, or the copy failed): not tried again
+  const kept = await db.update(jobs).set({ previewPath: made ? out : "" }).where(and(eq(jobs.id, job.id), isNotNull(jobs.filePath))).returning({ id: jobs.id });
+  if (made && !kept.length) await unlink(out).catch(() => {}); // the project was deleted meanwhile
+  if (made) console.log(`preview ${job.id} made`);
+}
+
 async function fail(job: typeof jobs.$inferSelect, err: unknown) {
   console.error(`job ${job.id} failed`, err);
   await db.update(jobs).set({ status: "failed", error: String((err as Error)?.message ?? err).slice(0, 500), updatedAt: new Date() }).where(eq(jobs.id, job.id));
@@ -146,7 +162,7 @@ async function purgeOld() {
   for (const j of old) {
     await removeUploads(j);
     if (j.renderPath) await unlink(j.renderPath).catch(() => {});
-    await db.update(jobs).set({ filePath: null, audioPath: null, videoTotal: null, renderPath: null, renderStatus: null }).where(eq(jobs.id, j.id));
+    await db.update(jobs).set({ filePath: null, audioPath: null, videoTotal: null, previewPath: null, renderPath: null, renderStatus: null }).where(eq(jobs.id, j.id));
   }
   // Styled MP4s whose project no longer exists (deleted before deletes removed them too). Safe only because
   // this runs between renders in the same loop: a render in progress has no renderPath yet.
@@ -177,6 +193,8 @@ async function main() {
     if (job) { await processJob(job).catch((e) => fail(job, e)); continue; }
     const render = await claimRender().catch((e) => (console.error(e), null));
     if (render) { await processRender(render); continue; }
+    const preview = await claimPreview().catch((e) => (console.error(e), null));
+    if (preview) { await processPreview(preview); continue; }
     await new Promise((r) => setTimeout(r, 2000));
   }
 }

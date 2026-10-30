@@ -34,9 +34,9 @@ export const VIDEO_PIECE = 4 * 1024 * 1024; // small enough that a dropped conne
 export const videoPart = (dir: string, jobId: string) => ({ file: join(dir, `${jobId}.part`), got: join(dir, `${jobId}.got`) });
 
 /** Remove a job's uploaded files: the video, the sound sent first, and a video still arriving in pieces. */
-export async function removeUploads(j: { id: string; userId: string; filePath: string | null; audioPath: string | null }) {
+export async function removeUploads(j: { id: string; userId: string; filePath: string | null; audioPath: string | null; previewPath?: string | null }) {
   const part = videoPart(join(STORAGE, "uploads", j.userId), j.id);
-  for (const f of [j.filePath, j.audioPath, part.file, part.got]) if (f) await rm(f, { recursive: true, force: true }).catch(() => {});
+  for (const f of [j.filePath, j.audioPath, j.previewPath, part.file, part.got]) if (f) await rm(f, { recursive: true, force: true }).catch(() => {});
 }
 
 /** Duration in seconds, or null if the file has no audio stream / isn't media. */
@@ -128,4 +128,27 @@ export async function loudness(file: string): Promise<Float32Array | null> {
     p.on("error", () => done(null));
     p.on("close", (code) => done(code === 0 && out.length ? Float32Array.from(out) : null));
   });
+}
+
+/**
+ * The copy the editor plays: phones record 1080p/4K at 20–60 Mbit/s, often HEVC, which streams in fits and starts
+ * (and HEVC doesn't play in many browsers). This one is H.264 at most 720p on its short side and ~2 Mbit/s, a
+ * keyframe every second for quick seeking, its index first so it starts at once. Exports still use the original.
+ * Returns false when the original is already light enough to play as it is (or has no picture).
+ */
+export async function makePreview(src: string, dst: string) {
+  const { stdout } = await run(bin("ffprobe"), ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name,width,height:format=duration,size", "-of", "json", src]);
+  const info = JSON.parse(stdout) as { streams?: { codec_name?: string; width?: number; height?: number }[]; format?: { duration?: string; size?: string } };
+  const v = info.streams?.[0];
+  if (!v?.width || !v.height) return false; // sound only
+  const mbps = (Number(info.format?.size) * 8) / Math.max(1, Number(info.format?.duration)) / 1e6;
+  if (v.codec_name === "h264" && Math.min(v.width, v.height) <= 720 && mbps <= 3) return false;
+  await run(bin("ffmpeg"), [
+    "-y", "-v", "error", "-i", src, "-map", "0:v:0", "-map", "0:a:0?",
+    "-vf", "scale=w='if(gt(iw,ih),-2,min(720,iw))':h='if(gt(iw,ih),min(720,ih),-2)',format=yuv420p", "-fpsmax", "30",
+    "-c:v", "libx264", "-preset", "veryfast", "-crf", "26", "-maxrate", "2500k", "-bufsize", "5000k",
+    "-force_key_frames", "expr:gte(t,n_forced*1)",
+    "-c:a", "aac", "-b:a", "96k", "-ac", "2", "-movflags", "+faststart", dst,
+  ], { maxBuffer: 1 << 24 });
+  return true;
 }
