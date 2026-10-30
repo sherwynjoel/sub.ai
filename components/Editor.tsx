@@ -688,6 +688,17 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
   const sel = cues[selected];
   const sample = sel ?? cues.find((c) => (c.ta || c.en).trim()); // the caption the style previews play (none picked yet: the first)
+  /** A small still of the video where it is now, for the style previews' background (none if it can't be read). */
+  const videoStill = () => {
+    const v = video.current;
+    if (!v?.videoWidth) return undefined;
+    try {
+      const c = document.createElement("canvas"), k = 360 / Math.max(v.videoWidth, v.videoHeight);
+      c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k);
+      c.getContext("2d")!.drawImage(v, 0, 0, c.width, c.height);
+      return c.toDataURL("image/jpeg", 0.7);
+    } catch { return undefined; } // a video from elsewhere can't be read back
+  };
   const selLook = sel ? resolveStyle(styleId, mergeCustom(custom, sel.style), portrait) : look;
   const words = sel ? wordsOf(sel[line]) : [];
   const starts = sel ? startsOf(sel, line) : [];
@@ -1046,8 +1057,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               )}
               <h3>Project style</h3>
               <p className="muted small">{styleOf(styleId).blurb} Applies to every caption without its own look.</p>
-              <StylePicker styleId={styleId} onPick={pickStyle} onHover={setHoverStyle}
-                main={sample ? (view === "en" ? sample.en : sample.ta) || sample.en : undefined} sub={sample && view === "both" ? sample.en : undefined} />
+              <StylePicker styleId={styleId} onPick={pickStyle} onHover={setHoverStyle} text={sample ? sample.en || sample.ta : undefined} frame={videoStill} />
               <div className="insp-head">
                 <h3>Customize</h3>
                 <button className="btn ghost small" onClick={() => { sameLook(); setCustom((c) => projectOnly(c)); }} disabled={Object.keys(custom).every((k) => PROJECT_KEYS.includes(k)) && !ownLooks}>Reset to {styleOf(styleId).name}</button>
