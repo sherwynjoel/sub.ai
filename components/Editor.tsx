@@ -487,6 +487,13 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const seek = (t: number) => { const v = video.current; if (v) v.currentTime = Math.max(0, Math.min(t, (v.duration || duration) - 0.01)); setNow(t); };
   const togglePlay = () => { const v = video.current; if (!v) return; if (v.paused) v.play().catch(() => {}); else v.pause(); };
   const activeIdx = cues.findIndex((c) => now >= c.start && now < c.end);
+  /** Paused: the caption on screen becomes the one being edited (the Caption panel, the list), as a click on it would. */
+  const pausedAt = (t: number) => {
+    const i = cues.findIndex((c) => t >= c.start && t < c.end);
+    if (i < 0 || i === selected) return;
+    setSelected(i);
+    list.current?.children[i]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  };
   useEffect(() => {
     if (activeIdx < 0 || !playing) return;
     list.current?.children[activeIdx]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -808,7 +815,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             <div className="player" style={{ aspectRatio: frameRatio, "--ar": frameRatio, width: `min(100%, ${(56 * frameRatio).toFixed(2)}vh)`, background: shaped && cv!.fit === "fit" && cv!.bg !== "blur" ? cv!.bg : undefined } as React.CSSProperties}>
               {blurBg && <canvas ref={bgCanvas} className="bg-blur" aria-hidden="true" />}
               <video ref={video} src={src} preload="auto" playsInline onClick={togglePlay} style={shaped ? { objectFit: cv!.fit === "fill" ? "cover" : "contain" } : undefined}
-                onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
+                onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)} onPlay={() => setPlaying(true)} onPause={(e) => { setPlaying(false); pausedAt(e.currentTarget.currentTime); }}
                 onLoadedMetadata={(e) => metadata(e.currentTarget)} />
               <Guides on={guides} />
               {showZones && (["top", "right", "bottom", "left"] as const).map((k) => <i key={k} className={`zone zone-${k}`} style={{ [k === "top" || k === "bottom" ? "height" : "width"]: `${look.safe[k] * 100}%` }} />)}
