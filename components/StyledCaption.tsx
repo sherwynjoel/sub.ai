@@ -201,7 +201,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   }
 
   return (
-    <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}`} style={{ "--p": p, ...wrap } as React.CSSProperties}>
+    <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}${s.textAlign && s.textAlign !== "center" ? ` ta-${s.textAlign}` : ""}`} style={{ "--p": p, ...wrap } as React.CSSProperties}>
       <span className={`cap-main${grad ? " grad" : ""}`} style={grad ? { ...gradBase, "--grad": `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` } as React.CSSProperties : base} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>
         {grad ? <span className="cap-grad">{body}</span> : body}
       </span>

@@ -8,6 +8,7 @@ import type { Cue } from "@/db";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
 import { lineScale, looksTall, textWidth } from "@/lib/fontWidths";
 
+export type TextAlign = "left" | "center" | "right";
 export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine";
 /** How a caption comes in (the last few from the Premiere template pack's presets). */
 export const ANIMS = {
@@ -39,6 +40,7 @@ export type CaptionStyle = {
   hook?: { sizes: number[]; colors: string[]; fonts?: (string | undefined)[] }; // "hook": each line's size (em), colour and font, in turn
   spacing?: number;              // letter spacing, em
   lineHeight?: number;           // space between lines: × the font's own line height (1 = as the font sets it)
+  textAlign?: TextAlign;         // lines flush left / centred / flush right (the caption against that side of the safe zone)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
@@ -169,6 +171,7 @@ export type CaptionCustom = {
   safeCustom?: Margins;          // margins for safe: "custom"
   bold?: boolean; italic?: boolean;
   spacing?: number; lineHeight?: number; opacity?: number; rotate?: number;
+  textAlign?: TextAlign;
   gradient?: [string, string] | null; // top and bottom colours of the text; null: the style's own (solid) colour
   shadowColor?: string; shadowSize?: number; boxPad?: number;
   anim?: Anim; highlight?: Highlight;
@@ -237,6 +240,7 @@ export function sanitizeCustom(input: unknown): CaptionCustom {
   if (typeof i.italic === "boolean") out.italic = i.italic;
   const sp = clamp(i.spacing, -0.1, 0.5); if (sp !== undefined) out.spacing = sp;
   const lh = clamp(i.lineHeight, 0.7, 2.5); if (lh !== undefined) out.lineHeight = lh;
+  if (i.textAlign === "left" || i.textAlign === "center" || i.textAlign === "right") out.textAlign = i.textAlign;
   if (i.gradient === null) out.gradient = null;
   else if (Array.isArray(i.gradient) && i.gradient.length === 2 && i.gradient.every((c) => typeof c === "string" && HEX.test(c))) out.gradient = [i.gradient[0], i.gradient[1]];
   const op = clamp(i.opacity, 0.1, 1); if (op !== undefined) out.opacity = op;
@@ -308,6 +312,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   if (c.italic !== undefined) s.italic = c.italic;
   if (c.spacing !== undefined) s.spacing = c.spacing;
   if (c.lineHeight !== undefined) s.lineHeight = c.lineHeight;
+  if (c.textAlign) s.textAlign = c.textAlign;
   if (c.gradient === null) s.gradient = undefined;
   else if (c.gradient) s.gradient = c.gradient;
   if (c.opacity !== undefined) s.opacity = c.opacity;
@@ -571,13 +576,19 @@ export function buildAss(cues: Cue[], o: Opts) {
     const fs = Math.round(short * 0.075 * (s.size ?? 1) * 10) / 10, assFs = Math.round(fs * lineScale(s.font) * 10) / 10;
     const px = (f = 0) => Math.round(f * fs * 10) / 10;
     const marginV = Math.round(o.height * s.offset);
+    // Text alignment: hz -1 / 0 / 1 (left, centre, right) added to an \\an number moves its anchor to that side, and
+    // libass lines up an event's lines on it.
+    const hz = s.textAlign === "left" ? -1 : s.textAlign === "right" ? 1 : 0;
     const align = s.position === "top" ? 8 : s.position === "middle" ? 5 : 2;
-    // Dragged placement: centre every line on the point (dx nudges the VHS colour copies apart).
-    const posAt = (dx: number) => (s.x !== undefined && s.y !== undefined ? `{\\an5\\pos(${Math.round(s.x * o.width + dx)},${Math.round(s.y * o.height)})}` : "");
-    // Lines wrap inside the safe zone's side margins.
+    // Lines wrap inside the safe zone's side margins; dragged, in a column centred on the point (as wide as fits).
     const marginL = Math.round(o.width * s.safe.left), marginR = Math.round(o.width * s.safe.right);
     const marginH = Math.max(marginL, marginR);
     const wrapM = s.x !== undefined ? Math.max(marginH, Math.round(o.width * (0.5 - Math.min(s.x - s.safe.left, 1 - s.safe.right - s.x)))) : 0;
+    // Where the caption is anchored: its lines' centre, or with the text aligned to a side, their left or right end
+    // (the safe zone's edge; dragged, the column's).
+    const ax = s.x !== undefined ? s.x * o.width + hz * (o.width / 2 - wrapM) : hz < 0 ? marginL : hz > 0 ? o.width - marginR : (marginL + o.width - marginR) / 2;
+    // Dragged placement: every line on the anchor (dx nudges the VHS colour copies apart).
+    const posAt = (dx: number) => (s.x !== undefined && s.y !== undefined ? `{\\an${5 + hz}\\pos(${Math.round(ax + dx)},${Math.round(s.y * o.height)})}` : "");
     const box = !!s.box;
     const fade = (hex: string) => withOpacity(hex, s.opacity ?? 1);
     const shadowColor = s.shadowColor ? s.shadowColor + "99" : "#00000099";
@@ -585,10 +596,8 @@ export function buildAss(cues: Cue[], o: Opts) {
       name, s.font, assFs, assColor(fade(s.color)), assColor(fade(s.color)),
       assColor(fade(box ? s.box! : s.glow && !s.outline ? s.glow + "B0" : s.outline?.[0] ?? "#000000")), assColor(fade(box ? s.box! : shadowColor)),
       s.bold ? -1 : 0, s.italic ? -1 : 0, 0, 0, 100, 100, px(s.spacing), -(s.rotate ?? 0),
-      box ? 3 : 1, box ? px(s.boxPad ?? 0.28) : s.glow && !s.outline ? px(0.12) : px(s.outline?.[1]), box ? 0 : px(s.shadow), align, marginL, marginR, marginV, 1,
+      box ? 3 : 1, box ? px(s.boxPad ?? 0.28) : s.glow && !s.outline ? px(0.12) : px(s.outline?.[1]), box ? 0 : px(s.shadow), align + hz, marginL, marginR, marginV, 1,
     ].join(",");
-    // Where an aligned (not dragged) caption is anchored, for animations that move it.
-    const ax = s.x !== undefined ? s.x * o.width : (marginL + o.width - marginR) / 2;
     const ay = s.y !== undefined ? s.y * o.height : align === 8 ? marginV : align === 5 ? o.height / 2 : o.height - marginV;
     /**
      * Entrance for a caption's first event (its later word-by-word events show it settled): tags for the whole event
@@ -607,10 +616,10 @@ export function buildAss(cues: Cue[], o: Opts) {
       if (a === "pop") return ["", `\\fscx60\\fscy60\\t(0,${t},\\fscx100\\fscy100)`];
       if (a === "zoom") return ["", `\\fscx0\\fscy0\\t(0,${t},\\fscx100\\fscy100)`];
       if (a === "bounce") return ["", `\\fscx40\\fscy40\\t(0,${Math.round(t * 0.6)},\\fscx118\\fscy118)\\t(${Math.round(t * 0.6)},${t},\\fscx100\\fscy100)`];
-      const d = Math.round(fs * 0.6), an = s.x !== undefined ? 5 : align; // slide up
+      const d = Math.round(fs * 0.6), an = s.x !== undefined ? 5 + hz : align + hz; // slide up
       return [`{\\an${an}\\move(${Math.round(ax)},${Math.round(ay + d)},${Math.round(ax)},${Math.round(ay)},0,${t})\\fad(${Math.round(t * 0.6)},0)}`, ""];
     };
-    return { name, s, fs, px, align, posAt, pos: posAt(0), marginL, marginR, wrapM, line, entrance, ax, ay };
+    return { name, s, fs, px, hz, align, posAt, pos: posAt(0), marginL, marginR, wrapM, line, entrance, ax, ay };
   };
   const base = lookOf(o.custom, "Main");
   const looks = [base];
@@ -622,7 +631,7 @@ export function buildAss(cues: Cue[], o: Opts) {
   };
   // The English line: 4.1% of the short side in the editor (.cap-sub), in the caption's font (sized as it switches).
   const secondEm = Math.round(short * 0.041 * 10) / 10;
-  const second = ["Second", "Poppins", Math.round(secondEm * lineScale("Poppins") * 10) / 10, "&H00FFFFFF&", "&H00FFFFFF&", "&H00000000&", "&H99000000&", 0, 0, 0, 0, 100, 100, 0, 0, 1, base.px(0.04), base.px(0.04), base.align, base.marginL, base.marginR, Math.round(o.height * base.s.offset), 1].join(",");
+  const second = ["Second", "Poppins", Math.round(secondEm * lineScale("Poppins") * 10) / 10, "&H00FFFFFF&", "&H00FFFFFF&", "&H00000000&", "&H99000000&", 0, 0, 0, 0, 100, 100, 0, 0, 1, base.px(0.04), base.px(0.04), base.align + base.hz, base.marginL, base.marginR, Math.round(o.height * base.s.offset), 1].join(",");
 
   const events: string[] = [];
   const fonts: Record<string, string> = { Second: "Poppins" }, tamil: Record<string, string> = {}, spaced: Record<string, number> = {};
@@ -635,7 +644,7 @@ export function buildAss(cues: Cue[], o: Opts) {
     const main = (o.lang === "en" ? c.en : c.ta).trim();
     if (!main) continue;
     const look = lookFor(c);
-    const { s, fs, px, pos, posAt, wrapM, marginL, marginR, entrance, ax, ay, align } = look;
+    const { s, fs, px, hz, pos, posAt, wrapM, marginL, marginR, entrance, ax, ay, align } = look;
     const glowTag = s.glow ? (s.outline ? `\\3c${colorOnly(s.glow)}\\bord${px(0.1)}\\blur${px(0.12)}` : `\\blur${px(0.12)}`) : ""; // glow: a soft border
     cur = look.name;
     fonts[cur] = s.font;
@@ -681,9 +690,9 @@ export function buildAss(cues: Cue[], o: Opts) {
     // Tags placing an event's line at y: a slide moves it the same way (and gives the move's start offset and length).
     function at(ev: string, y: number, x = ax): [string, number, number] {
       const m = ev.match(/\\move\(([-\d.]+),([-\d.]+),([-\d.]+),([-\d.]+),(\d+),(\d+)\)/);
-      if (!m) return [`{\\an5\\pos(${Math.round(x)},${Math.round(y)})}` + ev, 0, 0];
+      if (!m) return [`{\\an${5 + hz}\\pos(${Math.round(x)},${Math.round(y)})}` + ev, 0, 0];
       const dy = +m[2] - +m[4];
-      return [ev.replace(/\\an\d/, "\\an5").replace(m[0], `\\move(${Math.round(x)},${Math.round(y + dy)},${Math.round(x)},${Math.round(y)},${m[5]},${m[6]})`), dy, +m[6]];
+      return [ev.replace(/\\an\d/, `\\an${5 + hz}`).replace(m[0], `\\move(${Math.round(x)},${Math.round(y + dy)},${Math.round(x)},${Math.round(y)},${m[5]},${m[6]})`), dy, +m[6]];
     }
     // Text drawn by `lead` (which places it) with its line centred at y, nat tall: as it is, or with a gradient,
     // GRADIENT_BANDS copies each showing its strip of the line in its colour (libass fills a letter with one colour).
@@ -776,7 +785,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       rows.forEach(([a, b], r) => {
         const z = fit[r], f = fontOf(r), space = textWidth(" ", f, s.fontTa), wid = (j: number) => textWidth(text(j, r), f, s.fontTa) * fs * z;
         const look = r === big ? `\\fn${f}\\b1` : "";
-        let x = ax - (words.slice(a, b).reduce((t, _, n) => t + wid(a + n), 0) + (b - a - 1) * space * fs * z) / 2;
+        let x = ax - ((words.slice(a, b).reduce((t, _, n) => t + wid(a + n), 0) + (b - a - 1) * space * fs * z) * (1 + hz)) / 2;
         for (let j = a; j < b; j++) {
           const w = wid(j), cx = x + w / 2, sz = Math.round(z * 100);
           x += w + space * fs * z;
@@ -801,10 +810,10 @@ export function buildAss(cues: Cue[], o: Opts) {
         const h = rows.length * lineH, bottomPlaced = align === 2 && s.y === undefined;
         const top = align === 8 && s.y === undefined ? ay : bottomPlaced ? ay - subH - h : ay - (h + subH) / 2;
         rows.forEach((r, n) => r.forEach((w, side) => {
-          const x = Math.round(ax + (side ? blockW / 2 : -blockW / 2)), y = Math.round(top + n * lineH);
+          const x = Math.round(ax - (blockW * (1 + hz)) / 2 + (side ? blockW : 0)), y = Math.round(top + n * lineH);
           strips(w.s, g.e, `{\\an${side ? 9 : 7}\\pos(${x},${y})}`, y + natOf(w.w) / 2, natOf(w.w), word(w.j, w.j));
         }));
-        if (tail) add(g.s, g.e, `{\\an8\\pos(${Math.round(ax)},${Math.round(top + h + fs * 0.15)})}` + tail.replace(/^\\N/, ""), 0, marginL, marginR);
+        if (tail) add(g.s, g.e, `{\\an${8 + hz}\\pos(${Math.round(ax)},${Math.round(top + h + fs * 0.15)})}` + tail.replace(/^\\N/, ""), 0, marginL, marginR);
       }
       continue;
     }
@@ -828,7 +837,7 @@ export function buildAss(cues: Cue[], o: Opts) {
         return (n ? glueK(j) : "") + (letters && byLetters(w.w) ? [...w.w].map((ch, k) => part(ch, k)).join("") : part(w.w, null));
       }).join("");
       const hiddenTail = tail.replace("}", "\\alpha&HFF&}");
-      const an = s.x !== undefined ? 5 : align, dy = Math.round(px(RISE_DY));
+      const an = s.x !== undefined ? 5 + hz : align + hz, dy = Math.round(px(RISE_DY));
       const rise = (t0: string) => `{\\an${an}\\move(${Math.round(ax)},${Math.round(ay + dy)},${Math.round(ax)},${Math.round(ay)},0,${ms})}` + t0;
       const tagsFor = reveal === "flicker" ? flickerTags(FLICKER2) : `\\alpha&HFF&\\t(0,${ms},\\alpha&H00&)`;
       for (const g of groups) {
@@ -916,7 +925,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       const p = stackAt(nats), bottom = sub ? p.subY + subNatOf() / 2 : p.ys[rows.length - 1] + nats[rows.length - 1] / 2;
       const rise = short * 0.28, ms = Math.round((c.end - c.start) * 1000), cos = Math.cos((50 * Math.PI) / 180), sin = Math.sin((50 * Math.PI) / 180);
       const tip = (y: number) => bottom - (bottom - y) * cos * (CRAWL_DIST / (CRAWL_DIST + (bottom - y) * sin));
-      const lead = (y: number) => `{\\an5\\fad(200,300)\\org(${Math.round(ax)},${Math.round(bottom)})\\frx50\\move(${Math.round(ax)},${Math.round(y)},${Math.round(ax)},${Math.round(y - rise)})}`;
+      const lead = (y: number) => `{\\an${5 + hz}\\fad(200,300)\\org(${Math.round(ax)},${Math.round(bottom)})\\frx50\\move(${Math.round(ax)},${Math.round(y)},${Math.round(ax)},${Math.round(y - rise)})}`;
       rows.forEach((r, k) => { // a line at a time; with a gradient its strips where the tipped line is drawn, as it goes
         const y = p.ys[k], n = nats[k], path = Array.from({ length: CRAWL_STEPS + 1 }, (_, i): [number, number] => {
           const a = tip(y - (rise * i) / CRAWL_STEPS - n / 2), b = tip(y - (rise * i) / CRAWL_STEPS + n / 2);
