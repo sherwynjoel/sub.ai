@@ -21,7 +21,9 @@ test("insertAt adds an empty caption in the gap at the playhead", () => {
   const r = insertAt(cues, 3, 10);
   assert.equal(r.index, 1);
   assert.deepEqual([r.cues[1].start, r.cues[1].end], [3, 5]);
-  assert.equal(insertAt([{ start: 0, end: 10, ta: "a", en: "" }], 5, 10).index, -1, "no room");
+  const inside = insertAt([{ start: 0, end: 10, ta: "a", en: "" }], 5, 10); // inside a long caption: at its edge, room made from it
+  assert.deepEqual(inside.cues.map((c) => [c.start, c.end]), [[0, 8.8], [8.8, 10]]);
+  assert.equal(insertAt([{ start: 0, end: 0.5, ta: "a", en: "" }, { start: 0.5, end: 1, ta: "b", en: "" }], 0.4, 1).index, -1, "no room anywhere");
 });
 
 test("setText and setWord keep word times with their words", () => {
@@ -36,4 +38,25 @@ test("setText and setWord keep word times with their words", () => {
   assert.deepEqual(setWord(c, "ta", 1, { color: "#00ff00" }).wc, [null, "#00ff00", null, null]);
   assert.equal(setWord(setWord(c, "ta", 1, { color: "#00ff00" }), "ta", 1, { color: null }).wc, undefined);
   assert.equal(setWord(c, "ta", 1, { text: "B" }).ta, "a B c d");
+});
+
+test("insertBetween makes room between touching captions, from both sides, keeping their words in step", async () => {
+  const { insertBetween } = await import("./cueEdit");
+  const cues = [{ start: 0, end: 2, ta: "a b", en: "", w: [0, 1] }, { start: 2, end: 4, ta: "c d", en: "", w: [2, 3] }];
+  const r = insertBetween(cues, 0, 10);
+  assert.equal(r.index, 1);
+  assert.deepEqual(r.cues.map((c) => [c.start, c.end]), [[0, 1.4], [1.4, 2.6], [2.6, 4]], "1.2 s, 0.6 from each");
+  assert.deepEqual(r.cues[0].w, [0, 0.7], "words squeezed with their caption");
+  assert.deepEqual(r.cues[2].w, [2.6, 3.3]);
+  const short = [{ start: 0, end: 0.6, ta: "a", en: "" }, { start: 0.6, end: 3, ta: "b", en: "" }];
+  assert.deepEqual(insertBetween(short, 0, 10).cues.map((c) => [c.start, c.end]), [[0, 0.5], [0.5, 1.7], [1.7, 3]], "the longer side gives more");
+  assert.equal(insertBetween([{ start: 0, end: 0.5, ta: "a", en: "" }, { start: 0.5, end: 1, ta: "b", en: "" }], 0, 10).index, -1, "no room");
+  assert.deepEqual(insertBetween(cues, 1, 10).cues.at(-1), { start: 4, end: 5.2, ta: "", en: "" }, "after the last, into the free time");
+});
+
+test("insertAt inside a caption adds one at its nearer edge", () => {
+  const cues = [{ start: 0, end: 2, ta: "a", en: "" }, { start: 2, end: 4, ta: "b", en: "" }];
+  const r = insertAt(cues, 1.8, 10);
+  assert.equal(r.index, 1, "between the two");
+  assert.deepEqual(r.cues.map((c) => [c.start, c.end]), [[0, 1.4], [1.4, 2.6], [2.6, 4]]);
 });

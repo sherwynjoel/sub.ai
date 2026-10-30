@@ -67,6 +67,12 @@ export function mergeCues(a: Cue, b: Cue): Cue {
 
 /** A new empty caption at time t, in the gap there (or after the caption under t), up to 2 s long. */
 export function insertAt(cues: Cue[], t: number, duration: number): { cues: Cue[]; index: number } {
+  // Inside a caption (captions usually touch): at its nearer edge, between it and its neighbour.
+  const k = cues.findIndex((c) => t >= c.start && t < c.end);
+  if (k >= 0) {
+    const r = insertBetween(cues, t - cues[k].start < cues[k].end - t ? k - 1 : k, duration);
+    if (r.index >= 0) return r;
+  }
   let i = cues.findIndex((c) => c.start > t);
   if (i < 0) i = cues.length;
   const prev = cues[i - 1], next = cues[i];
@@ -76,6 +82,40 @@ export function insertAt(cues: Cue[], t: number, duration: number): { cues: Cue[
   const c: Cue = { start, end: Math.min(limit, start + 2), ta: "", en: "" };
   if (c.end - c.start < 0.2) return { cues, index: -1 };
   return { cues: [...cues.slice(0, i), c, ...cues.slice(i)], index: i };
+}
+
+/** Shortest a caption is left when a new one is put in beside it, and the new one's length when there's room. */
+const KEEP = 0.5, NEW = 1.2;
+
+/** Word times (and their caption's) moved from one span to another, keeping where each falls in it. */
+const respan = (c: Cue, start: number, end: number): Cue => {
+  const k = (end - start) / Math.max(0.001, c.end - c.start), m = (x: number) => Math.round((start + (x - c.start) * k) * 1000) / 1000;
+  return { ...c, start, end, ...(c.w ? { w: c.w.map(m) } : {}), ...(c.we ? { we: c.we.map(m) } : {}) };
+};
+
+/**
+ * An empty caption between caption j and the next (j = -1: before the first; the last: after it), with room made
+ * by ending caption j earlier and starting the next later, each keeping at least KEEP seconds (and its words, in
+ * proportion). Uses any gap there already is. index -1 when there's no room (both neighbours already short).
+ */
+export function insertBetween(cues: Cue[], j: number, duration: number): { cues: Cue[]; index: number } {
+  const prev = cues[j], next = cues[j + 1];
+  const a0 = prev ? prev.end : 0, b0 = next ? next.start : duration > 0 ? duration : a0 + NEW;
+  const gap = Math.max(0, b0 - a0), want = Math.max(0, NEW - gap);
+  if (!want) { // room already: a caption of the usual length at the start of the free time
+    const out = cues.slice();
+    out.splice(j + 1, 0, { start: a0, end: Math.round((a0 + NEW) * 1000) / 1000, ta: "", en: "" });
+    return { cues: out, index: j + 1 };
+  }
+  const fromPrev = prev ? Math.max(0, prev.end - prev.start - KEEP) : 0, fromNext = next ? Math.max(0, next.end - next.start - KEEP) : 0;
+  const give = Math.min(want - Math.min(want / 2, fromPrev), fromNext), take = Math.min(want - give, fromPrev); // the side with room covers what the other can't
+  const start = Math.round((a0 - take) * 1000) / 1000, end = Math.round((b0 + give) * 1000) / 1000;
+  if (end - start < 0.3) return { cues, index: -1 };
+  const out = cues.slice();
+  if (prev && take) out[j] = respan(prev, prev.start, start);
+  if (next && give) out[j + 1] = respan(next, end, next.end);
+  out.splice(j + 1, 0, { start, end, ta: "", en: "" });
+  return { cues: out, index: j + 1 };
 }
 
 /**

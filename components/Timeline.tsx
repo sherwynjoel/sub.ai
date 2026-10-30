@@ -22,6 +22,8 @@ type Props = {
   /** Add a caption / a text layer at a time; the index of the new one (-1: no room). */
   onAddCaption?: (t: number) => number;
   onAddText?: (t: number) => number;
+  /** A new caption between caption j and the next (room made from both); the new one's index, -1: no room. */
+  onInsertBetween?: (j: number) => number;
   /** Text typed into a caption / a text layer on the timeline. */
   onCaptionText?: (i: number, text: string) => void;
   onLayerText?: (i: number, text: string) => void;
@@ -47,7 +49,7 @@ const rescale = (t: number[] | undefined, s0: number, e0: number, s1: number, e1
  * Caption blocks on a timeline: click to select and move the playhead, drag a block to move it, drag its edges to
  * change when it starts or ends, drag the word marks of the selected caption to retime its words.
  */
-export default function Timeline({ cues, duration, now, selected, zoom, line, playing, onSeek, onSelect, onDrag, onDragEnd, layers = [], selectedLayer = -1, onSelectLayer, onDragLayer, onZoom, onAddCaption, onAddText, onCaptionText, onLayerText }: Props) {
+export default function Timeline({ cues, duration, now, selected, zoom, line, playing, onSeek, onSelect, onDrag, onDragEnd, layers = [], selectedLayer = -1, onSelectLayer, onDragLayer, onZoom, onAddCaption, onAddText, onCaptionText, onLayerText, onInsertBetween }: Props) {
   // A caption or text layer being typed into, right on the timeline.
   const [typing, setTyping] = useState<{ kind: "cue" | "layer"; i: number } | null>(null);
   /** Add one at t (an empty spot double-clicked, or the playhead) and start typing into it. */
@@ -257,6 +259,24 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
             </div>
           ))}
         </div>
+        {/* Between two captions (and after the last): + puts a new caption there, making room from both sides. The one
+            at the selected caption's ends always shows; the others when the pointer is on the row (all of them on touch). */}
+        {onInsertBetween && (
+          <div className="tl-pluses">
+            {cues.map((c, j) => {
+              const nextStart = j + 1 < cues.length ? cues[j + 1].start : null;
+              if (nextStart !== null && nextStart - c.end > 1.2) return null; // room already: double-click the gap
+              const near = j === selected || j + 1 === selected;
+              return (
+                <button key={j} type="button" className={`tl-plus${near ? " near" : ""}`} style={{ left: c.end * zoom }}
+                  aria-label={`Add a caption ${nextStart === null ? "after the last one" : `between captions ${j + 1} and ${j + 2}`}`}
+                  title="Add a caption here (room is made from the captions on both sides)"
+                  onPointerDown={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); const i = onInsertBetween(j); if (i >= 0) setTyping({ kind: "cue", i }); }}>+</button>
+              );
+            })}
+          </div>
+        )}
         {sel && (
           <div className="tl-words" onPointerDown={pan}>
             {selWords.map((w, j) => (
