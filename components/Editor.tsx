@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import type { Cue } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
 import { CANVAS_RATIOS, CAPTION_FONTS, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
-import { insertAt, mergeCues, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
+import { insertAt, insertBetween, mergeCues, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
 import { MAX_REDOS, typeLabel, typeOf, type CaptionType } from "@/lib/captionTypes";
@@ -1159,7 +1159,13 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           onSeek={seek} onSelect={select} onZoom={setZoom}
           onAddCaption={(t) => { // a caption where the timeline was double-clicked (or the playhead), typed into there
             const r = insertAt(cues, t, duration);
-            if (r.index < 0) { setMsg("No room for a caption there. Pick a gap between captions."); return -1; }
+            if (r.index < 0) { setMsg("No room there: the captions around it are already short. Shorten one, then try again."); return -1; }
+            commit(r.cues); select(r.index); seek(r.cues[r.index].start + 0.01);
+            return r.index;
+          }}
+          onInsertBetween={(j) => { // a caption between two (they usually touch): room from both sides
+            const r = insertBetween(cues, j, duration);
+            if (r.index < 0) { setMsg("No room there: the captions on both sides are already short. Shorten one, then try again."); return -1; }
             commit(r.cues); select(r.index); seek(r.cues[r.index].start + 0.01);
             return r.index;
           }}

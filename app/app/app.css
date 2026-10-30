@@ -844,3 +844,9 @@ a.signout { text-decoration: none; }
 .style-sample .cap { gap: .15em; }
 .style-sample .cap-main { font-size: calc(var(--fs-sample, 1) * 13cqh) !important; }
 .style-sample .cap-sub { font-size: 8cqh !important; }
+/* + between captions on the timeline (components/Timeline.tsx) */
+.tl-pluses { position: absolute; left: 0; right: 0; top: 26px; height: 52px; pointer-events: none; z-index: 5; }
+.tl-plus { position: absolute; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; padding: 0; border: 2px solid #15151f; border-radius: 50%; background: #d4ff3f; color: #0c0c14; font: 800 15px/1 var(--font-body); cursor: pointer; pointer-events: auto; opacity: 0; transform: scale(.7); transition: opacity .15s, transform .15s; box-shadow: 0 2px 8px rgb(0 0 0 / .5); }
+.tl-inner:hover .tl-plus, .tl-plus.near, .tl-plus:focus-visible { opacity: 1; transform: none; }
+.tl-plus:hover { transform: scale(1.15); }
+@media (hover: none) { .tl-plus { opacity: .95; transform: none; } }
