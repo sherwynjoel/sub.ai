@@ -3,7 +3,7 @@ import { access, cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import type { Cue } from "@/db";
-import { buildAss, canvasSize, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, buildAss, canvasSize, maskAss, resolveStyle, type CaptionCustom } from "@/lib/captionStyles";
 import { audioCodec, bin, STORAGE, videoSize } from "@/lib/media";
 import { englishCues } from "@/lib/subtitles";
 
@@ -26,7 +26,10 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
   await mkdir(outDir, { recursive: true });
   const out = join(outDir, `${job.id}.mp4`);
   try {
-    await writeFile(join(dir, "subs.ass"), buildAss(lang === "en" ? englishCues(job.cues) : job.cues, { styleId: job.captionStyle, custom: job.captionCustom, lang, width, height }), "utf8");
+    const ass = buildAss(lang === "en" ? englishCues(job.cues) : job.cues, { styleId: job.captionStyle, custom: job.captionCustom, lang, width, height });
+    // A blended look: the text is a window onto the video blended with the text colour (Negative: inverted).
+    const look = resolveStyle(job.captionStyle, job.captionCustom), blend = look.blend;
+    await writeFile(join(dir, "subs.ass"), blend ? maskAss(ass) : ass, "utf8");
     // Relative paths keep Windows drive colons out of the filter string, which ffmpeg would misparse.
     await cp(FONTS, join(dir, "fonts"), { recursive: true });
     const input = size
@@ -48,7 +51,8 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
     }
     // The ass filter with complex shaping: Tamil and other Indic scripts need it (otherwise vowel signs like ே land
     // after the consonant instead of before it). The server also needs a font with the script (fonts-noto-core).
-    graph.push(`[${last}]ass=subs.ass:fontsdir=fonts:shaping=complex[out]`);
+    if (blend) graph.push(blendGraph(last, BLENDS[blend][2], look.color));
+    else graph.push(`[${last}]ass=subs.ass:fontsdir=fonts:shaping=complex[out]`);
     const args = [
       "-y", "-v", "error", "-nostats", "-progress", "pipe:1", ...input,
       "-filter_complex", graph.join(";"), "-map", "[out]", "-map", audio,
@@ -72,6 +76,19 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+}
+
+/**
+ * The text blended into the video: the frame blended (in RGB) with a layer of the text colour, shown only where the
+ * captions' mask (subs.ass drawn white on black) is. Output label [out].
+ */
+export function blendGraph(from: string, mode: string, color: string) {
+  const c = `0x${color.slice(1, 7)}`;
+  return `[${from}]split=3[bv][bc][bm];` +
+    `[bc]format=gbrp,drawbox=x=0:y=0:w=iw:h=ih:color=${c}:t=fill[bcol];[bv]format=gbrp[bvid];` +
+    `[bvid][bcol]blend=all_mode=${mode}[bl];` +
+    `[bm]split[bm1][bm2];[bm1]format=rgb24,drawbox=x=0:y=0:w=iw:h=ih:color=black:t=fill,ass=subs.ass:fontsdir=fonts:shaping=complex,format=gray[mask];` +
+    `[bl][mask]alphamerge[blm];[bm2][blm]overlay=format=auto[out]`;
 }
 
 /** The uploaded logo of a job, when it has one. */

@@ -146,10 +146,10 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
   assert.match(ass, new RegExp(`Style: L1,Poppins ExtraBold,${Math.round(em * 1.762 * 10) / 10},`), "the layer's own size (em × the font's line height)");
 });
 
-test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 8, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 44);
+test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 8 + Pro, with the default among them", () => {
+  assert.equal(STYLE_CHOICES.length, 45);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 16);
-  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 8);
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 9);
   assert.equal(STYLE_GROUPS[0], "Typography");
   assert.ok(STYLE_CHOICES.some((s) => s.id === DEFAULT_STYLE));
   assert.ok(!STYLE_GROUPS.includes("Playful"), "a group with nothing on offer isn't shown");
@@ -362,4 +362,16 @@ test("Editing starts from the lines shown; Enter pushes the words after the curs
   assert.deepEqual(pushDown(t, t.indexOf("70%")), { text: "website?\n70% of customers check\nonline before", at: 9 });
   // on the last line: a new line
   assert.equal(pushDown(t, t.indexOf("before")).text, "website? 70% of\ncustomers check\nonline\nbefore");
+});
+
+test("Pro: Titan One a word at a time, the video negative inside the letters (the MP4 blends through a white mask)", async () => {
+  const { maskAss } = await import("./captionStyles");
+  const pro = resolveStyle("cc-pro");
+  assert.equal(pro.font, "Titan One"); assert.equal(pro.effect, "oneword"); assert.equal(pro.blend, "difference");
+  assert.equal(resolveStyle("cc-pro", { blend: null }).blend, undefined, "Normal turns it off");
+  assert.equal(resolveStyle("tall-caps", { blend: "screen" }).blend, "screen", "any style can blend");
+  const ass = buildAss([{ start: 0, end: 2, ta: "make great videos", en: "" }], { styleId: "flip-card", lang: "ta", width: 1080, height: 1920 });
+  const m = maskAss(ass);
+  assert.ok(!/\\[1-4]?c&H(?!FFFFFF&)[0-9A-F]{6}&/i.test(m), "every colour white");
+  assert.ok(!/\\bord[1-9]/.test(m) && /^Style: Main,([^,]*,){14}1,0,0,/m.test(m), "no outline, shadow or box");
 });

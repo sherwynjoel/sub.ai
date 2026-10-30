@@ -1,5 +1,5 @@
 "use client";
-import { ANIMS, CAPTION_FONTS, FONT_LIKE, highlights, takesLineSpacing, HIGHLIGHTS, TAMIL_FONTS, type Anim, type CaptionCustom, type CaptionStyle, type Highlight, type Placement } from "@/lib/captionStyles";
+import { ANIMS, BLENDS, CAPTION_FONTS, FONT_LIKE, highlights, takesLineSpacing, HIGHLIGHTS, TAMIL_FONTS, type Anim, type Blend, type CaptionCustom, type CaptionStyle, type Highlight, type Placement } from "@/lib/captionStyles";
 
 type Props = {
   look: CaptionStyle & Placement;   // the resolved look these controls show
@@ -82,6 +82,13 @@ export default function LookControls({ look, own, set, tamil, project, setAll }:
           </> : <label className="cz-color">Text<input type="color" value={hex(look.color, "#ffffff")} onChange={(e) => set({ color: e.target.value })} /></label>}
           {highlights(look) && <label className="cz-color">Highlight<input type="color" value={hex(own.accent ?? look.mark ?? look.keyword?.color ?? look.active, "#ffe14d")} onChange={(e) => set({ accent: e.target.value })} /></label>}
         </div>
+        {(!project || setAll) && <label>Text blend{project && " (all captions)"}
+          <select value={look.blend ?? ""} onChange={(e) => (setAll ?? set)({ blend: (e.target.value || null) as Blend | null })}
+            title="The letters as a window onto the video: Negative shows it inverted inside them (white text), the others mix the text colour in">
+            <option value="">Normal</option>
+            {Object.entries(BLENDS).map(([k, [label]]) => <option key={k} value={k}>{label}</option>)}
+          </select>
+        </label>}
         <label className="cz-check"><input type="checkbox" checked={!!look.gradient} onChange={(e) => set({ gradient: e.target.checked ? [hex(look.color, "#ffffff"), "#ffb37a"] : null })} /> Gradient (top colour to bottom colour)</label>
         {highlights(look) && <label>Spoken word
           <select value={highlight} onChange={(e) => set({ highlight: e.target.value === "style" ? undefined : (e.target.value as Highlight) })}>
