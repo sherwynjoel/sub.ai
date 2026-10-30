@@ -318,7 +318,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [selected, setSelected] = useState(-1);
   const [selLayer, setSelLayer] = useState(-1);
   const [logoVer, setLogoVer] = useState(0); // bumps the logo image URL after an upload
-  const bgVideo = useRef<HTMLVideoElement>(null);
+  const bgCanvas = useRef<HTMLCanvasElement>(null);
   const [tab, setTab] = useState<Tab>("caption");
   const inBrowser = useSyncExternalStore(noop, () => true, () => false); // false while rendered on the server
   // A video still arriving after its sound: play the phone's own copy meanwhile (lib/videoUpload.ts).
@@ -465,14 +465,23 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     if (v.videoWidth && v.videoHeight) setRatio(v.videoWidth / v.videoHeight);
     if (v.duration) setDuration(v.duration);
   }
-  // The blurred background copy (canvas "fit" on blur) follows the main video.
+  // The blurred background (canvas "fit" on blur): the main video's picture, painted small (it's blurred anyway)
+  // about 12 times a second. Not a second copy of the video: that downloaded it twice and kept seeking to follow.
+  const blurBg = !!(shaped && cv!.fit === "fit" && cv!.bg === "blur");
   useEffect(() => {
-    const b = bgVideo.current;
-    if (!b) return;
-    if (Math.abs(b.currentTime - now) > 0.3) b.currentTime = now;
-    if (playing && b.paused) b.play().catch(() => {});
-    if (!playing && !b.paused) b.pause();
-  }, [now, playing]);
+    if (!blurBg) return;
+    let raf = 0, last = 0;
+    const paint = (at: number) => {
+      raf = requestAnimationFrame(paint);
+      const v = video.current, c = bgCanvas.current;
+      if (!v || !c || !v.videoWidth || at - last < 80) return;
+      last = at;
+      c.width = 64; c.height = Math.max(1, Math.round((64 * v.videoHeight) / v.videoWidth));
+      try { c.getContext("2d")!.drawImage(v, 0, 0, c.width, c.height); } catch { /* not readable yet */ }
+    };
+    raf = requestAnimationFrame(paint);
+    return () => cancelAnimationFrame(raf);
+  }, [blurBg]);
   // The video can be ready before this page's scripts are: then loadedmetadata already fired.
   useEffect(() => { const v = video.current; if (v && v.readyState >= 1) metadata(v); }, []);
   const seek = (t: number) => { const v = video.current; if (v) v.currentTime = Math.max(0, Math.min(t, (v.duration || duration) - 0.01)); setNow(t); };
@@ -791,8 +800,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           )}
           {src ? (
             <div className="player" style={{ aspectRatio: frameRatio, "--ar": frameRatio, width: `min(100%, ${(56 * frameRatio).toFixed(2)}vh)`, background: shaped && cv!.fit === "fit" && cv!.bg !== "blur" ? cv!.bg : undefined } as React.CSSProperties}>
-              {shaped && cv!.fit === "fit" && cv!.bg === "blur" && <video ref={bgVideo} className="bg-blur" src={src} muted playsInline preload="metadata" aria-hidden="true" />}
-              <video ref={video} src={src} preload="metadata" playsInline onClick={togglePlay} style={shaped ? { objectFit: cv!.fit === "fill" ? "cover" : "contain" } : undefined}
+              {blurBg && <canvas ref={bgCanvas} className="bg-blur" aria-hidden="true" />}
+              <video ref={video} src={src} preload="auto" playsInline onClick={togglePlay} style={shaped ? { objectFit: cv!.fit === "fill" ? "cover" : "contain" } : undefined}
                 onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
                 onLoadedMetadata={(e) => metadata(e.currentTarget)} />
               <Guides on={guides} />
