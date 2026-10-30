@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { createPortal } from "react-dom";
 import type { Cue } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
-import { CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer, pushDown, shownLines } from "@/lib/captionStyles";
+import { BLENDS, CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer, pushDown, shownLines } from "@/lib/captionStyles";
 import { insertAt, insertBetween, mergeCues, removeCue, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
@@ -94,16 +94,17 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
   const main = view === "en" ? c.en : c.ta;
   if (!main.trim()) return null;
   const own = mergeCustom(custom, c.style);
-  const { position, offset, x, y, safe, scale, textAlign } = resolveStyle(styleId, own, portrait);
+  const { position, offset, x, y, safe, scale, textAlign, blend } = resolveStyle(styleId, own, portrait);
   const free = x !== undefined && y !== undefined;
   const pct = (n: number) => `${n * 100}%`;
   const sides = { left: pct(safe.left), right: pct(safe.right), textAlign };
   // Dragged with the text aligned to a side: the lines flush to that side of a column centred on the point (as the MP4)
   const column = 2 * Math.min(0.5 - Math.max(safe.left, safe.right), x !== undefined ? Math.min(x - safe.left, 1 - safe.right - x) : 0.5);
-  const place: React.CSSProperties = free ? { left: pct(x), top: pct(y), ...(textAlign && textAlign !== "center" ? { width: pct(column), textAlign } : { maxWidth: pct(Math.min(0.92, 2 * Math.min(x - safe.left, 1 - safe.right - x))) }) }
-    : position === "top" ? { ...sides, top: pct(offset), bottom: "auto" }
-    : position === "middle" ? { ...sides, top: pct((safe.top + 1 - safe.bottom) / 2), bottom: "auto", transform: "translateY(-50%)" }
-    : { ...sides, bottom: pct(offset) };
+  const mix: React.CSSProperties = blend ? { mixBlendMode: BLENDS[blend][1] } : {}; // the text blended with the video (as the MP4)
+  const place: React.CSSProperties = free ? { ...mix, left: pct(x), top: pct(y), ...(textAlign && textAlign !== "center" ? { width: pct(column), textAlign } : { maxWidth: pct(Math.min(0.92, 2 * Math.min(x - safe.left, 1 - safe.right - x))) }) }
+    : position === "top" ? { ...mix, ...sides, top: pct(offset), bottom: "auto" }
+    : position === "middle" ? { ...mix, ...sides, top: pct((safe.top + 1 - safe.bottom) / 2), bottom: "auto", transform: "translateY(-50%)" }
+    : { ...mix, ...sides, bottom: pct(offset) };
   const drag = (e: React.PointerEvent<HTMLDivElement>) => {
     const frame = video.current?.parentElement?.getBoundingClientRect();
     if (!frame) return;
@@ -205,9 +206,9 @@ function LayerViews({ layers, t, paused, styleId, custom, selected, onSelect, on
     const on = t >= l.start && t < l.end;
     if (!on && !(paused && i === selected)) return null;
     const own = mergeCustom({ ...custom, highlight: "none" }, l.style);
-    const words = l.text.split(/\s+/).filter(Boolean);
+    const words = l.text.split(/\s+/).filter(Boolean), blend = resolveStyle(styleId, own).blend;
     return (
-      <div key={i} className={`layer-view${i === selected ? " on" : ""}`} style={{ left: `${l.x * 100}%`, top: `${l.y * 100}%` }}
+      <div key={i} className={`layer-view${i === selected ? " on" : ""}`} style={{ left: `${l.x * 100}%`, top: `${l.y * 100}%`, mixBlendMode: blend ? BLENDS[blend][1] : undefined }}
         onPointerDown={(e) => { onSelect(i); dragIn(e, (x, y) => onMove(i, x, y)); }}>
         <StyledCaption styleId={styleId} custom={own} text={l.text} start={l.start} end={l.end} time={on ? t : l.end - 0.01} starts={words.map(() => l.start)} />
         {i === selected && <span className="rs-handle" title="Drag to resize" aria-hidden="true"

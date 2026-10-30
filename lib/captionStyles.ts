@@ -9,6 +9,22 @@ import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import { lineScale, looksTall, textWidth } from "@/lib/fontWidths";
 
 export type TextAlign = "left" | "center" | "right";
+/**
+ * How the text mixes with the video under it: the letters as a window onto the video, blended (Negative: the video
+ * inverted inside the letters, for white text). [label, CSS mix-blend-mode, ffmpeg blend mode]
+ */
+export const BLENDS = {
+  difference: ["Negative", "difference", "difference"],
+  exclusion: ["Soft negative", "exclusion", "exclusion"],
+  screen: ["Screen", "screen", "screen"],
+  multiply: ["Multiply", "multiply", "multiply"],
+  overlay: ["Overlay", "overlay", "overlay"],
+  softlight: ["Soft light", "soft-light", "softlight"],
+  lighten: ["Lighten", "lighten", "lighten"],
+  darken: ["Darken", "darken", "darken"],
+  dodge: ["Colour dodge", "color-dodge", "dodge"],
+} as const;
+export type Blend = keyof typeof BLENDS;
 export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine";
 /** How a caption comes in (the last few from the Premiere template pack's presets). */
 export const ANIMS = {
@@ -41,6 +57,7 @@ export type CaptionStyle = {
   spacing?: number;              // letter spacing, em
   lineHeight?: number;           // space between lines: × the font's own line height (1 = as the font sets it)
   textAlign?: TextAlign;         // lines flush left / centred / flush right (the caption against that side of the safe zone)
+  blend?: Blend;                 // the text blended with the video under it (see BLENDS)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
@@ -57,6 +74,7 @@ const W = "#FFFFFF";
 export const CAPTION_STYLES: CaptionStyle[] = [
   // The CINECUT short-form typography project (Premiere), matched frame by frame: its Helvetica Neue becomes Inter,
   // its Open Sauce Sans Black (OFL) is bundled.
+  { id: "cc-pro", name: "Pro", group: "Typography", blurb: "One big Titan One word at a time, the video inverted inside the letters (change the blend in Colour).", font: "Titan One", fontTa: "Mukta Malar ExtraBold", size: 1.09, color: W, effect: "oneword", blend: "difference" },
   { id: "cc-word-cut", name: "Word Cut", group: "Typography", blurb: "One big word at a time, cut on the beat.", font: "Playfair Display Bold Italic", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, effect: "oneword" },
   { id: "cc-cinematic", name: "Cinematic", group: "Typography", blurb: "Three lines narrowing down: the outer ones in rounded Comfortaa, the middle one big Poppins capitals; each word settles out of a soft blur as it's said.", font: "Comfortaa Bold", fontTa: "Hind Madurai", size: 1.06, color: W, shadow: 0.04, anim: "cinematic", effect: "cine" },
   { id: "cc-rise", name: "Rise Up", group: "Typography", blurb: "Each word fades in, rising into place as it's said.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, reveal: "rise" },
@@ -134,7 +152,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
-  "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-spaced", "cc-corners", "cc-bold-flicker", "cc-letter-rise", "cc-typo-block",
+  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-spaced", "cc-corners", "cc-bold-flicker", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker",
   "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-rgb", "tpl-reels-simple", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
@@ -177,6 +195,7 @@ export type CaptionCustom = {
   bold?: boolean; italic?: boolean;
   spacing?: number; lineHeight?: number; opacity?: number; rotate?: number;
   textAlign?: TextAlign;
+  blend?: Blend | null;          // project only: null = plain text even where the style blends
   gradient?: [string, string] | null; // top and bottom colours of the text; null: the style's own (solid) colour
   shadowColor?: string; shadowSize?: number; boxPad?: number;
   anim?: Anim; highlight?: Highlight;
@@ -246,6 +265,7 @@ export function sanitizeCustom(input: unknown): CaptionCustom {
   const sp = clamp(i.spacing, -0.1, 0.5); if (sp !== undefined) out.spacing = sp;
   const lh = clamp(i.lineHeight, 0.7, 2.5); if (lh !== undefined) out.lineHeight = lh;
   if (i.textAlign === "left" || i.textAlign === "center" || i.textAlign === "right") out.textAlign = i.textAlign;
+  if (i.blend === null || (typeof i.blend === "string" && i.blend in BLENDS)) out.blend = i.blend as Blend | null;
   if (i.gradient === null) out.gradient = null;
   else if (Array.isArray(i.gradient) && i.gradient.length === 2 && i.gradient.every((c) => typeof c === "string" && HEX.test(c))) out.gradient = [i.gradient[0], i.gradient[1]];
   const op = clamp(i.opacity, 0.1, 1); if (op !== undefined) out.opacity = op;
@@ -284,6 +304,7 @@ export function ownLook(input: unknown): CaptionCustom {
   const out = sanitizeCustom(input);
   delete out.safe; delete out.safeCustom; delete out.canvas; delete out.layers; delete out.logo; delete out.show;
   delete out.lineHeight; // the whole project's (the MP4 spaces every line of the file the same way)
+  delete out.blend; // the whole project's (the MP4 blends all its text at once)
   return out;
 }
 
@@ -318,6 +339,8 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   if (c.spacing !== undefined) s.spacing = c.spacing;
   if (c.lineHeight !== undefined) s.lineHeight = c.lineHeight;
   if (c.textAlign) s.textAlign = c.textAlign;
+  if (c.blend === null) s.blend = undefined;
+  else if (c.blend) s.blend = c.blend;
   if (c.gradient === null) s.gradient = undefined;
   else if (c.gradient) s.gradient = c.gradient;
   if (c.opacity !== undefined) s.opacity = c.opacity;
@@ -1147,3 +1170,20 @@ export function mixHex(a: string, b: string, t: number) {
     them, top colour above, bottom colour below. The editor's CSS gradient uses the same stops. */
 export const GRADIENT_STOPS = [0.22, 0.78] as const;
 const inkT = (y: number) => Math.min(1, Math.max(0, (y - GRADIENT_STOPS[0]) / (GRADIENT_STOPS[1] - GRADIENT_STOPS[0])));
+
+/**
+ * The same .ass as a mask for a blended look: every letter solid white on nothing (no outline, shadow, box or colours;
+ * hidden words stay hidden), so the MP4 shows the blended video where the text is.
+ */
+export function maskAss(ass: string) {
+  return ass.split("\n").map((l) => {
+    if (l.startsWith("Style: ")) {
+      const f = l.slice(7).split(",");
+      const white = (c: string) => c.slice(0, 4) + "FFFFFF&"; // &HAA + BBGGRR: keep the alpha
+      f[3] = white(f[3]); f[4] = white(f[4]); f[15] = "1"; f[16] = "0"; f[17] = "0";
+      return "Style: " + f.join(",");
+    }
+    if (!l.startsWith("Dialogue: ")) return l;
+    return l.replace(/\\([1-4]?c)&H[0-9A-Fa-f]{6}&/g, "\\$1&HFFFFFF&").replace(/\\(bord|shad|xbord|ybord|xshad|yshad)-?[\d.]+/g, (_, k) => `\\${k}0`);
+  }).join("\n");
+}
