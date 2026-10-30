@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { createPortal } from "react-dom";
 import type { Cue } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
-import { CANVAS_RATIOS, CAPTION_FONTS, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
+import { CANVAS_RATIOS, CAPTION_FONTS, highlights, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
 import { insertAt, insertBetween, mergeCues, removeCue, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
@@ -912,7 +912,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               ) : (
                 <>
                   <button onClick={() => { current(); setInline(true); }}><Icon name="text" />Edit text</button>
-                  <button onClick={highlight}><Icon name="mark" />Highlight</button>
+                  {highlights(look) && <button onClick={highlight}><Icon name="mark" />Highlight</button>}
                   <button onClick={() => { current(); setNudging(true); }}><Icon name="clock" />Timing</button>
                   <button onClick={() => remove(target())}><Icon name="delete" />Delete</button>
                   <button className="vt-more" onClick={split}><Icon name="split" />Split</button>

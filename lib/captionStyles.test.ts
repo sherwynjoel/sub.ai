@@ -239,3 +239,13 @@ test("line spacing: kept for the whole project, each line placed by the MP4 g li
   const hook = buildAss([cue], { styleId: "tpl-hook-yellow", lang: "ta", width: 1080, height: 1920, custom: { lineHeight: 2 } });
   assert.equal(hook, buildAss([cue], { styleId: "tpl-hook-yellow", lang: "ta", width: 1080, height: 1920 }), "styles with their own layout keep it");
 });
+
+test("Word Cut picks out no word: no highlight, keyword colour or hand-coloured word, in the MP4 too", async () => {
+  const { highlights } = await import("./captionStyles");
+  assert.equal(highlights(resolveStyle("cc-word-cut")), false);
+  assert.equal(highlights(resolveStyle("comic-pop")), true, "other styles keep theirs");
+  const s = resolveStyle("cc-word-cut", { highlight: "box", accent: "#ff0000" });
+  assert.equal(s.mark, undefined); assert.equal(s.active, undefined);
+  const ass = buildAss([{ start: 0, end: 2, ta: "one two", en: "", wc: ["#ff0000", null] }], { styleId: "cc-word-cut", lang: "ta", width: 1080, height: 1920, custom: { highlight: "color", accent: "#00ff00" } });
+  assert.ok(!/\\1c&H0000FF&|\\1c&H00FF00&/.test(ass), "neither the picked word's red nor the highlight green");
+});

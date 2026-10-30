@@ -319,6 +319,10 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
     else if (c.highlight === "underline") { s.underline = true; s.active = c.accent; }
     else if (c.highlight === "grow") { s.activeGrow = true; s.active = acc; }
   }
+  if (!highlights(s)) { // one word at a time (Word Cut): nothing to pick out, whatever was set before
+    s.mark = undefined; s.active = undefined; s.underline = false; s.activeGrow = false;
+    if (s.keyword) s.keyword = { ...s.keyword, color: undefined, grow: false };
+  }
   // Captions stay centred on the frame: the platforms cover more of one side (their buttons are on the right), so
   // both sides keep the larger margin rather than centring the caption in the off-centre space left over.
   const zone = c.safe === "custom" && c.safeCustom ? c.safeCustom : SAFE_ZONES[c.safe ?? "none"].m;
@@ -615,7 +619,7 @@ export function buildAss(cues: Cue[], o: Opts) {
     ems[cur] = fs;
     if (s.fontTa) tamil[cur] = s.fontTa;
     if (s.spacing) spaced[cur] = px(s.spacing);
-    const colors = o.lang === "en" ? c.wce : c.wc; // the user's colour for single words
+    const colors = highlights(s) ? (o.lang === "en" ? c.wce : c.wc) : undefined; // the user's colour for single words
     const sub = o.lang === "both" ? c.en.trim() : "";
     // English in the caption's font, turned and spaced like it.
     const tail = sub ? `\\N{\\rSecond\\fn${s.font}${s.rotate ? `\\frz${-s.rotate}` : ""}${s.spacing ? `\\fsp${px(s.spacing * 0.55)}` : ""}}${esc(breakLines(sub, s.lines))}` : "";
@@ -890,3 +894,7 @@ export function lineCount(s: CaptionStyle & Placement, text: string, ratio: numb
   const room = s.x !== undefined ? 2 * Math.min(s.x - s.safe.left, 1 - s.safe.right - s.x) : 1 - s.safe.left - s.safe.right;
   return Math.max(1, Math.ceil((textWidth(text, s.font, s.fontTa) * em) / (w * room * 0.95) - 1e-6));
 }
+
+/** Whether a style picks out the spoken word (its colour, box, underline, grow, words coloured by hand): not Word Cut,
+    which shows one word at a time. Its look controls and the Highlight button go with it. */
+export const highlights = (s: CaptionStyle) => s.effect !== "oneword";
