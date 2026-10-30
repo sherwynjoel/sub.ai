@@ -551,6 +551,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     select(r.index);
     setTimeout(() => (document.getElementById("cap-text") as HTMLTextAreaElement | null)?.focus(), 0);
   }
+  /** A text layer deleted (from the timeline's ×, the Delete key, or the Layers list). */
+  function removeLayer(i: number) {
+    if (!layers[i]) return;
+    setLayers(layers.filter((_, j) => j !== i));
+    setSelLayer(-1);
+  }
   function remove(i = target()) {
     if (i < 0) return;
     commit(removeCue(cues, i)); // its neighbours take its time back when they touched it
@@ -646,7 +652,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       else if (k === "s" || k === "S") split();
       else if (k === "m" || k === "M") merge();
       else if (k === "a" || k === "A") add();
-      else if (k === "Delete" || k === "Backspace") { e.preventDefault(); remove(); }
+      else if (k === "Delete" || k === "Backspace") { e.preventDefault(); if (tab === "layers" && layers[selLayer]) removeLayer(selLayer); else remove(); } // the text picked, else the caption
       else if (k === "ArrowLeft") { e.preventDefault(); seek(now - (e.shiftKey ? 1 : FRAME)); }
       else if (k === "ArrowRight") { e.preventDefault(); seek(now + (e.shiftKey ? 1 : FRAME)); }
       else if (k === "ArrowUp" || k === "ArrowDown") {
@@ -657,7 +663,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       else if (k === "+" || k === "=") setZoom((z) => Math.min(600, z * 1.25));
       else if (k === "-" || k === "_") setZoom((z) => Math.max(10, z / 1.25));
       else if (k === "g" || k === "G") setGuides((g) => !g);
-      else if (k === "Escape") { setSelected(-1); setPickedWord(null); setNudging(false); }
+      else if (k === "Escape") { setSelected(-1); setSelLayer(-1); setPickedWord(null); setNudging(false); }
       else if (k === "Enter" && target() >= 0) { e.preventDefault(); video.current?.pause(); current(); setInline(true); }
     };
     const onLeave = (e: BeforeUnloadEvent) => { if (dirty) e.preventDefault(); };
@@ -977,7 +983,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   {layers.map((l, i) => (
                     <li key={i} className={i === selLayer ? "on" : ""} onClick={() => { setSelLayer(i); seek(l.start); }}>
                       <span className="tnum small">{l.text.slice(0, 28) || "…"} <span className="muted">· {tc(l.start).slice(3, 8)}–{tc(l.end).slice(3, 8)}</span></span>
-                      <button className="link small" onClick={(e) => { e.stopPropagation(); setLayers(layers.filter((_, j) => j !== i)); setSelLayer(-1); }}>Delete</button>
+                      <button className="link small" onClick={(e) => { e.stopPropagation(); removeLayer(i); }}>Delete</button>
                     </li>
                   ))}
                 </ol>
@@ -1164,6 +1170,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             return r.index;
           }}
           onDelete={(i) => remove(i)}
+          onDeleteLayer={removeLayer}
+          onDeselect={() => { setSelected(-1); setSelLayer(-1); setPickedWord(null); }}
           onInsertBetween={(j) => { // a caption between two (they usually touch): room from both sides
             const r = insertBetween(cues, j, duration);
             if (r.index < 0) { setMsg("No room there: the captions on both sides are already short. Shorten one, then try again."); return -1; }
