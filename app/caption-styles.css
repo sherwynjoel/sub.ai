@@ -54,5 +54,8 @@
 .corners { display: inline-grid; grid-template-columns: auto auto; column-gap: 1.2em; line-height: 1.15; }
 .cine { display: inline-grid; justify-items: center; }
 .cine-last { justify-self: end; font-size: .55em; line-height: 1; }
-/* Gradient text (lib/captionStyles takesGradient): each line's letters filled top colour → bottom colour */
+/* Gradient text (every style): each line's letters filled top colour → bottom colour; each word (and each line of the
+   layouts built of lines) its own, so words of other sizes and ones that move take it whole, as in the MP4 */
 .cap-grad { -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.cap-grad, .grad :is(.cw, .cw > span, .hook-line, .stack-small, .stack-big, .solo-prev, .solo-now) { background-image: var(--grad); }
+.grad :is(.cw, .cw > span, .hook-line, .stack-small, .stack-big, .solo-prev, .solo-now) { -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }

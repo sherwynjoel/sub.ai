@@ -1,5 +1,5 @@
 "use client";
-import { ANIMS, CAPTION_FONTS, highlights, takesGradient, spacesLines, HIGHLIGHTS, TAMIL_FONTS, type Anim, type CaptionCustom, type CaptionStyle, type Highlight, type Placement } from "@/lib/captionStyles";
+import { ANIMS, CAPTION_FONTS, highlights, spacesLines, HIGHLIGHTS, TAMIL_FONTS, type Anim, type CaptionCustom, type CaptionStyle, type Highlight, type Placement } from "@/lib/captionStyles";
 
 type Props = {
   look: CaptionStyle & Placement;   // the resolved look these controls show
@@ -64,9 +64,7 @@ export default function LookControls({ look, own, set, tamil, project }: Props) 
           </> : <label className="cz-color">Text<input type="color" value={hex(look.color, "#ffffff")} onChange={(e) => set({ color: e.target.value })} /></label>}
           {highlights(look) && <label className="cz-color">Highlight<input type="color" value={hex(own.accent ?? look.mark ?? look.keyword?.color ?? look.active, "#ffe14d")} onChange={(e) => set({ accent: e.target.value })} /></label>}
         </div>
-        {takesGradient(look)
-          ? <label className="cz-check"><input type="checkbox" checked={!!look.gradient} onChange={(e) => set({ gradient: e.target.checked ? [hex(look.color, "#ffffff"), "#ffb37a"] : null })} /> Gradient (top colour to bottom colour)</label>
-          : <p className="muted small">Gradient: this style uses its own colours.</p>}
+        <label className="cz-check"><input type="checkbox" checked={!!look.gradient} onChange={(e) => set({ gradient: e.target.checked ? [hex(look.color, "#ffffff"), "#ffb37a"] : null })} /> Gradient (top colour to bottom colour)</label>
         {highlights(look) && <label>Spoken word
           <select value={highlight} onChange={(e) => set({ highlight: e.target.value === "style" ? undefined : (e.target.value as Highlight) })}>
             {Object.entries(HIGHLIGHTS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}

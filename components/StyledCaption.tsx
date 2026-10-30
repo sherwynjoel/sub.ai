@@ -1,5 +1,5 @@
 "use client";
-import { byLetters, caseOf, GRADIENT_STOPS, highlights, takesGradient, lineBox, lineCount, spacesLines, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { byLetters, caseOf, GRADIENT_STOPS, highlights, lineBox, lineCount, spacesLines, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
 
@@ -21,7 +21,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   const s = resolveStyle(styleId, custom);
   const colors = highlights(s) ? picked : undefined; // Word Cut: no words picked out
   // Gradient text: the letters filled top colour → bottom colour on each line (a word with its own colour keeps it).
-  const grad = s.gradient && takesGradient(s) ? s.gradient : null;
+  const grad = s.gradient ?? null;
   const words = wordTimes(caseOf(s, text), start, end, starts);
   const kw = s.keyword?.line ? nameOrKeyword(wordTimes(text, start, end).map((w) => w.w)) : keywordIndex(words.map((w) => w.w));
   // Lines as tall as libass draws them (its font's own line height), × the line spacing in the plain layout; with
@@ -70,6 +70,9 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     opacity: Number(enter.opacity ?? 1) * (s.opacity ?? 1),
     transform: [enter.transform, s.rotate ? `rotate(${s.rotate}deg)` : ""].filter(Boolean).join(" ") || undefined,
   };
+
+  // A colour of its own (a word picked out), kept over a gradient.
+  const own = (c: string): React.CSSProperties => ({ color: c, WebkitTextFillColor: grad ? c : undefined });
 
   const word = (j: number) => {
     const state = j < i ? "past" : j === i ? "active" : "future";
@@ -127,11 +130,15 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     const k = Math.max(0, chunks.findIndex((c) => time < c.e)), [a, b, d] = chunks[k]?.parts ?? ["", "", ""];
     const idx = chunks[k]?.idx ?? [[], -1, []];
     // A word the user coloured keeps its colour in its piece (as in the MP4).
-    const small = (text: string, at: number[]) => text.split(" ").map((w, n) => [n ? " " : null, colors?.[at[n]] ? <span key={n} style={{ color: colors[at[n]]! }}>{w}</span> : w]);
+    const small = (text: string, at: number[]) => text.split(" ").map((w, n) => [n ? " " : null, colors?.[at[n]] ? <span key={n} style={own(colors[at[n]]!)}>{w}</span> : w]);
     const big = colors?.[idx[1]] ?? s.stack!.big;
     // glow: a soft halo of its own colour; rgb: red and cyan copies nudged apart (as in the MP4)
     const halo = [s.stack!.glow ? `0 0 .12em ${big}, 0 0 .3em ${big}99` : "", s.stack!.rgb ? `-.05em 0 #00E5FFB0, .05em 0 #FF2040B0` : ""].filter(Boolean).join(", ") || undefined;
-    body = <>{a && <span className="stack-small">{small(a, idx[0])}</span>}<span key={k} className="stack-big" style={{ color: big, fontFamily: stack(s.stack!.font, s.fontTa), fontWeight: 400, fontSize: `${stackBig(b)}em`, textShadow: halo }}>{b}</span>{d && <span className="stack-small">{idx[2].length ? small(d, idx[2]) : d}</span>}</>;
+    // with a gradient: the big word takes it too (unless coloured by hand), its halo drawn behind (a text-shadow would cover it)
+    const bigLook: React.CSSProperties = grad
+      ? { ...(colors?.[idx[1]] ? own(big) : {}), filter: halo && [s.stack!.glow ? `drop-shadow(0 0 .1em ${big})` : "", s.stack!.rgb ? `drop-shadow(-.05em 0 #00E5FFB0) drop-shadow(.05em 0 #FF2040B0)` : ""].join(" ") }
+      : { color: big, textShadow: halo };
+    body = <>{a && <span className="stack-small">{small(a, idx[0])}</span>}<span key={k} className="stack-big" style={{ ...bigLook, fontFamily: stack(s.stack!.font, s.fontTa), fontWeight: 400, fontSize: `${stackBig(b)}em` }}>{b}</span>{d && <span className="stack-small">{idx[2].length ? small(d, idx[2]) : d}</span>}</>;
   } else if (s.effect === "hook" && s.hook) {
     const h = s.hook, pieces = hookChunks(caseOf(s, text), start, end);
     const piece = pieces[Math.max(0, pieces.findIndex((c) => time < c.e))];
@@ -143,7 +150,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
         <span key={`${piece.s}-${j}`} className="hook-line" style={{
           fontSize: `min(${size}em, calc(88cqw / ${Math.max(0.5, textWidth(ln.text, f ?? s.font, s.fontTa)).toFixed(3)}))`,
           color: h.colors[j % h.colors.length], fontFamily: f ? stack(f, s.fontTa) : undefined, opacity: v, filter: v < 1 ? `blur(${((1 - v) * 0.15).toFixed(3)}em)` : undefined,
-        }}>{ln.text.split(" ").map((w, n) => [n ? " " : null, colors?.[ln.idx[n]] ? <span key={n} style={{ color: colors[ln.idx[n]]! }}>{w}</span> : w])}</span>
+        }}>{ln.text.split(" ").map((w, n) => [n ? " " : null, colors?.[ln.idx[n]] ? <span key={n} style={own(colors[ln.idx[n]]!)}>{w}</span> : w])}</span>
       );
     });
   } else if (s.effect === "oneword") {
@@ -182,8 +189,8 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
 
   return (
     <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}`} style={{ "--p": p, ...wrap } as React.CSSProperties}>
-      <span className="cap-main" style={grad ? gradBase : base} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>
-        {grad ? <span className="cap-grad" style={{ backgroundImage: `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` }}>{body}</span> : body}
+      <span className={`cap-main${grad ? " grad" : ""}`} style={grad ? { ...gradBase, "--grad": `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` } as React.CSSProperties : base} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>
+        {grad ? <span className="cap-grad">{body}</span> : body}
       </span>
       {sub && !stacked && <span className="cap-sub" style={{ fontFamily: stack(s.font, s.fontTa), letterSpacing: s.spacing ? `${s.spacing}em` : undefined, lineHeight: lineScale(s.font), marginTop: `${(g - 1) * 0.5 * lineBox(s, text)}em` }}>{sub}</span>}
     </div>
