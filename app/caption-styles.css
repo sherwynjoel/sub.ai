@@ -54,3 +54,5 @@
 .corners { display: inline-grid; grid-template-columns: auto auto; column-gap: 1.2em; line-height: 1.15; }
 .cine { display: inline-grid; justify-items: center; }
 .cine-last { justify-self: end; font-size: .55em; line-height: 1; }
+/* Gradient text (lib/captionStyles takesGradient): each line's letters filled top colour → bottom colour */
+.cap-grad { -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; -webkit-box-decoration-break: clone; box-decoration-break: clone; }

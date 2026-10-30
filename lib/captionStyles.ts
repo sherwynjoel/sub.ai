@@ -39,6 +39,7 @@ export type CaptionStyle = {
   hook?: { sizes: number[]; colors: string[]; fonts?: (string | undefined)[] }; // "hook": each line's size (em), colour and font, in turn
   spacing?: number;              // letter spacing, em
   lineHeight?: number;           // space between lines: × the font's own line height (1 = as the font sets it)
+  gradient?: [string, string];   // the text filled top colour → bottom colour, each line (see takesGradient)
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
   shadowColor?: string;
@@ -168,6 +169,7 @@ export type CaptionCustom = {
   safeCustom?: Margins;          // margins for safe: "custom"
   bold?: boolean; italic?: boolean;
   spacing?: number; lineHeight?: number; opacity?: number; rotate?: number;
+  gradient?: [string, string] | null; // top and bottom colours of the text; null: the style's own (solid) colour
   shadowColor?: string; shadowSize?: number; boxPad?: number;
   anim?: Anim; highlight?: Highlight;
   canvas?: Canvas; layers?: TextLayer[]; logo?: Logo; // project only
@@ -235,6 +237,8 @@ export function sanitizeCustom(input: unknown): CaptionCustom {
   if (typeof i.italic === "boolean") out.italic = i.italic;
   const sp = clamp(i.spacing, -0.1, 0.5); if (sp !== undefined) out.spacing = sp;
   const lh = clamp(i.lineHeight, 0.7, 2.5); if (lh !== undefined) out.lineHeight = lh;
+  if (i.gradient === null) out.gradient = null;
+  else if (Array.isArray(i.gradient) && i.gradient.length === 2 && i.gradient.every((c) => typeof c === "string" && HEX.test(c))) out.gradient = [i.gradient[0], i.gradient[1]];
   const op = clamp(i.opacity, 0.1, 1); if (op !== undefined) out.opacity = op;
   const rot = clamp(i.rotate, -45, 45); if (rot !== undefined) out.rotate = rot;
   if (typeof i.shadowColor === "string" && HEX.test(i.shadowColor)) out.shadowColor = i.shadowColor;
@@ -304,6 +308,8 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   if (c.italic !== undefined) s.italic = c.italic;
   if (c.spacing !== undefined) s.spacing = c.spacing;
   if (c.lineHeight !== undefined) s.lineHeight = c.lineHeight;
+  if (c.gradient === null) s.gradient = undefined;
+  else if (c.gradient) s.gradient = c.gradient;
   if (c.opacity !== undefined) s.opacity = c.opacity;
   if (c.rotate !== undefined) s.rotate = c.rotate;
   if (c.shadowColor) s.shadowColor = c.shadowColor;
@@ -628,7 +634,38 @@ export function buildAss(cues: Cue[], o: Opts) {
     const kw = s.keyword?.line ? nameOrKeyword(wordTimes(main, c.start, c.end).map((w) => w.w)) : keywordIndex(words.map((w) => w.w));
     // Line spacing other than the font's own: the lines are broken here and each is placed at its own height
     // (libass has no line spacing; a line is as tall as its font). The editor breaks at the same words (lineCount).
-    const g = s.lineHeight ?? 1, ownLines = Math.abs(g - 1) > 0.005 && spacesLines(s);
+    const grad = s.gradient && takesGradient(s) ? s.gradient : null;
+    const g = s.lineHeight ?? 1, ownLines = (Math.abs(g - 1) > 0.005 || !!grad) && spacesLines(s);
+    // Lines placed here, n of them (+ the English under them): their centres g line-heights apart, the line nearest
+    // the anchor where the font would put it (a bottom caption's last line, a top caption's first); centred ones
+    // grow both ways. A line's natural height (nat) is what a gradient spans.
+    const place = (n: number, text: string, scale = 1) => {
+      const nat = fs * lineBox(s, text) * scale, box = nat * g;
+      const subN = sub ? Math.max(1, Math.ceil((textWidth(c.en, s.font, s.fontTa) * secondEm) / ((o.width - marginL - marginR) * 0.95))) : 0;
+      const subLine = secondEm * lineScale(s.font), subNat = subN * subLine, subGap = (box + subLine * g) / 2;
+      const span = (n - 1) * box + (sub ? subGap + (subNat - subLine) / 2 : 0); // first centre → last centre
+      const first = s.x !== undefined || align === 5 ? ay - span / 2 : align === 8 ? ay + nat / 2 : ay - (sub ? subNat : nat) / 2 - span;
+      return { nat, ys: Array.from({ length: n }, (_, k) => first + k * box), subY: first + (n - 1) * box + subGap + (subNat - subLine) / 2 };
+    };
+    // Tags placing an event's line at y: a slide moves it the same way (and gives the move's start offset and length).
+    const at = (ev: string, y: number): [string, number, number] => {
+      const m = ev.match(/\\move\(([-\d.]+),([-\d.]+),([-\d.]+),([-\d.]+),(\d+),(\d+)\)/);
+      if (!m) return [`{\\an5\\pos(${Math.round(ax)},${Math.round(y)})}` + ev, 0, 0];
+      const dy = +m[2] - +m[4];
+      return [ev.replace(/\\an\d/, "\\an5").replace(m[0], `\\move(${Math.round(ax)},${Math.round(y + dy)},${Math.round(ax)},${Math.round(y)},${m[5]},${m[6]})`), dy, +m[6]];
+    };
+    // One line of text: as it is, or with a gradient, GRADIENT_BANDS copies each showing its strip of the line in
+    // its colour (libass fills a letter with one colour). Words' own colours (the spoken word, picked words) stay.
+    const line = (start: number, end: number, ev: string, y: number, nat: number, body: string, ml = 0, mr = 0) => {
+      const [lead, dy, ms] = at(ev, y);
+      if (!grad) return add(start, end, lead + body, 0, ml, mr);
+      for (let k = 0; k < GRADIENT_BANDS; k++) {
+        const y0 = Math.floor(y - nat / 2 + (k * nat) / GRADIENT_BANDS) - (k ? 0 : 200), y1 = Math.ceil(y - nat / 2 + ((k + 1) * nat) / GRADIENT_BANDS) + (k === GRADIENT_BANDS - 1 ? 200 : 0);
+        const clip = (d: number) => `\\clip(0,${y0 + d},${o.width},${y1 + d})`;
+        const tint = `\\1c${colorOnly(mixHex(grad[0], grad[1], inkT((k + 0.5) / GRADIENT_BANDS)))}`;
+        add(start, end, lead + `{${dy ? clip(Math.round(dy)) + `\\t(0,${ms},${clip(0)})` : clip(0)}${tint}}` + body.replace(/\{\\r/g, `{\\r${tint}`), 0, ml, mr);
+      }
+    };
     const brk = lineBreaks(words.map((w) => w.w), ownLines ? lineCount(s, caseOf(s, main), o.width / o.height) : s.lines);
     const glue = (j: number) => (j ? (brk.has(j - 1) ? "\\N" : " ") : "");
     const q = s.lines === 1 ? "{\\q2}" : ""; // one line: no auto-wrap
@@ -669,7 +706,11 @@ export function buildAss(cues: Cue[], o: Opts) {
     if (s.effect === "oneword") { // one big word at a time, cut on; a long word shrinks to fit
       words.forEach((wt, i) => { // filling ~87% of the frame's width at most (as the reference), never bigger than the style
         const z = Math.round(Math.min(1, (0.9 * o.width) / (Math.max(0.3, textWidth(wt.w, s.font, s.fontTa)) * fs)) * 100); // advance width; the ink is ~0.85
-        add(wt.s, i === words.length - 1 ? c.end : words[i + 1].s, pos + word(i, i).replace("}", `\\fscx${z}\\fscy${z}}`) + tail, 0, wrapM, wrapM);
+        const end = i === words.length - 1 ? c.end : words[i + 1].s, w = word(i, i).replace("}", `\\fscx${z}\\fscy${z}}`);
+        if (!grad) { add(wt.s, end, pos + w + tail, 0, wrapM, wrapM); return; }
+        const p = place(1, wt.w, z / 100); // the word on its own line (so its strips can be cut), the English under it
+        line(wt.s, end, "", p.ys[0], p.nat, "{\\q2}" + w);
+        if (tail) add(wt.s, end, at("", p.subY)[0] + tail.replace(/^\\N/, ""), 0, marginL, marginR); // the English: no gradient
       });
       continue;
     }
@@ -816,23 +857,12 @@ export function buildAss(cues: Cue[], o: Opts) {
         text = words.map((_, j) => glue(j) + word(j, i, each)).join("");
         const sub = each && tail ? tail.replace("}", each + "}") : tail;
         if (ownLines) { // each line at its own height, centred on the caption's anchor; the English under them
-          const starts = [0, ...[...brk].sort((a, b) => a - b).map((b) => b + 1)], n = starts.length;
-          // Line centres g line-heights apart; the line nearest the anchor stays where the font would put it (a bottom
-          // caption's last line, a top caption's first), the others move; centred captions grow both ways.
-          const nat = fs * lineBox(s, main), box = nat * g;
-          const subN = sub ? Math.max(1, Math.ceil((textWidth(c.en, s.font, s.fontTa) * secondEm) / ((o.width - marginL - marginR) * 0.95))) : 0;
-          const subNat = subN * secondEm * lineScale(s.font), subGap = (box + secondEm * lineScale(s.font) * g) / 2;
-          const span = (n - 1) * box + (sub ? subGap + (subNat - secondEm * lineScale(s.font)) / 2 : 0); // first centre → last centre
-          const first = s.x !== undefined || align === 5 ? ay - span / 2 : align === 8 ? ay + nat / 2 : ay - (sub ? subNat : nat) / 2 - span;
-          const top = first - box / 2;
-          const at = (y: number) => ev.includes("\\move") // a slide moves each line the same way
-            ? ev.replace(/\\an\d/, "\\an5").replace(/\\move\(([-\d.]+),([-\d.]+),([-\d.]+),([-\d.]+)/, (_, _x1, y1, _x2, y2) => `\\move(${Math.round(ax)},${Math.round(y + (+y1 - +y2))},${Math.round(ax)},${Math.round(y)}`)
-            : `{\\an5\\pos(${Math.round(ax)},${Math.round(y)})}` + ev;
+          const starts = [0, ...[...brk].sort((a, b) => a - b).map((b) => b + 1)], n = starts.length, p = place(n, main);
           starts.forEach((a, k) => {
             const b = k + 1 < n ? starts[k + 1] : words.length;
-            add(wt.s, end, at(top + (k + 0.5) * box) + "{\\q2}" + words.slice(a, b).map((_, m) => (m ? " " : "") + word(a + m, i, each)).join(""), 0, 0, 0);
+            line(wt.s, end, ev, p.ys[k], p.nat, "{\\q2}" + words.slice(a, b).map((_, m) => (m ? " " : "") + word(a + m, i, each)).join(""));
           });
-          if (sub) add(wt.s, end, at(first + (n - 1) * box + subGap + (subNat - secondEm * lineScale(s.font)) / 2) + sub.replace(/^\\N/, ""), 0, marginL, marginR);
+          if (sub) { const [lead] = at(ev, p.subY); add(wt.s, end, lead + sub.replace(/^\\N/, ""), 0, marginL, marginR); }
           return;
         }
         add(wt.s, end, (ev.includes("\\move") ? "" : pos) + ev + q + text + sub, 0, wrapM, wrapM);
@@ -898,3 +928,20 @@ export function lineCount(s: CaptionStyle & Placement, text: string, ratio: numb
 /** Whether a style picks out the spoken word (its colour, box, underline, grow, words coloured by hand): not Word Cut,
     which shows one word at a time. Its look controls and the Highlight button go with it. */
 export const highlights = (s: CaptionStyle) => s.effect !== "oneword";
+
+/** Which styles take a gradient: the plain layout and Word Cut (their lines are placed here, so they can be striped). */
+export const takesGradient = (s: CaptionStyle) => spacesLines(s) || s.effect === "oneword";
+
+/** How many strips draw a gradient in the MP4: smooth to the eye at caption sizes. */
+const GRADIENT_BANDS = 10;
+
+/** The colour a fraction t of the way from a to b (#rrggbb). */
+export function mixHex(a: string, b: string, t: number) {
+  const p = (h: string, i: number) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16);
+  return "#" + [0, 1, 2].map((i) => Math.round(p(a, i) + (p(b, i) - p(a, i)) * t).toString(16).padStart(2, "0")).join("");
+}
+
+/** Where the letters are in a line's height (the rest is the font's room above and below): the gradient runs across
+    them, top colour above, bottom colour below. The editor's CSS gradient uses the same stops. */
+export const GRADIENT_STOPS = [0.22, 0.78] as const;
+const inkT = (y: number) => Math.min(1, Math.max(0, (y - GRADIENT_STOPS[0]) / (GRADIENT_STOPS[1] - GRADIENT_STOPS[0])));

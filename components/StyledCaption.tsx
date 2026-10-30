@@ -1,5 +1,5 @@
 "use client";
-import { byLetters, caseOf, highlights, lineBox, lineCount, spacesLines, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { byLetters, caseOf, GRADIENT_STOPS, highlights, takesGradient, lineBox, lineCount, spacesLines, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
 
@@ -20,6 +20,8 @@ const stack = (font: string, tamil?: string) => `"${font}", ${tamil ? `"${tamil}
 export default function StyledCaption({ styleId, custom, text, sub, start, end, time, starts, colors: picked, ratio }: Props) {
   const s = resolveStyle(styleId, custom);
   const colors = highlights(s) ? picked : undefined; // Word Cut: no words picked out
+  // Gradient text: the letters filled top colour → bottom colour on each line (a word with its own colour keeps it).
+  const grad = s.gradient && takesGradient(s) ? s.gradient : null;
   const words = wordTimes(caseOf(s, text), start, end, starts);
   const kw = s.keyword?.line ? nameOrKeyword(wordTimes(text, start, end).map((w) => w.w)) : keywordIndex(words.map((w) => w.w));
   // Lines as tall as libass draws them (its font's own line height), × the line spacing in the plain layout; with
@@ -40,6 +42,10 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     letterSpacing: s.spacing ? `${s.spacing}em` : undefined,
     lineHeight: lh,
   };
+  const gradBase: React.CSSProperties = grad ? {
+    ...base, textShadow: undefined,
+    filter: [s.glow && !s.box ? `drop-shadow(0 0 .08em ${s.glow}) drop-shadow(0 0 .22em ${s.glow}b0)` : "", s.shadow ? `drop-shadow(0 ${s.shadow}em ${s.shadow}em ${s.shadowColor ? s.shadowColor + "99" : "rgba(0,0,0,.6)"})` : ""].filter(Boolean).join(" ") || undefined,
+  } : base;
   // Entrance, from the playhead (so scrubbing shows what the MP4 will): 0.25 s or less on short captions.
   const k = Math.min(1, Math.max(0, (time - start) / Math.max(0.05, Math.min(0.25, (end - start) * 0.4))));
   const ease = 1 - Math.pow(1 - k, 3);
@@ -92,6 +98,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     }
     if (s.effect === "wobble") st.transform = `${st.transform ?? ""} rotate(${j % 2 ? -4 : 3}deg)`;
     if (colors?.[j] && state !== "future") st.color = colors[j]!;
+    if (grad && st.color) st.WebkitTextFillColor = st.color; // its own colour, over the gradient
     if (s.reveal || s.effect === "typo") {
       // Each word (or letter) comes in as it's said, in its final place (as the MP4's layers).
       const reveal = s.reveal ?? "rise";
@@ -175,7 +182,9 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
 
   return (
     <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}`} style={{ "--p": p, ...wrap } as React.CSSProperties}>
-      <span className="cap-main" style={base} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>{body}</span>
+      <span className="cap-main" style={grad ? gradBase : base} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>
+        {grad ? <span className="cap-grad" style={{ backgroundImage: `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` }}>{body}</span> : body}
+      </span>
       {sub && !stacked && <span className="cap-sub" style={{ fontFamily: stack(s.font, s.fontTa), letterSpacing: s.spacing ? `${s.spacing}em` : undefined, lineHeight: lineScale(s.font), marginTop: `${(g - 1) * 0.5 * lineBox(s, text)}em` }}>{sub}</span>}
     </div>
   );

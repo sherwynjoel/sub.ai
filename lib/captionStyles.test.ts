@@ -249,3 +249,22 @@ test("Word Cut picks out no word: no highlight, keyword colour or hand-coloured 
   const ass = buildAss([{ start: 0, end: 2, ta: "one two", en: "", wc: ["#ff0000", null] }], { styleId: "cc-word-cut", lang: "ta", width: 1080, height: 1920, custom: { highlight: "color", accent: "#00ff00" } });
   assert.ok(!/\\1c&H0000FF&|\\1c&H00FF00&/.test(ass), "neither the picked word's red nor the highlight green");
 });
+
+test("gradient: each line drawn in strips from the top colour to the bottom, the spoken word keeps its colour", async () => {
+  const { mixHex, takesGradient } = await import("./captionStyles");
+  assert.equal(mixHex("#000000", "#ffffff", 0.5), "#808080");
+  assert.equal(takesGradient(resolveStyle("tpl-blur")), true); assert.equal(takesGradient(resolveStyle("cc-word-cut")), true);
+  assert.equal(takesGradient(resolveStyle("tpl-hook-yellow")), false, "styles with their own colour designs");
+  assert.deepEqual(sanitizeCustom({ gradient: ["#ff0000", "#0000ff"] }).gradient, ["#ff0000", "#0000ff"]);
+  assert.equal(sanitizeCustom({ gradient: ["red", "#0000ff"] }).gradient, undefined, "only colours");
+  const ass = buildAss([{ start: 0, end: 2, ta: "one two", en: "" }], { styleId: "tpl-blur", lang: "ta", width: 1080, height: 1920, custom: { gradient: ["#ff0000", "#0000ff"] } });
+  const first = ass.split("\n").filter((l) => l.startsWith("Dialogue: 0,0:00:00.00,"));
+  assert.equal(first.length, 10, "one line, 10 strips");
+  const clips = first.map((l) => l.match(/\\clip\(0,(-?\d+),1080,(-?\d+)\)/)!.slice(1).map(Number));
+  for (let k = 1; k < clips.length; k++) assert.ok(clips[k][0] <= clips[k - 1][1], "strips meet, top to bottom");
+  assert.match(first[0], /\\1c&H0000FF&/, "top strip: the top colour (red)"); assert.match(first[9], /\\1c&HFF0000&/, "bottom strip ~ blue");
+  const wc = buildAss([{ start: 0, end: 2, ta: "hello", en: "" }], { styleId: "cc-word-cut", lang: "ta", width: 1080, height: 1920, custom: { gradient: ["#ff0000", "#0000ff"] } });
+  assert.equal(wc.split("\n").filter((l) => l.startsWith("Dialogue")).length, 10, "Word Cut too");
+  const plain = buildAss([{ start: 0, end: 2, ta: "one two", en: "" }], { styleId: "tpl-blur", lang: "ta", width: 1080, height: 1920 });
+  assert.ok(!/\\clip/.test(plain), "no gradient: drawn as before");
+});
