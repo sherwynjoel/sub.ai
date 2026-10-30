@@ -19,6 +19,21 @@
 @font-face { font-family: "Montserrat SemiBold"; src: url("/caption-fonts/Montserrat-SemiBold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Playfair Display Italic"; src: url("/caption-fonts/PlayfairDisplay-Italic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Playfair Display Bold Italic"; src: url("/caption-fonts/PlayfairDisplay-BoldItalic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Great Vibes"; src: url("/caption-fonts/GreatVibes-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Figtree Bold"; src: url("/caption-fonts/Figtree-Bold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "GFS Didot"; src: url("/caption-fonts/GFSDidot-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Oswald Bold"; src: url("/caption-fonts/Oswald-Bold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Bebas Neue"; src: url("/caption-fonts/BebasNeue-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Lobster"; src: url("/caption-fonts/Lobster-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Pacifico"; src: url("/caption-fonts/Pacifico-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Caveat Bold"; src: url("/caption-fonts/Caveat-Bold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Righteous"; src: url("/caption-fonts/Righteous-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Archivo Black"; src: url("/caption-fonts/ArchivoBlack-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Abril Fatface"; src: url("/caption-fonts/AbrilFatface-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Alfa Slab One"; src: url("/caption-fonts/AlfaSlabOne-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Comfortaa Bold"; src: url("/caption-fonts/Comfortaa-Bold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Luckiest Guy"; src: url("/caption-fonts/LuckiestGuy-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Titan One"; src: url("/caption-fonts/TitanOne-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 
 .cap { display: grid; justify-items: center; gap: .25em; text-align: center; line-height: 1.25; pointer-events: none; }
 .cap-main { display: inline-block; max-width: 100%; paint-order: stroke fill; overflow-wrap: anywhere; }

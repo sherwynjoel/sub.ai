@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { cornerRows, hookChunks, hookFit, revealUnits, typoSize } from "./captionStyles";
-import { assColor, buildAss, CAPTION_STYLES, DEFAULT_STYLE, STYLE_CHOICES, STYLE_GROUPS, keywordIndex, resolveStyle, SAFE_ZONES, sanitizeCustom, stackBig, stackChunks, styleOf, tamilRuns, wordTimes, takesLineSpacing } from "./captionStyles";
+import { assColor, buildAss, CAPTION_FONTS, CAPTION_STYLES, DEFAULT_STYLE, STYLE_CHOICES, STYLE_GROUPS, keywordIndex, resolveStyle, SAFE_ZONES, sanitizeCustom, stackBig, stackChunks, styleOf, tamilRuns, wordTimes, takesLineSpacing } from "./captionStyles";
 
 test("assColor converts #RRGGBB[AA] to ASS &HAABBGGRR with inverted alpha", () => {
   assert.equal(assColor("#FFC83D"), "&H003DC8FF&");
@@ -318,4 +318,17 @@ test("Text alignment: every style anchors left / right (safe zone edge, or the d
   const d = ass("cc-cinematic", { textAlign: "left", x: 0.5, y: 0.5 });
   assert.ok(sanitizeCustom({ textAlign: "left" }).textAlign === "left" && sanitizeCustom({ textAlign: "up" }).textAlign === undefined);
   assert.ok(Math.min(...[...d.matchAll(/\\pos\((\d+),/g)].map((m) => +m[1])) < 540);
+});
+
+test("Every caption font is bundled, declared for the editor and measured for the MP4", async () => {
+  const fs = await import("node:fs");
+  const { WIDTHS, LINE, HEIGHTS } = await import("./fontWidths");
+  const css = fs.readFileSync("app/caption-styles.css", "utf8");
+  for (const f of CAPTION_FONTS) {
+    const m = css.match(new RegExp(`font-family: "${f}"; src: url\\("/caption-fonts/([^"]+)"\\)`));
+    assert.ok(m && fs.existsSync(`public/caption-fonts/${m[1]}`), `${f}: file`);
+    if (f === "Roboto Black" || f === "Satisfy" || f === "Inter Italic" || f === "Playfair Display Italic") continue; // measured as their family
+    assert.equal(WIDTHS[f]?.length, 95, `${f}: widths`);
+    assert.ok(LINE[f] && HEIGHTS[f], `${f}: line height, letter heights`);
+  }
 });
