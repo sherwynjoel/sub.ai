@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { cornerRows, hookChunks, hookFit, revealUnits, typoSize } from "./captionStyles";
-import { assColor, buildAss, CAPTION_STYLES, DEFAULT_STYLE, STYLE_CHOICES, STYLE_GROUPS, keywordIndex, resolveStyle, SAFE_ZONES, sanitizeCustom, stackBig, stackChunks, styleOf, tamilRuns, wordTimes } from "./captionStyles";
+import { assColor, buildAss, CAPTION_STYLES, DEFAULT_STYLE, STYLE_CHOICES, STYLE_GROUPS, keywordIndex, resolveStyle, SAFE_ZONES, sanitizeCustom, stackBig, stackChunks, styleOf, tamilRuns, wordTimes, takesLineSpacing } from "./captionStyles";
 
 test("assColor converts #RRGGBB[AA] to ASS &HAABBGGRR with inverted alpha", () => {
   assert.equal(assColor("#FFC83D"), "&H003DC8FF&");
@@ -294,4 +294,13 @@ test("cinematic: three lines, an inverted pyramid, the middle one big in capital
   const starts = ev.map((l) => l.split(",")[1]);
   assert.equal(new Set(starts).size, words.length, "each word at its own time");
   assert.ok(ev.every((l) => /\\blur[\d.]+\\t\(0,420,\\blur0/.test(l)), "settling out of a blur");
+});
+
+test("Cinematic: line spacing moves its three lines apart (editor slider shown)", () => {
+  assert.ok(takesLineSpacing(resolveStyle("cc-cinematic")));
+  const ys = (g: number) => [...new Set([...buildAss([{ start: 0, end: 4, ta: "this is how we make great videos for you", en: "" }], { styleId: "cc-cinematic", lang: "ta", width: 1080, height: 1920, custom: { lineHeight: g } })
+    .matchAll(/\\pos\(\d+,(\d+)\)/g)].map((m) => +m[1]))].sort((a, b) => a - b);
+  const gap = (g: number) => { const y = ys(g); return y[y.length - 1] - y[0]; };
+  assert.equal(ys(1.6).length, 3);
+  assert.ok(gap(1.6) > gap(1) * 1.4 && gap(0.8) < gap(1), `${gap(0.8)} ${gap(1)} ${gap(1.6)}`);
 });

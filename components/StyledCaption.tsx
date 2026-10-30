@@ -1,5 +1,5 @@
 "use client";
-import { byLetters, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, spacesLines, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { byLetters, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
 
@@ -26,8 +26,8 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   const kw = s.keyword?.line ? nameOrKeyword(wordTimes(text, start, end).map((w) => w.w)) : keywordIndex(words.map((w) => w.w));
   // Lines as tall as libass draws them (its font's own line height), × the line spacing in the plain layout; with
   // spacing set, broken at the same words as the MP4 (lineCount), which places each line itself.
-  const g = spacesLines(s) ? s.lineHeight ?? 1 : 1, lh = lineBox(s, text) * g;
-  const brk = lineBreaks(words.map((w) => w.w), ratio && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : s.lines);
+  const g = takesLineSpacing(s) ? s.lineHeight ?? 1 : 1, lh = lineBox(s, text) * g;
+  const brk = lineBreaks(words.map((w) => w.w), ratio && spacesLines(s) && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : s.lines);
   let i = words.findIndex((w) => time < w.e);
   if (i < 0) i = words.length - 1;
   const p = Math.min(1, Math.max(0, (time - start) / Math.max(0.01, end - start)));
