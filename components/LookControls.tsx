@@ -1,5 +1,5 @@
 "use client";
-import { ANIMS, CAPTION_FONTS, spacesLines, HIGHLIGHTS, TAMIL_FONTS, type Anim, type CaptionCustom, type CaptionStyle, type Highlight, type Placement } from "@/lib/captionStyles";
+import { ANIMS, CAPTION_FONTS, highlights, spacesLines, HIGHLIGHTS, TAMIL_FONTS, type Anim, type CaptionCustom, type CaptionStyle, type Highlight, type Placement } from "@/lib/captionStyles";
 
 type Props = {
   look: CaptionStyle & Placement;   // the resolved look these controls show
@@ -59,13 +59,13 @@ export default function LookControls({ look, own, set, tamil, project }: Props) 
         <legend>Colour</legend>
         <div className="look-row">
           <label className="cz-color">Text<input type="color" value={hex(look.color, "#ffffff")} onChange={(e) => set({ color: e.target.value })} /></label>
-          <label className="cz-color">Highlight<input type="color" value={hex(own.accent ?? look.mark ?? look.keyword?.color ?? look.active, "#ffe14d")} onChange={(e) => set({ accent: e.target.value })} /></label>
+          {highlights(look) && <label className="cz-color">Highlight<input type="color" value={hex(own.accent ?? look.mark ?? look.keyword?.color ?? look.active, "#ffe14d")} onChange={(e) => set({ accent: e.target.value })} /></label>}
         </div>
-        <label>Spoken word
+        {highlights(look) && <label>Spoken word
           <select value={highlight} onChange={(e) => set({ highlight: e.target.value === "style" ? undefined : (e.target.value as Highlight) })}>
             {Object.entries(HIGHLIGHTS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
           </select>
-        </label>
+        </label>}
         <label>Opacity <span className="cz-val">{Math.round((look.opacity ?? 1) * 100)}%</span>
           <input type="range" min={0.1} max={1} step={0.05} value={look.opacity ?? 1} onChange={(e) => set({ opacity: +e.target.value })} />
         </label>

@@ -1,5 +1,5 @@
 "use client";
-import { byLetters, caseOf, lineBox, lineCount, spacesLines, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { byLetters, caseOf, highlights, lineBox, lineCount, spacesLines, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
 
@@ -17,8 +17,9 @@ const stack = (font: string, tamil?: string) => `"${font}", ${tamil ? `"${tamil}
  * A caption line drawn in a caption style at a moment in time. Mirrors buildAss() in lib/captionStyles.ts
  * so the editor preview matches the burned-in MP4. Sized in container units: the parent needs container-type: size.
  */
-export default function StyledCaption({ styleId, custom, text, sub, start, end, time, starts, colors, ratio }: Props) {
+export default function StyledCaption({ styleId, custom, text, sub, start, end, time, starts, colors: picked, ratio }: Props) {
   const s = resolveStyle(styleId, custom);
+  const colors = highlights(s) ? picked : undefined; // Word Cut: no words picked out
   const words = wordTimes(caseOf(s, text), start, end, starts);
   const kw = s.keyword?.line ? nameOrKeyword(wordTimes(text, start, end).map((w) => w.w)) : keywordIndex(words.map((w) => w.w));
   // Lines as tall as libass draws them (its font's own line height), × the line spacing in the plain layout; with
