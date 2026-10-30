@@ -58,7 +58,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   // The CINECUT short-form typography project (Premiere), matched frame by frame: its Helvetica Neue becomes Inter,
   // its Open Sauce Sans Black (OFL) is bundled.
   { id: "cc-word-cut", name: "Word Cut", group: "Typography", blurb: "One big word at a time, cut on the beat.", font: "Playfair Display Bold Italic", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, effect: "oneword" },
-  { id: "cc-cinematic", name: "Cinematic", group: "Typography", blurb: "Three lines narrowing down, the middle one big, bold capitals; each word settles out of a soft blur as it's said.", font: "Poppins", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, anim: "cinematic", effect: "cine" },
+  { id: "cc-cinematic", name: "Cinematic", group: "Typography", blurb: "Three lines narrowing down: the outer ones in rounded Comfortaa, the middle one big Poppins capitals; each word settles out of a soft blur as it's said.", font: "Comfortaa Bold", fontTa: "Hind Madurai", size: 1.06, color: W, shadow: 0.04, anim: "cinematic", effect: "cine" },
   { id: "cc-rise", name: "Rise Up", group: "Typography", blurb: "Each word fades in, rising into place as it's said.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, reveal: "rise" },
   { id: "cc-rise-spaced", name: "Rise Spaced", group: "Typography", blurb: "Airy, spaced-out words rising in one by one.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, spacing: 0.05, reveal: "rise" },
   { id: "cc-corners", name: "Corner Block", group: "Typography", blurb: "Small capitals pinned to a block's edges, popping on one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.96, caps: true, color: W, shadow: 0.04, effect: "corners" },
@@ -400,8 +400,8 @@ export const cineBig = (rows: unknown[]) => (rows.length > 1 ? 1 : 0);
 export const CINE_BIG = 1.45;
 /** How much bigger the middle line stays than the others (they shrink with it when it has to fit). */
 export const CINE_OVER = 1.25;
-/** The big line's font: Poppins's heavier cut, else the style's own, bold. */
-export const cineFont = (s: CaptionStyle) => (s.font === "Poppins" ? "Poppins ExtraBold" : s.font);
+/** The big line's font: Poppins ExtraBold with the style's own fonts (Comfortaa or Poppins), else the one picked, bold. */
+export const cineFont = (s: CaptionStyle) => (s.font === "Comfortaa Bold" || s.font.startsWith("Poppins") ? "Poppins ExtraBold" : s.font);
 
 /** Split n items into k runs of near-equal size. */
 function runs<T>(list: T[], k: number) {

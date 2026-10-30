@@ -283,7 +283,7 @@ test("cinematic: three lines, an inverted pyramid, the middle one big in capital
     assert.ok(r.length === 3 && len.every((l) => l >= 1) && len[0] >= len[1] && len[1] >= len[2] && r[2][1] === n, `${n} words: ${len}`);
   }
   assert.deepEqual(cineRows(2), [[0, 1], [1, 2]]); assert.deepEqual(cineRows(1), [[0, 1]]);
-  assert.equal(resolveStyle("cc-cinematic").font, "Poppins");
+  assert.equal(resolveStyle("cc-cinematic").font, "Comfortaa Bold"); // the outer lines; the middle one Poppins ExtraBold
   const words = "this is how we make great videos for every business today".split(" ");
   const ass = buildAss([{ start: 0, end: 4, ta: words.join(" "), en: "" }], { styleId: "cc-cinematic", lang: "ta", width: 1080, height: 1920 });
   const ev = ass.split("\n").filter((l) => l.startsWith("Dialogue"));
