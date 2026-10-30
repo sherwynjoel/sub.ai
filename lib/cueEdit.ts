@@ -4,6 +4,7 @@
  */
 import type { Cue } from "@/db/schema";
 import { wordTimes } from "@/lib/captionStyles";
+import { typedBreaks } from "@/lib/subtitles";
 
 export const wordsOf = (text: string) => text.split(/\s+/).filter(Boolean);
 const TIMES = { ta: "w", en: "we" } as const;
@@ -180,10 +181,11 @@ export function setWord(c: Cue, line: "ta" | "en", j: number, patch: { text?: st
     colors[j] = patch.color;
     if (colors.some(Boolean)) out[ck] = colors; else delete out[ck];
   }
-  if (patch.text !== undefined) {
-    const next = words.slice();
-    next[j] = patch.text.trim();
-    out = setText(out, line, next.filter(Boolean).join(" "));
+  if (patch.text !== undefined) { // the other words, and the line breaks typed between them, stay as they were
+    const typed = typedBreaks(c[line]);
+    const next = words.map((w, k) => [k === j ? patch.text!.trim() : w, typed?.has(k) ? "\n" : " "] as const).filter(([w]) => w)
+      .map(([w, sep]) => w + sep).join("").trim();
+    out = setText(out, line, next);
   }
   return out;
 }

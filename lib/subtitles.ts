@@ -23,11 +23,26 @@ export function lineBreaks(words: string[], n: number | undefined) {
   return breaks;
 }
 
-/** `text` laid out on up to `n` lines (newline-separated); no `n` leaves it as is. */
+/**
+ * Word indexes after which the user typed a line break (Enter while editing the caption), or null when they typed
+ * none: their lines then win over any automatic breaking.
+ */
+export function typedBreaks(text: string) {
+  const out = new Set<number>();
+  let j = -1;
+  for (const part of text.trim().split(/(\s+)/)) {
+    if (!part) continue;
+    if (/^\s+$/.test(part)) { if (part.includes("\n") && j >= 0) out.add(j); } else j++;
+  }
+  return out.size ? out : null;
+}
+
+/** `text` laid out on up to `n` lines (newline-separated), or on the lines the user typed; no `n` leaves it as is. */
 export function breakLines(text: string, n: number | undefined) {
-  if (!n) return text;
+  const typed = typedBreaks(text);
+  if (!n && !typed) return text;
   const words = text.split(/\s+/).filter(Boolean);
-  const brk = lineBreaks(words, n);
+  const brk = typed ?? lineBreaks(words, n);
   return words.map((w, i) => w + (brk.has(i) ? "\n" : " ")).join("").trim();
 }
 

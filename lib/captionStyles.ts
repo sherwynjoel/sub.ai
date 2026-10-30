@@ -5,7 +5,7 @@
  * Fonts live in public/caption-fonts (family names below must match the files).
  */
 import type { Cue } from "@/db";
-import { breakLines, lineBreaks } from "@/lib/subtitles";
+import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import { lineScale, looksTall, textWidth } from "@/lib/fontWidths";
 
 export type TextAlign = "left" | "center" | "right";
@@ -390,7 +390,11 @@ export function nameOrKeyword(words: string[]) {
  * Cinematic's three lines of n words, as [from, to): an inverted pyramid, about 4 : 3 : 2 words (nine words: four,
  * three, two). The middle line (cineBig) is big, bold and in capitals.
  */
-export function cineRows(n: number): [number, number][] {
+export function cineRows(n: number, typed?: Set<number> | null): [number, number][] {
+  if (typed) { // the lines the user typed (Enter while editing)
+    const cuts = [...typed].filter((j) => j < n - 1).sort((a, b) => a - b).map((j) => j + 1);
+    return [0, ...cuts].map((a, k) => [a, k < cuts.length ? cuts[k] : n]);
+  }
   if (n <= 2) return n === 2 ? [[0, 1], [1, 2]] : [[0, n]];
   const a = Math.max(1, Math.round((n * 4) / 9)), b = Math.max(1, Math.min(n - a - 1, Math.round((n * 3) / 9)));
   return [[0, a], [a, a + b], [a + b, n]];
@@ -728,7 +732,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       subAt(start, end, ev, p.subY);
     };
     // (a word a line and Typo Block break their own way)
-    const brk = lineBreaks(words.map((w) => w.w), ownLines && !s.wordLines && s.effect !== "typo" ? lineCount(s, caseOf(s, main), ratio) : s.lines);
+    const brk = typedBreaks(main) ?? lineBreaks(words.map((w) => w.w), ownLines && !s.wordLines && s.effect !== "typo" ? lineCount(s, caseOf(s, main), ratio) : s.lines);
     const glue = (j: number) => (j ? (brk.has(j - 1) ? "\\N" : " ") : "");
     const q = s.lines === 1 ? "{\\q2}" : ""; // one line: no auto-wrap
 
@@ -779,7 +783,7 @@ export function buildAss(cues: Cue[], o: Opts) {
     if (s.effect === "cine") {
       // Three lines, an inverted pyramid (cineRows), the middle one big, bold and in capitals (each line shrunk to fit
       // the width, never wrapped). Each word its own event, settling out of a blur as it's said, in its place.
-      const rows = cineRows(words.length), ms = 420, big = cineBig(rows), bigFont = cineFont(s);
+      const rows = cineRows(words.length, typedBreaks(main)), ms = 420, big = cineBig(rows), bigFont = cineFont(s);
       const fontOf = (r: number) => (r === big ? bigFont : s.font);
       const text = (j: number, r: number) => (r === big ? words[j].w.toUpperCase() : words[j].w);
       const fitW = rows.map(([a, b], r) => room / (Math.max(0.3, textWidth(words.slice(a, b).map((_, n) => text(a + n, r)).join(" "), fontOf(r), s.fontTa)) * fs));

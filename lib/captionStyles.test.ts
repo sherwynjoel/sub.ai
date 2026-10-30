@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cornerRows, hookChunks, hookFit, revealUnits, typoSize } from "./captionStyles";
+import { cineRows, cornerRows, hookChunks, hookFit, revealUnits, typoSize } from "./captionStyles";
 import { assColor, buildAss, CAPTION_FONTS, CAPTION_STYLES, DEFAULT_STYLE, STYLE_CHOICES, STYLE_GROUPS, keywordIndex, resolveStyle, SAFE_ZONES, sanitizeCustom, stackBig, stackChunks, styleOf, tamilRuns, wordTimes, takesLineSpacing } from "./captionStyles";
 
 test("assColor converts #RRGGBB[AA] to ASS &HAABBGGRR with inverted alpha", () => {
@@ -331,4 +331,23 @@ test("Every caption font is bundled, declared for the editor and measured for th
     assert.equal(WIDTHS[f]?.length, 95, `${f}: widths`);
     assert.ok(LINE[f] && HEIGHTS[f], `${f}: line height, letter heights`);
   }
+});
+
+test("Lines the user typed (Enter while editing) win: Cinematic's rows follow them, each word in its row's look", async () => {
+  const { typedBreaks, breakLines } = await import("./subtitles");
+  const { setWord } = await import("./cueEdit");
+  assert.equal(typedBreaks("one two three"), null);
+  assert.deepEqual([...typedBreaks(" one two\nthree four \n five\n")!], [1, 3]);
+  assert.equal(breakLines("one two\nthree four five", 3), "one two\nthree four five");
+  assert.deepEqual(cineRows(6, new Set([1, 2])), [[0, 2], [2, 3], [3, 6]]);
+  // "videos" moved off the big middle line: lowercase, in the outer lines' font
+  const ass = buildAss([{ start: 0, end: 4, ta: "this is how we\nmake great\nvideos for you", en: "" }], { styleId: "cc-cinematic", lang: "ta", width: 1080, height: 1920 });
+  const words = [...ass.matchAll(/^Dialogue:[^\n]*\\pos\(\d+,(\d+)\)[^\n]*\}([^{}\n]+)$/gm)].map((m) => [m[2], +m[1]] as const);
+  const y = (w: string) => words.find(([t]) => t === w)![1];
+  assert.ok(words.some(([t]) => t === "MAKE") && words.some(([t]) => t === "GREAT") && words.some(([t]) => t === "videos"));
+  assert.equal(y("videos"), y("you"));
+  assert.ok(y("we") < y("MAKE") && y("MAKE") < y("videos"));
+  // editing one word keeps the typed lines
+  const c = { start: 0, end: 3, ta: "this is\nhow we", en: "" };
+  assert.equal(setWord(c, "ta", 1, { text: "was" }).ta, "this was\nhow we");
 });

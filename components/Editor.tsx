@@ -137,9 +137,10 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
   return (
     <div className={`overlay styled${free ? " free" : ""}${ghost ? " ghost" : ""}${picked(c.start) ? " picked" : ""}`} style={place}>
       {editing !== null ? (
-        <textarea className="cap-inline" lang={line === "ta" ? undefined : "en"} defaultValue={editing} autoFocus rows={2} aria-label="Caption text"
+        <textarea className="cap-inline" lang={line === "ta" ? undefined : "en"} defaultValue={editing} autoFocus rows={3} aria-label="Caption text"
+          title="Enter starts a new line (the caption breaks there) · Ctrl/⌘+Enter or click away to save · Esc to cancel"
           onFocus={(e) => e.currentTarget.select()}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.currentTarget.blur(); } if (e.key === "Escape") onEditDone(null); }}
+          onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.currentTarget.blur(); } if (e.key === "Escape") onEditDone(null); }}
           onBlur={(e) => onEditDone(e.target.value)} />
       ) : (
       <div className="drag-handle" onPointerDown={drag} onDoubleClick={onEditOpen} title="Tap to pick, drag to move, double-click to edit the text">

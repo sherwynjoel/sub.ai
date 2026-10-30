@@ -1,7 +1,7 @@
 "use client";
 import { byLetters, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
-import { breakLines, lineBreaks } from "@/lib/subtitles";
+import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 
 type Props = {
   styleId: string; custom?: CaptionCustom; text: string; sub?: string; start: number; end: number; time: number;
@@ -27,7 +27,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   // Lines as tall as libass draws them (its font's own line height), × the line spacing in the plain layout; with
   // spacing set, broken at the same words as the MP4 (lineCount), which places each line itself.
   const g = takesLineSpacing(s) ? s.lineHeight ?? 1 : 1, lh = lineBox(s, text) * g;
-  const brk = lineBreaks(words.map((w) => w.w), ratio && spacesLines(s) && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : s.lines);
+  const brk = typedBreaks(text) ?? lineBreaks(words.map((w) => w.w), ratio && spacesLines(s) && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : s.lines);
   let i = words.findIndex((w) => time < w.e);
   if (i < 0) i = words.length - 1;
   const p = Math.min(1, Math.max(0, (time - start) / Math.max(0.01, end - start)));
@@ -165,7 +165,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   } else if (s.effect === "cine") {
     // Three lines (as the MP4): an inverted pyramid, the middle one big, bold and in capitals, each shrunk to fit the
     // width between the side margins; each word settling out of a blur as it's said, in its place.
-    const rows = cineRows(words.length), big = cineBig(rows), roomCqw = (1 - s.safe.left - s.safe.right) * 95;
+    const rows = cineRows(words.length, typedBreaks(text)), big = cineBig(rows), roomCqw = (1 - s.safe.left - s.safe.right) * 95;
     const settle = (t0: number): React.CSSProperties => {
       const since = time - t0;
       if (since < 0) return { visibility: "hidden" };
