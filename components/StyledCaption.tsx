@@ -1,5 +1,5 @@
 "use client";
-import { byLetters, caseOf, cineMiddle, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, spacesLines, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { byLetters, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, spacesLines, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
 
@@ -163,19 +163,22 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     const rows = cornerRows(words.slice(g.from, g.to).map((_, n) => g.from + n));
     body = <span className="corners">{rows.flatMap((r) => r.map((j, side) => <span key={j} style={{ justifySelf: side ? "end" : "start", visibility: time < words[j].s ? "hidden" : undefined }}>{word(j)}</span>))}</span>;
   } else if (s.effect === "cine") {
-    // Three lines (as the MP4): the first half, the middle word alone in capitals, the rest, each shrunk to fit the
+    // Three lines (as the MP4): an inverted pyramid, the middle one big, bold and in capitals, each shrunk to fit the
     // width between the side margins; each word settling out of a blur as it's said, in its place.
-    const mid = cineMiddle(words.length), roomCqw = (1 - s.safe.left - s.safe.right) * 95;
+    const rows = cineRows(words.length), big = cineBig(rows), roomCqw = (1 - s.safe.left - s.safe.right) * 95;
     const settle = (t0: number): React.CSSProperties => {
       const since = time - t0;
       if (since < 0) return { visibility: "hidden" };
       const c = Math.min(1, since / 0.42), e = 1 - Math.pow(1 - c, 3);
       return c >= 1 ? {} : { display: "inline-block", opacity: Math.min(1, since / 0.3), filter: `blur(${((1 - c) * 0.25).toFixed(3)}em)`, transform: `scale(${(1.12 - 0.12 * e).toFixed(3)})` };
     };
-    body = <span className="cine">{cineRows(words.length).map(([a, b]) => {
-      const tw = textWidth(words.slice(a, b).map((w, n) => (a + n === mid ? w.w.toUpperCase() : w.w)).join(" "), s.font, s.fontTa);
-      return <span key={a} style={{ fontSize: `min(1em, calc(${roomCqw.toFixed(1)}cqw / ${Math.max(0.3, tw).toFixed(3)}))` }}>
-        {words.slice(a, b).map((_, n) => [n ? " " : null, <span key={n} style={{ ...settle(words[a + n].s), textTransform: a + n === mid ? "uppercase" : undefined }}>{word(a + n)}</span>])}
+    const widthOf = ([a, b]: [number, number], r: number) => Math.max(0.3, textWidth(words.slice(a, b).map((w) => (r === big ? w.w.toUpperCase() : w.w)).join(" "), r === big ? cineFont(s) : s.font, s.fontTa)).toFixed(3);
+    const bigSize = `min(${CINE_BIG}em, calc(${roomCqw.toFixed(1)}cqw / ${widthOf(rows[big], big)}))`; // the others stay CINE_OVER smaller
+    body = <span className="cine">{rows.map(([a, b], r) => {
+      return <span key={a} style={r === big
+        ? { fontSize: bigSize, fontFamily: stack(cineFont(s), s.fontTa), fontWeight: 800, textTransform: "uppercase" }
+        : { fontSize: `min(1em, calc(${roomCqw.toFixed(1)}cqw / ${widthOf([a, b], r)}), calc(${bigSize} / ${CINE_OVER}))` }}>
+        {words.slice(a, b).map((_, n) => [n ? " " : null, <span key={n} style={settle(words[a + n].s)}>{word(a + n)}</span>])}
       </span>;
     })}</span>;
   } else if (s.wordLines) {

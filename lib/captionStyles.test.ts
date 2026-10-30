@@ -275,9 +275,13 @@ test("gradient: each line drawn in strips from the top colour to the bottom, the
   assert.ok(!/\\clip/.test(plain), "no gradient: drawn as before");
 });
 
-test("cinematic: three lines, the middle word alone in capitals, each word coming in as it's said", async () => {
+test("cinematic: three lines, an inverted pyramid, the middle one big in capitals, each word coming in as it's said", async () => {
   const { cineRows } = await import("./captionStyles");
-  assert.deepEqual(cineRows(6), [[0, 3], [3, 4], [4, 6]], "the first line the longer");
+  assert.deepEqual(cineRows(9), [[0, 4], [4, 7], [7, 9]], "four, three, two");
+  for (let n = 3; n <= 20; n++) {
+    const r = cineRows(n), len = r.map(([a, b]) => b - a);
+    assert.ok(r.length === 3 && len.every((l) => l >= 1) && len[0] >= len[1] && len[1] >= len[2] && r[2][1] === n, `${n} words: ${len}`);
+  }
   assert.deepEqual(cineRows(2), [[0, 1], [1, 2]]); assert.deepEqual(cineRows(1), [[0, 1]]);
   assert.equal(resolveStyle("cc-cinematic").font, "Poppins");
   const words = "this is how we make great videos for every business today".split(" ");
@@ -285,7 +289,8 @@ test("cinematic: three lines, the middle word alone in capitals, each word comin
   const ev = ass.split("\n").filter((l) => l.startsWith("Dialogue"));
   assert.equal(ev.length, words.length, "one event a word");
   assert.equal(new Set(ev.map((l) => l.match(/\\pos\(\d+,(\d+)\)/)![1])).size, 3, "on three lines");
-  assert.ok(ev.some((l) => /\}GREAT$/.test(l)), "the middle word in capitals");
+  const mid = ev.filter((l) => /\\fnPoppins ExtraBold\\b1/.test(l)).map((l) => l.replace(/^.*\}/, ""));
+  assert.deepEqual(mid, ["GREAT", "VIDEOS", "FOR", "EVERY"], "the middle line big, bold, in capitals");
   const starts = ev.map((l) => l.split(",")[1]);
   assert.equal(new Set(starts).size, words.length, "each word at its own time");
   assert.ok(ev.every((l) => /\\blur[\d.]+\\t\(0,420,\\blur0/.test(l)), "settling out of a blur");

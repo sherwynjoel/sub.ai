@@ -56,7 +56,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   // The CINECUT short-form typography project (Premiere), matched frame by frame: its Helvetica Neue becomes Inter,
   // its Open Sauce Sans Black (OFL) is bundled.
   { id: "cc-word-cut", name: "Word Cut", group: "Typography", blurb: "One big word at a time, cut on the beat.", font: "Playfair Display Bold Italic", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, effect: "oneword" },
-  { id: "cc-cinematic", name: "Cinematic", group: "Typography", blurb: "Three lines, the middle word in capitals; each word settles out of a soft blur as it's said.", font: "Poppins", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, anim: "cinematic", effect: "cine" },
+  { id: "cc-cinematic", name: "Cinematic", group: "Typography", blurb: "Three lines narrowing down, the middle one big, bold capitals; each word settles out of a soft blur as it's said.", font: "Poppins", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, anim: "cinematic", effect: "cine" },
   { id: "cc-rise", name: "Rise Up", group: "Typography", blurb: "Each word fades in, rising into place as it's said.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, reveal: "rise" },
   { id: "cc-rise-spaced", name: "Rise Spaced", group: "Typography", blurb: "Airy, spaced-out words rising in one by one.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, spacing: 0.05, reveal: "rise" },
   { id: "cc-corners", name: "Corner Block", group: "Typography", blurb: "Small capitals pinned to a block's edges, popping on one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.96, caps: true, color: W, shadow: 0.04, effect: "corners" },
@@ -376,12 +376,22 @@ export function nameOrKeyword(words: string[]) {
   return named >= 0 ? named : keywordIndex(words);
 }
 
-/** Cinematic's three lines of n words, as [from, to): the first half, the middle word alone, the rest. */
-export const cineMiddle = (n: number) => Math.ceil((n - 1) / 2);
+/**
+ * Cinematic's three lines of n words, as [from, to): an inverted pyramid, about 4 : 3 : 2 words (nine words: four,
+ * three, two). The middle line (cineBig) is big, bold and in capitals.
+ */
 export function cineRows(n: number): [number, number][] {
-  const m = cineMiddle(n);
-  return ([[0, m], [m, m + 1], [m + 1, n]] as [number, number][]).filter(([a, b]) => b > a);
+  if (n <= 2) return n === 2 ? [[0, 1], [1, 2]] : [[0, n]];
+  const a = Math.max(1, Math.round((n * 4) / 9)), b = Math.max(1, Math.min(n - a - 1, Math.round((n * 3) / 9)));
+  return [[0, a], [a, a + b], [a + b, n]];
 }
+export const cineBig = (rows: unknown[]) => (rows.length > 1 ? 1 : 0);
+/** The big line's size (× the style's), at most: it shrinks to fit the width. */
+export const CINE_BIG = 1.45;
+/** How much bigger the middle line stays than the others (they shrink with it when it has to fit). */
+export const CINE_OVER = 1.25;
+/** The big line's font: Poppins's heavier cut, else the style's own, bold. */
+export const cineFont = (s: CaptionStyle) => (s.font === "Poppins" ? "Poppins ExtraBold" : s.font);
 
 /** Split n items into k runs of near-equal size. */
 function runs<T>(list: T[], k: number) {
@@ -753,21 +763,24 @@ export function buildAss(cues: Cue[], o: Opts) {
       continue;
     }
     if (s.effect === "cine") {
-      // Three lines: the first half of the words, the middle word alone in capitals, the rest (each line shrunk to fit
+      // Three lines, an inverted pyramid (cineRows), the middle one big, bold and in capitals (each line shrunk to fit
       // the width, never wrapped). Each word its own event, settling out of a blur as it's said, in its place.
-      const rows = cineRows(words.length), ms = 420, mid = cineMiddle(words.length);
-      const text = (j: number) => (j === mid ? words[j].w.toUpperCase() : words[j].w);
-      const fit = rows.map(([a, b]) => Math.min(1, room / (Math.max(0.3, textWidth(words.slice(a, b).map((_, n) => text(a + n)).join(" "), s.font, s.fontTa)) * fs)));
-      const nats = rows.map(([a, b], r) => natOf(words.slice(a, b).map((w) => w.w).join(" "), fit[r]));
-      const p = stackAt(nats), space = textWidth(" ", s.font, s.fontTa);
+      const rows = cineRows(words.length), ms = 420, big = cineBig(rows), bigFont = cineFont(s);
+      const fontOf = (r: number) => (r === big ? bigFont : s.font);
+      const text = (j: number, r: number) => (r === big ? words[j].w.toUpperCase() : words[j].w);
+      const fitW = rows.map(([a, b], r) => room / (Math.max(0.3, textWidth(words.slice(a, b).map((_, n) => text(a + n, r)).join(" "), fontOf(r), s.fontTa)) * fs));
+      const zBig = Math.min(CINE_BIG, fitW[big]), fit = fitW.map((w, r) => (r === big ? zBig : Math.min(1, w, zBig / CINE_OVER)));
+      const nats = rows.map(([a, b], r) => natOf(words.slice(a, b).map((w) => w.w).join(" "), fit[r], fontOf(r)));
+      const p = stackAt(nats);
       rows.forEach(([a, b], r) => {
-        const z = fit[r], wid = (j: number) => textWidth(text(j), s.font, s.fontTa) * fs * z;
+        const z = fit[r], f = fontOf(r), space = textWidth(" ", f, s.fontTa), wid = (j: number) => textWidth(text(j, r), f, s.fontTa) * fs * z;
+        const look = r === big ? `\\fn${f}\\b1` : "";
         let x = ax - (words.slice(a, b).reduce((t, _, n) => t + wid(a + n), 0) + (b - a - 1) * space * fs * z) / 2;
         for (let j = a; j < b; j++) {
           const w = wid(j), cx = x + w / 2, sz = Math.round(z * 100);
           x += w + space * fs * z;
-          const tags = `\\fscx${Math.round(sz * 1.12)}\\fscy${Math.round(sz * 1.12)}\\blur${px(0.25)}\\t(0,${ms},\\blur0\\fscx${sz}\\fscy${sz})`;
-          const body = word(j, j).replace(/^\{([^}]*)\}.*$/, (_, t) => `{${t}${tags}}${esc(text(j))}`);
+          const tags = `${look}\\fscx${Math.round(sz * 1.12)}\\fscy${Math.round(sz * 1.12)}\\blur${px(0.25)}\\t(0,${ms},\\blur0\\fscx${sz}\\fscy${sz})`;
+          const body = word(j, j).replace(/^\{([^}]*)\}.*$/, (_, t) => `{${t}${tags}}${esc(text(j, r))}`);
           strips(words[j].s, c.end, `{\\an5\\pos(${Math.round(cx)},${Math.round(p.ys[r])})\\fad(300,0)}`, p.ys[r], nats[r], "{\\q2}" + body);
         }
       });
