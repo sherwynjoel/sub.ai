@@ -52,8 +52,8 @@
 .hook-line { display: block; line-height: 1.02; white-space: nowrap; }
 /* CINECUT typography: pairs pinned to a block's edges; a last word small under the line's right end */
 .corners { display: inline-grid; grid-template-columns: auto auto; column-gap: 1.2em; line-height: 1.15; }
-.cine { display: inline-grid; justify-items: center; }
-.cine-last { justify-self: end; font-size: .55em; line-height: 1; }
+.cine { display: inline-flex; flex-direction: column; align-items: center; }
+.cine > span { white-space: nowrap; }
 /* Gradient text (every style): each line's letters filled top colour → bottom colour; each word (and each line of the
    layouts built of lines) its own, so words of other sizes and ones that move take it whole, as in the MP4 */
 .cap-grad { -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; -webkit-box-decoration-break: clone; box-decoration-break: clone; }

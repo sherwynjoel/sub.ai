@@ -274,3 +274,19 @@ test("gradient: each line drawn in strips from the top colour to the bottom, the
   const plain = buildAss([{ start: 0, end: 2, ta: "one two", en: "" }], { styleId: "tpl-blur", lang: "ta", width: 1080, height: 1920 });
   assert.ok(!/\\clip/.test(plain), "no gradient: drawn as before");
 });
+
+test("cinematic: three lines, the middle word alone in capitals, each word coming in as it's said", async () => {
+  const { cineRows } = await import("./captionStyles");
+  assert.deepEqual(cineRows(6), [[0, 3], [3, 4], [4, 6]], "the first line the longer");
+  assert.deepEqual(cineRows(2), [[0, 1], [1, 2]]); assert.deepEqual(cineRows(1), [[0, 1]]);
+  assert.equal(resolveStyle("cc-cinematic").font, "Poppins");
+  const words = "this is how we make great videos for every business today".split(" ");
+  const ass = buildAss([{ start: 0, end: 4, ta: words.join(" "), en: "" }], { styleId: "cc-cinematic", lang: "ta", width: 1080, height: 1920 });
+  const ev = ass.split("\n").filter((l) => l.startsWith("Dialogue"));
+  assert.equal(ev.length, words.length, "one event a word");
+  assert.equal(new Set(ev.map((l) => l.match(/\\pos\(\d+,(\d+)\)/)![1])).size, 3, "on three lines");
+  assert.ok(ev.some((l) => /\}GREAT$/.test(l)), "the middle word in capitals");
+  const starts = ev.map((l) => l.split(",")[1]);
+  assert.equal(new Set(starts).size, words.length, "each word at its own time");
+  assert.ok(ev.every((l) => /\\blur[\d.]+\\t\(0,420,\\blur0/.test(l)), "settling out of a blur");
+});

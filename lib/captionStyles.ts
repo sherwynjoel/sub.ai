@@ -56,7 +56,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   // The CINECUT short-form typography project (Premiere), matched frame by frame: its Helvetica Neue becomes Inter,
   // its Open Sauce Sans Black (OFL) is bundled.
   { id: "cc-word-cut", name: "Word Cut", group: "Typography", blurb: "One big word at a time, cut on the beat.", font: "Playfair Display Bold Italic", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, effect: "oneword" },
-  { id: "cc-cinematic", name: "Cinematic", group: "Typography", blurb: "Clean white that settles out of a soft blur.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, anim: "cinematic", effect: "cine" },
+  { id: "cc-cinematic", name: "Cinematic", group: "Typography", blurb: "Three lines, the middle word in capitals; each word settles out of a soft blur as it's said.", font: "Poppins", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, anim: "cinematic", effect: "cine" },
   { id: "cc-rise", name: "Rise Up", group: "Typography", blurb: "Each word fades in, rising into place as it's said.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, reveal: "rise" },
   { id: "cc-rise-spaced", name: "Rise Spaced", group: "Typography", blurb: "Airy, spaced-out words rising in one by one.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, spacing: 0.05, reveal: "rise" },
   { id: "cc-corners", name: "Corner Block", group: "Typography", blurb: "Small capitals pinned to a block's edges, popping on one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.96, caps: true, color: W, shadow: 0.04, effect: "corners" },
@@ -374,6 +374,13 @@ export function keywordIndex(words: string[]) {
 export function nameOrKeyword(words: string[]) {
   const named = words.findIndex((w) => (w.match(/\p{Lu}/gu) ?? []).length >= 2);
   return named >= 0 ? named : keywordIndex(words);
+}
+
+/** Cinematic's three lines of n words, as [from, to): the first half, the middle word alone, the rest. */
+export const cineMiddle = (n: number) => Math.ceil((n - 1) / 2);
+export function cineRows(n: number): [number, number][] {
+  const m = cineMiddle(n);
+  return ([[0, m], [m, m + 1], [m + 1, n]] as [number, number][]).filter(([a, b]) => b > a);
 }
 
 /** Split n items into k runs of near-equal size. */
@@ -745,21 +752,26 @@ export function buildAss(cues: Cue[], o: Opts) {
       });
       continue;
     }
-    // Cinematic's small last word needs the words before it on one line (a short phrase, as the reference).
-    const cineFits = (ws: { w: string }[], room: number) => textWidth(ws.map((w) => w.w).join(" "), s.font, s.fontTa) * fs <= room;
-    if (s.effect === "cine" && words.length > 1 && cineFits(words.slice(0, -1), (o.width - marginL - marginR) * 0.95)) {
-      // The words but the last zoom out of a blur; the last comes in as it's said, small, under the line's right end.
-      const head = words.slice(0, -1), last = words[words.length - 1], [ev, each] = entrance(c.end - c.start);
-      const lineW = textWidth(head.map((w) => w.w).join(" "), s.font, s.fontTa) * fs;
-      if (grad) { // the line placed here (so its strips can be cut), the English under it
-        const p = stackAt([natOf(head.map((w) => w.w).join(" "))]);
-        line(c.start, c.end, ev, p.ys[0], natOf(head.map((w) => w.w).join(" ")), "{\\q2}" + head.map((_, j) => glueK(j) + word(j, j, each)).join(""));
-        subAt(c.start, c.end, "", p.subY);
-      } else add(c.start, c.end, (ev.includes("\\move") ? "" : pos) + ev + q + head.map((_, j) => glueK(j) + word(j, j, each)).join("") + tail, 0, wrapM, wrapM);
-      // its top just under the line's bottom (bottom-placed: the line ends at the anchor; middle: half a line below; top: a line below)
-      const x = Math.round(ax + lineW / 2), y = Math.round(s.y !== undefined || align === 5 ? ay + fs * 0.55 : align === 8 ? ay + fs * 1.15 : ay - fs * 0.1);
-      const ln = natOf(last.w, 0.55), up = Math.round(px(RISE_DY));
-      strips(last.s, c.end, `{\\an9\\move(${x},${y + up},${x},${y},0,${Math.round(RISE * 1000)})\\fad(${Math.round(RISE * 1000)},0)}`, y + ln / 2, ln, word(words.length - 1, words.length - 1).replace("}", "\\fscx55\\fscy55}"), 0, 0, 0, [[y + up + ln / 2, ln], [y + ln / 2, ln]], Math.round(RISE * 1000));
+    if (s.effect === "cine") {
+      // Three lines: the first half of the words, the middle word alone in capitals, the rest (each line shrunk to fit
+      // the width, never wrapped). Each word its own event, settling out of a blur as it's said, in its place.
+      const rows = cineRows(words.length), ms = 420, mid = cineMiddle(words.length);
+      const text = (j: number) => (j === mid ? words[j].w.toUpperCase() : words[j].w);
+      const fit = rows.map(([a, b]) => Math.min(1, room / (Math.max(0.3, textWidth(words.slice(a, b).map((_, n) => text(a + n)).join(" "), s.font, s.fontTa)) * fs)));
+      const nats = rows.map(([a, b], r) => natOf(words.slice(a, b).map((w) => w.w).join(" "), fit[r]));
+      const p = stackAt(nats), space = textWidth(" ", s.font, s.fontTa);
+      rows.forEach(([a, b], r) => {
+        const z = fit[r], wid = (j: number) => textWidth(text(j), s.font, s.fontTa) * fs * z;
+        let x = ax - (words.slice(a, b).reduce((t, _, n) => t + wid(a + n), 0) + (b - a - 1) * space * fs * z) / 2;
+        for (let j = a; j < b; j++) {
+          const w = wid(j), cx = x + w / 2, sz = Math.round(z * 100);
+          x += w + space * fs * z;
+          const tags = `\\fscx${Math.round(sz * 1.12)}\\fscy${Math.round(sz * 1.12)}\\blur${px(0.25)}\\t(0,${ms},\\blur0\\fscx${sz}\\fscy${sz})`;
+          const body = word(j, j).replace(/^\{([^}]*)\}.*$/, (_, t) => `{${t}${tags}}${esc(text(j))}`);
+          strips(words[j].s, c.end, `{\\an5\\pos(${Math.round(cx)},${Math.round(p.ys[r])})\\fad(300,0)}`, p.ys[r], nats[r], "{\\q2}" + body);
+        }
+      });
+      subAt(c.start, c.end, "", p.subY);
       continue;
     }
     if (s.effect === "corners") {

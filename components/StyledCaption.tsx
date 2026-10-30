@@ -1,5 +1,5 @@
 "use client";
-import { byLetters, caseOf, GRADIENT_STOPS, highlights, lineBox, lineCount, spacesLines, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { byLetters, caseOf, cineMiddle, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, spacesLines, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
 
@@ -65,10 +65,11 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     enter.transform = `scale(${k < 0.6 ? 0.4 + (1.18 - 0.4) * (k / 0.6) : 1.18 - 0.18 * ((k - 0.6) / 0.4)})`;
     enter.opacity = Math.min(1, Math.max(0, (end - time) / 0.25)); // fades away at the end
   }
+  const whole = s.effect === "cine" ? {} : enter; // Cinematic: its words come in one by one instead
   const wrap: React.CSSProperties = {
-    ...enter,
-    opacity: Number(enter.opacity ?? 1) * (s.opacity ?? 1),
-    transform: [enter.transform, s.rotate ? `rotate(${s.rotate}deg)` : ""].filter(Boolean).join(" ") || undefined,
+    ...whole,
+    opacity: Number(whole.opacity ?? 1) * (s.opacity ?? 1),
+    transform: [whole.transform, s.rotate ? `rotate(${s.rotate}deg)` : ""].filter(Boolean).join(" ") || undefined,
   };
 
   // A colour of its own (a word picked out), kept over a gradient.
@@ -161,13 +162,22 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     const groups = wordGroups(words, 4, end), g = groups[Math.max(0, groups.findIndex((x) => time < x.e))];
     const rows = cornerRows(words.slice(g.from, g.to).map((_, n) => g.from + n));
     body = <span className="corners">{rows.flatMap((r) => r.map((j, side) => <span key={j} style={{ justifySelf: side ? "end" : "start", visibility: time < words[j].s ? "hidden" : undefined }}>{word(j)}</span>))}</span>;
-  } else if (s.effect === "cine" && words.length > 1 && textWidth(words.slice(0, -1).map((w) => w.w).join(" "), s.font, s.fontTa) * (s.size ?? 1) * 7.5 <= 86) {
-    // (the MP4's rule: the words before the last fit on one line, ≈86% of the frame at 7.5% of its short side an em)
-    const last = words.length - 1, since = time - words[last].s, v = Math.min(1, Math.max(0, since / RISE));
-    body = <span className="cine">
-      <span>{join(0, last)}</span>
-      <span className="cine-last" style={{ visibility: since < 0 ? "hidden" : undefined, opacity: v, transform: `translateY(${((1 - v) * RISE_DY).toFixed(3)}em)` }}>{word(last)}</span>
-    </span>;
+  } else if (s.effect === "cine") {
+    // Three lines (as the MP4): the first half, the middle word alone in capitals, the rest, each shrunk to fit the
+    // width between the side margins; each word settling out of a blur as it's said, in its place.
+    const mid = cineMiddle(words.length), roomCqw = (1 - s.safe.left - s.safe.right) * 95;
+    const settle = (t0: number): React.CSSProperties => {
+      const since = time - t0;
+      if (since < 0) return { visibility: "hidden" };
+      const c = Math.min(1, since / 0.42), e = 1 - Math.pow(1 - c, 3);
+      return c >= 1 ? {} : { display: "inline-block", opacity: Math.min(1, since / 0.3), filter: `blur(${((1 - c) * 0.25).toFixed(3)}em)`, transform: `scale(${(1.12 - 0.12 * e).toFixed(3)})` };
+    };
+    body = <span className="cine">{cineRows(words.length).map(([a, b]) => {
+      const tw = textWidth(words.slice(a, b).map((w, n) => (a + n === mid ? w.w.toUpperCase() : w.w)).join(" "), s.font, s.fontTa);
+      return <span key={a} style={{ fontSize: `min(1em, calc(${roomCqw.toFixed(1)}cqw / ${Math.max(0.3, tw).toFixed(3)}))` }}>
+        {words.slice(a, b).map((_, n) => [n ? " " : null, <span key={n} style={{ ...settle(words[a + n].s), textTransform: a + n === mid ? "uppercase" : undefined }}>{word(a + n)}</span>])}
+      </span>;
+    })}</span>;
   } else if (s.wordLines) {
     // a word a line, three words at a time (as the MP4)
     const groups = wordGroups(words, 3, end), g = groups[Math.max(0, groups.findIndex((x) => time < x.e))];
