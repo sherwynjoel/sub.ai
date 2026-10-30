@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { createPortal } from "react-dom";
 import type { Cue } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
-import { CANVAS_RATIOS, CAPTION_FONTS, CAPTION_STYLES, mergeCustom, STYLE_CHOICES, STYLE_GROUPS, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
+import { CANVAS_RATIOS, CAPTION_FONTS, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
 import { insertAt, mergeCues, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";

@@ -158,3 +158,22 @@ select { appearance: none; -webkit-appearance: none; padding-right: 2.5em; curso
   .update-banner .update-x { min-width: 40px; padding: 8px; }
 }
 @media (max-width: 720px) { body:has(.ed-mbar) .update-banner { bottom: calc(84px + env(safe-area-inset-bottom)); } }
+
+/* Glass logo reveal (components/ui/liquid-glass-logo-reveal.tsx) */
+.glass-reveal { position: relative; isolation: isolate; overflow: hidden; user-select: none; cursor: pointer; }
+.glass-reveal-fallback { position: absolute; inset: 0; margin: auto; display: block; max-width: 40%; max-height: 40%; mask-size: contain; -webkit-mask-size: contain; mask-repeat: no-repeat; -webkit-mask-repeat: no-repeat; mask-position: center; -webkit-mask-position: center; }
+
+/* The intro (components/Splash.tsx): over everything from the first paint, once per visit */
+.splash { position: fixed; inset: 0; z-index: 1000; background: #f4f3fb; display: grid; place-items: center; transition: opacity .45s ease, visibility .45s; animation: splash-cap .45s ease 7s forwards; }
+.splash.leaving { opacity: 0; visibility: hidden; pointer-events: none; }
+.splash-glass { position: absolute; inset: 0; cursor: default; }
+/* Until the glass has its first frame (scripts still loading): the mark, still */
+.splash-mark { position: relative; width: 84px; height: 84px; border-radius: 27px; background: var(--black); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .3); z-index: -1; }
+.splash-mark::after { content: ""; position: absolute; left: 18px; right: 18px; bottom: 21px; height: 9px; border-radius: 5px; background: var(--lime); box-shadow: 0 -15px 0 rgba(255, 255, 255, .7); }
+.splash-glass ~ .splash-mark { position: absolute; }
+html[data-splash="seen"] .splash { display: none; }
+@keyframes splash-cap { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+
+/* Between pages that take a moment (app/loading.tsx) */
+.page-loading { min-height: 60vh; display: grid; place-items: center; }
+.page-loading-glass { width: min(320px, 80vw); height: 320px; border-radius: 28px; }
