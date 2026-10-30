@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import type { Cue } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
 import { CANVAS_RATIOS, CAPTION_FONTS, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
-import { insertAt, insertBetween, mergeCues, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
+import { insertAt, insertBetween, mergeCues, removeCue, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
 import { MAX_REDOS, typeLabel, typeOf, type CaptionType } from "@/lib/captionTypes";
@@ -553,7 +553,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   }
   function remove(i = target()) {
     if (i < 0) return;
-    commit(cues.filter((_, j) => j !== i));
+    commit(removeCue(cues, i)); // its neighbours take its time back when they touched it
     setSelected(Math.min(i, cues.length - 2));
   }
   /**
@@ -1163,6 +1163,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             commit(r.cues); select(r.index); seek(r.cues[r.index].start + 0.01);
             return r.index;
           }}
+          onDelete={(i) => remove(i)}
           onInsertBetween={(j) => { // a caption between two (they usually touch): room from both sides
             const r = insertBetween(cues, j, duration);
             if (r.index < 0) { setMsg("No room there: the captions on both sides are already short. Shorten one, then try again."); return -1; }
