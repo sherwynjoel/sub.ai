@@ -15,6 +15,7 @@ import { localVideo, progressOf, sendVideo, subscribeUploads, uploadsVersion } f
 import SubtitleReveal from "@/components/SubtitleReveal";
 import LookControls from "@/components/LookControls";
 import StyledCaption from "@/components/StyledCaption";
+import StylePicker from "@/components/StylePicker";
 import Timeline from "@/components/Timeline";
 import WordStrip, { type WordRef } from "@/components/WordStrip";
 import "@/app/caption-styles.css";
@@ -332,6 +333,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [lang, setLang] = useState<View>(!hasEnglish ? "ta" : !hasSpoken ? "en" : shown ?? "both");
   const [fmt, setFmt] = useState("srt");
   const [styleId, setStyleId] = useState(initial.captionStyle || "minimal");
+  const [hoverStyle, setHoverStyle] = useState<string | null>(null); // a style pointed at in the picker, shown on the video
   const [custom, setCustom] = useState<CaptionCustom>(initial.captionCustom ?? {});
   const [portrait, setPortrait] = useState(false);
   const [ratio, setRatio] = useState(16 / 9);
@@ -685,6 +687,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   }
 
   const sel = cues[selected];
+  const sample = sel ?? cues.find((c) => (c.ta || c.en).trim()); // the caption the style previews play (none picked yet: the first)
   const selLook = sel ? resolveStyle(styleId, mergeCustom(custom, sel.style), portrait) : look;
   const words = sel ? wordsOf(sel[line]) : [];
   const starts = sel ? startsOf(sel, line) : [];
@@ -809,7 +812,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   </div>
                 </>
               )}
-              <LiveCaption video={video} cues={view === "en" && cues.some((c) => c.ta) ? englishCues(cues) : cues} styleId={styleId} custom={custom} portrait={portrait} ratio={frameRatio} view={view} selected={selected}
+              <LiveCaption video={video} cues={view === "en" && cues.some((c) => c.ta) ? englishCues(cues) : cues} styleId={hoverStyle ?? styleId} custom={hoverStyle ? projectOnly(custom) : custom} portrait={portrait} ratio={frameRatio} view={view} selected={selected}
                 // The picked caption gets a dashed box (in the English view captions are regrouped: the one holding it).
                 picked={(start) => !playing && !!sel && (view === "en" ? start <= sel.start + 0.01 && now >= sel.start - 0.01 && now < sel.end : Math.abs(start - sel.start) < 0.001)}
                 editing={inline && cues[target()] ? cues[target()][line] : null}
@@ -1043,20 +1046,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               )}
               <h3>Project style</h3>
               <p className="muted small">{styleOf(styleId).blurb} Applies to every caption without its own look.</p>
-              {/* The styles on offer, plus this project's own if it's one no longer offered (so it still shows as picked). */}
-              {STYLE_GROUPS.concat(STYLE_GROUPS.includes(styleOf(styleId).group) ? [] : [styleOf(styleId).group]).map((g) => (
-                <div key={g} className="style-group">
-                  <span className="muted small">{g}</span>
-                  <div className="style-grid" role="radiogroup" aria-label={`${g} styles`}>
-                    {CAPTION_STYLES.filter((x) => x.group === g && (STYLE_CHOICES.includes(x) || x.id === styleId)).map((x) => (
-                      <button key={x.id} role="radio" aria-checked={styleId === x.id} className="style-chip" onClick={() => pickStyle(x.id)}>
-                        <span className="style-sample" style={{ "--s": x.size ?? 1 } as React.CSSProperties}><StyledCaption styleId={x.id} text="Aa கா" start={0} end={1} time={0.99} /></span>
-                        <span className="style-name">{x.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
+              <StylePicker styleId={styleId} onPick={pickStyle} onHover={setHoverStyle}
+                main={sample ? (view === "en" ? sample.en : sample.ta) || sample.en : undefined} sub={sample && view === "both" ? sample.en : undefined} />
               <div className="insp-head">
                 <h3>Customize</h3>
                 <button className="btn ghost small" onClick={() => { sameLook(); setCustom((c) => projectOnly(c)); }} disabled={Object.keys(custom).every((k) => PROJECT_KEYS.includes(k)) && !ownLooks}>Reset to {styleOf(styleId).name}</button>
