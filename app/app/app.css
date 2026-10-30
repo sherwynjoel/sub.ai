@@ -853,3 +853,7 @@ a.signout { text-decoration: none; }
 /* × on the selected caption in the timeline */
 .tl-del { position: absolute; top: 3px; right: 3px; z-index: 3; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: #0c0c14; color: #fff; font: 700 13px/18px var(--font-body); text-align: center; cursor: pointer; box-shadow: 0 1px 4px rgb(0 0 0 / .4); }
 .tl-del:hover { background: #e5484d; }
+/* Hold the video for 2× (components/Editor.tsx) */
+.player > video { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.fast-badge { position: absolute; z-index: 6; top: 14px; left: 50%; transform: translateX(-50%); padding: 6px 12px; border-radius: 999px; background: rgb(0 0 0 / .62); color: #fff; font: 700 .85rem var(--font-body); letter-spacing: .02em; pointer-events: none; backdrop-filter: blur(6px); }
+.ed-speed { min-width: 3.2em; font-variant-numeric: tabular-nums; }

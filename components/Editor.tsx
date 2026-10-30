@@ -59,6 +59,8 @@ const PROJECT_KEYS: string[] = ["safe", "safeCustom", "canvas", "layers", "logo"
 const projectOnly = (c: CaptionCustom): CaptionCustom => Object.fromEntries(Object.entries(c).filter(([k]) => PROJECT_KEYS.includes(k)));
 const EMOJIS = ["😀", "😂", "🔥", "❤️", "👍", "🎉", "✨", "💯", "😍", "🙏", "👀", "⭐"];
 const FRAME = 1 / 30;
+/** The speed button's steps. */
+const SPEEDS = [1, 1.5, 2, 0.5];
 /** Fonts added from the Premiere template pack: marked "New" in the font row. */
 const NEW_FONTS: string[] = ["Inter", "Inter Bold", "Inter Italic", "Montserrat SemiBold", "Playfair Display Italic", "Playfair Display Bold Italic", "Nunito ExtraBold", "Open Sauce Sans Black"];
 
@@ -486,6 +488,36 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   useEffect(() => { const v = video.current; if (v && v.readyState >= 1) metadata(v); }, []);
   const seek = (t: number) => { const v = video.current; if (v) v.currentTime = Math.max(0, Math.min(t, (v.duration || duration) - 0.01)); setNow(t); };
   const togglePlay = () => { const v = video.current; if (!v) return; if (v.paused) v.play().catch(() => {}); else v.pause(); };
+  // Playback speed: the button next to Play cycles it; pressing and holding the video plays at 2× until let go (as
+  // on YouTube). A hold on a paused video plays it while held. The click that ends a hold doesn't also pause.
+  const [speed, setSpeed] = useState(1);
+  const [fast, setFast] = useState(false);
+  const hold = useRef<{ timer: number; on: boolean; wasPaused: boolean } | null>(null);
+  const afterHold = useRef(false);
+  useEffect(() => { if (video.current) video.current.playbackRate = fast ? 2 : speed; }, [speed, fast, src]);
+  const holdStart = (e: React.PointerEvent) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    const h = { timer: 0, on: false, wasPaused: true };
+    h.timer = window.setTimeout(() => {
+      const v = video.current;
+      if (!v) return;
+      h.on = true; h.wasPaused = v.paused;
+      setFast(true);
+      if (v.paused) v.play().catch(() => {});
+    }, 350);
+    hold.current = h;
+  };
+  const holdEnd = () => {
+    const h = hold.current;
+    if (!h) return;
+    clearTimeout(h.timer);
+    hold.current = null;
+    if (!h.on) return;
+    setFast(false);
+    if (h.wasPaused) video.current?.pause();
+    afterHold.current = true;
+  };
+  const clickVideo = () => { if (afterHold.current) { afterHold.current = false; return; } togglePlay(); };
   const activeIdx = cues.findIndex((c) => now >= c.start && now < c.end);
   /** Paused: the caption on screen becomes the one being edited (the Caption panel, the list), as a click on it would. */
   const pausedAt = (t: number) => {
@@ -814,7 +846,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           {src ? (
             <div className="player" style={{ aspectRatio: frameRatio, "--ar": frameRatio, width: `min(100%, ${(56 * frameRatio).toFixed(2)}vh)`, background: shaped && cv!.fit === "fit" && cv!.bg !== "blur" ? cv!.bg : undefined } as React.CSSProperties}>
               {blurBg && <canvas ref={bgCanvas} className="bg-blur" aria-hidden="true" />}
-              <video ref={video} src={src} preload="auto" playsInline onClick={togglePlay} style={shaped ? { objectFit: cv!.fit === "fill" ? "cover" : "contain" } : undefined}
+              <video ref={video} src={src} preload="auto" playsInline onClick={clickVideo} onPointerDown={holdStart} onPointerUp={holdEnd}
+                onPointerCancel={holdEnd} onPointerLeave={holdEnd} onContextMenu={(e) => e.preventDefault()} onLoadedData={(e) => { e.currentTarget.playbackRate = speed; }} style={shaped ? { objectFit: cv!.fit === "fill" ? "cover" : "contain" } : undefined}
                 onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)} onPlay={() => setPlaying(true)} onPause={(e) => { setPlaying(false); pausedAt(e.currentTarget.currentTime); }}
                 onLoadedMetadata={(e) => metadata(e.currentTarget)} />
               <Guides on={guides} />
@@ -834,6 +867,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                     onPointerDown={(e) => resizeFrom(e, custom.logo!.size, 0.03, 0.6, 0.005, (size) => tweak({ logo: { ...custom.logo!, size } }))} />}
                 </div>
               )}
+              {fast && <span className="fast-badge" role="status">2× ▶▶</span>}
               {!playing && (
                 <>
                   <button className="play-big" onClick={togglePlay} aria-label="Play"><Icon name="play" /></button>
@@ -891,6 +925,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           <WordStrip cues={cues} line={line} now={now} picked={pickedWord} lang={line === "ta" ? short : "en"} onPick={pickWord} onEdit={editWord} />
           <div className="ed-transport" role="toolbar" aria-label="Playback and editing">
             <button className="btn small" onClick={togglePlay} title="Play / pause (Space)">{playing ? "Pause" : "Play"}</button>
+            <button className="btn ghost small ed-speed" onClick={() => setSpeed((x) => SPEEDS[(SPEEDS.indexOf(x) + 1) % SPEEDS.length])}
+              title="Playback speed (or press and hold the video for 2×)" aria-label={`Playback speed ${speed}×`}>{speed}×</button>
             <span className="tnum ed-time"><span className="t-long">{tc(now)} / {tc(duration)}</span><span className="t-short">{mmss(now)} / {mmss(duration)}</span></span>
             <span className="ed-sep" />
             <button className="btn ghost small ed-act" onClick={split} title="Split the caption at the playhead (S)">Split</button>
