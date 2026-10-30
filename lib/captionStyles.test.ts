@@ -251,10 +251,16 @@ test("Word Cut picks out no word: no highlight, keyword colour or hand-coloured 
 });
 
 test("gradient: each line drawn in strips from the top colour to the bottom, the spoken word keeps its colour", async () => {
-  const { mixHex, takesGradient } = await import("./captionStyles");
+  const { mixHex } = await import("./captionStyles");
   assert.equal(mixHex("#000000", "#ffffff", 0.5), "#808080");
-  assert.equal(takesGradient(resolveStyle("tpl-blur")), true); assert.equal(takesGradient(resolveStyle("cc-word-cut")), true);
-  assert.equal(takesGradient(resolveStyle("tpl-hook-yellow")), false, "styles with their own colour designs");
+  // every style: its text in strips (each strip its own colour), the English solid (a stack's English is one of its lines)
+  for (const st of CAPTION_STYLES) for (const lang of ["ta", "both"] as const) {
+    const g = buildAss([{ start: 0, end: 2, ta: "one two three four five six", en: "one two" }], { styleId: st.id, lang, width: 1080, height: 1920, custom: { gradient: ["#ff0000", "#0000ff"] } });
+    const ev = g.split("\n").filter((l) => l.startsWith("Dialogue"));
+    assert.ok(ev.some((l) => /\\clip\(0,-?\d+,1080,-?\d+\)[^}]*\\1c&H0000FF&/.test(l)), `${st.id}: a top strip in the top colour`);
+    assert.ok(ev.some((l) => /\\clip\(0,-?\d+,1080,-?\d+\)[^}]*\\1c&HFF0000&/.test(l)), `${st.id}: a bottom strip in the bottom colour`);
+    if (lang === "both" && st.effect !== "stack") assert.ok(ev.some((l) => /,Main,|,C\d/.test(l) && /Second/.test(l) && !/\\clip/.test(l)), `${st.id}: the English solid`);
+  }
   assert.deepEqual(sanitizeCustom({ gradient: ["#ff0000", "#0000ff"] }).gradient, ["#ff0000", "#0000ff"]);
   assert.equal(sanitizeCustom({ gradient: ["red", "#0000ff"] }).gradient, undefined, "only colours");
   const ass = buildAss([{ start: 0, end: 2, ta: "one two", en: "" }], { styleId: "tpl-blur", lang: "ta", width: 1080, height: 1920, custom: { gradient: ["#ff0000", "#0000ff"] } });

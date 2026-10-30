@@ -39,7 +39,7 @@ export type CaptionStyle = {
   hook?: { sizes: number[]; colors: string[]; fonts?: (string | undefined)[] }; // "hook": each line's size (em), colour and font, in turn
   spacing?: number;              // letter spacing, em
   lineHeight?: number;           // space between lines: × the font's own line height (1 = as the font sets it)
-  gradient?: [string, string];   // the text filled top colour → bottom colour, each line (see takesGradient)
+  gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
   shadowColor?: string;
@@ -634,8 +634,22 @@ export function buildAss(cues: Cue[], o: Opts) {
     const kw = s.keyword?.line ? nameOrKeyword(wordTimes(main, c.start, c.end).map((w) => w.w)) : keywordIndex(words.map((w) => w.w));
     // Line spacing other than the font's own: the lines are broken here and each is placed at its own height
     // (libass has no line spacing; a line is as tall as its font). The editor breaks at the same words (lineCount).
-    const grad = s.gradient && takesGradient(s) ? s.gradient : null;
-    const g = s.lineHeight ?? 1, ownLines = (Math.abs(g - 1) > 0.005 || !!grad) && spacesLines(s);
+    const grad = s.gradient ?? null;
+    const g = spacesLines(s) ? s.lineHeight ?? 1 : 1, ownLines = (Math.abs(g - 1) > 0.005 && spacesLines(s)) || !!grad;
+    const ratio = o.width / o.height, room = (o.width - marginL - marginR) * 0.95;
+    // A line's natural height, in font f at scale z (Tamil in it: as tall as the Tamil font's line).
+    const natOf = (text: string, z = 1, f = s.font) => fs * Math.max(lineScale(f), /[஀-௿]/.test(text) ? lineScale(s.fontTa ?? TAMIL_FONT) : 0) * z;
+    const subNatOf = () => (sub ? Math.max(1, Math.ceil((textWidth(c.en, s.font, s.fontTa) * secondEm) / room)) * secondEm * lineScale(s.font) : 0);
+    // Lines of these heights one under another (+ the English under them), the block anchored as the font would:
+    // their centres, and the English's.
+    const stackAt = (nats: number[], withSub = !!sub) => {
+      const subNat = withSub ? subNatOf() : 0, h = nats.reduce((a, b) => a + b, 0), total = h + subNat;
+      const top = s.x !== undefined || align === 5 ? ay - total / 2 : align === 8 ? ay : ay - total;
+      let y = top;
+      return { ys: nats.map((n) => (y += n) - n / 2), subY: top + h + subNat / 2 };
+    };
+    // The English on its own, centred at y (no gradient).
+    const subAt = (start: number, end: number, ev: string, y: number) => { if (tail) add(start, end, at(ev, y)[0] + tail.replace(/^\\N/, ""), 0, marginL, marginR); };
     // Lines placed here, n of them (+ the English under them): their centres g line-heights apart, the line nearest
     // the anchor where the font would put it (a bottom caption's last line, a top caption's first); centred ones
     // grow both ways. A line's natural height (nat) is what a gradient spans.
@@ -648,25 +662,42 @@ export function buildAss(cues: Cue[], o: Opts) {
       return { nat, ys: Array.from({ length: n }, (_, k) => first + k * box), subY: first + (n - 1) * box + subGap + (subNat - subLine) / 2 };
     };
     // Tags placing an event's line at y: a slide moves it the same way (and gives the move's start offset and length).
-    const at = (ev: string, y: number): [string, number, number] => {
+    function at(ev: string, y: number, x = ax): [string, number, number] {
       const m = ev.match(/\\move\(([-\d.]+),([-\d.]+),([-\d.]+),([-\d.]+),(\d+),(\d+)\)/);
-      if (!m) return [`{\\an5\\pos(${Math.round(ax)},${Math.round(y)})}` + ev, 0, 0];
+      if (!m) return [`{\\an5\\pos(${Math.round(x)},${Math.round(y)})}` + ev, 0, 0];
       const dy = +m[2] - +m[4];
-      return [ev.replace(/\\an\d/, "\\an5").replace(m[0], `\\move(${Math.round(ax)},${Math.round(y + dy)},${Math.round(ax)},${Math.round(y)},${m[5]},${m[6]})`), dy, +m[6]];
-    };
-    // One line of text: as it is, or with a gradient, GRADIENT_BANDS copies each showing its strip of the line in
-    // its colour (libass fills a letter with one colour). Words' own colours (the spoken word, picked words) stay.
-    const line = (start: number, end: number, ev: string, y: number, nat: number, body: string, ml = 0, mr = 0) => {
-      const [lead, dy, ms] = at(ev, y);
-      if (!grad) return add(start, end, lead + body, 0, ml, mr);
+      return [ev.replace(/\\an\d/, "\\an5").replace(m[0], `\\move(${Math.round(x)},${Math.round(y + dy)},${Math.round(x)},${Math.round(y)},${m[5]},${m[6]})`), dy, +m[6]];
+    }
+    // Text drawn by `lead` (which places it) with its line centred at y, nat tall: as it is, or with a gradient,
+    // GRADIENT_BANDS copies each showing its strip of the line in its colour (libass fills a letter with one colour).
+    // Text that moves: where its line is (centre, height) at even steps over the first ms, ending at (y, nat), the
+    // strips going along. Words' own colours (the spoken word, picked words) stay.
+    const strips = (start: number, end: number, lead: string, y: number, nat: number, body: string, layer = 0, ml = 0, mr = 0, path: [number, number][] = [], ms = 0) => {
+      if (!grad) return add(start, end, lead + body, layer, ml, mr);
       for (let k = 0; k < GRADIENT_BANDS; k++) {
-        const y0 = Math.floor(y - nat / 2 + (k * nat) / GRADIENT_BANDS) - (k ? 0 : 200), y1 = Math.ceil(y - nat / 2 + ((k + 1) * nat) / GRADIENT_BANDS) + (k === GRADIENT_BANDS - 1 ? 200 : 0);
-        const clip = (d: number) => `\\clip(0,${y0 + d},${o.width},${y1 + d})`;
+        const clip = ([y, nat]: [number, number]) => {
+          const y0 = Math.floor(y - nat / 2 + (k * nat) / GRADIENT_BANDS) - (k ? 0 : 200), y1 = Math.ceil(y - nat / 2 + ((k + 1) * nat) / GRADIENT_BANDS) + (k === GRADIENT_BANDS - 1 ? 200 : 0);
+          return `\\clip(0,${y0},${o.width},${y1})`;
+        };
+        const at = (i: number) => Math.round((i * ms) / (path.length - 1));
+        const tags = path.length > 1 ? clip(path[0]) + path.slice(1).map((g, i) => `\\t(${at(i)},${at(i + 1)},${clip(g)})`).join("") : clip([y, nat]);
         const tint = `\\1c${colorOnly(mixHex(grad[0], grad[1], inkT((k + 0.5) / GRADIENT_BANDS)))}`;
-        add(start, end, lead + `{${dy ? clip(Math.round(dy)) + `\\t(0,${ms},${clip(0)})` : clip(0)}${tint}}` + body.replace(/\{\\r/g, `{\\r${tint}`), 0, ml, mr);
+        add(start, end, lead + `{${tags}${tint}}` + body.replace(/\{\\r/g, `{\\r${tint}`), layer, ml, mr);
       }
     };
-    const brk = lineBreaks(words.map((w) => w.w), ownLines ? lineCount(s, caseOf(s, main), o.width / o.height) : s.lines);
+    // One line of text centred at (x, y), brought in by the event tags ev (a slide moves it there).
+    const line = (start: number, end: number, ev: string, y: number, nat: number, body: string, ml = 0, mr = 0, layer = 0, x = ax) => {
+      const [lead, dy, ms] = at(ev, y, x);
+      strips(start, end, lead, y, nat, body, layer, ml, mr, dy ? [[y + Math.round(dy), nat], [y, nat]] : [], ms);
+    };
+    // Lines (each its height and text) one under another, placed here; the English under them.
+    const rowsAt = (start: number, end: number, rows: [number, string][], ev = "") => {
+      const p = stackAt(rows.map((r) => r[0]));
+      rows.forEach(([nat, body], n) => line(start, end, ev, p.ys[n], nat, "{\\q2}" + body));
+      subAt(start, end, ev, p.subY);
+    };
+    // (a word a line and Typo Block break their own way)
+    const brk = lineBreaks(words.map((w) => w.w), ownLines && !s.wordLines && s.effect !== "typo" ? lineCount(s, caseOf(s, main), ratio) : s.lines);
     const glue = (j: number) => (j ? (brk.has(j - 1) ? "\\N" : " ") : "");
     const q = s.lines === 1 ? "{\\q2}" : ""; // one line: no auto-wrap
 
@@ -720,10 +751,15 @@ export function buildAss(cues: Cue[], o: Opts) {
       // The words but the last zoom out of a blur; the last comes in as it's said, small, under the line's right end.
       const head = words.slice(0, -1), last = words[words.length - 1], [ev, each] = entrance(c.end - c.start);
       const lineW = textWidth(head.map((w) => w.w).join(" "), s.font, s.fontTa) * fs;
-      add(c.start, c.end, (ev.includes("\\move") ? "" : pos) + ev + q + head.map((_, j) => glueK(j) + word(j, j, each)).join("") + tail, 0, wrapM, wrapM);
+      if (grad) { // the line placed here (so its strips can be cut), the English under it
+        const p = stackAt([natOf(head.map((w) => w.w).join(" "))]);
+        line(c.start, c.end, ev, p.ys[0], natOf(head.map((w) => w.w).join(" ")), "{\\q2}" + head.map((_, j) => glueK(j) + word(j, j, each)).join(""));
+        subAt(c.start, c.end, "", p.subY);
+      } else add(c.start, c.end, (ev.includes("\\move") ? "" : pos) + ev + q + head.map((_, j) => glueK(j) + word(j, j, each)).join("") + tail, 0, wrapM, wrapM);
       // its top just under the line's bottom (bottom-placed: the line ends at the anchor; middle: half a line below; top: a line below)
       const x = Math.round(ax + lineW / 2), y = Math.round(s.y !== undefined || align === 5 ? ay + fs * 0.55 : align === 8 ? ay + fs * 1.15 : ay - fs * 0.1);
-      add(last.s, c.end, `{\\an9\\move(${x},${y + Math.round(px(RISE_DY))},${x},${y},0,${Math.round(RISE * 1000)})\\fad(${Math.round(RISE * 1000)},0)}` + word(words.length - 1, words.length - 1).replace("}", "\\fscx55\\fscy55}"), 0, 0, 0);
+      const ln = natOf(last.w, 0.55), up = Math.round(px(RISE_DY));
+      strips(last.s, c.end, `{\\an9\\move(${x},${y + up},${x},${y},0,${Math.round(RISE * 1000)})\\fad(${Math.round(RISE * 1000)},0)}`, y + ln / 2, ln, word(words.length - 1, words.length - 1).replace("}", "\\fscx55\\fscy55}"), 0, 0, 0, [[y + up + ln / 2, ln], [y + ln / 2, ln]], Math.round(RISE * 1000));
       continue;
     }
     if (s.effect === "corners") {
@@ -740,7 +776,7 @@ export function buildAss(cues: Cue[], o: Opts) {
         const top = align === 8 && s.y === undefined ? ay : bottomPlaced ? ay - subH - h : ay - (h + subH) / 2;
         rows.forEach((r, n) => r.forEach((w, side) => {
           const x = Math.round(ax + (side ? blockW / 2 : -blockW / 2)), y = Math.round(top + n * lineH);
-          add(w.s, g.e, `{\\an${side ? 9 : 7}\\pos(${x},${y})}` + word(w.j, w.j), 0, 0, 0);
+          strips(w.s, g.e, `{\\an${side ? 9 : 7}\\pos(${x},${y})}`, y + natOf(w.w) / 2, natOf(w.w), word(w.j, w.j));
         }));
         if (tail) add(g.s, g.e, `{\\an8\\pos(${Math.round(ax)},${Math.round(top + h + fs * 0.15)})}` + tail.replace(/^\\N/, ""), 0, marginL, marginR);
       }
@@ -752,14 +788,15 @@ export function buildAss(cues: Cue[], o: Opts) {
       const reveal = s.reveal ?? "rise", letters = reveal === "letters", ms = Math.round(RISE * 1000);
       // typo: its sizes; a word a line: each word shrunk to fit the width when it's long ("PROFESSIONAL")
       const fitLine = (j: number) => Math.min(1, ((o.width - marginL - marginR) * 0.92) / (Math.max(0.3, textWidth(caseOf(s, words[j].w), s.font, s.fontTa)) * fs));
+      const zOf = (j: number) => (s.effect === "typo" ? typoSize(j) : s.wordLines ? fitLine(j) : 1);
       const sized = (j: number) => {
-        const z = s.effect === "typo" ? typoSize(j) : s.wordLines ? fitLine(j) : 1;
+        const z = zOf(j);
         return z === 1 ? "" : `\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)}`;
       };
       // A word a line (Bold Flicker): three words at a time, so a long caption doesn't run off the frame.
       const groups = s.wordLines ? wordGroups(words, 3, c.end) : [{ from: 0, to: words.length, s: c.start, e: c.end }];
-      const body = (on: (j: number, k: number | null) => boolean, tags: string, g = groups[0]) => words.slice(g.from, g.to).map((w, n) => {
-        const j = g.from + n;
+      const body = (on: (j: number, k: number | null) => boolean, tags: string, g = groups[0], from = g.from, to = g.to) => words.slice(from, to).map((w, n) => {
+        const j = from + n;
         const base = word(j, j).match(/^\{([^}]*)\}/)![1] + sized(j); // the word's look, settled
         const part = (txt: string, k: number | null) => `{${base}${on(j, k) ? tags : "\\alpha&HFF&"}}${esc(txt)}`;
         return (n ? glueK(j) : "") + (letters && byLetters(w.w) ? [...w.w].map((ch, k) => part(ch, k)).join("") : part(w.w, null));
@@ -769,6 +806,21 @@ export function buildAss(cues: Cue[], o: Opts) {
       const rise = (t0: string) => `{\\an${an}\\move(${Math.round(ax)},${Math.round(ay + dy)},${Math.round(ax)},${Math.round(ay)},0,${ms})}` + t0;
       const tagsFor = reveal === "flicker" ? flickerTags(FLICKER2) : `\\alpha&HFF&\\t(0,${ms},\\alpha&H00&)`;
       for (const g of groups) {
+        if (grad) { // each line its own event (so its strips can be cut), a word's layer only its line
+          const rows: [number, number][] = [];
+          for (let j = g.from; j < g.to; j++) if (j === g.from || glueK(j) === "\\N") rows.push([j, j + 1]); else rows[rows.length - 1][1] = j + 1;
+          const k = s.keyword, natW = (j: number) => natOf(words[j].w, zOf(j) * (j === kw && k?.scale ? k.scale : 1), (j === kw && k?.font) || s.font);
+          const nats = rows.map(([a, b]) => Math.max(...words.slice(a, b).map((_, n) => natW(a + n))));
+          const p = stackAt(nats);
+          for (const u of revealUnits(words.slice(g.from, g.to), letters)) {
+            // the strips span this word (a smaller word sits on the line's baseline, ~80% down a line)
+            const j = g.from + u.j, r = rows.findIndex(([a, b]) => j >= a && j < b), n = natW(j), cy = p.ys[r] + 0.3 * (nats[r] - n);
+            const [lead, dy, ms2] = at(reveal === "flicker" ? "" : rise(""), p.ys[r]);
+            strips(Math.max(g.s, u.s), g.e, lead, cy, n, "{\\q2}" + body((jj, kk) => jj === j && (u.k === null || kk === u.k), tagsFor, g, ...rows[r]), 1, 0, 0, dy ? [[cy + dy, n], [cy, n]] : [], ms2);
+          }
+          subAt(g.s, g.e, "", p.subY);
+          continue;
+        }
         for (const u of revealUnits(words.slice(g.from, g.to), letters))
           add(Math.max(g.s, u.s), g.e, (reveal === "flicker" ? pos : rise("")) + q + body((j, k) => j === g.from + u.j && (u.k === null || k === u.k), tagsFor, g) + hiddenTail, 1, wrapM, wrapM);
         if (tail) add(g.s, g.e, pos + body(() => false, "", g) + tail, 0, wrapM, wrapM);
@@ -785,7 +837,19 @@ export function buildAss(cues: Cue[], o: Opts) {
         const bigCol = colors?.[p.idx[1]] ?? s.stack.big;
         const glowBig = s.stack.glow ? `\\3c${colorOnly(bigCol)}\\3a&H60&\\bord${px(0.07)}\\blur${px(0.22)}` : "";
         const grow = `\\fscx${Math.round(z * 40)}\\fscy${Math.round(z * 40)}\\t(0,220,\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)})`;
-        const big = `{\\r\\fn${s.stack.font}\\b0\\1c${colorOnly(bigCol)}${glowBig}${grow}}${b}`;
+        // with a gradient the big word takes it too (unless the user coloured it)
+        const big = `{\\r\\fn${s.stack.font}\\b0${grad && !colors?.[p.idx[1]] ? "" : `\\1c${colorOnly(bigCol)}`}${glowBig}${grow}}${b}`;
+        if (grad) { // the lines placed one by one (so their strips can be cut); the red and cyan copies only the big word
+          const parts = [a && [natOf(p.parts[0], 0.6), `{${small}}${a}`], [natOf(p.parts[1], z, s.stack.font), big], d && [natOf(p.parts[2], 0.6), `{${small}}${d}`]].filter(Boolean) as [number, string][];
+          const at2 = stackAt(parts.map((x) => x[0]), false), bigAt = a ? 1 : 0;
+          if (s.stack.rgb) {
+            const dx = Math.max(2, Math.round(px(0.05)));
+            for (const [col, x] of [["#FF2040", ax + dx], ["#00E5FF", ax - dx]] as const)
+              add(p.s, p.e, at("{\\fad(120,0)}", at2.ys[bigAt], x)[0] + `{\\q2}{\\r\\fn${s.stack.font}\\b0\\1c${colorOnly(col)}\\1a&H50&\\bord0\\shad0${grow}}${b}`);
+          }
+          parts.forEach(([nat, txt], n) => line(p.s, p.e, "{\\fad(120,0)}", at2.ys[n], nat, "{\\q2}" + txt, 0, 0, 1));
+          continue;
+        }
         const layout = (bigPart: string, smallAlpha = "") => pos + `{\\q2\\fad(120,0)}` + (a ? `{${small}${smallAlpha}}${a}\\N` : "") + bigPart + (d ? `\\N{\\r${small}${smallAlpha}}${d}` : "");
         if (s.stack.rgb) { // the big word again in red and cyan, nudged apart behind it (the small lines invisible)
           const dx = Math.max(2, Math.round(px(0.05)));
@@ -804,34 +868,77 @@ export function buildAss(cues: Cue[], o: Opts) {
         const text = p.lines.map((ln, j) => {
           const col = h.colors[j % h.colors.length], f = h.fonts?.[j % h.colors.length];
           const z = hookFit(ln.text, h.sizes[j % h.sizes.length], widthEm, f ?? s.font, s.fontTa), at = Math.round(j * HOOK_STEP * 1000);
-          const head = `\\r\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)}\\1c${colorOnly(col)}${f ? `\\fn${f}` : ""}`;
+          const head = `\\r\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)}${grad ? "" : `\\1c${colorOnly(col)}`}${f ? `\\fn${f}` : ""}`;
           const reveal = `\\alpha&HFF&\\blur${px(0.15)}\\t(${at},${at + 180},\\alpha&H00&\\blur0)`;
           // a word the user coloured keeps its colour
-          return ln.text.split(" ").map((w, n) => `{${head}${colors?.[ln.idx[n]] ? `\\1c${colorOnly(colors[ln.idx[n]]!)}` : ""}${reveal}}${esc(w)}`).join(" ");
-        }).join("\\N");
-        add(p.s, p.e, pos + text + tail, 0, wrapM, wrapM); // lines fitted already; the English below wraps
+          return [natOf(ln.text, z, f ?? s.font), ln.text.split(" ").map((w, n) => `{${head}${colors?.[ln.idx[n]] ? `\\1c${colorOnly(colors[ln.idx[n]]!)}` : ""}${reveal}}${esc(w)}`).join(" ")] as const;
+        });
+        if (grad) { // each line placed here (so its strips can be cut), the English under them
+          const at2 = stackAt(text.map((t) => t[0]));
+          text.forEach(([nat, t], j) => line(p.s, p.e, "", at2.ys[j], nat, "{\\q2}" + t));
+          subAt(p.s, p.e, "", at2.subY);
+          continue;
+        }
+        add(p.s, p.e, pos + text.map((t) => t[1]).join("\\N") + tail, 0, wrapM, wrapM); // lines fitted already; the English below wraps
       }
       continue;
     }
     if (s.effect === "crawl") {
-      const H = o.height, cx = Math.round(o.width / 2);
-      add(c.start, c.end, `{\\an8\\fad(200,300)\\org(${cx},${H})\\frx55\\move(${cx},${Math.round(H * 0.66)},${cx},${Math.round(H * 0.42)})}${esc(breakLines(caseOf(s, main), s.lines))}${tail}`);
+      // As the editor: the block tipped back 50° about its own bottom edge and sliding up that slope (28% of the
+      // short side), so it rolls off into the distance. libass draws y (above the pivot) at tip(y).
+      const rows = breakLines(caseOf(s, main), lineCount(s, caseOf(s, main), ratio)).split("\n"), nats = rows.map((r) => natOf(r));
+      const p = stackAt(nats), bottom = sub ? p.subY + subNatOf() / 2 : p.ys[rows.length - 1] + nats[rows.length - 1] / 2;
+      const rise = short * 0.28, ms = Math.round((c.end - c.start) * 1000), cos = Math.cos((50 * Math.PI) / 180), sin = Math.sin((50 * Math.PI) / 180);
+      const tip = (y: number) => bottom - (bottom - y) * cos * (CRAWL_DIST / (CRAWL_DIST + (bottom - y) * sin));
+      const lead = (y: number) => `{\\an5\\fad(200,300)\\org(${Math.round(ax)},${Math.round(bottom)})\\frx50\\move(${Math.round(ax)},${Math.round(y)},${Math.round(ax)},${Math.round(y - rise)})}`;
+      rows.forEach((r, k) => { // a line at a time; with a gradient its strips where the tipped line is drawn, as it goes
+        const y = p.ys[k], n = nats[k], path = Array.from({ length: CRAWL_STEPS + 1 }, (_, i): [number, number] => {
+          const a = tip(y - (rise * i) / CRAWL_STEPS - n / 2), b = tip(y - (rise * i) / CRAWL_STEPS + n / 2);
+          return [(a + b) / 2, b - a];
+        });
+        strips(c.start, c.end, lead(y), ...path[CRAWL_STEPS], `{\\q2}${esc(r)}`, 0, 0, 0, path, ms);
+      });
+      if (tail) add(c.start, c.end, lead(p.subY) + tail.replace(/^\\N/, ""), 0, marginL, marginR);
       continue;
     }
     if (s.effect === "vhs") {
-      const text = esc(breakLines(caseOf(s, main), s.lines)) + tail;
+      // (with a gradient broken here, as the white copy is)
+      const rows = breakLines(caseOf(s, main), grad ? lineCount(s, caseOf(s, main), ratio) : s.lines);
+      const text = esc(rows) + tail;
       const nudge = [0, 2, -1, 1, -2];
       for (let t = c.start, k = 0; t < c.end; t += 0.25, k++) {
         const e = Math.min(c.end, t + 0.25), d = Math.round(px(0.05) + nudge[k % nudge.length]);
         add(t, e, posAt(d + 2) + `{\\1c&H3C3CFF&\\1a&H60&\\bord0\\shad0}${text}`, 0, marginL + 2 * d + 4, marginR); // red, nudged right
         add(t, e, posAt(-d - 2) + `{\\1c&HFFE600&\\1a&H60&\\bord0\\shad0}${text}`, 1, marginL, marginR + 2 * d + 4); // cyan, nudged left
-        add(t, e, pos + `{\\bord0\\shad0}${text}`, 2);
+        if (!grad) add(t, e, pos + `{\\bord0\\shad0}${text}`, 2);
+      }
+      if (grad) { // the white copy still: once, a line at a time (so its strips can be cut)
+        const at2 = stackAt(rows.split("\n").map((r) => natOf(r)));
+        rows.split("\n").forEach((r, n) => line(c.start, c.end, "", at2.ys[n], natOf(r), `{\\q2\\bord0\\shad0}${esc(r)}`, 0, 0, 2));
+        if (tail) add(c.start, c.end, at("", at2.subY)[0] + `{\\bord0\\shad0}` + tail.replace(/^\\N/, ""), 2, marginL, marginR);
       }
       continue;
     }
     if (s.effect === "typewriter") {
-      const chars = [...breakLines(caseOf(s, main), s.lines)];
+      const chars = [...breakLines(caseOf(s, main), grad ? lineCount(s, caseOf(s, main), ratio) : s.lines)];
       const step = (c.end - c.start) * 0.8 / chars.length;
+      if (grad) { // the lines typed so far, each placed here (so its strips can be cut); a finished line one event
+        const glow = glowTag ? `{${glowTag}}` : "";
+        for (let n = 1; n <= chars.length; ) {
+          const shown = chars.slice(0, n).join("").split("\n"), m = shown.length, at2 = stackAt(chars.join("").split("\n").slice(0, m).map((r) => natOf(r)));
+          let e = n; // the last step with these m lines
+          while (e < chars.length && chars[e] !== "\n") e++;
+          const t0 = c.start + (n - 1) * step, t1 = e === chars.length ? c.end : c.start + e * step;
+          chars.join("").split("\n").slice(0, m - 1).forEach((r, k) => line(t0, t1, "", at2.ys[k], natOf(r), "{\\q2}" + glow + esc(r)));
+          for (let q2 = n; q2 <= e; q2++) {
+            const a = c.start + (q2 - 1) * step, b = q2 === chars.length ? c.end : a + step, cur = chars.slice(0, q2).join("").split("\n")[m - 1];
+            line(a, b, "", at2.ys[m - 1], natOf(chars.join("").split("\n")[m - 1]), "{\\q2}" + glow + `${esc(cur)}{\\alpha&H00&}_`);
+          }
+          subAt(t0, t1, "", at2.subY);
+          n = e + 1;
+        }
+        continue;
+      }
       for (let n = 1; n <= chars.length; n++) {
         const t0 = c.start + (n - 1) * step;
         const t1 = n === chars.length ? c.end : t0 + step;
@@ -842,7 +949,24 @@ export function buildAss(cues: Cue[], o: Opts) {
     words.forEach((wt, i) => {
       const end = i === words.length - 1 ? c.end : words[i + 1].s;
       let text: string;
-      if (s.effect === "solo") {
+      if (s.effect === "solo" && grad) {
+        rowsAt(wt.s, end, [...(i > 0 ? [[natOf(words[i - 1].w, 0.45), `{\\fscx45\\fscy45\\1a&H60&}${esc(words[i - 1].w)}`] as [number, string]] : []), [natOf(wt.w), `{\\r\\t(0,120,\\fscx108\\fscy108)}${esc(wt.w)}`]]);
+        return;
+      } else if (s.effect === "punch" && words.length > 2 && grad) {
+        // the set-up small and the punch big, each broken into lines that fit
+        const cut = words.length - Math.min(2, words.length - 1);
+        const rowsOf = (a: number, b: number, z: number) => {
+          const ws = words.slice(a, b).map((w) => w.w), br = lineBreaks(ws, Math.max(1, Math.ceil((textWidth(ws.join(" "), s.font, s.fontTa) * fs * z) / room)));
+          const out: [number, string][] = [];
+          for (let j = a, from = a; j < b; j++) if (br.has(j - a) || j === b - 1) {
+            out.push([natOf(ws.slice(from - a, j + 1 - a).join(" "), z), words.slice(from, j + 1).map((_, k) => word(from + k, i)).join(" ").replace(/\{\\r/g, `{\\r\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)}`)]);
+            from = j + 1;
+          }
+          return out;
+        };
+        rowsAt(wt.s, end, [...rowsOf(0, cut, 0.55), ...rowsOf(cut, words.length, 1.4)]);
+        return;
+      } else if (s.effect === "solo") {
         text = (i > 0 ? `{\\fscx45\\fscy45\\1a&H60&}${esc(words[i - 1].w)}\\N` : "") + `{\\r\\t(0,120,\\fscx108\\fscy108)}${esc(wt.w)}`;
       } else if (s.effect === "punch" && words.length > 2) {
         const cut = words.length - Math.min(2, words.length - 1);
@@ -929,8 +1053,10 @@ export function lineCount(s: CaptionStyle & Placement, text: string, ratio: numb
     which shows one word at a time. Its look controls and the Highlight button go with it. */
 export const highlights = (s: CaptionStyle) => s.effect !== "oneword";
 
-/** Which styles take a gradient: the plain layout and Word Cut (their lines are placed here, so they can be striped). */
-export const takesGradient = (s: CaptionStyle) => spacesLines(s) || s.effect === "oneword";
+/** libass's camera distance for 3D turns (\\frx): 20000 in 1/64 pixels (where Crawl's tipped lines are drawn). */
+const CRAWL_DIST = 20000 / 64;
+/** Steps a Crawl line's strips follow it in (its tipped path isn't straight). */
+const CRAWL_STEPS = 8;
 
 /** How many strips draw a gradient in the MP4: smooth to the eye at caption sizes. */
 const GRADIENT_BANDS = 10;
