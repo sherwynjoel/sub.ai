@@ -69,6 +69,7 @@
 .corners { display: inline-grid; grid-template-columns: auto auto; column-gap: 1.2em; line-height: 1.15; }
 .cine { display: inline-flex; flex-direction: column; align-items: center; }
 .cine > span { white-space: nowrap; }
+.stagger { display: inline-flex; flex-direction: column; align-items: stretch; } .stagger > span { white-space: nowrap; }
 /* Text aligned to a side: the lines (and the caption, in its box) flush left or right. */
 .cap.ta-left { justify-items: start; text-align: left; }
 .cap.ta-right { justify-items: end; text-align: right; }

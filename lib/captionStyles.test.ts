@@ -146,10 +146,10 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
   assert.match(ass, new RegExp(`Style: L1,Poppins ExtraBold,${Math.round(em * 1.762 * 10) / 10},`), "the layer's own size (em × the font's line height)");
 });
 
-test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 8 + Pro, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 45);
+test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 7 + Pro, with the default among them", () => {
+  assert.equal(STYLE_CHOICES.length, 44);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 16);
-  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 9);
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 8);
   assert.equal(STYLE_GROUPS[0], "Typography");
   assert.ok(STYLE_CHOICES.some((s) => s.id === DEFAULT_STYLE));
   assert.ok(!STYLE_GROUPS.includes("Playful"), "a group with nothing on offer isn't shown");
@@ -185,8 +185,11 @@ test("CINECUT typography: words (or letters) come in each in a layer of its own,
   const dlg = (id: string) => buildAss(cue, { styleId: id, lang: "ta", width: 1080, height: 1920 }).split("\n").filter((l) => l.startsWith("Dialogue"));
   const rise = dlg("cc-rise");
   assert.equal(rise.length, 3, "a layer a word");
-  assert.ok(rise.every((l) => /\\move\(540,\d+,540,\d+,0,270\)/.test(l)), "each rises into place");
-  assert.ok(rise.every((l) => l.replace(/\{[^}]*\}/g, "") .endsWith("slide up effect")), "the same text in every layer");
+  assert.ok(rise.every((l) => /\\move\((\d+),\d+,\1,\d+,0,270\)/.test(l)), "each rises into place");
+  // Rise Up: three staggered lines (left, centre, right), wine red / wine red (heavier) / cream
+  assert.deepEqual(rise.map((l) => l.match(/\\an(\d)/)![1]), ["4", "5", "6"]);
+  assert.ok(/\\1c&H1F017F&\\bord[\d.]+\\3c&H1F017F&/.test(rise[1]) && /\\1c&HD0EBF5&/.test(rise[2]));
+  assert.equal(resolveStyle("cc-rise").font, "Bebas Neue");
   assert.equal(dlg("cc-letter-rise").length, "slideupeffect".length, "a layer a letter");
   assert.ok(dlg("cc-bold-flicker").every((l) => /\\t\(40,41,\\alpha&H00&\)/.test(l)), "each word flickers on");
   const corners = dlg("cc-corners");

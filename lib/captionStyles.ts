@@ -53,7 +53,10 @@ export type CaptionStyle = {
   box?: string;                  // solid card behind the line
   effect?: Effect;
   stack?: { big: string; font: string; glow?: boolean; rgb?: boolean }; // "stack": the big middle word's colour and font, glowing / split into colours
-  hook?: { sizes: number[]; colors: string[]; fonts?: (string | undefined)[] }; // "hook": each line's size (em), colour and font, in turn
+  hook?: { sizes: number[]; colors: string[]; fonts?: (string | undefined)[] };
+  // Staggered lines: the first flush left, the middle centred, the last flush right (within the block as wide as
+  // its widest line), each in its colour; the middle one made heavier by an outline of its own colour.
+  stagger?: { colors: string[]; bold: number }; // "hook": each line's size (em), colour and font, in turn
   spacing?: number;              // letter spacing, em
   lineHeight?: number;           // space between lines: × the font's own line height (1 = as the font sets it)
   textAlign?: TextAlign;         // lines flush left / centred / flush right (the caption against that side of the safe zone)
@@ -77,7 +80,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-pro", name: "Pro", group: "Typography", blurb: "One big Titan One word at a time, the video inverted inside the letters (change the blend in Colour).", font: "Titan One", fontTa: "Mukta Malar ExtraBold", size: 1.09, color: W, effect: "oneword", blend: "difference" },
   { id: "cc-word-cut", name: "Word Cut", group: "Typography", blurb: "One big word at a time, cut on the beat.", font: "Playfair Display Bold Italic", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, effect: "oneword" },
   { id: "cc-cinematic", name: "Cinematic", group: "Typography", blurb: "Three lines narrowing down: the outer ones in rounded Comfortaa, the middle one big Poppins capitals; each word settles out of a soft blur as it's said.", font: "Comfortaa Bold", fontTa: "Hind Madurai", size: 1.06, color: W, shadow: 0.04, anim: "cinematic", effect: "cine" },
-  { id: "cc-rise", name: "Rise Up", group: "Typography", blurb: "Each word fades in, rising into place as it's said.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, reveal: "rise" },
+  { id: "cc-rise", name: "Rise Up", group: "Typography", blurb: "Three Bebas Neue lines, left, centre (bold) and right, wine red and cream; each word rises in as it's said.", font: "Bebas Neue", fontTa: "Mukta Malar ExtraBold", size: 1.0, color: "#7F011F", reveal: "rise", stagger: { colors: ["#7F011F", "#7F011F", "#F5EBD0"], bold: 0.035 } },
   { id: "cc-rise-spaced", name: "Rise Spaced", group: "Typography", blurb: "Airy, spaced-out words rising in one by one.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, spacing: 0.05, reveal: "rise" },
   { id: "cc-corners", name: "Corner Block", group: "Typography", blurb: "Small capitals pinned to a block's edges, popping on one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.96, caps: true, color: W, shadow: 0.04, effect: "corners" },
   { id: "cc-bold-flicker", name: "Bold Flicker", group: "Typography", blurb: "Big capitals that strobe on, word by word.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 0.96, caps: true, color: W, shadow: 0.04, reveal: "flicker", wordLines: true },
@@ -152,7 +155,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
-  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-spaced", "cc-corners", "cc-bold-flicker", "cc-letter-rise", "cc-typo-block",
+  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-corners", "cc-bold-flicker", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker",
   "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-rgb", "tpl-reels-simple", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
@@ -316,6 +319,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   if (c.font) s.font = c.font;
   if (c.fontTa) s.fontTa = c.fontTa;
   if (c.color) {
+    if (s.stagger) s.stagger = { ...s.stagger, colors: s.stagger.colors.map((x) => (x === s.color ? c.color! : x)) }; // the lines in the style's colour
     s.color = c.color;
     if (typeof s.future === "string") s.future = c.color + "66"; // dimmed version of the new colour
   }
@@ -431,7 +435,7 @@ export function shownLines(styleId: string, custom: CaptionCustom, text: string,
   const s = resolveStyle(styleId, custom), words = text.split(/\s+/).filter(Boolean);
   const g = s.lineHeight ?? 1;
   const brk = s.effect === "cine" ? new Set(cineRows(words.length).slice(0, -1).map(([, b]) => b - 1))
-    : spacesLines(s) ? lineBreaks(words, ratio && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : s.lines) : new Set<number>();
+    : spacesLines(s) || s.stagger ? lineBreaks(words, !s.stagger && ratio && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : linesOf(s)) : new Set<number>();
   return words.map((w, i) => w + (brk.has(i) ? "\n" : " ")).join("").trim();
 }
 
@@ -452,6 +456,8 @@ export function pushDown(text: string, at: number): { text: string; at: number }
   const out = [...lines.slice(0, k), before, next, ...lines.slice(k + 2)].filter((l, n) => l.trim() || n !== k).join("\n");
   return { text: out, at: start + (before ? before.length + 1 : 0) };
 }
+/** How many lines a caption is laid out on (the user's choice; staggered styles three), or unset to wrap by width. */
+export const linesOf = (s: CaptionStyle & Placement) => s.lines ?? (s.stagger ? 3 : undefined);
 export const cineBig = (rows: unknown[]) => (rows.length > 1 ? 1 : 0);
 /** The big line's size (× the style's), at most: it shrinks to fit the width. */
 export const CINE_BIG = 1.45;
@@ -750,11 +756,11 @@ export function buildAss(cues: Cue[], o: Opts) {
       return { nat, ys: Array.from({ length: n }, (_, k) => first + k * box), subY: first + (n - 1) * box + subGap + (subNat - subLine) / 2 };
     };
     // Tags placing an event's line at y: a slide moves it the same way (and gives the move's start offset and length).
-    function at(ev: string, y: number, x = ax): [string, number, number] {
+    function at(ev: string, y: number, x = ax, h = hz): [string, number, number] {
       const m = ev.match(/\\move\(([-\d.]+),([-\d.]+),([-\d.]+),([-\d.]+),(\d+),(\d+)\)/);
-      if (!m) return [`{\\an${5 + hz}\\pos(${Math.round(x)},${Math.round(y)})}` + ev, 0, 0];
+      if (!m) return [`{\\an${5 + h}\\pos(${Math.round(x)},${Math.round(y)})}` + ev, 0, 0];
       const dy = +m[2] - +m[4];
-      return [ev.replace(/\\an\d/, `\\an${5 + hz}`).replace(m[0], `\\move(${Math.round(x)},${Math.round(y + dy)},${Math.round(x)},${Math.round(y)},${m[5]},${m[6]})`), dy, +m[6]];
+      return [ev.replace(/\\an\d/, `\\an${5 + h}`).replace(m[0], `\\move(${Math.round(x)},${Math.round(y + dy)},${Math.round(x)},${Math.round(y)},${m[5]},${m[6]})`), dy, +m[6]];
     }
     // Text drawn by `lead` (which places it) with its line centred at y, nat tall: as it is, or with a gradient,
     // GRADIENT_BANDS copies each showing its strip of the line in its colour (libass fills a letter with one colour).
@@ -785,7 +791,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       subAt(start, end, ev, p.subY);
     };
     // (a word a line and Typo Block break their own way)
-    const brk = typedBreaks(main) ?? lineBreaks(words.map((w) => w.w), ownLines && !s.wordLines && s.effect !== "typo" ? lineCount(s, caseOf(s, main), ratio) : s.lines);
+    const brk = typedBreaks(main) ?? lineBreaks(words.map((w) => w.w), ownLines && !s.wordLines && s.effect !== "typo" ? lineCount(s, caseOf(s, main), ratio) : linesOf(s));
     const glue = (j: number) => (j ? (brk.has(j - 1) ? "\\N" : " ") : "");
     const q = s.lines === 1 ? "{\\q2}" : ""; // one line: no auto-wrap
 
@@ -903,17 +909,29 @@ export function buildAss(cues: Cue[], o: Opts) {
       const rise = (t0: string) => `{\\an${an}\\move(${Math.round(ax)},${Math.round(ay + dy)},${Math.round(ax)},${Math.round(ay)},0,${ms})}` + t0;
       const tagsFor = reveal === "flicker" ? flickerTags(FLICKER2) : `\\alpha&HFF&\\t(0,${ms},\\alpha&H00&)`;
       for (const g of groups) {
-        if (grad) { // each line its own event (so its strips can be cut), a word's layer only its line
+        if (grad || s.stagger) { // each line its own event (so its strips can be cut, or it sits on its own side), a word's layer only its line
           const rows: [number, number][] = [];
           for (let j = g.from; j < g.to; j++) if (j === g.from || glueK(j) === "\\N") rows.push([j, j + 1]); else rows[rows.length - 1][1] = j + 1;
           const k = s.keyword, natW = (j: number) => natOf(words[j].w, zOf(j) * (j === kw && k?.scale ? k.scale : 1), (j === kw && k?.font) || s.font);
           const nats = rows.map(([a, b]) => Math.max(...words.slice(a, b).map((_, n) => natW(a + n))));
           const p = stackAt(nats);
+          // stagger: the block as wide as its widest line (centred where the caption goes), the first line on its left
+          // edge, the middle centred, the last on its right edge; each line in its colour, the middle one heavier
+          const st = s.stagger, last = rows.length - 1, mid = rows.length > 2 ? 1 : -1;
+          const rowW = rows.map(([a, b]) => textWidth(words.slice(a, b).map((w) => w.w).join(" "), s.font, s.fontTa) * fs);
+          const blockW = Math.max(...rowW), cx = ax - (hz * blockW) / 2;
+          const side = (r: number) => (!st || rows.length === 1 || r === mid ? 0 : r === 0 ? -1 : r === last ? 1 : 0);
+          const rowTag = (r: number) => {
+            if (!st || grad) return "";
+            const col = colorOnly(st.colors[r === last && rows.length > 1 ? 2 : r === mid ? 1 : 0] ?? s.color);
+            return `\\1c${col}` + (r === mid ? `\\bord${px(st.bold)}\\3c${col}` : "");
+          };
           for (const u of revealUnits(words.slice(g.from, g.to), letters)) {
             // the strips span this word (a smaller word sits on the line's baseline, ~80% down a line)
             const j = g.from + u.j, r = rows.findIndex(([a, b]) => j >= a && j < b), n = natW(j), cy = p.ys[r] + 0.3 * (nats[r] - n);
-            const [lead, dy, ms2] = at(reveal === "flicker" ? "" : rise(""), p.ys[r]);
-            strips(Math.max(g.s, u.s), g.e, lead, cy, n, "{\\q2}" + body((jj, kk) => jj === j && (u.k === null || kk === u.k), tagsFor, g, ...rows[r]), 1, 0, 0, dy ? [[cy + dy, n], [cy, n]] : [], ms2);
+            const [lead, dy, ms2] = st ? at(reveal === "flicker" ? "" : rise(""), p.ys[r], cx + (side(r) * blockW) / 2, side(r)) : at(reveal === "flicker" ? "" : rise(""), p.ys[r]);
+            const text = body((jj, kk) => jj === j && (u.k === null || kk === u.k), tagsFor, g, ...rows[r]).replace(/\{\\r/g, `{\\r${rowTag(r)}`);
+            strips(Math.max(g.s, u.s), g.e, lead, cy, n, "{\\q2}" + text, 1, 0, 0, dy ? [[cy + dy, n], [cy, n]] : [], ms2);
           }
           subAt(g.s, g.e, "", p.subY);
           continue;

@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 
@@ -27,7 +27,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   // Lines as tall as libass draws them (its font's own line height), × the line spacing in the plain layout; with
   // spacing set, broken at the same words as the MP4 (lineCount), which places each line itself.
   const g = takesLineSpacing(s) ? s.lineHeight ?? 1 : 1, lh = lineBox(s, text) * g;
-  const brk = typedBreaks(text) ?? lineBreaks(words.map((w) => w.w), ratio && spacesLines(s) && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : s.lines);
+  const brk = typedBreaks(text) ?? lineBreaks(words.map((w) => w.w), ratio && spacesLines(s) && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : linesOf(s));
   let i = words.findIndex((w) => time < w.e);
   if (i < 0) i = words.length - 1;
   const p = Math.min(1, Math.max(0, (time - start) / Math.max(0.01, end - start)));
@@ -196,6 +196,16 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     body = <><span className="punch-a">{join(0, cut)}</span><span className="punch-b">{join(cut, words.length)}</span></>;
   } else if (s.effect === "vhs" || s.effect === "crawl") {
     body = breakLines(caseOf(s, text), s.lines);
+  } else if (s.stagger) {
+    // staggered lines (as the MP4): the first flush left, the middle centred, the last flush right, each its colour,
+    // the middle one heavier (an outline of its own colour)
+    const st = s.stagger, starts = [0, ...[...brk].filter((b) => b < words.length - 1).sort((a, b) => a - b).map((b) => b + 1)];
+    const n = starts.length, last = n - 1, mid = n > 2 ? 1 : -1;
+    body = <span className="stagger">{starts.map((a, r) => {
+      const col = st.colors[r === last && n > 1 ? 2 : r === mid ? 1 : 0] ?? s.color;
+      return <span key={a} style={{ textAlign: n === 1 || r === mid ? "center" : r === 0 ? "left" : r === last ? "right" : "center", ...(grad ? {} : { color: col }),
+        ...(r === mid ? { WebkitTextStroke: `${st.bold * 2}em ${col}` } : {}) }}>{join(a, r + 1 < n ? starts[r + 1] : words.length).filter((x) => typeof x !== "object" || x === null || (x as React.ReactElement).type !== "br")}</span>;
+    })}</span>;
   } else {
     body = join(0, words.length);
   }
