@@ -351,3 +351,15 @@ test("Lines the user typed (Enter while editing) win: Cinematic's rows follow th
   const c = { start: 0, end: 3, ta: "this is\nhow we", en: "" };
   assert.equal(setWord(c, "ta", 1, { text: "was" }).ta, "this was\nhow we");
 });
+
+test("Editing starts from the lines shown; Enter pushes the words after the cursor down a line", async () => {
+  const { shownLines, pushDown } = await import("./captionStyles");
+  const shown = shownLines("cc-cinematic", {}, "website? 70% of customers check online before");
+  assert.equal(shown.split("\n").length, 3);
+  assert.equal(shownLines("cc-cinematic", {}, "a b\nc d"), "a b\nc d", "typed lines stay");
+  // Enter before "70%": it (and what follows on its line) joins the start of the next line
+  const t = "website? 70% of\ncustomers check\nonline before";
+  assert.deepEqual(pushDown(t, t.indexOf("70%")), { text: "website?\n70% of customers check\nonline before", at: 9 });
+  // on the last line: a new line
+  assert.equal(pushDown(t, t.indexOf("before")).text, "website? 70% of\ncustomers check\nonline\nbefore");
+});

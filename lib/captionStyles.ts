@@ -399,6 +399,36 @@ export function cineRows(n: number, typed?: Set<number> | null): [number, number
   const a = Math.max(1, Math.round((n * 4) / 9)), b = Math.max(1, Math.min(n - a - 1, Math.round((n * 3) / 9)));
   return [[0, a], [a, a + b], [a + b, n]];
 }
+/**
+ * A caption's text with the lines it shows on screen as newlines (the ones the user typed, else Cinematic's three or
+ * the line layout's breaks), so editing it starts from what's seen; text that wraps on its own stays one line.
+ */
+export function shownLines(styleId: string, custom: CaptionCustom, text: string, ratio?: number) {
+  if (typedBreaks(text)) return text.trim();
+  const s = resolveStyle(styleId, custom), words = text.split(/\s+/).filter(Boolean);
+  const g = s.lineHeight ?? 1;
+  const brk = s.effect === "cine" ? new Set(cineRows(words.length).slice(0, -1).map(([, b]) => b - 1))
+    : spacesLines(s) ? lineBreaks(words, ratio && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : s.lines) : new Set<number>();
+  return words.map((w, i) => w + (brk.has(i) ? "\n" : " ")).join("").trim();
+}
+
+/**
+ * Enter in a caption being edited, the cursor at `at`: the words after it go to the start of the next line (so
+ * pressing Enter before "70%" moves it down a line, the lines staying as many); on the last line, a new line.
+ */
+export function pushDown(text: string, at: number): { text: string; at: number } {
+  const lines = text.split("\n");
+  let k = 0, start = 0;
+  while (k < lines.length - 1 && at > start + lines[k].length) { start += lines[k].length + 1; k++; }
+  const before = lines[k].slice(0, at - start).trimEnd(), after = lines[k].slice(at - start).trim();
+  if (k === lines.length - 1 || !after) {
+    const out = [...lines.slice(0, k), before, after, ...lines.slice(k + 1)].join("\n");
+    return { text: out, at: start + before.length + 1 };
+  }
+  const next = [after, lines[k + 1].trim()].filter(Boolean).join(" ");
+  const out = [...lines.slice(0, k), before, next, ...lines.slice(k + 2)].filter((l, n) => l.trim() || n !== k).join("\n");
+  return { text: out, at: start + (before ? before.length + 1 : 0) };
+}
 export const cineBig = (rows: unknown[]) => (rows.length > 1 ? 1 : 0);
 /** The big line's size (× the style's), at most: it shrinks to fit the width. */
 export const CINE_BIG = 1.45;
