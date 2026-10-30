@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { createPortal } from "react-dom";
 import type { Cue } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
-import { CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
+import { CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer, pushDown, shownLines } from "@/lib/captionStyles";
 import { insertAt, insertBetween, mergeCues, removeCue, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
@@ -75,6 +75,7 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
 }) {
   const [t, setT] = useState(0);
   const [sizing, setSizing] = useState<number | null>(null); // the size shown while the corner is dragged
+  const [draft, setDraft] = useState<string | null>(null); // the text being typed (its lines shown live above it)
   useEffect(() => {
     const v = video.current;
     if (!v) return;
@@ -134,15 +135,33 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
     addEventListener("pointerup", stop);
   };
   const line = view === "en" ? "en" : "ta";
+  // Editing starts from the lines as they're shown; Enter moves the words after the cursor down a line.
+  const shown = editing !== null ? shownLines(styleId, own, editing, ratio) : "";
+  const typing = draft ?? shown;
+  const done = (text: string | null) => { setDraft(null); onEditDone(text === null || text.trim() === shown ? null : text); };
+  const enter = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const ta = e.currentTarget;
+    if (e.key === "Escape") { setDraft(null); onEditDone(null); return; }
+    if (e.key !== "Enter" || e.shiftKey) return;
+    e.preventDefault();
+    if (e.metaKey || e.ctrlKey) { ta.blur(); return; }
+    const next = pushDown(ta.value, ta.selectionStart);
+    setDraft(next.text);
+    requestAnimationFrame(() => ta.setSelectionRange(next.at, next.at));
+  };
   return (
     <div className={`overlay styled${free ? " free" : ""}${ghost ? " ghost" : ""}${picked(c.start) ? " picked" : ""}`} style={place}>
-      {editing !== null ? (
-        <textarea className="cap-inline" lang={line === "ta" ? undefined : "en"} defaultValue={editing} autoFocus rows={3} aria-label="Caption text"
-          title="Enter starts a new line (the caption breaks there) · Ctrl/⌘+Enter or click away to save · Esc to cancel"
-          onFocus={(e) => e.currentTarget.select()}
-          onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.currentTarget.blur(); } if (e.key === "Escape") onEditDone(null); }}
-          onBlur={(e) => onEditDone(e.target.value)} />
-      ) : (
+      {editing !== null ? (<>
+        {typing.trim() && <div className="cap-typing" aria-hidden="true">
+          <StyledCaption styleId={styleId} custom={own} text={typing} start={c.start} end={c.end} time={c.end - 0.01} ratio={ratio}
+            starts={typing.split(/\s+/).filter(Boolean).map(() => c.start)} /> {/* every word in, settled */}
+        </div>}
+        <textarea className="cap-inline" lang={line === "ta" ? undefined : "en"} value={typing} onChange={(e) => setDraft(e.target.value)} autoFocus
+          rows={Math.max(2, typing.split("\n").length)} aria-label="Caption text"
+          title="Enter moves the words after the cursor to the next line · Shift+Enter a new line · Ctrl/⌘+Enter or click away to save · Esc to cancel"
+          ref={(el) => { if (el && !el.dataset.placed) { el.dataset.placed = "1"; el.setSelectionRange(el.value.length, el.value.length); } }} // the cursor at the end, once
+          onKeyDown={enter} onBlur={(e) => done(e.target.value)} />
+      </>) : (
       <div className="drag-handle" onPointerDown={drag} onDoubleClick={onEditOpen} title="Tap to pick, drag to move, double-click to edit the text">
         <StyledCaption styleId={styleId} custom={own} text={main} sub={view === "both" ? c.en : undefined} start={c.start} end={c.end} time={ghost ? c.end - 0.01 : t}
           starts={line === "en" ? c.we : c.w} colors={line === "en" ? c.wce : c.wc} ratio={ratio} />
