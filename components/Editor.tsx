@@ -92,11 +92,13 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
   const main = view === "en" ? c.en : c.ta;
   if (!main.trim()) return null;
   const own = mergeCustom(custom, c.style);
-  const { position, offset, x, y, safe, scale } = resolveStyle(styleId, own, portrait);
+  const { position, offset, x, y, safe, scale, textAlign } = resolveStyle(styleId, own, portrait);
   const free = x !== undefined && y !== undefined;
   const pct = (n: number) => `${n * 100}%`;
-  const sides = { left: pct(safe.left), right: pct(safe.right) };
-  const place: React.CSSProperties = free ? { left: pct(x), top: pct(y), maxWidth: pct(Math.min(0.92, 2 * Math.min(x - safe.left, 1 - safe.right - x))) }
+  const sides = { left: pct(safe.left), right: pct(safe.right), textAlign };
+  // Dragged with the text aligned to a side: the lines flush to that side of a column centred on the point (as the MP4)
+  const column = 2 * Math.min(0.5 - Math.max(safe.left, safe.right), x !== undefined ? Math.min(x - safe.left, 1 - safe.right - x) : 0.5);
+  const place: React.CSSProperties = free ? { left: pct(x), top: pct(y), ...(textAlign && textAlign !== "center" ? { width: pct(column), textAlign } : { maxWidth: pct(Math.min(0.92, 2 * Math.min(x - safe.left, 1 - safe.right - x))) }) }
     : position === "top" ? { ...sides, top: pct(offset), bottom: "auto" }
     : position === "middle" ? { ...sides, top: pct((safe.top + 1 - safe.bottom) / 2), bottom: "auto", transform: "translateY(-50%)" }
     : { ...sides, bottom: pct(offset) };
@@ -106,7 +108,7 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
     e.preventDefault();
     video.current?.pause();
     onTap(c.start); // tapping a caption on the video picks it (and its tools come up under the video)
-    follow(e, frame, (x, y) => { video.current?.pause(); onMove(i, x, y); }, 0.05);
+    follow(e, frame, (x, y) => { video.current?.pause(); onMove(i, x, y); }, 0.05, e.currentTarget.parentElement);
   };
   // The corner dot resizes: the caption grows as the pointer moves away from its centre (Size, 40–260%).
   const resize = (e: React.PointerEvent<HTMLSpanElement>) => {
@@ -258,8 +260,9 @@ function Guides({ on }: { on: boolean }) {
  * to where it is (grabbing a caption by its left end used to pull its centre there), only once it has moved a few
  * pixels (a click or a shaky tap leaves it where it is), and snapping to the middle of the frame when near it.
  */
-function follow(e: React.PointerEvent, frame: DOMRect, onMove: (x: number, y: number) => void, edge: number) {
-  const el = e.currentTarget as HTMLElement, box = el.getBoundingClientRect();
+function follow(e: React.PointerEvent, frame: DOMRect, onMove: (x: number, y: number) => void, edge: number, around?: HTMLElement | null) {
+  // the centre of the thing (or of what it sits in: a caption's column, when its text is aligned to a side)
+  const el = e.currentTarget as HTMLElement, box = (around ?? el).getBoundingClientRect();
   const x0 = (box.left + box.width / 2 - frame.left) / frame.width, y0 = (box.top + box.height / 2 - frame.top) / frame.height;
   const sx = e.clientX, sy = e.clientY;
   let moving = false;

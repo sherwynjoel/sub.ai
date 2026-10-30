@@ -304,3 +304,18 @@ test("Cinematic: line spacing moves its three lines apart (editor slider shown)"
   assert.equal(ys(1.6).length, 3);
   assert.ok(gap(1.6) > gap(1) * 1.4 && gap(0.8) < gap(1), `${gap(0.8)} ${gap(1)} ${gap(1.6)}`);
 });
+
+test("Text alignment: every style anchors left / right (safe zone edge, or the dragged column's)", () => {
+  const ass = (id: string, custom: object) => buildAss([{ start: 0, end: 4, ta: "this is how we make great videos for every business", en: "" }], { styleId: id, lang: "ta", width: 1080, height: 1920, custom });
+  for (const st of CAPTION_STYLES) {
+    const l = ass(st.id, { textAlign: "left" }), r = ass(st.id, { textAlign: "right" });
+    assert.notEqual(l, r, st.name);
+    // the style line, or the events' own \an, is left / right anchored
+    assert.ok(/Style: Main,[^\n]*,1,\d+,\d+,\d+,1\n/.test(l) || /\\an[147]/.test(l), `${st.name} left`);
+    assert.ok(/Style: Main,[^\n]*,3,\d+,\d+,\d+,1\n/.test(r) || /\\an[369]/.test(r), `${st.name} right`);
+  }
+  // dragged: lines flush to the side of a column centred on the point
+  const d = ass("cc-cinematic", { textAlign: "left", x: 0.5, y: 0.5 });
+  assert.ok(sanitizeCustom({ textAlign: "left" }).textAlign === "left" && sanitizeCustom({ textAlign: "up" }).textAlign === undefined);
+  assert.ok(Math.min(...[...d.matchAll(/\\pos\((\d+),/g)].map((m) => +m[1])) < 540);
+});

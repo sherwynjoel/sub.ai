@@ -54,6 +54,13 @@
 .corners { display: inline-grid; grid-template-columns: auto auto; column-gap: 1.2em; line-height: 1.15; }
 .cine { display: inline-flex; flex-direction: column; align-items: center; }
 .cine > span { white-space: nowrap; }
+/* Text aligned to a side: the lines (and the caption, in its box) flush left or right. */
+.cap.ta-left { justify-items: start; text-align: left; }
+.cap.ta-right { justify-items: end; text-align: right; }
+.cap.ta-left .cine { align-items: flex-start; }
+.cap.ta-right .cine { align-items: flex-end; }
+.cap.ta-left.fx-hook .cap-main { justify-items: start; }
+.cap.ta-right.fx-hook .cap-main { justify-items: end; }
 /* Gradient text (every style): each line's letters filled top colour → bottom colour; each word (and each line of the
    layouts built of lines) its own, so words of other sizes and ones that move take it whole, as in the MP4 */
 .cap-grad { -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; -webkit-box-decoration-break: clone; box-decoration-break: clone; }

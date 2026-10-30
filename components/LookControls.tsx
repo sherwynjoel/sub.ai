@@ -12,6 +12,16 @@ type Props = {
 
 const hex = (c: string | undefined, fallback: string) => (c ?? fallback).slice(0, 7);
 
+/** Four lines, the short ones flush to that side (or centred). */
+function AlignIcon({ side }: { side: "left" | "center" | "right" }) {
+  const x = (w: number) => (side === "left" ? 2 : side === "right" ? 14 - w : 8 - w / 2);
+  return (
+    <svg width="14" height="12" viewBox="0 0 16 12" aria-hidden="true">
+      {[12, 8, 12, 6].map((w, n) => <rect key={n} x={x(w)} y={n * 3} width={w} height="1.6" rx=".8" fill="currentColor" />)}
+    </svg>
+  );
+}
+
 /** Every control for how captions look, for the whole project or for one caption. */
 export default function LookControls({ look, own, set, tamil, project, setAll }: Props) {
   const highlight = own.highlight ?? "style";
@@ -42,6 +52,13 @@ export default function LookControls({ look, own, set, tamil, project, setAll }:
           <div className="seg" role="group" aria-label="Letter case">
             {([["none", "Aa"], ["upper", "AA"], ["lower", "aa"]] as const).map(([v, l]) => (
               <button key={v} title={v === "none" ? "As typed" : v === "upper" ? "Capitals" : "Lower case"} aria-pressed={(look.caps ? "upper" : look.lower ? "lower" : "none") === v} onClick={() => set({ case: v })}>{l}</button>
+            ))}
+          </div>
+          <div className="seg" role="group" aria-label="Text alignment">
+            {(["left", "center", "right"] as const).map((v) => (
+              <button key={v} title={`Align ${v === "center" ? "centre" : v}`} aria-label={`Align ${v === "center" ? "centre" : v}`} aria-pressed={(look.textAlign ?? "center") === v} onClick={() => set({ textAlign: v })}>
+                <AlignIcon side={v} />
+              </button>
             ))}
           </div>
         </div>
