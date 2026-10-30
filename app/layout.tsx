@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Instrument_Sans, Noto_Sans_Tamil } from "next/font/google";
+import Splash from "@/components/Splash";
 import Track from "@/components/Track";
 import UpdateBanner from "@/components/UpdateBanner";
 import { BRAND } from "@/lib/brand";
@@ -24,8 +25,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${display.variable} ${tamil.variable}`}>
-      <body>{children}<Track /><UpdateBanner /></body>
+    <html lang="en" className={`${sans.variable} ${display.variable} ${tamil.variable}`} suppressHydrationWarning>
+      <head>
+        {/* The intro plays once per visit: when this tab's visit already saw it, hide it before the first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: `try{if(sessionStorage.getItem("vs-splash"))document.documentElement.dataset.splash="seen"}catch(e){}` }} />
+      </head>
+      <body><Splash />{children}<Track /><UpdateBanner /></body>
     </html>
   );
 }
