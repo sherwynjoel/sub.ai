@@ -177,3 +177,10 @@ html[data-splash="seen"] .splash { display: none; }
 /* Between pages that take a moment (app/loading.tsx) */
 .page-loading { min-height: 60vh; display: grid; place-items: center; }
 .page-loading-glass { width: min(320px, 80vw); height: 320px; border-radius: 28px; }
+
+/* No zooming on phones and tablets (with the viewport in app/layout.tsx): no double-tap zoom, no text inflation,
+   and every field at 16px or more, below which iOS zooms in when it's tapped. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: manipulation; }
+@media (hover: none) and (pointer: coarse) {
+  input, select, textarea, .cap-inline, .tl-type, .wpill.editing, .canvas-bar select { font-size: max(16px, 1em) !important; }
+}
