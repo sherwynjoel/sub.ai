@@ -986,7 +986,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               </div>
               <p className="muted small">{onlyThis ? "Changes here, and dragging or resizing this caption on the video, change only this caption." : "Changes here, and dragging or resizing a caption on the video, change every caption."}</p>
               {onlyThis
-                ? <LookControls look={selLook} own={own} set={(patch) => styleCue(selected, patch)} tamil={tamil} project={look} />
+                ? <LookControls look={selLook} own={own} set={(patch) => styleCue(selected, patch)} tamil={tamil} project={look} setAll={lookAll} />
                 : <LookControls look={look} own={custom} set={lookAll} tamil={tamil} />}
 
               <h3>Words</h3>
