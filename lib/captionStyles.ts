@@ -38,6 +38,7 @@ export type CaptionStyle = {
   stack?: { big: string; font: string; glow?: boolean; rgb?: boolean }; // "stack": the big middle word's colour and font, glowing / split into colours
   hook?: { sizes: number[]; colors: string[]; fonts?: (string | undefined)[] }; // "hook": each line's size (em), colour and font, in turn
   spacing?: number;              // letter spacing, em
+  lineHeight?: number;           // space between lines: × the font's own line height (1 = as the font sets it)
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
   shadowColor?: string;
@@ -166,7 +167,7 @@ export type CaptionCustom = {
   safe?: SafeZoneId;             // platform safe zone captions must stay inside
   safeCustom?: Margins;          // margins for safe: "custom"
   bold?: boolean; italic?: boolean;
-  spacing?: number; opacity?: number; rotate?: number;
+  spacing?: number; lineHeight?: number; opacity?: number; rotate?: number;
   shadowColor?: string; shadowSize?: number; boxPad?: number;
   anim?: Anim; highlight?: Highlight;
   canvas?: Canvas; layers?: TextLayer[]; logo?: Logo; // project only
@@ -233,6 +234,7 @@ export function sanitizeCustom(input: unknown): CaptionCustom {
   if (typeof i.bold === "boolean") out.bold = i.bold;
   if (typeof i.italic === "boolean") out.italic = i.italic;
   const sp = clamp(i.spacing, -0.1, 0.5); if (sp !== undefined) out.spacing = sp;
+  const lh = clamp(i.lineHeight, 0.7, 2.5); if (lh !== undefined) out.lineHeight = lh;
   const op = clamp(i.opacity, 0.1, 1); if (op !== undefined) out.opacity = op;
   const rot = clamp(i.rotate, -45, 45); if (rot !== undefined) out.rotate = rot;
   if (typeof i.shadowColor === "string" && HEX.test(i.shadowColor)) out.shadowColor = i.shadowColor;
@@ -268,6 +270,7 @@ export function sanitizeCustom(input: unknown): CaptionCustom {
 export function ownLook(input: unknown): CaptionCustom {
   const out = sanitizeCustom(input);
   delete out.safe; delete out.safeCustom; delete out.canvas; delete out.layers; delete out.logo; delete out.show;
+  delete out.lineHeight; // the whole project's (the MP4 spaces every line of the file the same way)
   return out;
 }
 
@@ -300,6 +303,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   if (c.bold !== undefined) s.bold = c.bold;
   if (c.italic !== undefined) s.italic = c.italic;
   if (c.spacing !== undefined) s.spacing = c.spacing;
+  if (c.lineHeight !== undefined) s.lineHeight = c.lineHeight;
   if (c.opacity !== undefined) s.opacity = c.opacity;
   if (c.rotate !== undefined) s.rotate = c.rotate;
   if (c.shadowColor) s.shadowColor = c.shadowColor;
@@ -618,7 +622,10 @@ export function buildAss(cues: Cue[], o: Opts) {
     const words = wordTimes(caseOf(s, main), c.start, c.end, o.lang === "en" ? c.we : c.w);
     // A keyword on a line of its own (Letter Rise) is a name when there is one, as in the reference ("EveryCut").
     const kw = s.keyword?.line ? nameOrKeyword(wordTimes(main, c.start, c.end).map((w) => w.w)) : keywordIndex(words.map((w) => w.w));
-    const brk = lineBreaks(words.map((w) => w.w), s.lines);
+    // Line spacing other than the font's own: the lines are broken here and each is placed at its own height
+    // (libass has no line spacing; a line is as tall as its font). The editor breaks at the same words (lineCount).
+    const g = s.lineHeight ?? 1, ownLines = Math.abs(g - 1) > 0.005 && spacesLines(s);
+    const brk = lineBreaks(words.map((w) => w.w), ownLines ? lineCount(s, caseOf(s, main), o.width / o.height) : s.lines);
     const glue = (j: number) => (j ? (brk.has(j - 1) ? "\\N" : " ") : "");
     const q = s.lines === 1 ? "{\\q2}" : ""; // one line: no auto-wrap
 
@@ -804,6 +811,26 @@ export function buildAss(cues: Cue[], o: Opts) {
         const ev = i === words.length - 1 && s.anim === "bouncyout" ? ev0 + "{\\fad(0,250)}" : ev0;
         text = words.map((_, j) => glue(j) + word(j, i, each)).join("");
         const sub = each && tail ? tail.replace("}", each + "}") : tail;
+        if (ownLines) { // each line at its own height, centred on the caption's anchor; the English under them
+          const starts = [0, ...[...brk].sort((a, b) => a - b).map((b) => b + 1)], n = starts.length;
+          // Line centres g line-heights apart; the line nearest the anchor stays where the font would put it (a bottom
+          // caption's last line, a top caption's first), the others move; centred captions grow both ways.
+          const nat = fs * lineBox(s, main), box = nat * g;
+          const subN = sub ? Math.max(1, Math.ceil((textWidth(c.en, s.font, s.fontTa) * secondEm) / ((o.width - marginL - marginR) * 0.95))) : 0;
+          const subNat = subN * secondEm * lineScale(s.font), subGap = (box + secondEm * lineScale(s.font) * g) / 2;
+          const span = (n - 1) * box + (sub ? subGap + (subNat - secondEm * lineScale(s.font)) / 2 : 0); // first centre → last centre
+          const first = s.x !== undefined || align === 5 ? ay - span / 2 : align === 8 ? ay + nat / 2 : ay - (sub ? subNat : nat) / 2 - span;
+          const top = first - box / 2;
+          const at = (y: number) => ev.includes("\\move") // a slide moves each line the same way
+            ? ev.replace(/\\an\d/, "\\an5").replace(/\\move\(([-\d.]+),([-\d.]+),([-\d.]+),([-\d.]+)/, (_, _x1, y1, _x2, y2) => `\\move(${Math.round(ax)},${Math.round(y + (+y1 - +y2))},${Math.round(ax)},${Math.round(y)}`)
+            : `{\\an5\\pos(${Math.round(ax)},${Math.round(y)})}` + ev;
+          starts.forEach((a, k) => {
+            const b = k + 1 < n ? starts[k + 1] : words.length;
+            add(wt.s, end, at(top + (k + 0.5) * box) + "{\\q2}" + words.slice(a, b).map((_, m) => (m ? " " : "") + word(a + m, i, each)).join(""), 0, 0, 0);
+          });
+          if (sub) add(wt.s, end, at(first + (n - 1) * box + subGap + (subNat - secondEm * lineScale(s.font)) / 2) + sub.replace(/^\\N/, ""), 0, marginL, marginR);
+          return;
+        }
         add(wt.s, end, (ev.includes("\\move") ? "" : pos) + ev + q + text + sub, 0, wrapM, wrapM);
         return;
       }
@@ -841,4 +868,25 @@ Style: ${second}
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 ${events.join("\n")}
 `;
+}
+
+/**
+ * Line spacing (lineHeight) applies to the plain layout, where captions are lines of words; styles that lay out their
+ * own lines (hooks, stacks, one word, corners, reveals…) keep their design.
+ */
+export const spacesLines = (s: CaptionStyle) => !((s.effect && s.effect !== "wobble") || s.reveal || s.wordLines || s.keyword?.line);
+
+/** How tall a line of this text is, × the em: its fonts' own line height (what libass draws, so the editor matches). */
+export const lineBox = (s: CaptionStyle, text: string) =>
+  Math.max(lineScale(s.font), /[\u0B80-\u0BFF]/.test(text) ? lineScale(s.fontTa ?? TAMIL_FONT) : 0);
+
+/**
+ * How many lines a caption takes in a frame of this shape (width ÷ height): its set line count, else as many as its
+ * width needs between the side margins. The editor and the MP4 break at the same words with it.
+ */
+export function lineCount(s: CaptionStyle & Placement, text: string, ratio: number) {
+  if (s.lines) return s.lines;
+  const w = Math.max(ratio, 1), em = 0.075 * (s.size ?? 1); // in short sides: the frame is w wide, the em 7.5% of it
+  const room = s.x !== undefined ? 2 * Math.min(s.x - s.safe.left, 1 - s.safe.right - s.x) : 1 - s.safe.left - s.safe.right;
+  return Math.max(1, Math.ceil((textWidth(text, s.font, s.fontTa) * em) / (w * room * 0.95) - 1e-6));
 }

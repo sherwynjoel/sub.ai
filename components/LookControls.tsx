@@ -1,5 +1,5 @@
 "use client";
-import { ANIMS, CAPTION_FONTS, HIGHLIGHTS, TAMIL_FONTS, type Anim, type CaptionCustom, type CaptionStyle, type Highlight, type Placement } from "@/lib/captionStyles";
+import { ANIMS, CAPTION_FONTS, spacesLines, HIGHLIGHTS, TAMIL_FONTS, type Anim, type CaptionCustom, type CaptionStyle, type Highlight, type Placement } from "@/lib/captionStyles";
 
 type Props = {
   look: CaptionStyle & Placement;   // the resolved look these controls show
@@ -47,6 +47,12 @@ export default function LookControls({ look, own, set, tamil, project }: Props) 
         <label>Letter spacing <span className="cz-val">{Math.round((look.spacing ?? 0) * 100)}</span>
           <input type="range" min={-0.1} max={0.5} step={0.01} value={look.spacing ?? 0} onChange={(e) => set({ spacing: +e.target.value })} />
         </label>
+        {!project && (spacesLines(look)
+          ? <label>Line spacing <span className="cz-val">{Math.round((look.lineHeight ?? 1) * 100)}%</span>
+              <input type="range" min={0.7} max={2.5} step={0.05} value={look.lineHeight ?? 1} onChange={(e) => set({ lineHeight: +e.target.value })}
+                title="Space between the lines of a caption (and the English line under it), for every caption" />
+            </label>
+          : <p className="muted small">Line spacing: this style lays out its own lines.</p>)}
       </fieldset>
 
       <fieldset>
