@@ -155,7 +155,12 @@ export const CAPTION_FONTS = [
   "Inter", "Inter Italic", "Montserrat SemiBold", "Playfair Display Italic", "Playfair Display Bold Italic",
   "Inter Bold", "Nunito ExtraBold", // stand-ins for the pack's commercial Helvetica / Neue Haas and Helvetica Rounded
   "Open Sauce Sans Black", // the CINECUT project's keyword font
+  // more free fonts (Great Vibes, Figtree and GFS Didot: free look-alikes of the commercial Snell Roundhand, Avenir, Didot)
+  "Great Vibes", "Figtree Bold", "GFS Didot", "Oswald Bold", "Bebas Neue", "Lobster", "Pacifico", "Caveat Bold", "Righteous",
+  "Archivo Black", "Abril Fatface", "Alfa Slab One", "Comfortaa Bold", "Luckiest Guy", "Titan One",
 ] as const;
+/** The commercial font a free one stands in for (shown in the font menu). */
+export const FONT_LIKE: Partial<Record<string, string>> = { "Great Vibes": "Snell", "Figtree Bold": "Avenir", "GFS Didot": "Didot" };
 
 /** Fonts for Tamil letters (bundled in public/caption-fonts; Noto Sans Tamil is also installed on the server). */
 export const TAMIL_FONTS = ["Noto Sans Tamil", "Mukta Malar ExtraBold", "Hind Madurai", "Kavivanar", "Pavanam", "Meera Inimai"] as const;

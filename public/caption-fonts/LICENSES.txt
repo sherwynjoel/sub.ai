@@ -12,3 +12,8 @@ Inter Bold (from Inter, above) and Nunito ExtraBold (SIL OFL 1.1, https://github
 way: stand-ins for the template pack's commercial Helvetica / Neue Haas Grotesk and Helvetica Rounded.
 Open Sauce Sans Black: SIL Open Font License 1.1, from https://github.com/marcologous/Open-Sauce-Fonts (the CINECUT project's
 keyword font), given its own family name the same way.
+More caption fonts, SIL Open Font License 1.1, from https://github.com/google/fonts (ofl/...): Great Vibes, GFS Didot,
+Bebas Neue, Lobster, Pacifico, Righteous, Archivo Black, Abril Fatface, Alfa Slab One, Titan One; and from the variable
+fonts, fixed Bold styles given their own family names as above: Figtree Bold, Oswald Bold, Caveat Bold, Comfortaa Bold.
+Luckiest Guy: Apache License 2.0, from https://github.com/google/fonts (apache/luckiestguy).
+Great Vibes, Figtree and GFS Didot are free look-alikes of the commercial Snell Roundhand, Avenir and Didot.

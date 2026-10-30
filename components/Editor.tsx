@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { createPortal } from "react-dom";
 import type { Cue } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
-import { CANVAS_RATIOS, CAPTION_FONTS, highlights, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
+import { CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer } from "@/lib/captionStyles";
 import { insertAt, insertBetween, mergeCues, removeCue, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
@@ -61,8 +61,9 @@ const EMOJIS = ["😀", "😂", "🔥", "❤️", "👍", "🎉", "✨", "💯",
 const FRAME = 1 / 30;
 /** The speed button's steps. */
 const SPEEDS = [1, 1.5, 2, 0.5];
-/** Fonts added from the Premiere template pack: marked "New" in the font row. */
-const NEW_FONTS: string[] = ["Inter", "Inter Bold", "Inter Italic", "Montserrat SemiBold", "Playfair Display Italic", "Playfair Display Bold Italic", "Nunito ExtraBold", "Open Sauce Sans Black"];
+/** The latest fonts added: marked "New" in the font row. */
+const NEW_FONTS: string[] = ["Great Vibes", "Figtree Bold", "GFS Didot", "Oswald Bold", "Bebas Neue", "Lobster", "Pacifico", "Caveat Bold", "Righteous",
+  "Archivo Black", "Abril Fatface", "Alfa Slab One", "Comfortaa Bold", "Luckiest Guy", "Titan One"];
 
 /** The styled caption over the player, redrawn every frame while the video plays so word timing is smooth. */
 function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, selected, picked, editing, onMove, onResize, onTap, onEditOpen, onEditDone }: {
@@ -1104,7 +1105,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 </button>
                 {[...NEW_FONTS, ...CAPTION_FONTS.filter((f) => !NEW_FONTS.includes(f))].map((f) => ( // the new ones first
                   <button key={f} role="radio" aria-checked={custom.font === f} onClick={() => tweak({ font: f })}>
-                    <span style={{ fontFamily: `"${f}"` }}>Aa</span><small>{f}</small>
+                    <span style={{ fontFamily: `"${f}"` }}>Aa</span><small>{f}{FONT_LIKE[f] ? ` (${FONT_LIKE[f]})` : ""}</small>
                     {NEW_FONTS.includes(f) && <i className="fc-new">New</i>}
                   </button>
                 ))}

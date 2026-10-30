@@ -1,5 +1,5 @@
 "use client";
-import { ANIMS, CAPTION_FONTS, highlights, takesLineSpacing, HIGHLIGHTS, TAMIL_FONTS, type Anim, type CaptionCustom, type CaptionStyle, type Highlight, type Placement } from "@/lib/captionStyles";
+import { ANIMS, CAPTION_FONTS, FONT_LIKE, highlights, takesLineSpacing, HIGHLIGHTS, TAMIL_FONTS, type Anim, type CaptionCustom, type CaptionStyle, type Highlight, type Placement } from "@/lib/captionStyles";
 
 type Props = {
   look: CaptionStyle & Placement;   // the resolved look these controls show
@@ -32,7 +32,7 @@ export default function LookControls({ look, own, set, tamil, project, setAll }:
         <label>Font
           <select value={project ? own.font ?? "" : look.font} onChange={(e) => set({ font: e.target.value || undefined })}>
             {project && <option value="">Project ({project.font})</option>}
-            {CAPTION_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
+            {CAPTION_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f}{FONT_LIKE[f] ? ` (like ${FONT_LIKE[f]})` : ""}</option>)}
           </select>
         </label>
         {tamil && <label>Tamil font
