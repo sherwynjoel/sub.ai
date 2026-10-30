@@ -62,8 +62,8 @@ const FRAME = 1 / 30;
 const NEW_FONTS: string[] = ["Inter", "Inter Bold", "Inter Italic", "Montserrat SemiBold", "Playfair Display Italic", "Playfair Display Bold Italic", "Nunito ExtraBold", "Open Sauce Sans Black"];
 
 /** The styled caption over the player, redrawn every frame while the video plays so word timing is smooth. */
-function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, picked, editing, onMove, onResize, onTap, onEditOpen, onEditDone }: {
-  video: React.RefObject<HTMLVideoElement | null>; cues: Cue[]; styleId: string; custom: CaptionCustom; portrait: boolean; view: View; selected: number;
+function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, selected, picked, editing, onMove, onResize, onTap, onEditOpen, onEditDone }: {
+  video: React.RefObject<HTMLVideoElement | null>; cues: Cue[]; styleId: string; custom: CaptionCustom; portrait: boolean; ratio: number; view: View; selected: number;
   picked: (start: number) => boolean; editing: string | null;
   onMove: (i: number, x: number, y: number) => void;
   onResize: (i: number, size: number) => void;
@@ -138,7 +138,7 @@ function LiveCaption({ video, cues, styleId, custom, portrait, view, selected, p
       ) : (
       <div className="drag-handle" onPointerDown={drag} onDoubleClick={onEditOpen} title="Tap to pick, drag to move, double-click to edit the text">
         <StyledCaption styleId={styleId} custom={own} text={main} sub={view === "both" ? c.en : undefined} start={c.start} end={c.end} time={ghost ? c.end - 0.01 : t}
-          starts={line === "en" ? c.we : c.w} colors={line === "en" ? c.wce : c.wc} />
+          starts={line === "en" ? c.we : c.w} colors={line === "en" ? c.wce : c.wc} ratio={ratio} />
         {video.current?.paused !== false && <span className="rs-handle" onPointerDown={resize} title="Drag to resize the subtitle" aria-hidden="true" />}
         {sizing !== null && <span className="rs-size">{Math.round(sizing * 100)}%</span>}
       </div>
@@ -809,7 +809,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   </div>
                 </>
               )}
-              <LiveCaption video={video} cues={view === "en" && cues.some((c) => c.ta) ? englishCues(cues) : cues} styleId={styleId} custom={custom} portrait={portrait} view={view} selected={selected}
+              <LiveCaption video={video} cues={view === "en" && cues.some((c) => c.ta) ? englishCues(cues) : cues} styleId={styleId} custom={custom} portrait={portrait} ratio={frameRatio} view={view} selected={selected}
                 // The picked caption gets a dashed box (in the English view captions are regrouped: the one holding it).
                 picked={(start) => !playing && !!sel && (view === "en" ? start <= sel.start + 0.01 && now >= sel.start - 0.01 && now < sel.end : Math.abs(start - sel.start) < 0.001)}
                 editing={inline && cues[target()] ? cues[target()][line] : null}

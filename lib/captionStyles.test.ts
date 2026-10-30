@@ -219,3 +219,23 @@ test("every style starts at the standard size, in any font or case; the user's s
     assert.equal(big.scale, 1.5);
   }
 });
+
+test("line spacing: kept for the whole project, each line placed by the MP4 g line-heights apart, the anchor line still", async () => {
+  const { ownLook: own, lineBox: box, lineCount: count } = await import("./captionStyles");
+  assert.equal(sanitizeCustom({ lineHeight: 9 }).lineHeight, 2.5);
+  assert.equal(own({ lineHeight: 1.5, size: 1.2 }).lineHeight, undefined, "not a single caption's: one spacing per project");
+  const cue = { start: 0, end: 4, ta: "Hello there friends how are you all today", en: "" };
+  const at = (g: number) => buildAss([cue], { styleId: "tpl-blur", lang: "ta", width: 1080, height: 1920, custom: { lineHeight: g } })
+    .split("\n").filter((l) => l.startsWith("Dialogue: 0,0:00:00.00,")).map((l) => +l.match(/\\pos\(\d+,(\d+)\)/)![1]);
+  const s = resolveStyle("tpl-blur"), em = 1080 * 0.075 * (s.size ?? 1), n = count(s, "Hello there friends how are you all today", 1080 / 1920);
+  for (const g of [0.7, 1.5, 2]) {
+    const ys = at(g);
+    assert.equal(ys.length, n, `${n} lines, each its own event`);
+    for (let k = 1; k < ys.length; k++) assert.ok(Math.abs(ys[k] - ys[k - 1] - em * box(s, "Hello") * g) <= 1, `lines ${g}× apart`);
+  }
+  assert.equal(at(2).at(-1), at(1.5).at(-1), "a bottom caption's last line stays put");
+  const plain = buildAss([cue], { styleId: "tpl-blur", lang: "ta", width: 1080, height: 1920 });
+  assert.ok(!/\\an5\\pos/.test(plain), "no spacing set: libass lays the lines out as before");
+  const hook = buildAss([cue], { styleId: "tpl-hook-yellow", lang: "ta", width: 1080, height: 1920, custom: { lineHeight: 2 } });
+  assert.equal(hook, buildAss([cue], { styleId: "tpl-hook-yellow", lang: "ta", width: 1080, height: 1920 }), "styles with their own layout keep it");
+});

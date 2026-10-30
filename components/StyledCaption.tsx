@@ -1,12 +1,13 @@
 "use client";
-import { byLetters, caseOf, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
-import { textWidth } from "@/lib/fontWidths";
+import { byLetters, caseOf, lineBox, lineCount, spacesLines, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks } from "@/lib/subtitles";
 
 type Props = {
   styleId: string; custom?: CaptionCustom; text: string; sub?: string; start: number; end: number; time: number;
   starts?: number[];             // when each word starts (measured or edited), else shared by length
   colors?: (string | null)[];    // a colour per word the user picked
+  ratio?: number;                // the frame's width ÷ height: with line spacing, lines break where the MP4's do
 };
 
 /** A font for the Latin letters, then the Tamil font for Tamil letters (the Latin caption fonts have none). */
@@ -16,11 +17,14 @@ const stack = (font: string, tamil?: string) => `"${font}", ${tamil ? `"${tamil}
  * A caption line drawn in a caption style at a moment in time. Mirrors buildAss() in lib/captionStyles.ts
  * so the editor preview matches the burned-in MP4. Sized in container units: the parent needs container-type: size.
  */
-export default function StyledCaption({ styleId, custom, text, sub, start, end, time, starts, colors }: Props) {
+export default function StyledCaption({ styleId, custom, text, sub, start, end, time, starts, colors, ratio }: Props) {
   const s = resolveStyle(styleId, custom);
   const words = wordTimes(caseOf(s, text), start, end, starts);
   const kw = s.keyword?.line ? nameOrKeyword(wordTimes(text, start, end).map((w) => w.w)) : keywordIndex(words.map((w) => w.w));
-  const brk = lineBreaks(words.map((w) => w.w), s.lines);
+  // Lines as tall as libass draws them (its font's own line height), × the line spacing in the plain layout; with
+  // spacing set, broken at the same words as the MP4 (lineCount), which places each line itself.
+  const g = spacesLines(s) ? s.lineHeight ?? 1 : 1, lh = lineBox(s, text) * g;
+  const brk = lineBreaks(words.map((w) => w.w), ratio && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : s.lines);
   let i = words.findIndex((w) => time < w.e);
   if (i < 0) i = words.length - 1;
   const p = Math.min(1, Math.max(0, (time - start) / Math.max(0.01, end - start)));
@@ -33,6 +37,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     WebkitTextStroke: s.outline ? `${s.outline[1] * 2}em ${s.outline[0]}` : undefined,
     background: s.box, padding: s.box ? `${pad * 0.65}em ${pad * 1.6}em` : undefined, borderRadius: s.box ? ".25em" : undefined,
     letterSpacing: s.spacing ? `${s.spacing}em` : undefined,
+    lineHeight: lh,
   };
   // Entrance, from the playhead (so scrubbing shows what the MP4 will): 0.25 s or less on short captions.
   const k = Math.min(1, Math.max(0, (time - start) / Math.max(0.05, Math.min(0.25, (end - start) * 0.4))));
@@ -170,7 +175,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   return (
     <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}`} style={{ "--p": p, ...wrap } as React.CSSProperties}>
       <span className="cap-main" style={base} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>{body}</span>
-      {sub && !stacked && <span className="cap-sub" style={{ fontFamily: stack(s.font, s.fontTa), letterSpacing: s.spacing ? `${s.spacing}em` : undefined }}>{sub}</span>}
+      {sub && !stacked && <span className="cap-sub" style={{ fontFamily: stack(s.font, s.fontTa), letterSpacing: s.spacing ? `${s.spacing}em` : undefined, lineHeight: lineScale(s.font), marginTop: `${(g - 1) * 0.5 * lineBox(s, text)}em` }}>{sub}</span>}
     </div>
   );
 }
