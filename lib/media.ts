@@ -132,8 +132,9 @@ export async function loudness(file: string): Promise<Float32Array | null> {
 
 /**
  * The copy the editor plays: phones record 1080p/4K at 20–60 Mbit/s, often HEVC, which streams in fits and starts
- * (and HEVC doesn't play in many browsers). This one is H.264 at most 720p on its short side and ~2 Mbit/s, a
- * keyframe every second for quick seeking, its index first so it starts at once. Exports still use the original.
+ * (and HEVC doesn't play in many browsers). This one is H.264 at most 540p on its short side and ~0.8 Mbit/s (it
+ * plays on a slow mobile connection; the editor's player is small), a keyframe every second for quick seeking, its
+ * index first so it starts at once. Exports still use the original.
  * Returns false when the original is already light enough to play as it is (or has no picture).
  */
 export async function makePreview(src: string, dst: string) {
@@ -142,13 +143,13 @@ export async function makePreview(src: string, dst: string) {
   const v = info.streams?.[0];
   if (!v?.width || !v.height) return false; // sound only
   const mbps = (Number(info.format?.size) * 8) / Math.max(1, Number(info.format?.duration)) / 1e6;
-  if (v.codec_name === "h264" && Math.min(v.width, v.height) <= 720 && mbps <= 3) return false;
+  if (v.codec_name === "h264" && Math.min(v.width, v.height) <= 540 && mbps <= 1.2) return false;
   await run(bin("ffmpeg"), [
     "-y", "-v", "error", "-i", src, "-map", "0:v:0", "-map", "0:a:0?",
-    "-vf", "scale=w='if(gt(iw,ih),-2,min(720,iw))':h='if(gt(iw,ih),min(720,ih),-2)',format=yuv420p", "-fpsmax", "30",
-    "-c:v", "libx264", "-preset", "veryfast", "-crf", "26", "-maxrate", "2500k", "-bufsize", "5000k",
+    "-vf", "scale=w='if(gt(iw,ih),-2,min(540,iw))':h='if(gt(iw,ih),min(540,ih),-2)',format=yuv420p", "-fpsmax", "30",
+    "-c:v", "libx264", "-preset", "veryfast", "-crf", "28", "-maxrate", "900k", "-bufsize", "1800k",
     "-force_key_frames", "expr:gte(t,n_forced*1)",
-    "-c:a", "aac", "-b:a", "96k", "-ac", "2", "-movflags", "+faststart", dst,
+    "-c:a", "aac", "-b:a", "64k", "-ac", "2", "-movflags", "+faststart", dst,
   ], { maxBuffer: 1 << 24 });
   return true;
 }

@@ -5,7 +5,7 @@
 import { mkdtemp, readdir, readFile, rm, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
-import { and, desc, eq, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lt, ne, notLike, or, sql } from "drizzle-orm";
 import { db, jobs, settings, users, type Cue } from "./db";
 import { getAiConfig, transcribe, type Script } from "./lib/ai";
 import { effectivePlan, PLANS } from "./lib/plans";
@@ -134,19 +134,23 @@ async function chargeExtra(job: typeof jobs.$inferSelect, heard: number) {
   console.log(`job ${job.id}: ${extra}s more sound than stated, charged`);
 }
 
-/** The next video without a playback copy (new uploads, and older projects too), after transcriptions and renders. */
+/** The current playback copy's name ending: a copy made before (heavier, 720p) is made again. */
+const PREVIEW = ".preview540.mp4";
+
+/** The next video without a current playback copy (new uploads, and older projects too), after transcriptions and renders. */
 async function claimPreview() {
-  const [j] = await db.select().from(jobs).where(and(isNotNull(jobs.filePath), isNull(jobs.previewPath), ne(jobs.status, "queued"), ne(jobs.status, "processing")))
-    .orderBy(desc(jobs.createdAt)).limit(1);
+  const [j] = await db.select().from(jobs).where(and(isNotNull(jobs.filePath), or(isNull(jobs.previewPath), and(ne(jobs.previewPath, ""), notLike(jobs.previewPath, `%${PREVIEW}`))),
+    ne(jobs.status, "queued"), ne(jobs.status, "processing"))).orderBy(desc(jobs.createdAt)).limit(1);
   return j ?? null;
 }
 
 async function processPreview(job: typeof jobs.$inferSelect) {
-  const out = join(dirname(job.filePath!), `${job.id}.preview.mp4`);
+  const out = join(dirname(job.filePath!), `${job.id}${PREVIEW}`), old = job.previewPath;
   const made = await makePreview(job.filePath!, out).catch((e) => { console.error(`preview ${job.id} failed`, e); return false; });
   // "" = plays the original (light already, or the copy failed): not tried again
   const kept = await db.update(jobs).set({ previewPath: made ? out : "" }).where(and(eq(jobs.id, job.id), isNotNull(jobs.filePath))).returning({ id: jobs.id });
   if (made && !kept.length) await unlink(out).catch(() => {}); // the project was deleted meanwhile
+  if (old && old !== out) await unlink(old).catch(() => {}); // the earlier, heavier copy
   if (made) console.log(`preview ${job.id} made`);
 }
 
