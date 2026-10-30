@@ -659,11 +659,11 @@ export function buildAss(cues: Cue[], o: Opts) {
     const subNatOf = () => (sub ? Math.max(1, Math.ceil((textWidth(c.en, s.font, s.fontTa) * secondEm) / room)) * secondEm * lineScale(s.font) : 0);
     // Lines of these heights one under another (+ the English under them), the block anchored as the font would:
     // their centres, and the English's.
-    const stackAt = (nats: number[], withSub = !!sub) => {
-      const subNat = withSub ? subNatOf() : 0, h = nats.reduce((a, b) => a + b, 0), total = h + subNat;
+    const stackAt = (nats: number[], withSub = !!sub, gap = 0) => {
+      const subNat = withSub ? subNatOf() : 0, h = nats.reduce((a, b) => a + b, 0), total = h + (withSub ? gap : 0) + subNat;
       const top = s.x !== undefined || align === 5 ? ay - total / 2 : align === 8 ? ay : ay - total;
       let y = top;
-      return { ys: nats.map((n) => (y += n) - n / 2), subY: top + h + subNat / 2 };
+      return { ys: nats.map((n) => (y += n) - n / 2), subY: top + h + gap + subNat / 2 };
     };
     // The English on its own, centred at y (no gradient).
     const subAt = (start: number, end: number, ev: string, y: number) => { if (tail) add(start, end, at(ev, y)[0] + tail.replace(/^\\N/, ""), 0, marginL, marginR); };
@@ -771,7 +771,8 @@ export function buildAss(cues: Cue[], o: Opts) {
       const fitW = rows.map(([a, b], r) => room / (Math.max(0.3, textWidth(words.slice(a, b).map((_, n) => text(a + n, r)).join(" "), fontOf(r), s.fontTa)) * fs));
       const zBig = Math.min(CINE_BIG, fitW[big]), fit = fitW.map((w, r) => (r === big ? zBig : Math.min(1, w, zBig / CINE_OVER)));
       const nats = rows.map(([a, b], r) => natOf(words.slice(a, b).map((w) => w.w).join(" "), fit[r], fontOf(r)));
-      const p = stackAt(nats);
+      // Line spacing: each line's slot g × its height, and the English g's worth further down (as the editor).
+      const gc = s.lineHeight ?? 1, p = stackAt(nats.map((n) => n * gc), !!sub, ((gc - 1) / 2) * fs * lineBox(s, main));
       rows.forEach(([a, b], r) => {
         const z = fit[r], f = fontOf(r), space = textWidth(" ", f, s.fontTa), wid = (j: number) => textWidth(text(j, r), f, s.fontTa) * fs * z;
         const look = r === big ? `\\fn${f}\\b1` : "";
@@ -1058,6 +1059,8 @@ ${events.join("\n")}
  * own lines (hooks, stacks, one word, corners, reveals…) keep their design.
  */
 export const spacesLines = (s: CaptionStyle) => !((s.effect && s.effect !== "wobble") || s.reveal || s.wordLines || s.keyword?.line);
+/** Styles the line spacing reaches: the plain layout's, and Cinematic's three lines. */
+export const takesLineSpacing = (s: CaptionStyle) => spacesLines(s) || s.effect === "cine";
 
 /** How tall a line of this text is, × the em: its fonts' own line height (what libass draws, so the editor matches). */
 export const lineBox = (s: CaptionStyle, text: string) =>
