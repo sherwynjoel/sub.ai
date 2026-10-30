@@ -24,6 +24,8 @@ type Props = {
   onAddText?: (t: number) => number;
   /** A new caption between caption j and the next (room made from both); the new one's index, -1: no room. */
   onInsertBetween?: (j: number) => number;
+  /** Delete caption i (its neighbours take its time back when they touched it). */
+  onDelete?: (i: number) => void;
   /** Text typed into a caption / a text layer on the timeline. */
   onCaptionText?: (i: number, text: string) => void;
   onLayerText?: (i: number, text: string) => void;
@@ -49,7 +51,7 @@ const rescale = (t: number[] | undefined, s0: number, e0: number, s1: number, e1
  * Caption blocks on a timeline: click to select and move the playhead, drag a block to move it, drag its edges to
  * change when it starts or ends, drag the word marks of the selected caption to retime its words.
  */
-export default function Timeline({ cues, duration, now, selected, zoom, line, playing, onSeek, onSelect, onDrag, onDragEnd, layers = [], selectedLayer = -1, onSelectLayer, onDragLayer, onZoom, onAddCaption, onAddText, onCaptionText, onLayerText, onInsertBetween }: Props) {
+export default function Timeline({ cues, duration, now, selected, zoom, line, playing, onSeek, onSelect, onDrag, onDragEnd, layers = [], selectedLayer = -1, onSelectLayer, onDragLayer, onZoom, onAddCaption, onAddText, onCaptionText, onLayerText, onInsertBetween, onDelete }: Props) {
   // A caption or text layer being typed into, right on the timeline.
   const [typing, setTyping] = useState<{ kind: "cue" | "layer"; i: number } | null>(null);
   /** Add one at t (an empty spot double-clicked, or the playhead) and start typing into it. */
@@ -256,6 +258,11 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
                 : <span className="tl-text">{(line === "en" ? c.en : c.ta) || "…"}</span>}
               <i className="tl-edge l" onPointerDown={(e) => grab(e, i, "start")} />
               <i className="tl-edge r" onPointerDown={(e) => grab(e, i, "end")} />
+              {onDelete && i === selected && !(typing?.kind === "cue" && typing.i === i) && (
+                <button type="button" className="tl-del" aria-label="Delete this caption" title="Delete this caption (Delete key)"
+                  onPointerDown={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); onDelete(i); }}>×</button>
+              )}
             </div>
           ))}
         </div>

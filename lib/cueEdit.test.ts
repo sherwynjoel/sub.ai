@@ -60,3 +60,13 @@ test("insertAt inside a caption adds one at its nearer edge", () => {
   assert.equal(r.index, 1, "between the two");
   assert.deepEqual(r.cues.map((c) => [c.start, c.end]), [[0, 1.4], [1.4, 2.6], [2.6, 4]]);
 });
+
+test("removeCue: a caption between touching ones gives its time back to them; one beside a gap just goes", async () => {
+  const { insertBetween, removeCue } = await import("./cueEdit");
+  const cues = [{ start: 0, end: 2, ta: "a b", en: "", w: [0, 1] }, { start: 2, end: 4, ta: "c d", en: "", w: [2, 3] }];
+  const added = insertBetween(cues, 0, 10);
+  assert.deepEqual(removeCue(added.cues, added.index), cues, "adding then deleting puts everything back");
+  const gap = [{ start: 0, end: 1, ta: "a", en: "" }, { start: 1, end: 2, ta: "b", en: "" }, { start: 3, end: 4, ta: "c", en: "" }];
+  assert.deepEqual(removeCue(gap, 1).map((c) => [c.start, c.end]), [[0, 1], [3, 4]], "a gap beside it: nothing stretched");
+  assert.deepEqual(removeCue(gap, 0).map((c) => [c.start, c.end]), [[1, 2], [3, 4]], "the first: nothing stretched");
+});

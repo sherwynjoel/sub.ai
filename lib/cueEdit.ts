@@ -119,6 +119,20 @@ export function insertBetween(cues: Cue[], j: number, duration: number): { cues:
 }
 
 /**
+ * Caption i taken out. When it touched the captions on both sides (as one added between them does), they meet in its
+ * middle so no gap is left (their words stretched with them); with a gap on either side, it just goes.
+ */
+export function removeCue(cues: Cue[], i: number): Cue[] {
+  const c = cues[i], prev = cues[i - 1], next = cues[i + 1];
+  const out = cues.filter((_, j) => j !== i);
+  if (!c || !prev || !next || c.start - prev.end > 0.05 || next.start - c.end > 0.05) return out;
+  const mid = Math.round(((c.start + c.end) / 2) * 1000) / 1000;
+  out[i - 1] = respan(prev, prev.start, mid);
+  out[i] = respan(next, mid, next.end);
+  return out;
+}
+
+/**
  * A line's text changed: word times and colours stay with the words they belong to while the count matches; a word
  * added or removed keeps the times around it (new words share the time of the word they came from).
  */
