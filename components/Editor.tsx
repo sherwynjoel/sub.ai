@@ -22,6 +22,7 @@ import Presets, { type Preset } from "@/components/Presets";
 import ColorPicker from "@/components/ColorPicker";
 import { applyPreset } from "@/lib/presets";
 import { pickKeywords } from "@/lib/keywords";
+import { zoomAt, zoomMoments, zoomOf } from "@/lib/zoom";
 import { BRAND } from "@/lib/brand";
 import "@/app/caption-styles.css";
 
@@ -636,6 +637,26 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     const id = setTimeout(() => setScan(Date.now()), 700);
     return () => clearTimeout(id);
   }, [cues, custom, styleId, frameRatio, view, portrait]);
+  // Auto zoom on the preview: the video (and its blurred backdrop) scaled on each caption's key word, as the MP4.
+  const autoZoom = zoomOf(custom.zoom), zoomKey = autoZoom ? `${autoZoom.strength}/${autoZoom.style}` : "";
+  const moments = useMemo(() => (zoomKey ? zoomMoments(cues, line) : []), [cues, line, zoomKey]);
+  useEffect(() => {
+    const v = video.current, bg = bgCanvas.current;
+    if (!v) return;
+    const z0 = zoomOf(custom.zoom);
+    const apply = () => {
+      const z = z0 ? zoomAt(v.currentTime, moments, z0) : 1;
+      v.style.transform = z === 1 ? "" : `scale(${z.toFixed(4)})`;
+      if (bg) bg.style.transform = z === 1 ? "" : `scale(${(1.12 * z).toFixed(4)})`;
+    };
+    let raf = 0;
+    const tick = () => { apply(); if (!v.paused) raf = requestAnimationFrame(tick); };
+    const kick = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); };
+    const evs = ["play", "pause", "seeked", "timeupdate"];
+    for (const e of evs) v.addEventListener(e, kick);
+    apply();
+    return () => { cancelAnimationFrame(raf); for (const e of evs) v.removeEventListener(e, kick); v.style.transform = ""; if (bg) bg.style.transform = ""; };
+  }, [moments, zoomKey, src, custom.canvas]); // eslint-disable-line react-hooks/exhaustive-deps
   /** Pick the next caption that goes outside the video (and show it). */
   function showOutside() {
     if (!outside.length) return;
@@ -1336,6 +1357,21 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   <button className="btn ghost small" onClick={clearHighlights} disabled={!cues.some((c) => c.wc || c.wce || c.wf || c.wfe)}>Clear word styles</button>
                 </div>
                 {!highlights(look) && <p className="muted small">This style shows no coloured words: the colour won&apos;t show, the size and bold will.</p>}
+              </section>
+              <section className="auto-zoom" aria-label="Auto zoom">
+                <div className="insp-head"><h3>Auto zoom</h3>
+                  <label className="cz-check"><input type="checkbox" checked={!!autoZoom} onChange={(e) => tweak({ zoom: e.target.checked ? { strength: 1.15, style: "punch" } : null })} /> On</label>
+                </div>
+                <p className="muted small">The video punches in on each caption&apos;s key word (a word you picked out first){autoZoom ? ` · ${moments.length} zoom${moments.length === 1 ? "" : "s"}` : ""}.</p>
+                {autoZoom && <>
+                  <label>Strength <span className="cz-val">{Math.round((autoZoom.strength - 1) * 100)}%</span>
+                    <input type="range" min={1.03} max={1.4} step={0.01} value={autoZoom.strength} onChange={(e) => tweak({ zoom: { ...autoZoom, strength: +e.target.value } })} />
+                  </label>
+                  <div className="seg" role="group" aria-label="Zoom style">
+                    <button aria-pressed={autoZoom.style === "punch"} onClick={() => tweak({ zoom: { ...autoZoom, style: "punch" } })}>Punch</button>
+                    <button aria-pressed={autoZoom.style === "smooth"} onClick={() => tweak({ zoom: { ...autoZoom, style: "smooth" } })}>Smooth</button>
+                  </div>
+                </>}
               </section>
               <h3>Project style</h3>
               <p className="muted small">{styleOf(styleId).blurb} Applies to every caption without its own look.</p>

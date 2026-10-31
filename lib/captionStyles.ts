@@ -203,6 +203,7 @@ export type CaptionCustom = {
   shadowColor?: string; shadowSize?: number; boxPad?: number;
   anim?: Anim; highlight?: Highlight;
   canvas?: Canvas; layers?: TextLayer[]; logo?: Logo; // project only
+  zoom?: { strength: number; style: "punch" | "smooth" } | null; // project only: the video punches in on each caption's key word (lib/zoom.ts)
   show?: "ta" | "en" | "both";   // project only: which lines the subtitles show (ta = the project's language)
 };
 export type Margins = { top: number; right: number; bottom: number; left: number }; // fractions of the frame
@@ -269,6 +270,9 @@ export function sanitizeCustom(input: unknown): CaptionCustom {
   const lh = clamp(i.lineHeight, 0.7, 2.5); if (lh !== undefined) out.lineHeight = lh;
   if (i.textAlign === "left" || i.textAlign === "center" || i.textAlign === "right") out.textAlign = i.textAlign;
   if (i.blend === null || (typeof i.blend === "string" && i.blend in BLENDS)) out.blend = i.blend as Blend | null;
+  const zm = i.zoom as Record<string, unknown> | null | undefined;
+  if (zm === null) out.zoom = null;
+  else if (zm && typeof zm === "object" && typeof zm.strength === "number" && Number.isFinite(zm.strength)) out.zoom = { strength: Math.min(1.4, Math.max(1.03, zm.strength)), style: zm.style === "smooth" ? "smooth" : "punch" };
   if (i.gradient === null) out.gradient = null;
   else if (Array.isArray(i.gradient) && i.gradient.length === 2 && i.gradient.every((c) => typeof c === "string" && HEX.test(c))) out.gradient = [i.gradient[0], i.gradient[1]];
   const op = clamp(i.opacity, 0.1, 1); if (op !== undefined) out.opacity = op;
@@ -308,6 +312,7 @@ export function ownLook(input: unknown): CaptionCustom {
   delete out.safe; delete out.safeCustom; delete out.canvas; delete out.layers; delete out.logo; delete out.show;
   delete out.lineHeight; // the whole project's (the MP4 spaces every line of the file the same way)
   delete out.blend; // the whole project's (the MP4 blends all its text at once)
+  delete out.zoom;
   return out;
 }
 
