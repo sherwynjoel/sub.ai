@@ -7,6 +7,16 @@ import { translateLines } from "@/lib/ai/translate";
 
 type Ctx = { params: Promise<{ id: string }> };
 
+// Each translation is paid for (Sarvam): at most 6 an account in any 10 minutes (one server, so kept in memory).
+const WINDOW = 10 * 60 * 1000, LIMIT = 6;
+const recent = new Map<string, number[]>();
+function allowed(user: string, now = Date.now()) {
+  const times = (recent.get(user) ?? []).filter((t) => now - t < WINDOW);
+  if (times.length >= LIMIT) { recent.set(user, times); return false; }
+  recent.set(user, [...times, now]);
+  return true;
+}
+
 /**
  * Translate the captions: `{ lang }`, an Indian language code or "en-IN".
  * Into English: the main line translated into the English line (added if the project had none).
@@ -22,6 +32,7 @@ export async function POST(req: Request, { params }: Ctx) {
   if (j.status !== "done" || !j.cues?.length) return json({ error: "Subtitles aren't ready yet." }, 409);
   const { lang } = await req.json().catch(() => ({}));
   if (lang !== "en-IN" && !isLanguage(lang)) return json({ error: "Pick a language." }, 400);
+  if (!allowed(u.id)) return json({ error: "That's a lot of translations in a short time. Try again in a few minutes." }, 429);
   const cues = j.cues as Cue[];
   const hasEn = cues.some((c) => c.en.trim()), hasMain = cues.some((c) => c.ta.trim());
   try {

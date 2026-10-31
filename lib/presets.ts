@@ -3,10 +3,13 @@ import { CAPTION_STYLES, sanitizeCustom, type CaptionCustom } from "@/lib/captio
 /** The most presets one account keeps. */
 export const MAX_PRESETS = 30;
 
-/** What a preset keeps of a project's look: everything but the parts that belong to one video (canvas, text layers, logo). */
+/**
+ * What a preset keeps of a project's look: everything but the parts that belong to one video (canvas, text layers,
+ * logo, and which lines it shows: a preset made on an English-only project mustn't hide another's Tamil line).
+ */
 export function presetLook(input: unknown): CaptionCustom {
   const out = sanitizeCustom(input);
-  delete out.canvas; delete out.layers; delete out.logo;
+  delete out.canvas; delete out.layers; delete out.logo; delete out.show;
   return out;
 }
 
@@ -22,5 +25,6 @@ export function applyPreset(project: CaptionCustom, preset: CaptionCustom): Capt
   if (project.canvas) kept.canvas = project.canvas;
   if (project.layers) kept.layers = project.layers;
   if (project.logo) kept.logo = project.logo;
+  if (project.show) kept.show = project.show;
   return { ...presetLook(preset), ...kept };
 }
