@@ -19,6 +19,7 @@ import StylePicker from "@/components/StylePicker";
 import Timeline from "@/components/Timeline";
 import WordStrip, { type WordRef } from "@/components/WordStrip";
 import Presets, { type Preset } from "@/components/Presets";
+import ColorPicker from "@/components/ColorPicker";
 import { applyPreset } from "@/lib/presets";
 import "@/app/caption-styles.css";
 
@@ -387,7 +388,7 @@ function WordBar({ word, look, color, base, onChange, onClose }: {
         <b>{Math.round(size * 100)}%</b>
         <button onClick={() => resize(0.1)} aria-label="Bigger" title="Bigger">A+</button>
       </span>
-      <input type="color" aria-label="Word colour" title="Word colour" value={(color ?? base.color).slice(0, 7)} onChange={(e) => onChange({ color: e.target.value })} />
+      <ColorPicker value={(color ?? base.color).slice(0, 7)} onChange={(c) => onChange({ color: c })} label="Word colour" />
       <button aria-pressed={look?.bold ?? !!base.bold} onClick={() => onChange({ look: { bold: !(look?.bold ?? !!base.bold) } })} style={{ fontWeight: 800 }} title="Bold">B</button>
       <button aria-pressed={look?.italic ?? !!base.italic} onClick={() => onChange({ look: { italic: !(look?.italic ?? !!base.italic) } })} style={{ fontStyle: "italic" }} title="Italic">I</button>
       <button onClick={() => onChange({ look: null, color: null })} disabled={!look && !color} title="Back to the caption's look">Reset</button>
@@ -1180,7 +1181,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                     <input className="w-text" lang={line === "ta" ? short : "en"} defaultValue={w} aria-label={`Word ${j + 1}`}
                       onBlur={(e) => { if (e.target.value !== w) editCue(selected, setWord(sel, line, j, { text: e.target.value })); }} />
                     <TimeInput key={`w${selected}-${j}-${starts[j]}`} value={starts[j]} label={`Word ${j + 1} start`} onChange={(v) => editCue(selected, setWord(sel, line, j, { start: v }))} />
-                    <input type="color" aria-label={`Word ${j + 1} colour`} value={hex(colors?.[j] ?? undefined, hex(selLook.color, "#ffffff"))} onChange={(e) => editCue(selected, setWord(sel, line, j, { color: e.target.value }))} />
+                    <ColorPicker value={hex(colors?.[j] ?? undefined, hex(selLook.color, "#ffffff"))} onChange={(c) => editCue(selected, setWord(sel, line, j, { color: c }))} label={`Word ${j + 1} colour`} />
                     {colors?.[j] && <button className="link small" onClick={() => editCue(selected, setWord(sel, line, j, { color: null }))}>Reset</button>}
                   </li>
                 ))}
@@ -1271,7 +1272,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 {cv!.fit === "fit" && <div className="look-row">
                   <label className="cz-check"><input type="radio" name="bg" checked={cv!.bg === "blur"} onChange={() => tweak({ canvas: { ...cv!, bg: "blur" } })} /> Blurred video behind</label>
                   <label className="cz-check"><input type="radio" name="bg" checked={cv!.bg !== "blur"} onChange={() => tweak({ canvas: { ...cv!, bg: cv!.bg !== "blur" ? cv!.bg : "#000000" } })} /> Colour</label>
-                  {cv!.bg !== "blur" && <input type="color" aria-label="Background colour" value={cv!.bg} onChange={(e) => tweak({ canvas: { ...cv!, bg: e.target.value } })} />}
+                  {cv!.bg !== "blur" && <ColorPicker value={cv!.bg} onChange={(c) => tweak({ canvas: { ...cv!, bg: c } })} label="Background colour" />}
                 </div>}
               </>}
               </div>

@@ -1,4 +1,5 @@
 "use client";
+import ColorPicker from "@/components/ColorPicker";
 import { ANIMS, BLENDS, CAPTION_FONTS, FONT_LIKE, highlights, takesLineSpacing, HIGHLIGHTS, TAMIL_FONTS, type Anim, type Blend, type CaptionCustom, type CaptionStyle, type Highlight, type Placement } from "@/lib/captionStyles";
 
 type Props = {
@@ -77,10 +78,10 @@ export default function LookControls({ look, own, set, tamil, project, setAll }:
         <legend>Colour</legend>
         <div className="look-row">
           {look.gradient ? <>
-            <label className="cz-color">Top<input type="color" value={hex(look.gradient[0], "#ffffff")} onChange={(e) => set({ gradient: [e.target.value, look.gradient![1]] })} /></label>
-            <label className="cz-color">Bottom<input type="color" value={hex(look.gradient[1], "#ffb37a")} onChange={(e) => set({ gradient: [look.gradient![0], e.target.value] })} /></label>
-          </> : <label className="cz-color">Text<input type="color" value={hex(look.color, "#ffffff")} onChange={(e) => set({ color: e.target.value })} /></label>}
-          {highlights(look) && <label className="cz-color">Highlight<input type="color" value={hex(own.accent ?? look.mark ?? look.keyword?.color ?? look.active, "#ffe14d")} onChange={(e) => set({ accent: e.target.value })} /></label>}
+            <span className="cz-color">Top<ColorPicker value={hex(look.gradient[0], "#ffffff")} onChange={(c) => set({ gradient: [c, look.gradient![1]] })} label="Gradient top colour" /></span>
+            <span className="cz-color">Bottom<ColorPicker value={hex(look.gradient[1], "#ffb37a")} onChange={(c) => set({ gradient: [look.gradient![0], c] })} label="Gradient bottom colour" /></span>
+          </> : <span className="cz-color">Text<ColorPicker value={hex(look.color, "#ffffff")} onChange={(c) => set({ color: c })} label="Text colour" /></span>}
+          {highlights(look) && <span className="cz-color">Highlight<ColorPicker value={hex(own.accent ?? look.mark ?? look.keyword?.color ?? look.active, "#ffe14d")} onChange={(c) => set({ accent: c })} label="Highlight colour" /></span>}
         </div>
         {(!project || setAll) && <label>Text blend{project && " (all captions)"}
           <select value={look.blend ?? ""} onChange={(e) => (setAll ?? set)({ blend: (e.target.value || null) as Blend | null })}
@@ -104,14 +105,14 @@ export default function LookControls({ look, own, set, tamil, project, setAll }:
         <legend>Outline &amp; shadow</legend>
         <div className="look-row">
           <label className="cz-check"><input type="checkbox" checked={!!look.outline} onChange={(e) => set({ outline: e.target.checked ? hex(look.outline?.[0], "#000000") : null })} /> Outline</label>
-          {look.outline && <input type="color" aria-label="Outline colour" value={hex(look.outline[0], "#000000")} onChange={(e) => set({ outline: e.target.value })} />}
+          {look.outline && <ColorPicker value={hex(look.outline[0], "#000000")} onChange={(c) => set({ outline: c })} label="Outline colour" />}
         </div>
         {look.outline && <label>Outline thickness <span className="cz-val">{Math.round(look.outline[1] * 100)}</span>
           <input type="range" min={0.01} max={0.2} step={0.01} value={look.outline[1]} onChange={(e) => set({ outlineWidth: +e.target.value })} />
         </label>}
         <div className="look-row">
           <label className="cz-check"><input type="checkbox" checked={!!look.shadow} onChange={(e) => set({ shadow: e.target.checked, shadowSize: e.target.checked ? look.shadow || 0.06 : 0 })} /> Shadow</label>
-          {!!look.shadow && <input type="color" aria-label="Shadow colour" value={hex(look.shadowColor, "#000000")} onChange={(e) => set({ shadowColor: e.target.value })} />}
+          {!!look.shadow && <ColorPicker value={hex(look.shadowColor, "#000000")} onChange={(c) => set({ shadowColor: c })} label="Shadow colour" />}
         </div>
         {!!look.shadow && <label>Shadow size <span className="cz-val">{Math.round(look.shadow * 100)}</span>
           <input type="range" min={0.01} max={0.4} step={0.01} value={look.shadow} onChange={(e) => set({ shadowSize: +e.target.value })} />
@@ -122,7 +123,7 @@ export default function LookControls({ look, own, set, tamil, project, setAll }:
         <legend>Background</legend>
         <div className="look-row">
           <label className="cz-check"><input type="checkbox" checked={!!look.box} onChange={(e) => set({ box: e.target.checked ? hex(look.box, "#0b0b0b") : null })} /> Box behind the text</label>
-          {look.box && <input type="color" aria-label="Background colour" value={hex(look.box, "#0b0b0b")} onChange={(e) => set({ box: e.target.value })} />}
+          {look.box && <ColorPicker value={hex(look.box, "#0b0b0b")} onChange={(c) => set({ box: c })} label="Background colour" />}
         </div>
         {look.box && <label>Padding <span className="cz-val">{Math.round((look.boxPad ?? 0.28) * 100)}</span>
           <input type="range" min={0.05} max={0.8} step={0.01} value={look.boxPad ?? 0.28} onChange={(e) => set({ boxPad: +e.target.value })} />
