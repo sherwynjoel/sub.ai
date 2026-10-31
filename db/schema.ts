@@ -116,3 +116,17 @@ export const emailChecks = pgTable("email_checks", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * A user's saved looks ("My brand"): a caption style and its customisation (no video-specific parts: canvas, text
+ * layers, logo). The default one is applied to every new upload.
+ */
+export const stylePresets = pgTable("style_presets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  styleId: text("style_id").notNull(),
+  custom: jsonb("custom").$type<CaptionCustom>().notNull().default({}),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("style_presets_user_idx").on(t.userId)]);
