@@ -885,3 +885,7 @@ a.signout { text-decoration: none; }
 .preset-star, .preset-del { width: 38px; border: 0; border-left: 1px solid var(--line, rgb(0 0 0 / .12)); background: none; color: inherit; cursor: pointer; font-size: 1rem; opacity: .45; }
 .preset-star[aria-pressed="true"] { color: #e0a800; opacity: 1; }
 .preset-star:hover, .preset-del:hover { opacity: 1; }
+
+/* The free plan's watermark on the preview, where and as big as the MP4 draws it (lib/render.ts watermarkGraph) */
+.wm-preview { position: absolute; right: 3cqmin; bottom: 3cqmin; z-index: 4; font: 700 2.8cqmin/1 "Poppins", var(--font-body); color: rgb(255 255 255 / .75); text-shadow: 1px 1px 0 rgb(0 0 0 / .5); pointer-events: none; }
+.wm-note { flex-basis: 100%; margin: 4px 0 0; }

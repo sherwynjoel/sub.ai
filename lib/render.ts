@@ -6,10 +6,11 @@ import type { Cue } from "@/db";
 import { BLENDS, buildAss, canvasSize, maskAss, resolveStyle, type CaptionCustom } from "@/lib/captionStyles";
 import { audioCodec, bin, STORAGE, videoSize } from "@/lib/media";
 import { englishCues } from "@/lib/subtitles";
+import { BRAND } from "@/lib/brand";
 
 const FONTS = resolve(/*turbopackIgnore: true*/ process.cwd(), "public", "caption-fonts");
 
-type Job = { id: string; filePath: string; durationSec: number; cues: Cue[]; captionStyle: string; captionCustom: CaptionCustom; renderLang: string };
+type Job = { id: string; filePath: string; durationSec: number; cues: Cue[]; captionStyle: string; captionCustom: CaptionCustom; renderLang: string; watermark?: boolean };
 
 /**
  * Burns the job's captions into an MP4 in its caption style (libass via ffmpeg's subtitles filter).
@@ -53,6 +54,7 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
     // after the consonant instead of before it). The server also needs a font with the script (fonts-noto-core).
     if (blend) graph.push(blendGraph(last, BLENDS[blend][2], look.color));
     else graph.push(`[${last}]ass=subs.ass:fontsdir=fonts:shaping=complex[out]`);
+    if (job.watermark) { graph[graph.length - 1] = graph[graph.length - 1].replace(/\[out\]$/, "[subbed]"); graph.push(watermarkGraph("subbed", width, height)); }
     const args = [
       "-y", "-v", "error", "-nostats", "-progress", "pipe:1", ...input,
       "-filter_complex", graph.join(";"), "-map", "[out]", "-map", audio,
@@ -89,6 +91,13 @@ export function blendGraph(from: string, mode: string, color: string) {
     `[bvid][bcol]blend=all_mode=${mode}[bl];` +
     `[bm]split[bm1][bm2];[bm1]format=rgb24,drawbox=x=0:y=0:w=iw:h=ih:color=black:t=fill,ass=subs.ass:fontsdir=fonts:shaping=complex,format=gray[mask];` +
     `[bl][mask]alphamerge[blm];[bm2][blm]overlay=format=auto[out]`;
+}
+
+/** The free plan's mark: "Made with Vasanam", small and soft in the bottom-right corner, over everything. Output [out]. */
+export function watermarkGraph(from: string, width: number, height: number) {
+  const size = Math.max(14, Math.round(Math.min(width, height) * 0.028)), m = Math.round(Math.min(width, height) * 0.03);
+  return `[${from}]drawtext=fontfile=fonts/Poppins-Bold.ttf:text='Made with ${BRAND.name}':fontsize=${size}:fontcolor=white@0.75:` +
+    `shadowcolor=black@0.5:shadowx=1:shadowy=1:x=w-tw-${m}:y=h-th-${m}[out]`;
 }
 
 /** The uploaded logo of a job, when it has one. */
