@@ -1,9 +1,9 @@
 import { unlink } from "node:fs/promises";
 import { eq } from "drizzle-orm";
-import { db, jobs, type Cue } from "@/db";
+import { db, jobs, type Cue, type WordLook } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { ownJob, publicJob } from "@/lib/jobs";
-import { CAPTION_STYLES, ownLook, sanitizeCustom } from "@/lib/captionStyles";
+import { CAPTION_FONTS, CAPTION_STYLES, ownLook, sanitizeCustom } from "@/lib/captionStyles";
 import { LEVEL_FRAME, loudness, removeUploads } from "@/lib/media";
 import { withWordTimes } from "@/lib/subtitles";
 import { speechRegions } from "@/lib/timing";
@@ -55,7 +55,21 @@ export async function PATCH(req: Request, { params }: Ctx) {
   // A colour per word, while the line still has that many words.
   const colors = (v: unknown, line: string) =>
     Array.isArray(v) && v.length === line.split(/\s+/).filter(Boolean).length && v.every((x) => x === null || (typeof x === "string" && /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(x))) && v.some(Boolean) ? (v as (string | null)[]) : undefined;
-  const clean = (cues as Cue[]).map(({ start, end, ta, en, w, we, style, wc, wce }) => {
+  // A look per word (font, size, bold, italic: picked on the video), while the line still has that many words.
+  const looks = (v: unknown, line: string) => {
+    if (!Array.isArray(v) || v.length !== line.split(/\s+/).filter(Boolean).length) return undefined;
+    const out = v.map((x) => {
+      if (!x || typeof x !== "object") return null;
+      const l: WordLook = {}, o = x as Record<string, unknown>;
+      if (typeof o.font === "string" && (CAPTION_FONTS as readonly string[]).includes(o.font)) l.font = o.font;
+      if (typeof o.size === "number" && Number.isFinite(o.size)) l.size = Math.min(3, Math.max(0.4, o.size));
+      if (typeof o.bold === "boolean") l.bold = o.bold;
+      if (typeof o.italic === "boolean") l.italic = o.italic;
+      return Object.keys(l).length ? l : null;
+    });
+    return out.some(Boolean) ? out : undefined;
+  };
+  const clean = (cues as Cue[]).map(({ start, end, ta, en, w, we, style, wc, wce, wf, wfe }) => {
     const c: Cue = { start, end, ta: ta.slice(0, 500), en: en.slice(0, 500) };
     const wt = times(w, c.ta, start, end), et = times(we, c.en, start, end);
     if (wt) c.w = wt;
@@ -65,6 +79,9 @@ export async function PATCH(req: Request, { params }: Ctx) {
     const tc = colors(wc, c.ta), ec = colors(wce, c.en);
     if (tc) c.wc = tc;
     if (ec) c.wce = ec;
+    const tf = looks(wf, c.ta), ef = looks(wfe, c.en);
+    if (tf) c.wf = tf;
+    if (ef) c.wfe = ef;
     return c;
   }).sort((a, b) => a.start - b.start);
   await db.update(jobs).set({ cues: clean, updatedAt: new Date() }).where(eq(jobs.id, j.id));

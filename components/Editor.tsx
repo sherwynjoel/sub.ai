@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import type { Cue, WordLook } from "@/db/schema";
-import { languageOf, shortCode } from "@/lib/languages";
+import { LANGUAGES, languageOf, shortCode } from "@/lib/languages";
 import { BLENDS, CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type CaptionStyle, type SafeZoneId, type TextLayer, pushDown, shownLines } from "@/lib/captionStyles";
 import { insertAt, insertBetween, mergeCues, removeCue, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
@@ -756,6 +756,20 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     seek(Math.max(0, x.at - 0.5));
     setMsg(ISSUE_TEXT[x.kind]);
   }
+  // Translate: the language picked (open while set), and the request running.
+  const [translateTo, setTranslateTo] = useState<string | null>(null);
+  const [translating, setTranslating] = useState(false);
+  async function translate() {
+    if (!translateTo) return;
+    setTranslating(true);
+    if (dirty && !(await save())) { setTranslating(false); return; } // the translation starts from what's saved
+    const res = await fetch(`/api/jobs/${job.id}/translate`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ lang: translateTo }) });
+    const r = await res.json().catch(() => ({}));
+    setTranslating(false);
+    if (!res.ok) { setTranslateTo(null); setMsg(r.error || "Couldn't translate."); return; }
+    setDirty(false);
+    setTimeout(() => window.location.reload(), 50); // the captions and the project's language come back new
+  }
   const [retype, setRetype] = useState<{ type: CaptionType; withEnglish: boolean } | null>(null);
   const [retyping, setRetyping] = useState(false);
   async function applyType() {
@@ -990,7 +1004,33 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           <button className="ctype-chip" onClick={() => setRetype(typeOf(initial))} title="Change what the captions say and how they're written">
             <span className="muted">Captions:</span> <strong>{typeLabel(initial, language.name)}</strong> <span className="ctype-go">Change type</span>
           </button>
+          <button className="ctype-chip" onClick={() => setTranslateTo(job.language === "en-IN" ? "hi-IN" : cues.some((c) => c.en.trim()) ? (job.language === "hi-IN" ? "ta-IN" : "hi-IN") : "en-IN")} title="Translate the captions into another language">
+            <span aria-hidden="true">🌐</span> <span className="ctype-go">Translate</span>
+          </button>
         </div>
+        {translateTo && createPortal(
+          <div className="modal-back" onClick={(e) => e.target === e.currentTarget && !translating && setTranslateTo(null)}>
+            <div className="modal" role="dialog" aria-modal="true" aria-label="Translate captions">
+              <h2>Translate captions</h2>
+              <label className="insp-field">Into
+                <select value={translateTo} onChange={(e) => setTranslateTo(e.target.value)} disabled={translating}>
+                  <option value="en-IN">English (the English line)</option>
+                  {LANGUAGES.filter((l) => l.code !== job.language || cues.some((c) => c.en.trim())).map((l) => <option key={l.code} value={l.code}>{l.name} · {l.native}</option>)}
+                </select>
+              </label>
+              <p className="muted small">
+                {translateTo === "en-IN"
+                  ? `The ${language.name} line is translated into English${cues.some((c) => c.en.trim()) ? ", replacing the English line" : " and shown under it"}.`
+                  : `The ${language.name} line becomes ${languageOf(translateTo).name}, translated from ${cues.some((c) => c.en.trim()) ? "the English line" : `the ${language.name} line`}. Timing and style stay; word colours on that line are cleared.`}
+                {" "}Uses no minutes. To go back, translate again or use Change type.
+              </p>
+              <div className="modal-actions">
+                <button className="btn ghost" onClick={() => setTranslateTo(null)} disabled={translating}>Cancel</button>
+                <button className="btn" onClick={translate} disabled={translating}>{translating ? "Translating…" : "Translate"}</button>
+              </div>
+            </div>
+          </div>, document.body,
+        )}
         {retype && createPortal(
           <div className="modal-back" onClick={(e) => e.target === e.currentTarget && !retyping && setRetype(null)}>
             <div className="modal" role="dialog" aria-modal="true" aria-label="Change caption type">
