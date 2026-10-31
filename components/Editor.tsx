@@ -21,6 +21,7 @@ import WordStrip, { type WordRef } from "@/components/WordStrip";
 import Presets, { type Preset } from "@/components/Presets";
 import ColorPicker from "@/components/ColorPicker";
 import { applyPreset } from "@/lib/presets";
+import { pickKeywords } from "@/lib/keywords";
 import "@/app/caption-styles.css";
 
 type Job = {
@@ -550,6 +551,26 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     setCustom(kept);
     savedLook.current = JSON.stringify(kept);
     saveLook({ captionStyle: id, captionCustom: kept });
+  }
+  // Highlight keywords: the colour, and whether the words also grow.
+  const [hlColor, setHlColor] = useState("#FFD60A");
+  const [hlBig, setHlBig] = useState(true);
+  /** Every caption's keywords (lib/keywords.ts) in the colour picked, bigger and bold if chosen: one step to undo. */
+  function autoHighlight() {
+    commit(cues.map((c) => {
+      let out = c;
+      for (const ln of ["ta", "en"] as const) {
+        const words = wordsOf(c[ln]);
+        if (!words.length) continue;
+        for (const j of pickKeywords(words)) out = setWord(out, ln, j, { color: hlColor, ...(hlBig ? { look: { size: 1.15, bold: true } } : {}) });
+      }
+      return out;
+    }));
+  }
+  /** Every word back to its caption's look (colours, fonts, sizes picked out by hand or by Highlight keywords). */
+  function clearHighlights() {
+    if (!confirm("Take the colour, size and font off every picked-out word?")) return;
+    commit(cues.map((c) => { const out = { ...c }; delete out.wc; delete out.wce; delete out.wf; delete out.wfe; return out; }));
   }
   /** A saved preset on this video: its style and look for every caption (the video's canvas, titles and logo stay). */
   function applyLook(p: Preset) {
@@ -1298,6 +1319,19 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 </div>
               )}
               <Presets styleId={styleId} custom={custom} onApply={applyLook} />
+              <section className="auto-hl" aria-label="Highlight keywords">
+                <div className="insp-head"><h3>Highlight keywords</h3></div>
+                <p className="muted small">Picks the words that matter in every caption (numbers, money, names, strong words) and makes them stand out. Change any word after by tapping it on the video.</p>
+                <div className="look-row">
+                  <span className="cz-color">Colour<ColorPicker value={hlColor} onChange={setHlColor} label="Keyword colour" /></span>
+                  <label className="cz-check"><input type="checkbox" checked={hlBig} onChange={(e) => setHlBig(e.target.checked)} /> Bigger and bold</label>
+                </div>
+                <div className="look-row">
+                  <button className="btn small" onClick={autoHighlight} disabled={!cues.length}>✨ Highlight keywords</button>
+                  <button className="btn ghost small" onClick={clearHighlights} disabled={!cues.some((c) => c.wc || c.wce || c.wf || c.wfe)}>Clear word styles</button>
+                </div>
+                {!highlights(look) && <p className="muted small">This style shows no coloured words: the colour won&apos;t show, the size and bold will.</p>}
+              </section>
               <h3>Project style</h3>
               <p className="muted small">{styleOf(styleId).blurb} Applies to every caption without its own look.</p>
               <StylePicker styleId={styleId} onPick={pickStyle} onHover={setHoverStyle} text={sample ? sample.en || sample.ta : undefined} frame={videoStill} />
