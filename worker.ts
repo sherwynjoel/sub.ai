@@ -102,7 +102,10 @@ async function processRender(job: typeof jobs.$inferSelect) {
   try {
     if (!job.filePath || !job.cues?.length) throw new Error("The video or its subtitles are no longer available.");
     let last = 0;
-    const out = await renderStyled({ ...job, filePath: job.filePath, cues: job.cues }, (pct) => {
+    // The free plan's exports carry a small watermark; a paid plan running now takes it off.
+    const [owner] = await db.select().from(users).where(eq(users.id, job.userId));
+    const watermark = !owner || effectivePlan(owner) === "free";
+    const out = await renderStyled({ ...job, filePath: job.filePath, cues: job.cues, watermark }, (pct) => {
       if (pct < last + 5) return;
       last = pct;
       db.update(jobs).set({ renderProgress: pct }).where(eq(jobs.id, job.id)).catch(console.error);

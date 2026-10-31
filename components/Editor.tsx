@@ -22,6 +22,7 @@ import Presets, { type Preset } from "@/components/Presets";
 import ColorPicker from "@/components/ColorPicker";
 import { applyPreset } from "@/lib/presets";
 import { pickKeywords } from "@/lib/keywords";
+import { BRAND } from "@/lib/brand";
 import "@/app/caption-styles.css";
 
 type Job = {
@@ -487,6 +488,9 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [wordBar, setWordBar] = useState(false);
   // Captions whose text goes outside the video (found by OutsideScan a moment after each change), and the scan's turn.
   const [outside, setOutside] = useState<number[]>([]);
+  // The account's plan: free exports carry a watermark (shown on the preview too, as the MP4 will have it).
+  const [freePlan, setFreePlan] = useState(false);
+  useEffect(() => { fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((m) => setFreePlan(m?.plan === "free")).catch(() => {}); }, []);
   const [scan, setScan] = useState(0);
   const scanDone = useCallback((found: number[]) => { setOutside(found); setScan(0); }, []); // the picked word's tools shown over it on the video (it was tapped there)
   const [inline, setInline] = useState(false);
@@ -1084,6 +1088,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 wordBar={wordBar && pickedWord && !playing ? pickedWord : null} onWord={styleWord} onWordClose={() => setWordBar(false)}
                 onMove={(i, x, y) => { if (onlyThis && i === selected) styleCue(i, { x, y }); else lookAll({ x, y }); }}
                 onResize={(i, size) => { if (onlyThis && i === selected) styleCue(i, { size }); else lookAll({ size }); }} />
+              {freePlan && <span className="wm-preview" aria-hidden="true">Made with {BRAND.name}</span>}
               {scan > 0 && view !== "en" && <OutsideScan key={scan} cues={cues} styleId={styleId} custom={custom} portrait={portrait} ratio={frameRatio} line={line} onDone={scanDone} />}
             </div>
           ) : (
@@ -1384,6 +1389,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 <div className="insp-actions">
                   <button className="btn" onClick={render} disabled={!videoHere}>{coming ? `Video uploading · ${local ? progressOf(local) : 0}%` : dirty ? "Save and export MP4" : "Export MP4"}</button>
                   {job.renderStatus === "done" && <a className="btn ghost" href={`/api/jobs/${job.id}/render`} download>Download MP4</a>}
+                  {freePlan && <p className="muted small wm-note">Free plan videos carry a small &ldquo;Made with {BRAND.name}&rdquo; mark. <a href="/pricing">Upgrade</a> to export without it.</p>}
                 </div>
               )}
               {job.renderStatus === "failed" && <p className="error">{job.renderError}</p>}
