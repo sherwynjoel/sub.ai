@@ -378,3 +378,21 @@ test("Pro: Titan One a word at a time, the video negative inside the letters (th
   assert.ok(!/\\[1-4]?c&H(?!FFFFFF&)[0-9A-F]{6}&/i.test(m), "every colour white");
   assert.ok(!/\\bord[1-9]/.test(m) && /^Style: Main,([^,]*,){14}1,0,0,/m.test(m), "no outline, shadow or box");
 });
+
+test("A word picked on the video: its own font, size, bold, italic in the MP4, kept with it through edits", async () => {
+  const { setWord, setText } = await import("./cueEdit");
+  const { lineScale } = await import("./fontWidths");
+  let c = { start: 0, end: 3, ta: "make great videos", en: "" } as Parameters<typeof setWord>[0];
+  c = setWord(c, "ta", 1, { look: { font: "Lobster", size: 1.5, bold: true } });
+  c = setWord(c, "ta", 1, { look: { italic: true } });
+  assert.deepEqual(c.wf, [null, { font: "Lobster", size: 1.5, bold: true, italic: true }, null]);
+  assert.deepEqual(setText(c, "ta", "we make great videos").wf, [null, null, { font: "Lobster", size: 1.5, bold: true, italic: true }, null], "stays with its word");
+  const ass = buildAss([c], { styleId: "tall-caps", lang: "ta", width: 1080, height: 1920 });
+  const em = Math.round(1080 * 0.075 * resolveStyle("tall-caps").size! * 10) / 10;
+  assert.match(ass, new RegExp(`\\\\fnLobster\\\\b1\\\\i1\\}\\{\\\\fs${Math.round(em * lineScale("Lobster") * 1.5 * 10) / 10}\\}GREAT`), "Lobster at 150%, bold, italic");
+  assert.ok(!ass.includes("\\fsz"), "our size tag never reaches libass");
+  assert.equal(setWord(c, "ta", 1, { look: null }).wf, undefined, "reset");
+  // unknown fonts never reach the file
+  const bad = buildAss([{ ...c, wf: [{ font: "X}{\\pos(0,0)" }, null, null] }], { styleId: "tall-caps", lang: "ta", width: 1080, height: 1920 });
+  assert.ok(!bad.includes("X}"));
+});

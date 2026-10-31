@@ -566,7 +566,17 @@ a.signout { text-decoration: none; }
 .overlay.picked .drag-handle { outline: 1.5px dashed rgba(255, 255, 255, .9); outline-offset: 6px; }
 .cap-inline { pointer-events: auto; width: 100%; min-width: 12em; resize: none; font: 700 clamp(.95rem, 2.4vw, 1.3rem)/1.3 var(--font-body); text-align: center; color: #fff; background: rgb(10 10 16 / .78); border: 1.5px dashed #fff; border-radius: 10px; padding: .45em .6em; outline: none; box-shadow: 0 8px 24px rgb(0 0 0 / .35); }
 .overlay.styled.free .cap-inline { width: min(80cqw, 26em); }
-.cap-typing { pointer-events: none; margin-bottom: .5em; } /* the caption as typed, above the box */
+.cap-typing { pointer-events: none; margin-bottom: .5em; }
+/* A word picked on the video, and its tools over the caption */
+.w-picked { outline: 2px solid #d4ff3f; outline-offset: .06em; border-radius: .12em; }
+.word-bar { position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 6px; padding: 6px; width: max-content; max-width: min(96cqw, 560px); flex-wrap: wrap; justify-content: center;
+  pointer-events: auto; cursor: default; background: rgb(14 14 22 / .94); border: 1px solid rgb(255 255 255 / .14); border-radius: 12px; box-shadow: 0 10px 28px rgb(0 0 0 / .45); font: 600 13px/1 var(--font-body); color: #fff; text-align: left; mix-blend-mode: normal; }
+.word-bar select { max-width: 150px; height: 32px; padding: 0 6px; border-radius: 8px; border: 1px solid rgb(255 255 255 / .2); background: #1d1d2a; color: #fff; font: inherit; }
+.word-bar button { min-width: 32px; height: 32px; padding: 0 8px; border-radius: 8px; border: 1px solid rgb(255 255 255 / .2); background: #1d1d2a; color: #fff; font: inherit; cursor: pointer; }
+.word-bar button[aria-pressed="true"] { background: #d4ff3f; color: #0c0c14; border-color: #d4ff3f; }
+.word-bar button:disabled { opacity: .4; cursor: default; }
+.word-bar input[type="color"] { width: 32px; height: 32px; padding: 2px; border-radius: 8px; border: 1px solid rgb(255 255 255 / .2); background: #1d1d2a; cursor: pointer; }
+.wb-size { display: inline-flex; align-items: center; gap: 4px; } .wb-size b { min-width: 3.2em; text-align: center; font-variant-numeric: tabular-nums; } /* the caption as typed, above the box */
 /* small players (phones): the box fits inside the video, the text scales with it */
 @container (max-width: 420px) { .cap-inline { min-width: 0; font-size: clamp(.68rem, 5.2cqw, 1.1rem); padding: .35em .4em; } .overlay.styled.free .cap-inline { width: 88cqw; } }
 

@@ -1,12 +1,15 @@
 "use client";
-import { BLENDS, byLetters, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, CAPTION_FONTS, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
+import type { WordLook } from "@/db/schema";
 
 type Props = {
   styleId: string; custom?: CaptionCustom; text: string; sub?: string; start: number; end: number; time: number;
   starts?: number[];             // when each word starts (measured or edited), else shared by length
   colors?: (string | null)[];    // a colour per word the user picked
+  looks?: (WordLook | null)[];   // a font / size / bold / italic per word the user picked out
+  pickedWord?: number;           // the word picked on the video (outlined)
   ratio?: number;                // the frame's width ÷ height: with line spacing, lines break where the MP4's do
 };
 
@@ -17,7 +20,7 @@ const stack = (font: string, tamil?: string) => `"${font}", ${tamil ? `"${tamil}
  * A caption line drawn in a caption style at a moment in time. Mirrors buildAss() in lib/captionStyles.ts
  * so the editor preview matches the burned-in MP4. Sized in container units: the parent needs container-type: size.
  */
-export default function StyledCaption({ styleId, custom, text, sub, start, end, time, starts, colors: picked, ratio }: Props) {
+export default function StyledCaption({ styleId, custom, text, sub, start, end, time, starts, colors: picked, looks, pickedWord, ratio }: Props) {
   const s = resolveStyle(styleId, custom);
   const colors = highlights(s) ? picked : undefined; // Word Cut: no words picked out
   // Gradient text: the letters filled top colour → bottom colour on each line (a word with its own colour keeps it).
@@ -103,6 +106,11 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     if (s.effect === "wobble") st.transform = `${st.transform ?? ""} rotate(${j % 2 ? -4 : 3}deg)`;
     if (colors?.[j] && state !== "future") st.color = colors[j]!;
     if (grad && st.color) st.WebkitTextFillColor = st.color; // its own colour, over the gradient
+    const lk = looks?.[j]; // its own look (as the MP4's wordLookTags)
+    if (lk?.font && (CAPTION_FONTS as readonly string[]).includes(lk.font)) st.fontFamily = stack(lk.font, s.fontTa);
+    if (lk?.size && Math.abs(lk.size - 1) > 0.001) st.fontSize = `${Math.min(3, Math.max(0.4, lk.size)) * (s.effect === "typo" ? typoSize(j) : 1)}em`;
+    if (lk?.bold !== undefined) st.fontWeight = lk.bold ? 700 : 400;
+    if (lk?.italic !== undefined) st.fontStyle = lk.italic ? "italic" : "normal";
     if (s.reveal || s.effect === "typo") {
       // Each word (or letter) comes in as it's said, in its final place (as the MP4's layers).
       const reveal = s.reveal ?? "rise";
@@ -115,11 +123,11 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       };
       if (reveal === "letters" && byLetters(words[j].w)) {
         const units = revealUnits([words[j]], true);
-        return <span key={j} className="cw" style={{ ...st, visibility: undefined }}>{[...words[j].w].map((ch, k) => <span key={k} style={look(units[k].s)}>{ch}</span>)}</span>;
+        return <span key={j} data-j={j} className={`cw${pickedWord === j ? " w-picked" : ""}`} style={{ ...st, visibility: undefined }}>{[...words[j].w].map((ch, k) => <span key={k} style={look(units[k].s)}>{ch}</span>)}</span>;
       }
-      return <span key={j} className="cw" style={{ ...st, visibility: undefined, ...look(words[j].s) }}>{words[j].w}</span>;
+      return <span key={j} data-j={j} className={`cw${pickedWord === j ? " w-picked" : ""}`} style={{ ...st, visibility: undefined, ...look(words[j].s) }}>{words[j].w}</span>;
     }
-    return <span key={j} className="cw" style={st}>{words[j].w}</span>;
+    return <span key={j} data-j={j} className={`cw${pickedWord === j ? " w-picked" : ""}`} style={st}>{words[j].w}</span>;
   };
   const breakBefore = (j: number) => brk.has(j - 1) || !!s.wordLines || (s.effect === "typo" && typoBreak(j - 1, words.length)) || (!!s.keyword?.line && (j === kw || j === kw + 1));
   const join = (from: number, to: number) => words.slice(from, to).flatMap((_, k) => [k ? (breakBefore(from + k) ? <br key={`br${from + k}`} /> : " ") : null, word(from + k)]);

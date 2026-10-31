@@ -4,7 +4,7 @@
  * Sizes are fractions of the font size; colours are #RRGGBB or #RRGGBBAA.
  * Fonts live in public/caption-fonts (family names below must match the files).
  */
-import type { Cue } from "@/db";
+import type { Cue, WordLook } from "@/db";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import { lineScale, looksTall, textWidth } from "@/lib/fontWidths";
 
@@ -602,24 +602,37 @@ const EMOJI_FONT = "Noto Emoji"; // one-colour emoji (libass can't draw colour o
  * a style font without Tamil letters picks a font per run, and a word on its own can lose its conjuncts (ப்ப drawn
  * as ப + a dotted circle).
  */
+/** Tags for a word's own look (only known fonts, sizes 40–300%: the values come from the saved project). */
+export function wordLookTags(l: WordLook | null | undefined) {
+  if (!l) return "";
+  let t = "";
+  if (typeof l.font === "string" && (CAPTION_FONTS as readonly string[]).includes(l.font)) t += `\\fn${l.font}`;
+  if (typeof l.size === "number" && Number.isFinite(l.size) && Math.abs(l.size - 1) > 0.001) t += `\\fsz${Math.round(Math.min(3, Math.max(0.4, l.size)) * 100) / 100}`;
+  if (typeof l.bold === "boolean") t += `\\b${l.bold ? 1 : 0}`;
+  if (typeof l.italic === "boolean") t += `\\i${l.italic ? 1 : 0}`;
+  return t;
+}
+
 export function tamilRuns(text: string, fonts: Record<string, string>, style: string, tamil = TAMIL_FONT, spacing = 0, ems?: Record<string, number>) {
   type Run = "latin" | "ta" | "emoji";
-  let font = fonts[style], out = "", run: Run = "latin", cur = style;
+  let font = fonts[style], out = "", run: Run = "latin", cur = style, z = 1;
   const fontOf = (r: Run) => (r === "ta" ? tamil : r === "emoji" ? EMOJI_FONT : font);
-  // With the styles' em sizes: every font drawn em × its line height (libass sizes by the line, the editor by the em).
-  const fsOf = (f: string) => (ems?.[cur] ? `\\fs${Math.round(ems[cur] * lineScale(f) * 10) / 10}` : "");
+  // With the styles' em sizes: every font drawn em × its line height (libass sizes by the line, the editor by the em);
+  // \fsz<n> (ours, not libass's) makes a word n × that size.
+  const fsOf = (f: string) => (ems?.[cur] ? `\\fs${Math.round(ems[cur] * lineScale(f) * z * 10) / 10}` : "");
   for (let i = 0; i < text.length; ) {
     if (text[i] === "{") { // override block: follow \fn and \r[Style]
       const end = text.indexOf("}", i), block = text.slice(i, end + 1);
       let changed = false;
-      for (const m of block.matchAll(/\\(fn|r)([^\\}]*)/g)) {
-        if (m[1] === "r") cur = fonts[m[2]] ? m[2] : style;
+      for (const m of block.matchAll(/\\(fsz|fn|r)([^\\}]*)/g)) {
+        if (m[1] === "fsz") { z = +m[2] || 1; changed = true; continue; }
+        if (m[1] === "r") { cur = fonts[m[2]] ? m[2] : style; z = 1; }
         font = m[1] === "fn" ? m[2] || fonts[style] : fonts[m[2]] ?? fonts[style];
         changed = true;
       }
-      out += block; i = end + 1;
+      out += block.replace(/\\fsz[\d.]*/g, ""); i = end + 1;
       if (run !== "latin") out += `{\\fn${fontOf(run)}${fsOf(fontOf(run))}${spacing ? "\\fsp0" : ""}}`; // a block inside a run may have reset the font
-      else if (changed && ems && font !== fonts[cur]) out += `{${fsOf(font)}}`; // a word in another font (a keyword, a big word)
+      else if (changed && ems && (font !== fonts[cur] || z !== 1)) out += `{${fsOf(font)}}`; // a word in another font or size (a keyword, a big word, one picked out)
       continue;
     }
     const cp = text.codePointAt(i)!, ch = String.fromCodePoint(cp);
@@ -720,6 +733,7 @@ export function buildAss(cues: Cue[], o: Opts) {
     if (s.fontTa) tamil[cur] = s.fontTa;
     if (s.spacing) spaced[cur] = px(s.spacing);
     const colors = highlights(s) ? (o.lang === "en" ? c.wce : c.wc) : undefined; // the user's colour for single words
+    const looks = o.lang === "en" ? c.wfe : c.wf; // a word's own font, size, bold, italic (picked on the video)
     const sub = o.lang === "both" ? c.en.trim() : "";
     // English in the caption's font, turned and spaced like it.
     const tail = sub ? `\\N{\\rSecond\\fn${s.font}${s.rotate ? `\\frz${-s.rotate}` : ""}${s.spacing ? `\\fsp${px(s.spacing * 0.55)}` : ""}}${esc(breakLines(sub, s.lines))}` : "";
@@ -823,6 +837,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       if (s.effect === "wobble") t += `\\frz${j % 2 ? -4 : 3}`;
       if (s.activeGrow && state === "active") t += "\\t(0,120,\\fscx115\\fscy115)";
       if (colors?.[j] && state !== "future") t += `\\1c${colorOnly(colors[j]!)}`;
+      t += wordLookTags(looks?.[j]);
       return `{${t}}${w}`;
     };
 
@@ -845,20 +860,25 @@ export function buildAss(cues: Cue[], o: Opts) {
       const rows = cineRows(words.length, typedBreaks(main)), ms = 420, big = cineBig(rows), bigFont = cineFont(s);
       const fontOf = (r: number) => (r === big ? bigFont : s.font);
       const text = (j: number, r: number) => (r === big ? words[j].w.toUpperCase() : words[j].w);
-      const fitW = rows.map(([a, b], r) => room / (Math.max(0.3, textWidth(words.slice(a, b).map((_, n) => text(a + n, r)).join(" "), fontOf(r), s.fontTa)) * fs));
+      // a word's width in its own font and size when it has them (picked on the video)
+      const wordEm = (j: number, r: number) => {
+        const l = looks?.[j], f = l?.font && (CAPTION_FONTS as readonly string[]).includes(l.font) ? l.font : fontOf(r);
+        return textWidth(text(j, r), f, s.fontTa) * (l?.size ? Math.min(3, Math.max(0.4, l.size)) : 1);
+      };
+      const fitW = rows.map(([a, b], r) => room / (Math.max(0.3, words.slice(a, b).reduce((t, _, n) => t + wordEm(a + n, r), 0) + (b - a - 1) * textWidth(" ", fontOf(r), s.fontTa)) * fs));
       const zBig = Math.min(CINE_BIG, fitW[big]), fit = fitW.map((w, r) => (r === big ? zBig : Math.min(1, w, zBig / CINE_OVER)));
       const nats = rows.map(([a, b], r) => natOf(words.slice(a, b).map((w) => w.w).join(" "), fit[r], fontOf(r)));
       // Line spacing: each line's slot g × its height, and the English g's worth further down (as the editor).
       const gc = s.lineHeight ?? 1, p = stackAt(nats.map((n) => n * gc), !!sub, ((gc - 1) / 2) * fs * lineBox(s, main));
       rows.forEach(([a, b], r) => {
-        const z = fit[r], f = fontOf(r), space = textWidth(" ", f, s.fontTa), wid = (j: number) => textWidth(text(j, r), f, s.fontTa) * fs * z;
+        const z = fit[r], f = fontOf(r), space = textWidth(" ", f, s.fontTa), wid = (j: number) => wordEm(j, r) * fs * z;
         const look = r === big ? `\\fn${f}\\b1` : "";
         let x = ax - ((words.slice(a, b).reduce((t, _, n) => t + wid(a + n), 0) + (b - a - 1) * space * fs * z) * (1 + hz)) / 2;
         for (let j = a; j < b; j++) {
           const w = wid(j), cx = x + w / 2, sz = Math.round(z * 100);
           x += w + space * fs * z;
           const tags = `${look}\\fscx${Math.round(sz * 1.12)}\\fscy${Math.round(sz * 1.12)}\\blur${px(0.25)}\\t(0,${ms},\\blur0\\fscx${sz}\\fscy${sz})`;
-          const body = word(j, j).replace(/^\{([^}]*)\}.*$/, (_, t) => `{${t}${tags}}${esc(text(j, r))}`);
+          const body = word(j, j).replace(/^\{\\r([^}]*)\}.*$/, (_, t) => `{\\r${tags}${t}}${esc(text(j, r))}`);
           strips(words[j].s, c.end, `{\\an5\\pos(${Math.round(cx)},${Math.round(p.ys[r])})\\fad(300,0)}`, p.ys[r], nats[r], "{\\q2}" + body);
         }
       });

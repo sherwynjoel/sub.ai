@@ -12,7 +12,11 @@ export type Cue = {
   style?: CaptionCustom;        // this caption's own look, over the project's (font, size, colours, position…)
   wc?: (string | null)[];       // colour of each word of `ta` (null = the style's own)
   wce?: (string | null)[];      // colour of each word of `en`
+  wf?: (WordLook | null)[];     // font, size, weight and slant of each word of `ta` picked out on the video (null = as the caption)
+  wfe?: (WordLook | null)[];    // the same for each word of `en`
 };
+/** One word's own look: a caption font, a size (× the caption's), bold, italic. */
+export type WordLook = { font?: string; size?: number; bold?: boolean; italic?: boolean };
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),

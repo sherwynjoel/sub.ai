@@ -3,9 +3,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import type { Cue } from "@/db/schema";
+import type { Cue, WordLook } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
-import { BLENDS, CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type SafeZoneId, type TextLayer, pushDown, shownLines } from "@/lib/captionStyles";
+import { BLENDS, CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type CaptionStyle, type SafeZoneId, type TextLayer, pushDown, shownLines } from "@/lib/captionStyles";
 import { insertAt, insertBetween, mergeCues, removeCue, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
@@ -66,12 +66,14 @@ const NEW_FONTS: string[] = ["Great Vibes", "Figtree Bold", "GFS Didot", "Oswald
   "Archivo Black", "Abril Fatface", "Alfa Slab One", "Comfortaa Bold", "Luckiest Guy", "Titan One"];
 
 /** The styled caption over the player, redrawn every frame while the video plays so word timing is smooth. */
-function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, selected, picked, editing, onMove, onResize, onTap, onEditOpen, onEditDone }: {
+function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, selected, picked, editing, wordBar, onMove, onResize, onTap, onEditOpen, onEditDone, onWord, onWordClose }: {
   video: React.RefObject<HTMLVideoElement | null>; cues: Cue[]; styleId: string; custom: CaptionCustom; portrait: boolean; ratio: number; view: View; selected: number;
   picked: (start: number) => boolean; editing: string | null;
+  wordBar: { cue: number; j: number } | null; // the word picked on the video, its tools shown over it
   onMove: (i: number, x: number, y: number) => void;
   onResize: (i: number, size: number) => void;
-  onTap: (start: number) => void; onEditOpen: () => void; onEditDone: (text: string | null) => void;
+  onTap: (start: number, word?: number) => void; onEditOpen: () => void; onEditDone: (text: string | null) => void;
+  onWord: (patch: { look?: WordLook | null; color?: string | null }) => void; onWordClose: () => void;
 }) {
   const [t, setT] = useState(0);
   const [sizing, setSizing] = useState<number | null>(null); // the size shown while the corner is dragged
@@ -110,7 +112,14 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
     if (!frame) return;
     e.preventDefault();
     video.current?.pause();
-    onTap(c.start); // tapping a caption on the video picks it (and its tools come up under the video)
+    // tapping a caption on the video picks it (its tools come up under the video), and the word tapped (its tools over it)
+    // (the caption's text lets the pointer through, so the word is the one whose box holds it)
+    const hit = [...e.currentTarget.querySelectorAll<HTMLElement>("[data-j]")].find((el) => {
+      const b = el.getBoundingClientRect();
+      return e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom;
+    });
+    const w = hit?.dataset.j;
+    onTap(c.start, w == null ? undefined : +w);
     follow(e, frame, (x, y) => { video.current?.pause(); onMove(i, x, y); }, 0.05, e.currentTarget.parentElement);
   };
   // The corner dot resizes: the caption grows as the pointer moves away from its centre (Size, 40–260%).
@@ -165,7 +174,12 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
       </>) : (
       <div className="drag-handle" onPointerDown={drag} onDoubleClick={onEditOpen} title="Tap to pick, drag to move, double-click to edit the text">
         <StyledCaption styleId={styleId} custom={own} text={main} sub={view === "both" ? c.en : undefined} start={c.start} end={c.end} time={ghost ? c.end - 0.01 : t}
-          starts={line === "en" ? c.we : c.w} colors={line === "en" ? c.wce : c.wc} ratio={ratio} />
+          starts={line === "en" ? c.we : c.w} colors={line === "en" ? c.wce : c.wc} looks={line === "en" ? c.wfe : c.wf} ratio={ratio}
+          pickedWord={wordBar?.cue === i && video.current?.paused !== false ? wordBar.j : undefined} />
+        {wordBar?.cue === i && video.current?.paused !== false && wordsOf(main)[wordBar.j] && (
+          <WordBar word={wordsOf(main)[wordBar.j]} look={(line === "en" ? c.wfe : c.wf)?.[wordBar.j] ?? null} color={(line === "en" ? c.wce : c.wc)?.[wordBar.j] ?? null}
+            base={resolveStyle(styleId, own)} onChange={onWord} onClose={onWordClose} />
+        )}
         {video.current?.paused !== false && <span className="rs-handle" onPointerDown={resize} title="Drag to resize the subtitle" aria-hidden="true" />}
         {sizing !== null && <span className="rs-size">{Math.round(sizing * 100)}%</span>}
       </div>
@@ -282,6 +296,36 @@ function Guides({ on }: { on: boolean }) {
  * to where it is (grabbing a caption by its left end used to pull its centre there), only once it has moved a few
  * pixels (a click or a shaky tap leaves it where it is), and snapping to the middle of the frame when near it.
  */
+/**
+ * Tools for one word, over the caption on the video: its font, size, colour, bold and italic (the MP4 draws the same,
+ * captionStyles wordLookTags), or back to the caption's own look.
+ */
+function WordBar({ word, look, color, base, onChange, onClose }: {
+  word: string; look: WordLook | null; color: string | null; base: CaptionStyle; onChange: (patch: { look?: WordLook | null; color?: string | null }) => void; onClose: () => void;
+}) {
+  const size = look?.size ?? 1;
+  const resize = (d: number) => { const n = Math.round(Math.min(3, Math.max(0.4, size + d)) * 10) / 10; onChange({ look: { size: Math.abs(n - 1) < 0.001 ? undefined : n } }); };
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation(); // not a drag of the caption
+  return (
+    <div className="word-bar" role="toolbar" aria-label={`Word: ${word}`} onPointerDown={stop} onDoubleClick={stop} onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}>
+      <select value={look?.font ?? ""} onChange={(e) => onChange({ look: { font: e.target.value || undefined } })} aria-label="Word font" style={{ fontFamily: look?.font ? `"${look.font}"` : undefined }}>
+        <option value="">Font: caption&apos;s</option>
+        {CAPTION_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: `"${f}"` }}>{f}</option>)}
+      </select>
+      <span className="wb-size">
+        <button onClick={() => resize(-0.1)} aria-label="Smaller" title="Smaller">A−</button>
+        <b>{Math.round(size * 100)}%</b>
+        <button onClick={() => resize(0.1)} aria-label="Bigger" title="Bigger">A+</button>
+      </span>
+      <input type="color" aria-label="Word colour" title="Word colour" value={(color ?? base.color).slice(0, 7)} onChange={(e) => onChange({ color: e.target.value })} />
+      <button aria-pressed={look?.bold ?? !!base.bold} onClick={() => onChange({ look: { bold: !(look?.bold ?? !!base.bold) } })} style={{ fontWeight: 800 }} title="Bold">B</button>
+      <button aria-pressed={look?.italic ?? !!base.italic} onClick={() => onChange({ look: { italic: !(look?.italic ?? !!base.italic) } })} style={{ fontStyle: "italic" }} title="Italic">I</button>
+      <button onClick={() => onChange({ look: null, color: null })} disabled={!look && !color} title="Back to the caption's look">Reset</button>
+      <button onClick={onClose} aria-label="Close" title="Close (Esc)">×</button>
+    </div>
+  );
+}
+
 function follow(e: React.PointerEvent, frame: DOMRect, onMove: (x: number, y: number) => void, edge: number, around?: HTMLElement | null) {
   // the centre of the thing (or of what it sits in: a caption's column, when its text is aligned to a side)
   const el = e.currentTarget as HTMLElement, box = (around ?? el).getBoundingClientRect();
@@ -368,6 +412,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [guides, setGuides] = useState(false); // centring guides kept on (they also show while dragging)
   // Editing on the video: the word picked in the strip, the caption's text open over the video, the timing nudges.
   const [pickedWord, setPickedWord] = useState<WordRef | null>(null);
+  const [wordBar, setWordBar] = useState(false); // the picked word's tools shown over it on the video (it was tapped there)
   const [inline, setInline] = useState(false);
   const [nudging, setNudging] = useState(false);
   // Phones: the video fills the screen; the sections open as a sheet from the bottom, the video above it.
@@ -657,14 +702,22 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   /** The word of caption i at time t (the one being said). */
   const wordAt = (i: number, t: number) => { const st = startsOf(cues[i], line); let j = 0; while (j + 1 < st.length && st[j + 1] <= t + 0.01) j++; return j; };
   /** A caption tapped on the video: pick it (by its time: the English view groups captions differently). */
-  function tapCaption(start: number) {
+  function tapCaption(start: number, word?: number) {
     const t = Math.max(start, now);
     let i = cues.findIndex((c) => t >= c.start - 0.01 && t < c.end);
     if (i < 0) i = cues.findIndex((c) => c.end > start);
     if (i < 0) return;
     if (i !== selected) { setInline(false); setNudging(false); }
     select(i);
-    setPickedWord({ cue: i, j: wordAt(i, Math.max(now, cues[i].start)) });
+    const regrouped = view === "en" && cues.some((c) => c.ta); // English captions regrouped: their words aren't one caption's
+    setPickedWord({ cue: i, j: word !== undefined && !regrouped ? word : wordAt(i, Math.max(now, cues[i].start)) });
+    setWordBar(word !== undefined && !regrouped);
+  }
+  /** A change to the word picked on the video: its own look and/or colour. */
+  function styleWord(patch: { look?: WordLook | null; color?: string | null }) {
+    if (!pickedWord) return;
+    const c = cues[pickedWord.cue];
+    if (c) editCue(pickedWord.cue, setWord(c, line, pickedWord.j, patch));
   }
   function pickWord(w: WordRef, start: number) {
     video.current?.pause();
@@ -908,7 +961,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 // The picked caption gets a dashed box (in the English view captions are regrouped: the one holding it).
                 picked={(start) => !playing && !!sel && (view === "en" ? start <= sel.start + 0.01 && now >= sel.start - 0.01 && now < sel.end : Math.abs(start - sel.start) < 0.001)}
                 editing={inline && cues[target()] ? cues[target()][line] : null}
-                onTap={tapCaption} onEditOpen={() => { setInline(true); }} onEditDone={inlineDone}
+                onTap={tapCaption} onEditOpen={() => { setWordBar(false); setInline(true); }} onEditDone={inlineDone}
+                wordBar={wordBar && pickedWord && !playing ? pickedWord : null} onWord={styleWord} onWordClose={() => setWordBar(false)}
                 onMove={(i, x, y) => { if (onlyThis && i === selected) styleCue(i, { x, y }); else lookAll({ x, y }); }}
                 onResize={(i, size) => { if (onlyThis && i === selected) styleCue(i, { size }); else lookAll({ size }); }} />
             </div>

@@ -2,13 +2,14 @@
  * Editing operations on captions for the web editor (pure, so they're tested on their own): split, merge, insert,
  * and word-level edits that keep each line's word times (w / we) and word colours (wc / wce) in step with its words.
  */
-import type { Cue } from "@/db/schema";
+import type { Cue, WordLook } from "@/db/schema";
 import { wordTimes } from "@/lib/captionStyles";
 import { typedBreaks } from "@/lib/subtitles";
 
 export const wordsOf = (text: string) => text.split(/\s+/).filter(Boolean);
 const TIMES = { ta: "w", en: "we" } as const;
 const COLORS = { ta: "wc", en: "wce" } as const;
+const LOOKS = { ta: "wf", en: "wfe" } as const;
 
 /** The starts of a line's words: the stored ones, else shared by length. */
 export function startsOf(c: Cue, line: "ta" | "en") {
@@ -48,6 +49,8 @@ export function splitCue(c: Cue, t: number): [Cue, Cue] | undefined {
     }
     const colors = c[ck];
     if (colors && colors.length === h.a.length + h.b.length) { a[ck] = colors.slice(0, h.cut); b[ck] = colors.slice(h.cut); }
+    const lk = LOOKS[line], looks = c[lk];
+    if (looks && looks.length === h.a.length + h.b.length) { a[lk] = looks.slice(0, h.cut); b[lk] = looks.slice(h.cut); }
   }
   if (c.style) { a.style = { ...c.style }; b.style = { ...c.style }; }
   return [a, b];
@@ -60,6 +63,8 @@ export function mergeCues(a: Cue, b: Cue): Cue {
     const tk = TIMES[line], ck = COLORS[line];
     if (c[line]) c[tk] = [...startsOf(a, line).slice(0, wordsOf(a[line]).length), ...startsOf(b, line).slice(0, wordsOf(b[line]).length)];
     if (a[ck] || b[ck]) c[ck] = [...(a[ck] ?? wordsOf(a[line]).map(() => null)), ...(b[ck] ?? wordsOf(b[line]).map(() => null))];
+    const lk = LOOKS[line];
+    if (a[lk] || b[lk]) c[lk] = [...(a[lk] ?? wordsOf(a[line]).map(() => null)), ...(b[lk] ?? wordsOf(b[line]).map(() => null))];
   }
   const style = a.style ?? b.style;
   if (style) c.style = { ...style };
@@ -162,11 +167,16 @@ export function setText(c: Cue, line: "ta" | "en", text: string): Cue {
     const kept = [...colors.slice(0, h), ...Array.from({ length: mid }, () => null), ...colors.slice(before.length - tl)];
     if (kept.some(Boolean)) out[ck] = kept; else delete out[ck];
   }
+  const lk = LOOKS[line], looks = c[lk];
+  if (looks) {
+    const kept = [...looks.slice(0, h), ...Array.from({ length: mid }, () => null), ...looks.slice(before.length - tl)];
+    if (kept.some(Boolean)) out[lk] = kept; else delete out[lk];
+  }
   return out;
 }
 
 /** Change one word of a line (its text, start or colour). */
-export function setWord(c: Cue, line: "ta" | "en", j: number, patch: { text?: string; start?: number; color?: string | null }): Cue {
+export function setWord(c: Cue, line: "ta" | "en", j: number, patch: { text?: string; start?: number; color?: string | null; look?: WordLook | null }): Cue {
   let out: Cue = { ...c };
   const tk = TIMES[line], ck = COLORS[line];
   const words = wordsOf(c[line]);
@@ -180,6 +190,12 @@ export function setWord(c: Cue, line: "ta" | "en", j: number, patch: { text?: st
     const colors = c[ck]?.slice() ?? words.map(() => null);
     colors[j] = patch.color;
     if (colors.some(Boolean)) out[ck] = colors; else delete out[ck];
+  }
+  if (patch.look !== undefined) { // its own font / size / bold / italic, merged in (null: back to the caption's)
+    const lk = LOOKS[line], looks = c[lk]?.slice() ?? words.map(() => null);
+    const next = patch.look === null ? null : Object.fromEntries(Object.entries({ ...looks[j], ...patch.look }).filter(([, v]) => v !== undefined)) as WordLook;
+    looks[j] = next && Object.keys(next).length ? next : null;
+    if (looks.some(Boolean)) out[lk] = looks; else delete out[lk];
   }
   if (patch.text !== undefined) { // the other words, and the line breaks typed between them, stay as they were
     const typed = typedBreaks(c[line]);
