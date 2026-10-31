@@ -18,6 +18,8 @@ import StyledCaption from "@/components/StyledCaption";
 import StylePicker from "@/components/StylePicker";
 import Timeline from "@/components/Timeline";
 import WordStrip, { type WordRef } from "@/components/WordStrip";
+import Presets, { type Preset } from "@/components/Presets";
+import { applyPreset } from "@/lib/presets";
 import "@/app/caption-styles.css";
 
 type Job = {
@@ -547,6 +549,15 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     setCustom(kept);
     savedLook.current = JSON.stringify(kept);
     saveLook({ captionStyle: id, captionCustom: kept });
+  }
+  /** A saved preset on this video: its style and look for every caption (the video's canvas, titles and logo stay). */
+  function applyLook(p: Preset) {
+    sameLook();
+    const next = applyPreset(custom, p.custom);
+    setStyleId(p.styleId);
+    setCustom(next);
+    savedLook.current = JSON.stringify(next);
+    saveLook({ captionStyle: p.styleId, captionCustom: next });
   }
   const savedLook = useRef(JSON.stringify(initial.captionCustom ?? {}));
   useEffect(() => {
@@ -1285,6 +1296,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   <button className="btn small" onClick={sameLook}>Make all captions the same</button>
                 </div>
               )}
+              <Presets styleId={styleId} custom={custom} onApply={applyLook} />
               <h3>Project style</h3>
               <p className="muted small">{styleOf(styleId).blurb} Applies to every caption without its own look.</p>
               <StylePicker styleId={styleId} onPick={pickStyle} onHover={setHoverStyle} text={sample ? sample.en || sample.ta : undefined} frame={videoStill} />

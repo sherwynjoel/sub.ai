@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { and, eq, sql } from "drizzle-orm";
-import { db, jobs, users } from "@/db";
+import { db, jobs, stylePresets, users } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { probe, remuxAudio, soundLength, STORAGE, videoPart } from "@/lib/media";
 import { DEFAULT_LANGUAGE, isLanguage } from "@/lib/languages";
@@ -13,6 +13,7 @@ import { JOB_SCRIPTS, type JobScript } from "@/lib/captionTypes";
 import { DEFAULT_STYLE, SAFE_ZONES, STYLE_CHOICES } from "@/lib/captionStyles";
 import { effectivePlan, PLANS, secondsLeft } from "@/lib/plans";
 import { mustConfirm } from "@/lib/verify";
+import { knownStyle, presetLook } from "@/lib/presets";
 
 const MAX_BYTES = 4 * 1024 ** 3; // 4 GB
 
@@ -36,9 +37,12 @@ export async function POST(req: Request) {
   // show: which lines the subtitles show; English only still needs the English pass.
   const show = q.get("show") === "en" || q.get("show") === "ta" ? (q.get("show") as "en" | "ta") : undefined;
   const withEnglish = show === "en" || q.get("english") !== "0";
-  const captionStyle = STYLE_CHOICES.some((s) => s.id === q.get("style")) ? q.get("style")! : DEFAULT_STYLE;
   const safe = q.get("safe") ?? "";
-  const captionCustom = { ...(safe in SAFE_ZONES && safe !== "none" && safe !== "custom" ? { safe: safe as keyof typeof SAFE_ZONES } : {}), ...(show ? { show } : {}) };
+  const picked = { ...(safe in SAFE_ZONES && safe !== "none" && safe !== "custom" ? { safe: safe as keyof typeof SAFE_ZONES } : {}), ...(show ? { show } : {}) };
+  // No style chosen with the upload: the user's default preset ("My brand"), with the upload's own choices on top.
+  const [preset] = q.get("style") ? [] : await db.select().from(stylePresets).where(and(eq(stylePresets.userId, u.id), eq(stylePresets.isDefault, true))).limit(1);
+  const captionStyle = STYLE_CHOICES.some((s) => s.id === q.get("style")) ? q.get("style")! : preset && knownStyle(preset.styleId) ? preset.styleId : DEFAULT_STYLE;
+  const captionCustom = { ...(preset ? presetLook(preset.custom) : {}), ...picked };
   const dir = join(STORAGE, "uploads", u.id);
   await mkdir(dir, { recursive: true });
   const audioFirst = q.get("audio") === "1";
