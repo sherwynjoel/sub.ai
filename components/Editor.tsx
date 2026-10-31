@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import type { Cue, WordLook } from "@/db/schema";
 import { languageOf, shortCode } from "@/lib/languages";
@@ -65,6 +65,75 @@ const SPEEDS = [1, 1.5, 2, 0.5];
 const NEW_FONTS: string[] = ["Great Vibes", "Figtree Bold", "GFS Didot", "Oswald Bold", "Bebas Neue", "Lobster", "Pacifico", "Caveat Bold", "Righteous",
   "Archivo Black", "Abril Fatface", "Alfa Slab One", "Comfortaa Bold", "Luckiest Guy", "Titan One"];
 
+/** Where a caption sits over the player (as the MP4 places it): its box's CSS. */
+function placeOf(styleId: string, own: CaptionCustom, portrait: boolean) {
+  const { position, offset, x, y, safe, textAlign, blend } = resolveStyle(styleId, own, portrait);
+  const free = x !== undefined && y !== undefined;
+  const pct = (n: number) => `${n * 100}%`;
+  const sides = { left: pct(safe.left), right: pct(safe.right), textAlign };
+  // Dragged with the text aligned to a side: the lines flush to that side of a column centred on the point (as the MP4)
+  const column = 2 * Math.min(0.5 - Math.max(safe.left, safe.right), x !== undefined ? Math.min(x - safe.left, 1 - safe.right - x) : 0.5);
+  const mix: React.CSSProperties = blend ? { mixBlendMode: BLENDS[blend][1] } : {}; // the text blended with the video (as the MP4)
+  const place: React.CSSProperties = free ? { ...mix, left: pct(x), top: pct(y), ...(textAlign && textAlign !== "center" ? { width: pct(column), textAlign } : { maxWidth: pct(Math.min(0.92, 2 * Math.min(x - safe.left, 1 - safe.right - x))) }) }
+    : position === "top" ? { ...mix, ...sides, top: pct(offset), bottom: "auto" }
+    : position === "middle" ? { ...mix, ...sides, top: pct((safe.top + 1 - safe.bottom) / 2), bottom: "auto", transform: "translateY(-50%)" }
+    : { ...mix, ...sides, bottom: pct(offset) };
+  return { free, place };
+}
+
+/**
+ * The sides of the video a caption's text runs past (by more than 2 px), or null when it's all inside: measured from
+ * every piece of its text, which can stick out of its own box (lines that don't wrap, big words). The MP4 cuts there.
+ */
+function outsideOf(box: HTMLElement, frame: DOMRect) {
+  const out = { left: false, right: false, top: false, bottom: false };
+  for (const el of box.querySelectorAll<HTMLElement>(".cap-main, .cap-main *, .cap-sub")) {
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) continue;
+    if (r.left < frame.left - 2) out.left = true;
+    if (r.right > frame.right + 2) out.right = true;
+    if (r.top < frame.top - 2) out.top = true;
+    if (r.bottom > frame.bottom + 2) out.bottom = true;
+  }
+  return out.left || out.right || out.top || out.bottom ? out : null;
+}
+const sidesText = (o: { left: boolean; right: boolean; top: boolean; bottom: boolean }) =>
+  (["left", "right", "top", "bottom"] as const).filter((k) => o[k]).join(", ");
+
+/**
+ * Every caption laid out once, unseen, in the player (fully shown, as it ends), to find the ones whose text goes
+ * outside the video; reports their indexes and is then taken away.
+ */
+function OutsideScan({ cues, styleId, custom, portrait, ratio, line, onDone }: {
+  cues: Cue[]; styleId: string; custom: CaptionCustom; portrait: boolean; ratio: number; line: "ta" | "en"; onDone: (out: number[]) => void;
+}) {
+  const root = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = root.current, frame = el?.parentElement?.getBoundingClientRect();
+    if (!el || !frame) return;
+    const found: number[] = [];
+    el.querySelectorAll<HTMLElement>("[data-cue]").forEach((box) => { if (outsideOf(box, frame)) found.push(+box.dataset.cue!); });
+    onDone(found);
+  }, [onDone]);
+  return (
+    <div ref={root} className="out-scan" aria-hidden="true">
+      {cues.map((c, i) => {
+        const text = c[line];
+        if (!text.trim()) return null;
+        const own = mergeCustom(custom, c.style);
+        return (
+          <div key={i} data-cue={i} className={`overlay styled${placeOf(styleId, own, portrait).free ? " free" : ""}`} style={placeOf(styleId, own, portrait).place}>
+            <div className="drag-handle">
+              <StyledCaption styleId={styleId} custom={own} text={text} start={c.start} end={c.end} time={c.end - 0.01} ratio={ratio}
+                starts={(line === "en" ? c.we : c.w)?.map(() => c.start) ?? text.split(/\s+/).filter(Boolean).map(() => c.start)} looks={line === "en" ? c.wfe : c.wf} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /** The styled caption over the player, redrawn every frame while the video plays so word timing is smooth. */
 function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, selected, picked, editing, wordBar, onMove, onResize, onTap, onEditOpen, onEditDone, onWord, onWordClose }: {
   video: React.RefObject<HTMLVideoElement | null>; cues: Cue[]; styleId: string; custom: CaptionCustom; portrait: boolean; ratio: number; view: View; selected: number;
@@ -78,6 +147,13 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
   const [t, setT] = useState(0);
   const [sizing, setSizing] = useState<number | null>(null); // the size shown while the corner is dragged
   const [draft, setDraft] = useState<string | null>(null); // the text being typed (its lines shown live above it)
+  const box = useRef<HTMLDivElement>(null);
+  const [out, setOut] = useState<string | null>(null); // the sides of the video the caption on screen goes past
+  useLayoutEffect(() => { // after every redraw (a frame, an edit, a drag, a resize): measured against the video
+    const el = box.current, frame = el?.parentElement?.getBoundingClientRect();
+    const o = el && frame ? outsideOf(el, frame) : null;
+    setOut(o ? sidesText(o) : null);
+  }, [t, cues, custom, styleId, ratio, view, sizing, draft, selected]);
   useEffect(() => {
     const v = video.current;
     if (!v) return;
@@ -96,17 +172,8 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
   const main = view === "en" ? c.en : c.ta;
   if (!main.trim()) return null;
   const own = mergeCustom(custom, c.style);
-  const { position, offset, x, y, safe, scale, textAlign, blend } = resolveStyle(styleId, own, portrait);
-  const free = x !== undefined && y !== undefined;
-  const pct = (n: number) => `${n * 100}%`;
-  const sides = { left: pct(safe.left), right: pct(safe.right), textAlign };
-  // Dragged with the text aligned to a side: the lines flush to that side of a column centred on the point (as the MP4)
-  const column = 2 * Math.min(0.5 - Math.max(safe.left, safe.right), x !== undefined ? Math.min(x - safe.left, 1 - safe.right - x) : 0.5);
-  const mix: React.CSSProperties = blend ? { mixBlendMode: BLENDS[blend][1] } : {}; // the text blended with the video (as the MP4)
-  const place: React.CSSProperties = free ? { ...mix, left: pct(x), top: pct(y), ...(textAlign && textAlign !== "center" ? { width: pct(column), textAlign } : { maxWidth: pct(Math.min(0.92, 2 * Math.min(x - safe.left, 1 - safe.right - x))) }) }
-    : position === "top" ? { ...mix, ...sides, top: pct(offset), bottom: "auto" }
-    : position === "middle" ? { ...mix, ...sides, top: pct((safe.top + 1 - safe.bottom) / 2), bottom: "auto", transform: "translateY(-50%)" }
-    : { ...mix, ...sides, bottom: pct(offset) };
+  const { scale } = resolveStyle(styleId, own, portrait);
+  const { free, place } = placeOf(styleId, own, portrait);
   const drag = (e: React.PointerEvent<HTMLDivElement>) => {
     const frame = video.current?.parentElement?.getBoundingClientRect();
     if (!frame) return;
@@ -159,8 +226,9 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
     setDraft(next.text);
     requestAnimationFrame(() => ta.setSelectionRange(next.at, next.at));
   };
-  return (
-    <div className={`overlay styled${free ? " free" : ""}${ghost ? " ghost" : ""}${picked(c.start) ? " picked" : ""}`} style={place}>
+  return (<>
+    {out && editing === null && <span className="out-badge" role="status">⚠ This subtitle goes outside the video ({out}): make it smaller or move it in</span>}
+    <div ref={box} className={`overlay styled${free ? " free" : ""}${ghost ? " ghost" : ""}${picked(c.start) ? " picked" : ""}${out ? " outside" : ""}`} style={place}>
       {editing !== null ? (<>
         {typing.trim() && <div className="cap-typing" aria-hidden="true">
           <StyledCaption styleId={styleId} custom={own} text={typing} start={c.start} end={c.end} time={c.end - 0.01} ratio={ratio}
@@ -185,7 +253,7 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
       </div>
       )}
     </div>
-  );
+  </>);
 }
 
 /**
@@ -412,7 +480,11 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [guides, setGuides] = useState(false); // centring guides kept on (they also show while dragging)
   // Editing on the video: the word picked in the strip, the caption's text open over the video, the timing nudges.
   const [pickedWord, setPickedWord] = useState<WordRef | null>(null);
-  const [wordBar, setWordBar] = useState(false); // the picked word's tools shown over it on the video (it was tapped there)
+  const [wordBar, setWordBar] = useState(false);
+  // Captions whose text goes outside the video (found by OutsideScan a moment after each change), and the scan's turn.
+  const [outside, setOutside] = useState<number[]>([]);
+  const [scan, setScan] = useState(0);
+  const scanDone = useCallback((found: number[]) => { setOutside(found); setScan(0); }, []); // the picked word's tools shown over it on the video (it was tapped there)
   const [inline, setInline] = useState(false);
   const [nudging, setNudging] = useState(false);
   // Phones: the video fills the screen; the sections open as a sheet from the bottom, the video above it.
@@ -522,7 +594,21 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     return res.ok;
   }
 
+  // A moment after the captions or their look change: look for any that go outside the video.
+  useEffect(() => {
+    const id = setTimeout(() => setScan(Date.now()), 700);
+    return () => clearTimeout(id);
+  }, [cues, custom, styleId, frameRatio, view, portrait]);
+  /** Pick the next caption that goes outside the video (and show it). */
+  function showOutside() {
+    if (!outside.length) return;
+    const next = outside.find((i) => i > selected) ?? outside[0];
+    video.current?.pause();
+    seek(cues[next].start + Math.min(0.5, (cues[next].end - cues[next].start) / 2));
+    select(next);
+  }
   async function render() {
+    if (outside.length && !confirm(`${outside.length} subtitle${outside.length === 1 ? " goes" : "s go"} outside the video and will be cut off in the MP4. Export anyway?`)) return;
     if (dirty && !(await save())) return;
     await saveLook({ captionStyle: styleId, captionCustom: custom });
     const res = await fetch(`/api/jobs/${job.id}/render`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ style: styleId, lang: view }) });
@@ -965,6 +1051,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 wordBar={wordBar && pickedWord && !playing ? pickedWord : null} onWord={styleWord} onWordClose={() => setWordBar(false)}
                 onMove={(i, x, y) => { if (onlyThis && i === selected) styleCue(i, { x, y }); else lookAll({ x, y }); }}
                 onResize={(i, size) => { if (onlyThis && i === selected) styleCue(i, { size }); else lookAll({ size }); }} />
+              {scan > 0 && view !== "en" && <OutsideScan key={scan} cues={cues} styleId={styleId} custom={custom} portrait={portrait} ratio={frameRatio} line={line} onDone={scanDone} />}
             </div>
           ) : (
             coming ? (
@@ -976,6 +1063,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             ) : <div className="player gone"><p>The video was removed after 7 days. Your subtitles are still here.</p></div>
           )}
           </div>
+          {outside.length > 0 && view !== "en" && (
+            <div className="out-warn" role="alert">
+              <span>⚠ {outside.length} subtitle{outside.length === 1 ? " goes" : "s go"} outside the video and will be cut off in the MP4.</span>
+              <button className="btn small" onClick={showOutside}>Show {outside.length === 1 ? "it" : "next"}</button>
+            </div>
+          )}
           {!playing && target() >= 0 && (
             <div className="vtools" role="toolbar" aria-label="This caption">
               {nudging ? (
