@@ -7,6 +7,7 @@ import { BLENDS, buildAss, canvasSize, maskAss, resolveStyle, type CaptionCustom
 import { audioCodec, bin, STORAGE, videoSize } from "@/lib/media";
 import { englishCues } from "@/lib/subtitles";
 import { BRAND } from "@/lib/brand";
+import { zoomExpr, zoomMoments, zoomOf } from "@/lib/zoom";
 
 const FONTS = resolve(/*turbopackIgnore: true*/ process.cwd(), "public", "caption-fonts");
 
@@ -42,6 +43,16 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
     const logo = await logoFile(job);
     const graph = [frame(canvas, width, height, !!size)];
     let last = "framed";
+    // Auto zoom: the frame scaled up around its centre on each caption's key word, cropped back to size (as the preview).
+    const zoom = zoomOf(job.captionCustom?.zoom);
+    if (zoom) {
+      const moments = zoomMoments(job.cues, lang === "en" ? "en" : "ta");
+      if (moments.length) {
+        const z = zoomExpr(moments, zoom);
+        graph.push(`[${last}]scale=w='trunc(iw*(${z})/2)*2':h='trunc(ih*(${z})/2)*2':eval=frame,crop=${width}:${height},setsar=1[zoomed]`);
+        last = "zoomed";
+      }
+    }
     if (logo) {
       const l = job.captionCustom.logo!;
       input.push("-i", logo);
