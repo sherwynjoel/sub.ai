@@ -568,6 +568,11 @@ a.signout { text-decoration: none; }
 .overlay.styled.free .cap-inline { width: min(80cqw, 26em); }
 .cap-typing { pointer-events: none; margin-bottom: .5em; }
 /* A word picked on the video, and its tools over the caption */
+/* Text going outside the video: the caption outlined red, a note on it, and a banner under the player */
+.overlay.outside .drag-handle { outline: 2px dashed #ff4d4d !important; outline-offset: 4px; }
+.out-badge { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); z-index: 7; width: max-content; max-width: 92%; padding: 5px 10px; border-radius: 999px; background: #ff4d4d; color: #fff; font: 700 12px/1.3 var(--font-body); text-align: center; box-shadow: 0 6px 18px rgb(0 0 0 / .35); pointer-events: none; }
+.out-warn { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 12px; margin: 10px auto 0; padding: 8px 12px; max-width: 640px; border-radius: 12px; background: #fff1f0; border: 1px solid #ffb4ad; color: #9b1c12; font-size: .9rem; font-weight: 600; }
+.out-scan { position: absolute; inset: 0; visibility: hidden; pointer-events: none; }
 .w-picked { outline: 2px solid #d4ff3f; outline-offset: .06em; border-radius: .12em; }
 .word-bar { position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 6px; padding: 6px; width: max-content; max-width: min(96cqw, 560px); flex-wrap: wrap; justify-content: center;
   pointer-events: auto; cursor: default; background: rgb(14 14 22 / .94); border: 1px solid rgb(255 255 255 / .14); border-radius: 12px; box-shadow: 0 10px 28px rgb(0 0 0 / .45); font: 600 13px/1 var(--font-body); color: #fff; text-align: left; mix-blend-mode: normal; }
