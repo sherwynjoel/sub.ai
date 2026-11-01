@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -107,7 +107,9 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       if (s.underline) st.textDecoration = "underline";
       if (s.activeGrow) st.transform = "scale(1.15)";
     }
-    if (j === kw && s.keyword && state !== "future") {
+    // (layouts that show each word in its place before it's said, as reveals do, have the keyword's look from the start:
+    // else it grew into it when said, a jump)
+    if (j === kw && s.keyword && (state !== "future" || s.reveal || s.effect === "typo")) {
       if (s.keyword.color) st.color = s.keyword.color;
       if (s.keyword.font) st.fontFamily = stack(s.keyword.font, s.fontTa);
       if (s.keyword.italic) st.fontStyle = "italic";
@@ -136,8 +138,9 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
         const since = time - t0;
         if (since < 0) return { visibility: "hidden" };
         if (reveal === "flicker") return { opacity: flickerOn(FLICKER2, since * 1000) ? 1 : 0 };
+        // risen by shifting it in place (inline, as it ends up), so it settles without a jump when the rise ends
         const v = Math.min(1, since / RISE);
-        return v >= 1 ? {} : { display: "inline-block", opacity: v, transform: `translateY(${((1 - v) * RISE_DY).toFixed(3)}em)` };
+        return v >= 1 ? {} : { position: "relative", top: `${((1 - v) * RISE_DY).toFixed(3)}em`, opacity: v };
       };
       // flow: one wave of letters through the caption from when it appears (as the MP4)
       const units = s.flow ? flowUnits.filter((u) => u.j === j) : null;
@@ -149,8 +152,9 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     }
     return <span key={j} data-j={j} className={`cw${pickedWord === j ? " w-picked" : ""}`} style={st}>{words[j].w}</span>;
   };
-  const typoBrk = s.effect === "typo" ? typoBreaks(words.length, typedBreaks(text)) : null; // three lines at most (as the MP4)
-  const breakBefore = (j: number) => (typoBrk ? typoBrk.has(j - 1) : brk.has(j - 1)) || !!s.wordLines || (!!s.keyword?.line && (j === kw || j === kw + 1));
+  // Typo Block and Letter Rise: three lines at most (as the MP4)
+  const typoBrk = s.effect === "typo" ? typoBreaks(words.length, typedBreaks(text)) : s.keyword?.line ? keywordRows(words.map((w) => w.w), kw, typedBreaks(text)) : null;
+  const breakBefore = (j: number) => (typoBrk ? typoBrk.has(j - 1) : brk.has(j - 1)) || !!s.wordLines;
   const join = (from: number, to: number) => words.slice(from, to).flatMap((_, k) => [k ? (breakBefore(from + k) ? <br key={`br${from + k}`} /> : " ") : null, word(from + k)]);
 
   let body: React.ReactNode;
@@ -225,6 +229,16 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     body = <><span className="punch-a">{join(0, cut)}</span><span className="punch-b">{join(cut, words.length)}</span></>;
   } else if (s.effect === "vhs" || s.effect === "crawl") {
     body = breakLines(caseOf(s, text), s.lines);
+  } else if (s.keyword?.line && typoBrk) {
+    // Letter Rise: three lines (before the keyword, the keyword, after it), each shrunk to fit the width (as the MP4)
+    const roomCqw = (1 - s.safe.left - s.safe.right) * 95, starts = [0, ...[...typoBrk].sort((a, b) => a - b).map((b) => b + 1)].filter((a) => a < words.length);
+    body = starts.map((a, r) => {
+      const to = r + 1 < starts.length ? starts[r + 1] : words.length;
+      const em = (j: number) => textWidth(words[j].w, (j === kw && s.keyword?.font) || s.font, s.fontTa) * (j === kw ? s.keyword?.scale ?? 1 : 1);
+      const tw = Math.max(0.3, words.slice(a, to).reduce((t, _, n) => t + em(a + n), 0) + (to - a - 1) * textWidth(" ", s.font, s.fontTa));
+      return <span key={a} className="typo-row" style={{ fontSize: `min(1em, calc(${roomCqw.toFixed(1)}cqw / ${tw.toFixed(3)}))` }}>
+        {words.slice(a, to).map((_, n) => [n ? " " : null, word(a + n)])}</span>;
+    });
   } else if (s.effect === "typo" && typoBrk) {
     // Typo Block: three lines at most, each shrunk to fit the width when it's long (as the MP4)
     const roomCqw = (1 - s.safe.left - s.safe.right) * 95, starts = [0, ...[...typoBrk].sort((a, b) => a - b).map((b) => b + 1)].filter((a) => a < words.length);

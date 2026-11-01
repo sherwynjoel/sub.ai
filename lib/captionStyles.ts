@@ -561,6 +561,21 @@ export const typoSize = (j: number) => TYPO[j % TYPO.length];
 /** "typo": a new line after each run of big words (as the reference: "sometimes this / is the best way / to start."). */
 export const typoBreak = (j: number, n: number) => j + 1 < n && typoSize(j) > 1 && typoSize(j + 1) < 1;
 /**
+ * Letter Rise's three lines: the words before the keyword, the keyword alone, the words after it (when one side has
+ * no words, the other side's words go on two lines); lines the user typed win.
+ */
+export function keywordRows(words: string[], kw: number, typed?: Set<number> | null) {
+  if (typed) return typed;
+  const n = words.length, b = new Set<number>();
+  if (n <= 1) return b;
+  if (kw > 0) b.add(kw - 1);
+  if (kw < n - 1) b.add(kw);
+  if (kw === 0 && n > 2) for (const x of lineBreaks(words.slice(1), 2)) b.add(x + 1);
+  if (kw === n - 1 && n > 2) for (const x of lineBreaks(words.slice(0, n - 1), 2)) b.add(x);
+  return b;
+}
+
+/**
  * Typo Block's line breaks for n words: after runs of big words, but at most three lines (a long caption keeps the
  * breaks nearest a third and two thirds of its words); lines the user typed win.
  */
@@ -878,8 +893,9 @@ export function buildAss(cues: Cue[], o: Opts) {
     };
 
     // A word on its own line ("Letter Rise"'s keyword).
-    const typoBrk = s.effect === "typo" ? typoBreaks(words.length, typedBreaks(main)) : null;
-    const glueK = (j: number) => (j ? ((typoBrk ? typoBrk.has(j - 1) : brk.has(j - 1)) || s.wordLines || (s.keyword?.line && (j === kw || j === kw + 1)) ? "\\N" : " ") : "");
+    // Typo Block and Letter Rise set their own (three) lines
+    const typoBrk = s.effect === "typo" ? typoBreaks(words.length, typedBreaks(main)) : s.keyword?.line ? keywordRows(words.map((w) => w.w), kw, typedBreaks(main)) : null;
+    const glueK = (j: number) => (j ? ((typoBrk ? typoBrk.has(j - 1) : brk.has(j - 1)) || s.wordLines ? "\\N" : " ") : "");
     if (s.effect === "oneword") { // one big word at a time, cut on; a long word shrinks to fit
       words.forEach((wt, i) => { // filling ~87% of the frame's width at most (as the reference), never bigger than the style
         const z = Math.round(Math.min(1, (0.9 * o.width) / (Math.max(0.3, textWidth(wt.w, s.font, s.fontTa)) * fs)) * 100); // advance width; the ink is ~0.85
@@ -950,22 +966,26 @@ export function buildAss(cues: Cue[], o: Opts) {
       const fitLine = (j: number) => Math.min(1, ((o.width - marginL - marginR) * 0.92) / (Math.max(0.3, textWidth(caseOf(s, words[j].w), s.font, s.fontTa)) * fs));
       // Typo Block: each line shrunk to fit the width when it's long (its three lines can hold many words)
       const fitOf = new Map<number, number>();
-      if (s.effect === "typo") {
+      if (s.effect === "typo" || s.keyword?.line) {
         const rows: [number, number][] = [];
         for (let j = 0; j < words.length; j++) if (!j || typoBrk?.has(j - 1)) rows.push([j, j + 1]); else rows[rows.length - 1][1] = j + 1;
+        const kwz = s.keyword?.line && s.keyword.scale ? s.keyword.scale : 1;
         for (const [a, b] of rows) {
-          const em = (j: number) => textWidth(words[j].w, (typoSize(j) > 1 && s.typoBig?.font) || s.font, s.fontTa) * typoSize(j);
+          const em = (j: number) => s.effect === "typo" ? textWidth(words[j].w, (typoSize(j) > 1 && s.typoBig?.font) || s.font, s.fontTa) * typoSize(j)
+            : textWidth(words[j].w, (j === kw && s.keyword?.font) || s.font, s.fontTa) * (j === kw ? kwz : 1);
           const w = words.slice(a, b).reduce((t, _, n) => t + em(a + n), 0) + (b - a - 1) * textWidth(" ", s.font, s.fontTa) * 0.55;
           const fit = Math.min(1, room / (Math.max(0.3, w) * fs));
           for (let j = a; j < b; j++) fitOf.set(j, fit);
         }
       }
-      const zOf = (j: number) => (s.effect === "typo" ? typoSize(j) * (fitOf.get(j) ?? 1) : s.wordLines ? fitLine(j) : 1);
+      const zOf = (j: number) => (s.effect === "typo" ? typoSize(j) : s.wordLines ? fitLine(j) : 1) * (fitOf.get(j) ?? 1);
       // Typo Block's big words: their own font (and, below, their own gradient)
       const bigOf = (j: number) => (s.effect === "typo" && s.typoBig && typoSize(j) > 1 ? s.typoBig : null);
+      // a keyword's own scale stays in its size (its tags set it; a fitted line scales it with the rest)
+      const kwScale = (j: number) => (j === kw && s.keyword?.scale ? s.keyword.scale : 1);
       const sized = (j: number) => {
         const z = zOf(j), big = bigOf(j);
-        return (z === 1 ? "" : `\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)}`) + (big ? `\\fn${big.font}` : "");
+        return (z === 1 ? "" : `\\fscx${Math.round(z * kwScale(j) * 100)}\\fscy${Math.round(z * kwScale(j) * 100)}`) + (big ? `\\fn${big.font}` : "");
       };
       // A word a line (Bold Flicker): three words at a time, so a long caption doesn't run off the frame.
       const groups = s.wordLines ? wordGroups(words, 3, c.end) : [{ from: 0, to: words.length, s: c.start, e: c.end }];
@@ -980,7 +1000,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       const rise = (t0: string) => `{\\an${an}\\move(${Math.round(ax)},${Math.round(ay + dy)},${Math.round(ax)},${Math.round(ay)},0,${ms})}` + t0;
       const tagsFor = reveal === "flicker" ? flickerTags(FLICKER2) : `\\alpha&HFF&\\t(0,${ms},\\alpha&H00&)`;
       for (const g of groups) {
-        if (grad || s.stagger || gapped || s.typoBig) { // each line its own event (so its strips can be cut, or it sits on its own side), a word's layer only its line
+        if (grad || s.stagger || gapped || s.typoBig || s.keyword?.line) { // each line its own event (so its strips can be cut, or it sits on its own side), a word's layer only its line
           const rows: [number, number][] = [];
           for (let j = g.from; j < g.to; j++) if (j === g.from || glueK(j) === "\\N") rows.push([j, j + 1]); else rows[rows.length - 1][1] = j + 1;
           const st = s.stagger, last = rows.length - 1, mid = rows.length > 2 ? 1 : -1;
