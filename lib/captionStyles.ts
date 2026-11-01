@@ -59,7 +59,8 @@ export type CaptionStyle = {
   // big: the middle line that many times the others (shrunk to fit the width), in bigFont and capitals; glow: the
   // shadow drawn as a soft glow behind every line (its colour and strength the Shadow settings, so they're editable);
   // tight: the lines' height × this (set closer than the fonts' own).
-  stagger?: { colors: string[]; bold: number; big?: number; bigFont?: string; glow?: boolean; tight?: number }; // "hook": each line's size (em), colour and font, in turn
+  stagger?: { colors: string[]; bold: number; big?: number; bigFont?: string; glow?: boolean; tight?: number };
+  typoBig?: { font: string; gradient: [string, string] }; // "typo": the big words' font and top → bottom colours // "hook": each line's size (em), colour and font, in turn
   spacing?: number;              // letter spacing, em
   lineHeight?: number;           // space between lines: × the font's own line height (1 = as the font sets it)
   textAlign?: TextAlign;         // lines flush left / centred / flush right (the caption against that side of the safe zone)
@@ -90,7 +91,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-corners", name: "Corner Block", group: "Typography", blurb: "Small capitals pinned to a block's edges, popping on one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.96, caps: true, color: W, shadow: 0.04, effect: "corners" },
   { id: "cc-bold-flicker", name: "Bold Flicker", group: "Typography", blurb: "Big capitals that strobe on, word by word.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 0.96, caps: true, color: W, shadow: 0.04, reveal: "flicker", wordLines: true },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Letters rise in one by one around a huge black keyword.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, reveal: "letters", keyword: { font: "Open Sauce Sans Black", scale: 1.57, line: true } },
-  { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small and big words mixed in a block, each rising in.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, effect: "typo", reveal: "rise" },
+  { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
   // Helvetica / Neue Haas Grotesk (commercial) become Inter Bold, Helvetica Rounded becomes Nunito ExtraBold.
   { id: "tpl-blur", name: "Blur Animation", group: "Templates", blurb: "Bold orange that sharpens out of a blur.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF7800", shadow: 0.05, anim: "blur" },
@@ -754,7 +755,7 @@ export function buildAss(cues: Cue[], o: Opts) {
     const kw = s.keyword?.line ? nameOrKeyword(wordTimes(main, c.start, c.end).map((w) => w.w)) : keywordIndex(words.map((w) => w.w));
     // Line spacing other than the font's own: the lines are broken here and each is placed at its own height
     // (libass has no line spacing; a line is as tall as its font). The editor breaks at the same words (lineCount).
-    const grad = s.gradient ?? null;
+    const grad = s.gradient ?? null, gradAll = grad;
     const g = spacesLines(s) ? s.lineHeight ?? 1 : 1, ownLines = (Math.abs(g - 1) > 0.005 && spacesLines(s)) || !!grad;
     // line spacing in the layouts that set their own lines (reveals, Rise Up, stacks, hooks): each line placed itself
     const gl = takesLineSpacing(s) && !spacesLines(s) ? s.lineHeight ?? 1 : 1, gapped = Math.abs(gl - 1) > 0.005;
@@ -794,7 +795,7 @@ export function buildAss(cues: Cue[], o: Opts) {
     // GRADIENT_BANDS copies each showing its strip of the line in its colour (libass fills a letter with one colour).
     // Text that moves: where its line is (centre, height) at even steps over the first ms, ending at (y, nat), the
     // strips going along. Words' own colours (the spoken word, picked words) stay.
-    const strips = (start: number, end: number, lead: string, y: number, nat: number, body: string, layer = 0, ml = 0, mr = 0, path: [number, number][] = [], ms = 0) => {
+    const strips = (start: number, end: number, lead: string, y: number, nat: number, body: string, layer = 0, ml = 0, mr = 0, path: [number, number][] = [], ms = 0, grad = gradAll) => {
       if (!grad) return add(start, end, lead + body, layer, ml, mr);
       for (let k = 0; k < GRADIENT_BANDS; k++) {
         const clip = ([y, nat]: [number, number]) => {
@@ -926,9 +927,11 @@ export function buildAss(cues: Cue[], o: Opts) {
       // typo: its sizes; a word a line: each word shrunk to fit the width when it's long ("PROFESSIONAL")
       const fitLine = (j: number) => Math.min(1, ((o.width - marginL - marginR) * 0.92) / (Math.max(0.3, textWidth(caseOf(s, words[j].w), s.font, s.fontTa)) * fs));
       const zOf = (j: number) => (s.effect === "typo" ? typoSize(j) : s.wordLines ? fitLine(j) : 1);
+      // Typo Block's big words: their own font (and, below, their own gradient)
+      const bigOf = (j: number) => (s.effect === "typo" && s.typoBig && typoSize(j) > 1 ? s.typoBig : null);
       const sized = (j: number) => {
-        const z = zOf(j);
-        return z === 1 ? "" : `\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)}`;
+        const z = zOf(j), big = bigOf(j);
+        return (z === 1 ? "" : `\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)}`) + (big ? `\\fn${big.font}` : "");
       };
       // A word a line (Bold Flicker): three words at a time, so a long caption doesn't run off the frame.
       const groups = s.wordLines ? wordGroups(words, 3, c.end) : [{ from: 0, to: words.length, s: c.start, e: c.end }];
@@ -943,7 +946,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       const rise = (t0: string) => `{\\an${an}\\move(${Math.round(ax)},${Math.round(ay + dy)},${Math.round(ax)},${Math.round(ay)},0,${ms})}` + t0;
       const tagsFor = reveal === "flicker" ? flickerTags(FLICKER2) : `\\alpha&HFF&\\t(0,${ms},\\alpha&H00&)`;
       for (const g of groups) {
-        if (grad || s.stagger || gapped) { // each line its own event (so its strips can be cut, or it sits on its own side), a word's layer only its line
+        if (grad || s.stagger || gapped || s.typoBig) { // each line its own event (so its strips can be cut, or it sits on its own side), a word's layer only its line
           const rows: [number, number][] = [];
           for (let j = g.from; j < g.to; j++) if (j === g.from || glueK(j) === "\\N") rows.push([j, j + 1]); else rows[rows.length - 1][1] = j + 1;
           const st = s.stagger, last = rows.length - 1, mid = rows.length > 2 ? 1 : -1;
@@ -954,7 +957,7 @@ export function buildAss(cues: Cue[], o: Opts) {
           const rowZ = rows.map((_, r) => (isBig(r) ? Math.min(st!.big!, room / (Math.max(0.3, textWidth(rowText(r).toUpperCase(), rowFont(r), s.fontTa)) * fs)) : 1));
           const k = s.keyword, natW = (j: number) => {
             const r = rows.findIndex(([a, b]) => j >= a && j < b);
-            return natOf(words[j].w, zOf(j) * rowZ[r] * (j === kw && k?.scale ? k.scale : 1), (j === kw && k?.font) || rowFont(r)) * (st?.tight ?? 1);
+            return natOf(words[j].w, zOf(j) * rowZ[r] * (j === kw && k?.scale ? k.scale : 1), (j === kw && k?.font) || bigOf(j)?.font || rowFont(r)) * (st?.tight ?? 1);
           };
           const nats = rows.map(([a, b]) => Math.max(...words.slice(a, b).map((_, n) => natW(a + n))));
           const p = stackAt(nats.map((n) => n * gl));
@@ -980,7 +983,7 @@ export function buildAss(cues: Cue[], o: Opts) {
             const [lead, dy, ms2] = st ? at(reveal === "flicker" ? "" : rise(""), p.ys[r], cx + (side(r) * blockW) / 2, side(r)) : at(reveal === "flicker" ? "" : rise(""), p.ys[r]);
             const text0 = body((jj, kk) => jj === j && (u.k === null || kk === u.k), tagsFor, g, ...rows[r]).replace(/\{\\r/g, `{\\r${rowTag(r)}`);
             const text = isBig(r) ? upper(text0) : text0;
-            strips(Math.max(g.s, u.s), g.e, lead, cy, n, "{\\q2}" + text, 1, 0, 0, dy ? [[cy + dy, n], [cy, n]] : [], ms2);
+            strips(Math.max(g.s, u.s), g.e, lead, cy, n, "{\\q2}" + text, 1, 0, 0, dy ? [[cy + dy, n], [cy, n]] : [], ms2, bigOf(j)?.gradient ?? grad);
           }
           subAt(g.s, g.e, "", p.subY);
           continue;

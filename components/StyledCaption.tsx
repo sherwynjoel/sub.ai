@@ -114,6 +114,12 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       if (s.keyword.scale) st.fontSize = `${s.keyword.scale}em`;
     }
     if (s.effect === "typo") st.fontSize = `${typoSize(j)}em`;
+    if (s.effect === "typo" && s.typoBig && typoSize(j) > 1) { // the big words: their font and own gradient (as the MP4)
+      const [top, bottom] = s.typoBig.gradient;
+      Object.assign(st, { fontFamily: stack(s.typoBig.font, s.fontTa), backgroundImage: `linear-gradient(${top} ${GRADIENT_STOPS[0] * 100}%, ${bottom} ${GRADIENT_STOPS[1] * 100}%)`,
+        WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", textShadow: "none",
+        filter: s.shadow ? `drop-shadow(0 ${s.shadow}em ${s.shadow}em rgba(0,0,0,.6))` : undefined });
+    }
     if (s.anim === "wordin") { // each word blurs in as it's said; the ones to come are hidden
       if (state === "future") st.visibility = "hidden";
       if (state === "active") { const w = Math.min(1, Math.max(0, (time - words[j].s) / 0.16)); st.opacity = w; st.filter = `blur(${((1 - w) * 0.3).toFixed(3)}em)`; }
