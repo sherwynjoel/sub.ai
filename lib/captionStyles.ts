@@ -1012,7 +1012,8 @@ export function buildAss(cues: Cue[], o: Opts) {
         if (grad || s.stagger || gapped || s.typoBig || s.keyword?.line) { // each line its own event (so its strips can be cut, or it sits on its own side), a word's layer only its line
           const rows: [number, number][] = [];
           for (let j = g.from; j < g.to; j++) if (j === g.from || glueK(j) === "\\N") rows.push([j, j + 1]); else rows[rows.length - 1][1] = j + 1;
-          const st = s.stagger, last = rows.length - 1, mid = rows.length > 2 ? 1 : -1;
+          // the middle line, or with two lines the second (one line: it), so a short caption still has its big line
+          const st = s.stagger, last = rows.length - 1, mid = rows.length > 2 ? 1 : last;
           // stagger's big middle line: in its own font and capitals, big as asked but no wider than the frame
           const rowText = (r: number) => words.slice(rows[r][0], rows[r][1]).map((w) => w.w).join(" ");
           const isBig = (r: number) => !!st?.big && r === mid;
@@ -1031,7 +1032,7 @@ export function buildAss(cues: Cue[], o: Opts) {
           const side = (r: number) => (!st || rows.length === 1 || r === mid ? 0 : r === 0 ? -1 : r === last ? 1 : 0);
           const rowTag = (r: number) => {
             if (!st) return "";
-            const col = colorOnly(st.colors[r === last && rows.length > 1 ? 2 : r === mid ? 1 : 0] ?? s.color);
+            const col = colorOnly(st.colors[r === mid ? 1 : r === last ? 2 : 0] ?? s.color);
             // the glow (the Shadow's colour and size): strong behind the big line, faint behind the thin ones (else it
             // outshines their colour); no shadow, no glow
             const [ba, sa] = isBig(r) ? ["50", "40"] : ["B0", "A0"], gk = (s.shadow ?? 0) / GLOW * rowZ[r], gc = colorOnly(s.shadowColor ?? "#7F011F");

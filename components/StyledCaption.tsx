@@ -257,12 +257,13 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     // staggered lines (as the MP4): the first flush left, the middle centred, the last flush right, each its colour,
     // the middle one heavier (an outline of its own colour)
     const st = s.stagger, starts = [0, ...[...brk].filter((b) => b < words.length - 1).sort((a, b) => a - b).map((b) => b + 1)];
-    const n = starts.length, last = n - 1, mid = n > 2 ? 1 : -1, roomCqw = (1 - s.safe.left - s.safe.right) * 95;
+    // the middle line big, or with two lines the second (one line: it), as the MP4
+    const n = starts.length, last = n - 1, mid = n > 2 ? 1 : last, roomCqw = (1 - s.safe.left - s.safe.right) * 95;
     // as the MP4's blurred edge and shadow (the Shadow's colour and size): strong behind the big line, faint behind the thin ones
     const gk = (s.shadow ?? 0) / GLOW, gc = (s.shadowColor ?? "#7F011F").slice(0, 7), em = (n: number) => `${(n * gk).toFixed(3)}em`;
     const glowOf = (big: boolean) => (st.glow && s.shadow ? `${em(0.035)} ${em(0.035)} ${em(0.07)} ${gc}${big ? "bb" : "5c"}, 0 0 ${em(0.1)} ${gc}${big ? "99" : "4d"}` : "none");
     body = <span className="stagger">{starts.map((a, r) => {
-      const col = st.colors[r === last && n > 1 ? 2 : r === mid ? 1 : 0] ?? s.color, to = r + 1 < n ? starts[r + 1] : words.length;
+      const col = st.colors[r === mid ? 1 : r === last ? 2 : 0] ?? s.color, to = r + 1 < n ? starts[r + 1] : words.length;
       const big = !!st.big && r === mid, font = big && st.bigFont ? st.bigFont : s.font;
       const tw = Math.max(0.3, textWidth(words.slice(a, to).map((w) => (big ? w.w.toUpperCase() : w.w)).join(" "), font, s.fontTa)).toFixed(3);
       return <span key={a} style={{ textAlign: n === 1 || r === mid ? "center" : r === 0 ? "left" : r === last ? "right" : "center", ...(grad ? {} : { color: col }),
