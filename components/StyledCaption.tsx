@@ -78,6 +78,21 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   // A colour of its own (a word picked out), kept over a gradient.
   const own = (c: string): React.CSSProperties => ({ color: c, WebkitTextFillColor: grad ? c : undefined });
 
+  // A word's own look (picked on the video: as the MP4's wordLookTags).
+  const lookOf = (j: number): React.CSSProperties => {
+    const lk = looks?.[j], st: React.CSSProperties = {};
+    if (lk?.font && (CAPTION_FONTS as readonly string[]).includes(lk.font)) st.fontFamily = stack(lk.font, s.fontTa);
+    if (lk?.size && Math.abs(lk.size - 1) > 0.001) st.fontSize = `${Math.min(3, Math.max(0.4, lk.size)) * (s.effect === "typo" ? typoSize(j) : 1)}em`;
+    if (lk?.bold !== undefined) st.fontWeight = lk.bold ? 700 : 400;
+    if (lk?.italic !== undefined) st.fontStyle = lk.italic ? "italic" : "normal";
+    return st;
+  };
+  // One word in a layout that sets its own lines (stacks, hooks, one word at a time): pickable on the video, in its
+  // own colour and look.
+  const pick = (j: number, text: string) => (
+    <span key={j} data-j={j} className={pickedWord === j ? "w-picked" : undefined} style={{ ...(colors?.[j] ? own(colors[j]!) : {}), ...lookOf(j) }}>{text}</span>
+  );
+
   const word = (j: number) => {
     const state = j < i ? "past" : j === i ? "active" : "future";
     const st: React.CSSProperties = {};
@@ -106,11 +121,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     if (s.effect === "wobble") st.transform = `${st.transform ?? ""} rotate(${j % 2 ? -4 : 3}deg)`;
     if (colors?.[j] && state !== "future") st.color = colors[j]!;
     if (grad && st.color) st.WebkitTextFillColor = st.color; // its own colour, over the gradient
-    const lk = looks?.[j]; // its own look (as the MP4's wordLookTags)
-    if (lk?.font && (CAPTION_FONTS as readonly string[]).includes(lk.font)) st.fontFamily = stack(lk.font, s.fontTa);
-    if (lk?.size && Math.abs(lk.size - 1) > 0.001) st.fontSize = `${Math.min(3, Math.max(0.4, lk.size)) * (s.effect === "typo" ? typoSize(j) : 1)}em`;
-    if (lk?.bold !== undefined) st.fontWeight = lk.bold ? 700 : 400;
-    if (lk?.italic !== undefined) st.fontStyle = lk.italic ? "italic" : "normal";
+    Object.assign(st, lookOf(j));
     if (s.reveal || s.effect === "typo") {
       // Each word (or letter) comes in as it's said, in its final place (as the MP4's layers).
       const reveal = s.reveal ?? "rise";
@@ -139,7 +150,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     const k = Math.max(0, chunks.findIndex((c) => time < c.e)), [a, b, d] = chunks[k]?.parts ?? ["", "", ""];
     const idx = chunks[k]?.idx ?? [[], -1, []];
     // A word the user coloured keeps its colour in its piece (as in the MP4).
-    const small = (text: string, at: number[]) => text.split(" ").map((w, n) => [n ? " " : null, colors?.[at[n]] ? <span key={n} style={own(colors[at[n]]!)}>{w}</span> : w]);
+    const small = (text: string, at: number[]) => text.split(" ").map((w, n) => [n ? " " : null, at[n] === undefined ? w : pick(at[n], w)]);
     const big = colors?.[idx[1]] ?? s.stack!.big;
     // glow: a soft halo of its own colour; rgb: red and cyan copies nudged apart (as in the MP4)
     const halo = [s.stack!.glow ? `0 0 .12em ${big}, 0 0 .3em ${big}99` : "", s.stack!.rgb ? `-.05em 0 #00E5FFB0, .05em 0 #FF2040B0` : ""].filter(Boolean).join(", ") || undefined;
@@ -147,7 +158,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     const bigLook: React.CSSProperties = grad
       ? { ...(colors?.[idx[1]] ? own(big) : {}), filter: halo && [s.stack!.glow ? `drop-shadow(0 0 .1em ${big})` : "", s.stack!.rgb ? `drop-shadow(-.05em 0 #00E5FFB0) drop-shadow(.05em 0 #FF2040B0)` : ""].join(" ") }
       : { color: big, textShadow: halo };
-    body = <>{a && <span className="stack-small">{small(a, idx[0])}</span>}<span key={k} className="stack-big" style={{ ...bigLook, fontFamily: stack(s.stack!.font, s.fontTa), fontWeight: 400, fontSize: `${stackBig(b)}em` }}>{b}</span>{d && <span className="stack-small">{idx[2].length ? small(d, idx[2]) : d}</span>}</>;
+    body = <>{a && <span className="stack-small">{small(a, idx[0])}</span>}<span key={k} className="stack-big" style={{ ...bigLook, fontFamily: stack(s.stack!.font, s.fontTa), fontWeight: 400, fontSize: `${stackBig(b)}em` }}>{typeof idx[1] === "number" && idx[1] >= 0 ? pick(idx[1], b) : b}</span>{d && <span className="stack-small">{idx[2].length ? small(d, idx[2]) : d}</span>}</>;
   } else if (s.effect === "hook" && s.hook) {
     const h = s.hook, pieces = hookChunks(caseOf(s, text), start, end);
     const piece = pieces[Math.max(0, pieces.findIndex((c) => time < c.e))];
@@ -159,7 +170,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
         <span key={`${piece.s}-${j}`} className="hook-line" style={{
           fontSize: `min(${size}em, calc(88cqw / ${Math.max(0.5, textWidth(ln.text, f ?? s.font, s.fontTa)).toFixed(3)}))`,
           color: h.colors[j % h.colors.length], fontFamily: f ? stack(f, s.fontTa) : undefined, opacity: v, filter: v < 1 ? `blur(${((1 - v) * 0.15).toFixed(3)}em)` : undefined,
-        }}>{ln.text.split(" ").map((w, n) => [n ? " " : null, colors?.[ln.idx[n]] ? <span key={n} style={own(colors[ln.idx[n]]!)}>{w}</span> : w])}</span>
+        }}>{ln.text.split(" ").map((w, n) => [n ? " " : null, ln.idx[n] === undefined ? w : pick(ln.idx[n], w)])}</span>
       );
     });
   } else if (s.effect === "oneword") {
@@ -198,7 +209,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     const chars = [...breakLines(caseOf(s, text), s.lines)];
     body = <>{chars.slice(0, Math.max(1, Math.ceil(chars.length * Math.min(1, p / 0.8)))).join("")}<span className="caret">_</span></>;
   } else if (s.effect === "solo") {
-    body = <>{i > 0 && <span className="solo-prev">{words[i - 1].w}</span>}<span key={i} className="solo-now">{words[i].w}</span></>;
+    body = <>{i > 0 && <span className="solo-prev">{pick(i - 1, words[i - 1].w)}</span>}<span key={i} className="solo-now">{pick(i, words[i].w)}</span></>;
   } else if (s.effect === "punch" && words.length > 2) {
     const cut = words.length - Math.min(2, words.length - 1);
     body = <><span className="punch-a">{join(0, cut)}</span><span className="punch-b">{join(cut, words.length)}</span></>;
