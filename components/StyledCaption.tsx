@@ -78,6 +78,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   // A colour of its own (a word picked out), kept over a gradient.
   const own = (c: string): React.CSSProperties => ({ color: c, WebkitTextFillColor: grad ? c : undefined });
 
+  const flowUnits = s.flow ? revealUnits(words, s.reveal === "letters", [start, end]) : [];
   // A word's own look (picked on the video: as the MP4's wordLookTags).
   const lookOf = (j: number): React.CSSProperties => {
     const lk = looks?.[j], st: React.CSSProperties = {};
@@ -138,11 +139,13 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
         const v = Math.min(1, since / RISE);
         return v >= 1 ? {} : { display: "inline-block", opacity: v, transform: `translateY(${((1 - v) * RISE_DY).toFixed(3)}em)` };
       };
+      // flow: one wave of letters through the caption from when it appears (as the MP4)
+      const units = s.flow ? flowUnits.filter((u) => u.j === j) : null;
       if (reveal === "letters" && byLetters(words[j].w)) {
-        const units = revealUnits([words[j]], true);
-        return <span key={j} data-j={j} className={`cw${pickedWord === j ? " w-picked" : ""}`} style={{ ...st, visibility: undefined }}>{[...words[j].w].map((ch, k) => <span key={k} style={look(units[k].s)}>{ch}</span>)}</span>;
+        const own = units ?? revealUnits([words[j]], true);
+        return <span key={j} data-j={j} className={`cw${pickedWord === j ? " w-picked" : ""}`} style={{ ...st, visibility: undefined }}>{[...words[j].w].map((ch, k) => <span key={k} style={look(own[k].s)}>{ch}</span>)}</span>;
       }
-      return <span key={j} data-j={j} className={`cw${pickedWord === j ? " w-picked" : ""}`} style={{ ...st, visibility: undefined, ...look(words[j].s) }}>{words[j].w}</span>;
+      return <span key={j} data-j={j} className={`cw${pickedWord === j ? " w-picked" : ""}`} style={{ ...st, visibility: undefined, ...look(units?.[0]?.s ?? words[j].s) }}>{words[j].w}</span>;
     }
     return <span key={j} data-j={j} className={`cw${pickedWord === j ? " w-picked" : ""}`} style={st}>{words[j].w}</span>;
   };
