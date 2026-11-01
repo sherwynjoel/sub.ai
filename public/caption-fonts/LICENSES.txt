@@ -17,3 +17,4 @@ Bebas Neue, Lobster, Pacifico, Righteous, Archivo Black, Abril Fatface, Alfa Sla
 fonts, fixed Bold styles given their own family names as above: Figtree Bold, Oswald Bold, Caveat Bold, Comfortaa Bold.
 Luckiest Guy: Apache License 2.0, from https://github.com/google/fonts (apache/luckiestguy).
 Great Vibes, Figtree and GFS Didot are free look-alikes of the commercial Snell Roundhand, Avenir and Didot.
+Alex Brush and Pinyon Script: SIL Open Font License 1.1, from https://github.com/google/fonts (ofl/alexbrush, ofl/pinyonscript); free look-alikes of the commercial Snell Roundhand / Snell BT.

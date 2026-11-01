@@ -68,7 +68,7 @@ const FRAME = 1 / 30;
 /** The speed button's steps. */
 const SPEEDS = [1, 1.5, 2, 0.5];
 /** The latest fonts added: marked "New" in the font row. */
-const NEW_FONTS: string[] = ["Great Vibes", "Figtree Bold", "GFS Didot", "Oswald Bold", "Bebas Neue", "Lobster", "Pacifico", "Caveat Bold", "Righteous",
+const NEW_FONTS: string[] = ["Alex Brush", "Pinyon Script", "Great Vibes", "Figtree Bold", "GFS Didot", "Oswald Bold", "Bebas Neue", "Lobster", "Pacifico", "Caveat Bold", "Righteous",
   "Archivo Black", "Abril Fatface", "Alfa Slab One", "Comfortaa Bold", "Luckiest Guy", "Titan One"];
 
 /** Where a caption sits over the player (as the MP4 places it): its box's CSS. */
