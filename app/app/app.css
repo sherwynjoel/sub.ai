@@ -909,3 +909,6 @@ a.signout { text-decoration: none; }
 .word-bar .fmt-seg button { border: 0; border-radius: 0; min-width: 32px; }
 .word-bar .fmt-seg button + button { border-left: 1px solid rgb(255 255 255 / .2); }
 .word-bar .fmt-done { background: #d4ff3f; color: #0c0c14; border-color: #d4ff3f; font-weight: 700; }
+/* Setup & Punch Pro: the blended punch copy over the caption lets taps through to it */
+.overlay.punch-copy, .layer-view.punch-copy { pointer-events: none; }
+.overlay.punch-copy .drag-handle, .layer-view.punch-copy * { pointer-events: none !important; }
