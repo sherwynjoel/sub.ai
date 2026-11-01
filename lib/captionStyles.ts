@@ -88,7 +88,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-pro", name: "Pro", group: "Typography", blurb: "One big Titan One word at a time, the video inverted inside the letters (change the blend in Colour).", font: "Titan One", fontTa: "Mukta Malar ExtraBold", size: 1.09, color: W, effect: "oneword", blend: "difference" },
   { id: "cc-word-cut", name: "Word Cut", group: "Typography", blurb: "One big word at a time, cut on the beat.", font: "Playfair Display Bold Italic", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, effect: "oneword" },
   { id: "cc-cinematic", name: "Cinematic", group: "Typography", blurb: "Three lines narrowing down: the outer ones in rounded Comfortaa, the middle one big Poppins capitals; each word settles out of a soft blur as it's said.", font: "Comfortaa Bold", fontTa: "Hind Madurai", size: 1.06, color: W, shadow: 0.04, lineHeight: 0.7, anim: "cinematic", effect: "cine" },
-  { id: "cc-rise", name: "Rise Up", group: "Typography", blurb: "A big Anton middle line between two handwritten Caveat lines, set to its left and right edges, amber with a wine glow; each word rises in.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.3, lower: true, color: "#F4B23E", lineHeight: 0.8, shadow: GLOW, shadowColor: "#7F011F", reveal: "rise", stagger: { colors: ["#F4B23E", "#F4B23E", "#F4B23E"], bold: 0, big: 3.1, bigFont: "Anton", glow: true, tight: 0.72 } },
+  { id: "cc-rise", name: "Rise Up", group: "Typography", blurb: "A big Anton middle line between two Poppins lines, set to its left and right edges, amber with a wine glow; each word rises in.", font: "Poppins Medium", fontTa: "Hind Madurai", size: 1.12, lower: true, color: "#F4B23E", lineHeight: 0.8, shadow: GLOW, shadowColor: "#7F011F", reveal: "rise", stagger: { colors: ["#F4B23E", "#F4B23E", "#F4B23E"], bold: 0, big: 3.1, bigFont: "Anton", glow: true, tight: 0.72 } },
   { id: "cc-rise-spaced", name: "Rise Spaced", group: "Typography", blurb: "Airy, spaced-out words rising in one by one.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, spacing: 0.05, reveal: "rise" },
   { id: "cc-corners", name: "Corner Block", group: "Typography", blurb: "Small capitals pinned to a block's edges, popping on one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.96, caps: true, color: W, shadow: 0.04, effect: "corners" },
   { id: "cc-bold-flicker", name: "Bold Flicker", group: "Typography", blurb: "Big capitals that strobe on, word by word.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 0.96, caps: true, color: W, shadow: 0.04, reveal: "flicker", wordLines: true },
@@ -192,6 +192,7 @@ export const CAPTION_FONTS = [
   "Archivo Black", "Abril Fatface", "Alfa Slab One", "Comfortaa Bold", "Luckiest Guy", "Titan One",
   "Alex Brush", "Pinyon Script", // more free look-alikes of the commercial Snell (Bold)
   "Poppins Light",
+  "Poppins Medium",
 ] as const;
 /** The commercial font a free one stands in for (shown in the font menu). */
 export const FONT_LIKE: Partial<Record<string, string>> = { "Great Vibes": "Snell", "Alex Brush": "Snell Bold", "Pinyon Script": "Snell", "Figtree Bold": "Avenir", "GFS Didot": "Didot" };
