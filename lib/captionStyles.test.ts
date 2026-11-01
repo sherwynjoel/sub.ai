@@ -483,3 +483,11 @@ test("Setup & Punch Pro: left-aligned, only the punch words blended (two parts i
   // other styles ignore the part
   assert.equal(buildAss([cue], { ...o, styleId: "setup-punch", part: "plain" }), buildAss([cue], { ...o, styleId: "setup-punch" }));
 });
+
+test("Rise Up: a short caption still has its big capital line (two lines: the second, one line: it)", () => {
+  for (const ta of ["Welcome", "Hello friends", "grow your sales"]) {
+    const ass = buildAss([{ start: 0, end: 2, ta, en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-rise", lang: "ta", width: 1080, height: 1920 });
+    const last = ass.split("\n").filter((l) => l.startsWith("Dialogue") && l.includes("Anton"));
+    assert.ok(last.length >= 1, `${ta}: a big Anton line`);
+  }
+});
