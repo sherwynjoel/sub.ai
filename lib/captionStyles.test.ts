@@ -409,3 +409,13 @@ test("Words picked on the video keep their look in the layouts that set their ow
     assert.ok(/\\fnLobster/.test(ass) && /\\i1/.test(ass), `${id}: the word's own font and slant`);
   }
 });
+
+test("Rise Up's glow is its Shadow: the colour, the size, or off", () => {
+  const ass = (custom: object) => buildAss([{ start: 0, end: 3, ta: "my name is sherwyn joyl from cbe", en: "" }], { styleId: "cc-rise", lang: "ta", width: 1080, height: 1920, custom })
+    .split("\n").filter((l) => l.startsWith("Dialogue"));
+  assert.ok(ass({}).every((l) => /\\3c&H1F017F&/.test(l)), "wine by default");
+  assert.ok(ass({ shadowColor: "#0000FF" }).every((l) => /\\3c&HFF0000&/.test(l) && /\\4c&HFF0000&/.test(l)), "blue when picked");
+  const blur = (l: string) => +l.match(/\\blur([\d.]+)/)![1];
+  assert.ok(blur(ass({ shadowSize: 0.1 })[0]) > blur(ass({})[0]) * 2, "bigger size, bigger glow");
+  assert.ok(ass({ shadow: false }).every((l) => !/\\blur/.test(l) && !/\\4c/.test(l)), "off");
+});

@@ -56,9 +56,10 @@ export type CaptionStyle = {
   hook?: { sizes: number[]; colors: string[]; fonts?: (string | undefined)[] };
   // Staggered lines: the first flush left, the middle centred, the last flush right (within the block as wide as
   // its widest line), each in its colour; the middle one made heavier by an outline of its own colour.
-  // big: the middle line that many times the others (shrunk to fit the width), in bigFont and capitals; glow: a soft
-  // shadow of that colour behind every line; tight: the lines' height × this (set closer than the fonts' own).
-  stagger?: { colors: string[]; bold: number; big?: number; bigFont?: string; glow?: string; tight?: number }; // "hook": each line's size (em), colour and font, in turn
+  // big: the middle line that many times the others (shrunk to fit the width), in bigFont and capitals; glow: the
+  // shadow drawn as a soft glow behind every line (its colour and strength the Shadow settings, so they're editable);
+  // tight: the lines' height × this (set closer than the fonts' own).
+  stagger?: { colors: string[]; bold: number; big?: number; bigFont?: string; glow?: boolean; tight?: number }; // "hook": each line's size (em), colour and font, in turn
   spacing?: number;              // letter spacing, em
   lineHeight?: number;           // space between lines: × the font's own line height (1 = as the font sets it)
   textAlign?: TextAlign;         // lines flush left / centred / flush right (the caption against that side of the safe zone)
@@ -76,13 +77,15 @@ export type CaptionStyle = {
 const GOLD = "#FFC83D", BUTTER = "#FFE58A", CREAM = "#FFF4D6", INK = "#141414", HL = "#FFE14D";
 const W = "#FFFFFF";
 
+/** A staggered style's glow at its usual strength (its Shadow size; bigger or smaller scales it). */
+export const GLOW = 0.035;
 export const CAPTION_STYLES: CaptionStyle[] = [
   // The CINECUT short-form typography project (Premiere), matched frame by frame: its Helvetica Neue becomes Inter,
   // its Open Sauce Sans Black (OFL) is bundled.
   { id: "cc-pro", name: "Pro", group: "Typography", blurb: "One big Titan One word at a time, the video inverted inside the letters (change the blend in Colour).", font: "Titan One", fontTa: "Mukta Malar ExtraBold", size: 1.09, color: W, effect: "oneword", blend: "difference" },
   { id: "cc-word-cut", name: "Word Cut", group: "Typography", blurb: "One big word at a time, cut on the beat.", font: "Playfair Display Bold Italic", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, effect: "oneword" },
   { id: "cc-cinematic", name: "Cinematic", group: "Typography", blurb: "Three lines narrowing down: the outer ones in rounded Comfortaa, the middle one big Poppins capitals; each word settles out of a soft blur as it's said.", font: "Comfortaa Bold", fontTa: "Hind Madurai", size: 1.06, color: W, shadow: 0.04, anim: "cinematic", effect: "cine" },
-  { id: "cc-rise", name: "Rise Up", group: "Typography", blurb: "A big Anton middle line between two light lowercase ones, set to its left and right edges, amber with a wine glow; each word rises in.", font: "Poppins Light", fontTa: "Hind Madurai", size: 1.12, lower: true, color: "#F4B23E", reveal: "rise", stagger: { colors: ["#F4B23E", "#F4B23E", "#F4B23E"], bold: 0, big: 3.1, bigFont: "Anton", glow: "#7F011F", tight: 0.72 } },
+  { id: "cc-rise", name: "Rise Up", group: "Typography", blurb: "A big Anton middle line between two light lowercase ones, set to its left and right edges, amber with a wine glow; each word rises in.", font: "Poppins Light", fontTa: "Hind Madurai", size: 1.12, lower: true, color: "#F4B23E", shadow: GLOW, shadowColor: "#7F011F", reveal: "rise", stagger: { colors: ["#F4B23E", "#F4B23E", "#F4B23E"], bold: 0, big: 3.1, bigFont: "Anton", glow: true, tight: 0.72 } },
   { id: "cc-rise-spaced", name: "Rise Spaced", group: "Typography", blurb: "Airy, spaced-out words rising in one by one.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, spacing: 0.05, reveal: "rise" },
   { id: "cc-corners", name: "Corner Block", group: "Typography", blurb: "Small capitals pinned to a block's edges, popping on one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.96, caps: true, color: W, shadow: 0.04, effect: "corners" },
   { id: "cc-bold-flicker", name: "Bold Flicker", group: "Typography", blurb: "Big capitals that strobe on, word by word.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 0.96, caps: true, color: W, shadow: 0.04, reveal: "flicker", wordLines: true },
@@ -961,9 +964,10 @@ export function buildAss(cues: Cue[], o: Opts) {
           const rowTag = (r: number) => {
             if (!st) return "";
             const col = colorOnly(st.colors[r === last && rows.length > 1 ? 2 : r === mid ? 1 : 0] ?? s.color);
-            // the glow strong behind the big line, faint behind the thin ones (else it outshines their colour)
-            const [ba, sa] = isBig(r) ? ["50", "40"] : ["B0", "A0"];
-            const glow = st.glow ? `\\bord${px(0.04 * rowZ[r])}\\3c${colorOnly(st.glow)}\\3a&H${ba}&\\blur${px(0.07 * rowZ[r])}\\shad${px(0.035 * rowZ[r])}\\4c${colorOnly(st.glow)}\\4a&H${sa}&` : "";
+            // the glow (the Shadow's colour and size): strong behind the big line, faint behind the thin ones (else it
+            // outshines their colour); no shadow, no glow
+            const [ba, sa] = isBig(r) ? ["50", "40"] : ["B0", "A0"], gk = (s.shadow ?? 0) / GLOW * rowZ[r], gc = colorOnly(s.shadowColor ?? "#7F011F");
+            const glow = st.glow && s.shadow ? `\\bord${px(0.04 * gk)}\\3c${gc}\\3a&H${ba}&\\blur${px(0.07 * gk)}\\shad${px(0.035 * gk)}\\4c${gc}\\4a&H${sa}&` : "";
             const big = isBig(r) ? `\\fn${rowFont(r)}\\fscx${Math.round(rowZ[r] * 100)}\\fscy${Math.round(rowZ[r] * 100)}` : "";
             return (grad ? "" : `\\1c${col}`) + (r === mid && st.bold ? `\\bord${px(st.bold)}\\3c${col}` : "") + glow + big;
           };
