@@ -146,11 +146,11 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
   assert.match(ass, new RegExp(`Style: L1,Poppins ExtraBold,${Math.round(em * 1.762 * 10) / 10},`), "the layer's own size (em × the font's line height)");
 });
 
-test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 6 + Pro, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 43);
+test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 5 + Pro, with the default among them", () => {
+  assert.equal(STYLE_CHOICES.length, 42);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 16);
-  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 7);
-  assert.ok(!STYLE_CHOICES.some((s) => s.id === "cc-bold-flicker"), "Bold Flicker no longer offered");
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 6);
+  assert.ok(!STYLE_CHOICES.some((s) => s.id === "cc-bold-flicker" || s.id === "cc-corners"), "Bold Flicker and Corner Block no longer offered");
   assert.equal(STYLE_GROUPS[0], "Typography");
   assert.ok(STYLE_CHOICES.some((s) => s.id === DEFAULT_STYLE));
   assert.ok(!STYLE_GROUPS.includes("Playful"), "a group with nothing on offer isn't shown");
