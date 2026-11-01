@@ -5,7 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, use
 import { createPortal } from "react-dom";
 import type { Cue, WordLook } from "@/db/schema";
 import { LANGUAGES, languageOf, shortCode } from "@/lib/languages";
-import { BLENDS, CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type CaptionStyle, type SafeZoneId, type TextLayer, pushDown, shownLines } from "@/lib/captionStyles";
+import { BLENDS, CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type CaptionStyle, type Placement, type SafeZoneId, type TextLayer, pushDown, shownLines } from "@/lib/captionStyles";
 import { insertAt, insertBetween, mergeCues, removeCue, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
@@ -141,7 +141,7 @@ function OutsideScan({ cues, styleId, custom, portrait, ratio, line, onDone }: {
 }
 
 /** The styled caption over the player, redrawn every frame while the video plays so word timing is smooth. */
-function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, selected, picked, editing, wordBar, onMove, onResize, onTap, onEditOpen, onEditDone, onWord, onWordClose }: {
+function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, selected, picked, editing, wordBar, onMove, onResize, onTap, onEditOpen, onEditDone, onWord, onWordClose, onLook }: {
   video: React.RefObject<HTMLVideoElement | null>; cues: Cue[]; styleId: string; custom: CaptionCustom; portrait: boolean; ratio: number; view: View; selected: number;
   picked: (start: number) => boolean; editing: string | null;
   wordBar: { cue: number; j: number } | null; // the word picked on the video, its tools shown over it
@@ -149,10 +149,13 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
   onResize: (i: number, size: number) => void;
   onTap: (start: number, word?: number) => void; onEditOpen: () => void; onEditDone: (text: string | null) => void;
   onWord: (patch: { look?: WordLook | null; color?: string | null }) => void; onWordClose: () => void;
+  onLook: (patch: CaptionCustom, all: boolean) => void; // the caption being typed: its look, or every caption's
 }) {
   const [t, setT] = useState(0);
   const [sizing, setSizing] = useState<number | null>(null); // the size shown while the corner is dragged
   const [draft, setDraft] = useState<string | null>(null); // the text being typed (its lines shown live above it)
+  const [fmtAll, setFmtAll] = useState(false); // the format bar changes every caption (else the one being typed)
+  const typed = useRef<HTMLTextAreaElement>(null);
   const box = useRef<HTMLDivElement>(null);
   const [out, setOut] = useState<string | null>(null); // the sides of the video the caption on screen goes past
   useLayoutEffect(() => { // after every redraw (a frame, an edit, a drag, a resize): measured against the video
@@ -221,7 +224,7 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
   // Editing starts from the lines as they're shown; Enter moves the words after the cursor down a line.
   const shown = editing !== null ? shownLines(styleId, own, editing, ratio) : "";
   const typing = draft ?? shown;
-  const done = (text: string | null) => { setDraft(null); onEditDone(text === null || text.trim() === shown ? null : text); };
+  const done = (text: string | null) => { setDraft(null); setFmtAll(false); onEditDone(text === null || text.trim() === shown ? null : text); };
   const enter = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const ta = e.currentTarget;
     if (e.key === "Escape") { setDraft(null); onEditDone(null); return; }
@@ -242,9 +245,10 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
         </div>}
         <textarea className="cap-inline" lang={line === "ta" ? undefined : "en"} value={typing} onChange={(e) => setDraft(e.target.value)} autoFocus
           rows={Math.max(2, typing.split("\n").length)} aria-label="Caption text"
-          title="Enter moves the words after the cursor to the next line · Shift+Enter a new line · Ctrl/⌘+Enter or click away to save · Esc to cancel"
-          ref={(el) => { if (el && !el.dataset.placed) { el.dataset.placed = "1"; el.setSelectionRange(el.value.length, el.value.length); } }} // the cursor at the end, once
-          onKeyDown={enter} onBlur={(e) => done(e.target.value)} />
+          title="Enter moves the words after the cursor to the next line · Shift+Enter a new line · Ctrl/⌘+Enter, Done or click away to save · Esc to cancel"
+          ref={(el) => { (typed as React.MutableRefObject<HTMLTextAreaElement | null>).current = el; if (el && !el.dataset.placed) { el.dataset.placed = "1"; el.setSelectionRange(el.value.length, el.value.length); } }} // the cursor at the end, once
+          onKeyDown={enter} />
+        <FormatBar look={resolveStyle(styleId, own, portrait)} all={fmtAll} onAll={setFmtAll} onLook={(patch) => onLook(patch, fmtAll)} onDone={() => done(typed.current?.value ?? typing)} />
       </>) : (
       <div className="drag-handle" onPointerDown={drag} onDoubleClick={onEditOpen} title="Tap to pick, drag to move, double-click to edit the text">
         <StyledCaption styleId={styleId} custom={own} text={main} sub={view === "both" ? c.en : undefined} start={c.start} end={c.end} time={ghost ? c.end - 0.01 : t}
@@ -371,17 +375,11 @@ function Guides({ on }: { on: boolean }) {
  * pixels (a click or a shaky tap leaves it where it is), and snapping to the middle of the frame when near it.
  */
 /**
- * Tools for one word, over the caption on the video: its font, size, colour, bold and italic (the MP4 draws the same,
- * captionStyles wordLookTags), or back to the caption's own look.
+ * A toolbar drawn over the page (the video clips what's inside it), next to the caption its anchor sits in: above
+ * it, or under it when there's no room above (a caption near the top), kept on screen; placed again whenever the
+ * caption changes size or the page moves.
  */
-function WordBar({ word, look, color, base, onChange, onClose }: {
-  word: string; look: WordLook | null; color: string | null; base: CaptionStyle; onChange: (patch: { look?: WordLook | null; color?: string | null }) => void; onClose: () => void;
-}) {
-  const size = look?.size ?? 1;
-  const resize = (d: number) => { const n = Math.round(Math.min(3, Math.max(0.4, size + d)) * 10) / 10; onChange({ look: { size: Math.abs(n - 1) < 0.001 ? undefined : n } }); };
-  const stop = (e: React.SyntheticEvent) => e.stopPropagation(); // not a drag of the caption
-  // Drawn over the page (the video clips what's inside it): above the caption, or under it when there's no room
-  // above (a caption near the top), kept on screen; placed again whenever the caption changes size or the page moves.
+function useFloat() {
   const anchor = useRef<HTMLSpanElement>(null), bar = useRef<HTMLDivElement>(null);
   const [at, setAt] = useState<{ left: number; top: number } | null>(null);
   const place = useCallback(() => {
@@ -398,6 +396,71 @@ function WordBar({ word, look, color, base, onChange, onClose }: {
     addEventListener("scroll", place, true);
     return () => { removeEventListener("resize", place); removeEventListener("scroll", place, true); };
   }, [place]);
+  return { anchor, bar, at: (at ? { left: at.left, top: at.top } : { left: 0, top: 0, visibility: "hidden" }) as React.CSSProperties };
+}
+
+/**
+ * The look of the caption being typed, beside its text box: font, size, colour, bold, italic, capitals and
+ * alignment, for this caption or every caption.
+ */
+function FormatBar({ look, all, onAll, onLook, onDone }: {
+  look: CaptionStyle & Placement; all: boolean; onAll: (all: boolean) => void; onLook: (patch: CaptionCustom) => void; onDone: () => void;
+}) {
+  const { anchor, bar, at } = useFloat();
+  const size = look.scale;
+  // Typing ends with a click outside the text box and these tools (the colour picker's panel counts as them).
+  const finish = useRef(onDone);
+  useLayoutEffect(() => { finish.current = onDone; });
+  useEffect(() => {
+    const away = (e: PointerEvent) => { if (!(e.target as Element | null)?.closest?.(".cap-inline, .fmt-bar, .cp-pop")) finish.current(); };
+    document.addEventListener("pointerdown", away, true);
+    return () => document.removeEventListener("pointerdown", away, true);
+  }, []);
+  const resize = (d: number) => onLook({ size: Math.round(Math.min(2.6, Math.max(0.4, size + d)) * 20) / 20 });
+  return (<>
+    <span ref={anchor} hidden />
+    {createPortal(
+      <div ref={bar} className="word-bar fmt-bar" role="toolbar" aria-label="Caption look" style={at} onPointerDown={(e) => e.stopPropagation()}>
+        <select value={look.font} onChange={(e) => onLook({ font: e.target.value })} aria-label="Font" style={{ fontFamily: `"${look.font}"` }}>
+          {CAPTION_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: `"${f}"` }}>{f}</option>)}
+        </select>
+        <span className="wb-size">
+          <button onClick={() => resize(-0.1)} aria-label="Smaller" title="Smaller">A−</button>
+          <b>{Math.round(size * 100)}%</b>
+          <button onClick={() => resize(0.1)} aria-label="Bigger" title="Bigger">A+</button>
+        </span>
+        <ColorPicker value={hexOf(look.color)} onChange={(c) => onLook({ color: c })} label="Text colour" />
+        <button aria-pressed={!!look.bold} onClick={() => onLook({ bold: !look.bold })} style={{ fontWeight: 800 }} title="Bold">B</button>
+        <button aria-pressed={!!look.italic} onClick={() => onLook({ italic: !look.italic })} style={{ fontStyle: "italic" }} title="Italic">I</button>
+        <button aria-pressed={!!look.caps} onClick={() => onLook({ case: look.caps ? "none" : "upper" })} title="Capitals">AA</button>
+        <span className="fmt-seg" role="group" aria-label="Alignment">
+          {(["left", "center", "right"] as const).map((a) => (
+            <button key={a} aria-pressed={(look.textAlign ?? "center") === a} onClick={() => onLook({ textAlign: a })} title={`Align ${a === "center" ? "centre" : a}`} aria-label={`Align ${a === "center" ? "centre" : a}`}>
+              <svg width="14" height="12" viewBox="0 0 16 12" aria-hidden="true">{[12, 8, 12, 6].map((w, n) => <rect key={n} x={a === "left" ? 2 : a === "right" ? 14 - w : 8 - w / 2} y={n * 3} width={w} height="1.6" rx=".8" fill="currentColor" />)}</svg>
+            </button>
+          ))}
+        </span>
+        <span className="fmt-seg" role="group" aria-label="Apply to">
+          <button aria-pressed={!all} onClick={() => onAll(false)}>This caption</button>
+          <button aria-pressed={all} onClick={() => onAll(true)}>All</button>
+        </span>
+        <button className="fmt-done" onClick={onDone} title="Save the text (Ctrl/⌘+Enter)">Done</button>
+      </div>, document.body)}
+  </>);
+}
+const hexOf = (c: string | undefined) => (c && /^#[0-9a-f]{6}/i.test(c) ? c.slice(0, 7) : "#FFFFFF");
+
+/**
+ * Tools for one word, over the caption on the video: its font, size, colour, bold and italic (the MP4 draws the same,
+ * captionStyles wordLookTags), or back to the caption's own look.
+ */
+function WordBar({ word, look, color, base, onChange, onClose }: {
+  word: string; look: WordLook | null; color: string | null; base: CaptionStyle; onChange: (patch: { look?: WordLook | null; color?: string | null }) => void; onClose: () => void;
+}) {
+  const size = look?.size ?? 1;
+  const resize = (d: number) => { const n = Math.round(Math.min(3, Math.max(0.4, size + d)) * 10) / 10; onChange({ look: { size: Math.abs(n - 1) < 0.001 ? undefined : n } }); };
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation(); // not a drag of the caption
+  const { anchor, bar, at } = useFloat();
   return (<>
     <span ref={anchor} hidden />
     {createPortal(
@@ -1168,6 +1231,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 editing={inline && cues[target()] ? cues[target()][line] : null}
                 onTap={tapCaption} onEditOpen={() => { setWordBar(false); setInline(true); }} onEditDone={inlineDone}
                 wordBar={wordBar && pickedWord && !playing ? pickedWord : null} onWord={styleWord} onWordClose={() => setWordBar(false)}
+                onLook={(patch, all) => { if (all) lookAll(patch); else { const i = target(); if (i >= 0) styleCue(i, patch); } }}
                 onMove={(i, x, y) => { if (onlyThis && i === selected) styleCue(i, { x, y }); else lookAll({ x, y }); }}
                 onResize={(i, size) => { if (onlyThis && i === selected) styleCue(i, { size }); else lookAll({ size }); }} />
               {freePlan && <span className="wm-preview" aria-hidden="true">Made with {BRAND.name}</span>}

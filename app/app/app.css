@@ -903,3 +903,9 @@ a.signout { text-decoration: none; }
 .auto-zoom .insp-head .cz-check input { width: 16px; height: 16px; margin: 0; }
 /* the colour swatch in the word bar shows its colour (the bar's button style mustn't paint over it) */
 .word-bar .cp-swatch { padding: 0; background: linear-gradient(var(--cp), var(--cp)), repeating-conic-gradient(#ccc 0 25%, #fff 0 50%) 0 0 / 10px 10px; box-shadow: inset 0 0 0 2px rgb(255 255 255 / .55); }
+/* The look of the caption being typed: beside its text box (the word bar's look) */
+.fmt-bar { max-width: min(calc(100vw - 16px), 640px); }
+.fmt-seg { display: inline-flex; border: 1px solid rgb(255 255 255 / .2); border-radius: 8px; overflow: hidden; }
+.word-bar .fmt-seg button { border: 0; border-radius: 0; min-width: 32px; }
+.word-bar .fmt-seg button + button { border-left: 1px solid rgb(255 255 255 / .2); }
+.word-bar .fmt-done { background: #d4ff3f; color: #0c0c14; border-color: #d4ff3f; font-weight: 700; }
