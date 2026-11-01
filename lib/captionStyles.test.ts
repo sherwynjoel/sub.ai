@@ -186,10 +186,12 @@ test("CINECUT typography: words (or letters) come in each in a layer of its own,
   const rise = dlg("cc-rise");
   assert.equal(rise.length, 3, "a layer a word");
   assert.ok(rise.every((l) => /\\move\((\d+),\d+,\1,\d+,0,270\)/.test(l)), "each rises into place");
-  // Rise Up: three staggered lines (left, centre, right), wine red / wine red (heavier) / cream
+  // Rise Up: a big Bebas Neue middle line in capitals between two light lowercase ones set to its left and right
+  // edges, all amber with a wine glow
   assert.deepEqual(rise.map((l) => l.match(/\\an(\d)/)![1]), ["4", "5", "6"]);
-  assert.ok(/\\1c&H1F017F&\\bord[\d.]+\\3c&H1F017F&/.test(rise[1]) && /\\1c&HD0EBF5&/.test(rise[2]));
-  assert.equal(resolveStyle("cc-rise").font, "Bebas Neue");
+  assert.ok(rise.every((l) => /\\1c&H3EB2F4&/.test(l) && /\\3c&H1F017F&/.test(l)), "amber, wine glow");
+  assert.ok(/\\fnAnton\\fscx\d+/.test(rise[1]) && /UP/.test(rise[1].replace(/\{[^}]*\}/g, "")), "the middle line big, in capitals");
+  assert.equal(resolveStyle("cc-rise").font, "Poppins Light");
   assert.equal(dlg("cc-letter-rise").length, "slideupeffect".length, "a layer a letter");
   assert.ok(dlg("cc-bold-flicker").every((l) => /\\t\(40,41,\\alpha&H00&\)/.test(l)), "each word flickers on");
   const corners = dlg("cc-corners");

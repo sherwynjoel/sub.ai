@@ -56,7 +56,9 @@ export type CaptionStyle = {
   hook?: { sizes: number[]; colors: string[]; fonts?: (string | undefined)[] };
   // Staggered lines: the first flush left, the middle centred, the last flush right (within the block as wide as
   // its widest line), each in its colour; the middle one made heavier by an outline of its own colour.
-  stagger?: { colors: string[]; bold: number }; // "hook": each line's size (em), colour and font, in turn
+  // big: the middle line that many times the others (shrunk to fit the width), in bigFont and capitals; glow: a soft
+  // shadow of that colour behind every line; tight: the lines' height × this (set closer than the fonts' own).
+  stagger?: { colors: string[]; bold: number; big?: number; bigFont?: string; glow?: string; tight?: number }; // "hook": each line's size (em), colour and font, in turn
   spacing?: number;              // letter spacing, em
   lineHeight?: number;           // space between lines: × the font's own line height (1 = as the font sets it)
   textAlign?: TextAlign;         // lines flush left / centred / flush right (the caption against that side of the safe zone)
@@ -80,7 +82,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-pro", name: "Pro", group: "Typography", blurb: "One big Titan One word at a time, the video inverted inside the letters (change the blend in Colour).", font: "Titan One", fontTa: "Mukta Malar ExtraBold", size: 1.09, color: W, effect: "oneword", blend: "difference" },
   { id: "cc-word-cut", name: "Word Cut", group: "Typography", blurb: "One big word at a time, cut on the beat.", font: "Playfair Display Bold Italic", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, effect: "oneword" },
   { id: "cc-cinematic", name: "Cinematic", group: "Typography", blurb: "Three lines narrowing down: the outer ones in rounded Comfortaa, the middle one big Poppins capitals; each word settles out of a soft blur as it's said.", font: "Comfortaa Bold", fontTa: "Hind Madurai", size: 1.06, color: W, shadow: 0.04, anim: "cinematic", effect: "cine" },
-  { id: "cc-rise", name: "Rise Up", group: "Typography", blurb: "Three Bebas Neue lines, left, centre (bold) and right, wine red and cream; each word rises in as it's said.", font: "Bebas Neue", fontTa: "Mukta Malar ExtraBold", size: 1.0, color: "#7F011F", reveal: "rise", stagger: { colors: ["#7F011F", "#7F011F", "#F5EBD0"], bold: 0.035 } },
+  { id: "cc-rise", name: "Rise Up", group: "Typography", blurb: "A big Anton middle line between two light lowercase ones, set to its left and right edges, amber with a wine glow; each word rises in.", font: "Poppins Light", fontTa: "Hind Madurai", size: 1.12, lower: true, color: "#F4B23E", reveal: "rise", stagger: { colors: ["#F4B23E", "#F4B23E", "#F4B23E"], bold: 0, big: 3.1, bigFont: "Anton", glow: "#7F011F", tight: 0.72 } },
   { id: "cc-rise-spaced", name: "Rise Spaced", group: "Typography", blurb: "Airy, spaced-out words rising in one by one.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, spacing: 0.05, reveal: "rise" },
   { id: "cc-corners", name: "Corner Block", group: "Typography", blurb: "Small capitals pinned to a block's edges, popping on one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.96, caps: true, color: W, shadow: 0.04, effect: "corners" },
   { id: "cc-bold-flicker", name: "Bold Flicker", group: "Typography", blurb: "Big capitals that strobe on, word by word.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 0.96, caps: true, color: W, shadow: 0.04, reveal: "flicker", wordLines: true },
@@ -180,6 +182,7 @@ export const CAPTION_FONTS = [
   "Great Vibes", "Figtree Bold", "GFS Didot", "Oswald Bold", "Bebas Neue", "Lobster", "Pacifico", "Caveat Bold", "Righteous",
   "Archivo Black", "Abril Fatface", "Alfa Slab One", "Comfortaa Bold", "Luckiest Guy", "Titan One",
   "Alex Brush", "Pinyon Script", // more free look-alikes of the commercial Snell (Bold)
+  "Poppins Light",
 ] as const;
 /** The commercial font a free one stands in for (shown in the font menu). */
 export const FONT_LIKE: Partial<Record<string, string>> = { "Great Vibes": "Snell", "Alex Brush": "Snell Bold", "Pinyon Script": "Snell", "Figtree Bold": "Avenir", "GFS Didot": "Didot" };
@@ -938,25 +941,39 @@ export function buildAss(cues: Cue[], o: Opts) {
         if (grad || s.stagger) { // each line its own event (so its strips can be cut, or it sits on its own side), a word's layer only its line
           const rows: [number, number][] = [];
           for (let j = g.from; j < g.to; j++) if (j === g.from || glueK(j) === "\\N") rows.push([j, j + 1]); else rows[rows.length - 1][1] = j + 1;
-          const k = s.keyword, natW = (j: number) => natOf(words[j].w, zOf(j) * (j === kw && k?.scale ? k.scale : 1), (j === kw && k?.font) || s.font);
+          const st = s.stagger, last = rows.length - 1, mid = rows.length > 2 ? 1 : -1;
+          // stagger's big middle line: in its own font and capitals, big as asked but no wider than the frame
+          const rowText = (r: number) => words.slice(rows[r][0], rows[r][1]).map((w) => w.w).join(" ");
+          const isBig = (r: number) => !!st?.big && r === mid;
+          const rowFont = (r: number) => (isBig(r) && st?.bigFont ? st.bigFont : s.font);
+          const rowZ = rows.map((_, r) => (isBig(r) ? Math.min(st!.big!, room / (Math.max(0.3, textWidth(rowText(r).toUpperCase(), rowFont(r), s.fontTa)) * fs)) : 1));
+          const k = s.keyword, natW = (j: number) => {
+            const r = rows.findIndex(([a, b]) => j >= a && j < b);
+            return natOf(words[j].w, zOf(j) * rowZ[r] * (j === kw && k?.scale ? k.scale : 1), (j === kw && k?.font) || rowFont(r)) * (st?.tight ?? 1);
+          };
           const nats = rows.map(([a, b]) => Math.max(...words.slice(a, b).map((_, n) => natW(a + n))));
           const p = stackAt(nats);
           // stagger: the block as wide as its widest line (centred where the caption goes), the first line on its left
           // edge, the middle centred, the last on its right edge; each line in its colour, the middle one heavier
-          const st = s.stagger, last = rows.length - 1, mid = rows.length > 2 ? 1 : -1;
-          const rowW = rows.map(([a, b]) => textWidth(words.slice(a, b).map((w) => w.w).join(" "), s.font, s.fontTa) * fs);
+          const rowW = rows.map((_, r) => textWidth(isBig(r) ? rowText(r).toUpperCase() : rowText(r), rowFont(r), s.fontTa) * fs * rowZ[r]);
           const blockW = Math.max(...rowW), cx = ax - (hz * blockW) / 2;
           const side = (r: number) => (!st || rows.length === 1 || r === mid ? 0 : r === 0 ? -1 : r === last ? 1 : 0);
           const rowTag = (r: number) => {
-            if (!st || grad) return "";
+            if (!st) return "";
             const col = colorOnly(st.colors[r === last && rows.length > 1 ? 2 : r === mid ? 1 : 0] ?? s.color);
-            return `\\1c${col}` + (r === mid ? `\\bord${px(st.bold)}\\3c${col}` : "");
+            // the glow strong behind the big line, faint behind the thin ones (else it outshines their colour)
+            const [ba, sa] = isBig(r) ? ["50", "40"] : ["B0", "A0"];
+            const glow = st.glow ? `\\bord${px(0.04 * rowZ[r])}\\3c${colorOnly(st.glow)}\\3a&H${ba}&\\blur${px(0.07 * rowZ[r])}\\shad${px(0.035 * rowZ[r])}\\4c${colorOnly(st.glow)}\\4a&H${sa}&` : "";
+            const big = isBig(r) ? `\\fn${rowFont(r)}\\fscx${Math.round(rowZ[r] * 100)}\\fscy${Math.round(rowZ[r] * 100)}` : "";
+            return (grad ? "" : `\\1c${col}`) + (r === mid && st.bold ? `\\bord${px(st.bold)}\\3c${col}` : "") + glow + big;
           };
+          const upper = (txt: string) => txt.replace(/(^|\})([^{]*)/g, (_, a: string, b: string) => a + b.toUpperCase()); // capitals outside the tags
           for (const u of revealUnits(words.slice(g.from, g.to), letters)) {
             // the strips span this word (a smaller word sits on the line's baseline, ~80% down a line)
             const j = g.from + u.j, r = rows.findIndex(([a, b]) => j >= a && j < b), n = natW(j), cy = p.ys[r] + 0.3 * (nats[r] - n);
             const [lead, dy, ms2] = st ? at(reveal === "flicker" ? "" : rise(""), p.ys[r], cx + (side(r) * blockW) / 2, side(r)) : at(reveal === "flicker" ? "" : rise(""), p.ys[r]);
-            const text = body((jj, kk) => jj === j && (u.k === null || kk === u.k), tagsFor, g, ...rows[r]).replace(/\{\\r/g, `{\\r${rowTag(r)}`);
+            const text0 = body((jj, kk) => jj === j && (u.k === null || kk === u.k), tagsFor, g, ...rows[r]).replace(/\{\\r/g, `{\\r${rowTag(r)}`);
+            const text = isBig(r) ? upper(text0) : text0;
             strips(Math.max(g.s, u.s), g.e, lead, cy, n, "{\\q2}" + text, 1, 0, 0, dy ? [[cy + dy, n], [cy, n]] : [], ms2);
           }
           subAt(g.s, g.e, "", p.subY);
