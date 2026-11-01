@@ -158,7 +158,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     const bigLook: React.CSSProperties = grad
       ? { ...(colors?.[idx[1]] ? own(big) : {}), filter: halo && [s.stack!.glow ? `drop-shadow(0 0 .1em ${big})` : "", s.stack!.rgb ? `drop-shadow(-.05em 0 #00E5FFB0) drop-shadow(.05em 0 #FF2040B0)` : ""].join(" ") }
       : { color: big, textShadow: halo };
-    body = <>{a && <span className="stack-small">{small(a, idx[0])}</span>}<span key={k} className="stack-big" style={{ ...bigLook, fontFamily: stack(s.stack!.font, s.fontTa), fontWeight: 400, fontSize: `${stackBig(b)}em` }}>{typeof idx[1] === "number" && idx[1] >= 0 ? pick(idx[1], b) : b}</span>{d && <span className="stack-small">{idx[2].length ? small(d, idx[2]) : d}</span>}</>;
+    body = <>{a && <span className="stack-small">{small(a, idx[0])}</span>}<span key={k} className="stack-big" style={{ ...bigLook, fontFamily: stack(s.stack!.font, s.fontTa), fontWeight: 400, fontSize: `${stackBig(b)}em`, lineHeight: 1.05 * g }}>{typeof idx[1] === "number" && idx[1] >= 0 ? pick(idx[1], b) : b}</span>{d && <span className="stack-small">{idx[2].length ? small(d, idx[2]) : d}</span>}</>;
   } else if (s.effect === "hook" && s.hook) {
     const h = s.hook, pieces = hookChunks(caseOf(s, text), start, end);
     const piece = pieces[Math.max(0, pieces.findIndex((c) => time < c.e))];
@@ -169,7 +169,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       return (
         <span key={`${piece.s}-${j}`} className="hook-line" style={{
           fontSize: `min(${size}em, calc(88cqw / ${Math.max(0.5, textWidth(ln.text, f ?? s.font, s.fontTa)).toFixed(3)}))`,
-          color: h.colors[j % h.colors.length], fontFamily: f ? stack(f, s.fontTa) : undefined, opacity: v, filter: v < 1 ? `blur(${((1 - v) * 0.15).toFixed(3)}em)` : undefined,
+          color: h.colors[j % h.colors.length], fontFamily: f ? stack(f, s.fontTa) : undefined, opacity: v, filter: v < 1 ? `blur(${((1 - v) * 0.15).toFixed(3)}em)` : undefined, lineHeight: 1.02 * g,
         }}>{ln.text.split(" ").map((w, n) => [n ? " " : null, ln.idx[n] === undefined ? w : pick(ln.idx[n], w)])}</span>
       );
     });
@@ -230,7 +230,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       return <span key={a} style={{ textAlign: n === 1 || r === mid ? "center" : r === 0 ? "left" : r === last ? "right" : "center", ...(grad ? {} : { color: col }),
         ...(r === mid && st.bold ? { WebkitTextStroke: `${st.bold * 2}em ${col}` } : {}),
         ...(st.glow && !grad ? { textShadow: glowOf(big) } : {}), // (none when the Shadow is off: not the caption's own)
-        ...(st.tight ? { lineHeight: lineScale(font) * st.tight } : {}),
+        ...(st.tight ? { lineHeight: lineScale(font) * st.tight * (s.lineHeight ?? 1) } : {}),
         ...(big ? { fontFamily: stack(font, s.fontTa), textTransform: "uppercase", fontSize: `min(${st.big}em, calc(${roomCqw.toFixed(1)}cqw / ${tw}))` } : {}) }}>
         {join(a, to).filter((x) => typeof x !== "object" || x === null || (x as React.ReactElement).type !== "br")}</span>;
     })}</span>;

@@ -241,8 +241,13 @@ test("line spacing: kept for the whole project, each line placed by the MP4 g li
   assert.equal(at(2).at(-1), at(1.5).at(-1), "a bottom caption's last line stays put");
   const plain = buildAss([cue], { styleId: "tpl-blur", lang: "ta", width: 1080, height: 1920 });
   assert.ok(!/\\an5\\pos/.test(plain), "no spacing set: libass lays the lines out as before");
-  const hook = buildAss([cue], { styleId: "tpl-hook-yellow", lang: "ta", width: 1080, height: 1920, custom: { lineHeight: 2 } });
-  assert.equal(hook, buildAss([cue], { styleId: "tpl-hook-yellow", lang: "ta", width: 1080, height: 1920 }), "styles with their own layout keep it");
+  // styles that set their own lines (hooks, stacks, reveals, Rise Up) space them too, each line placed itself
+  for (const id of ["tpl-hook-yellow", "trending-1", "cc-bold-flicker", "cc-rise"]) {
+    const ys = (lh: number) => [...new Set([...buildAss([cue], { styleId: id, lang: "ta", width: 1080, height: 1920, custom: { lineHeight: lh } })
+      .matchAll(/\\pos\(\d+,(\d+)\)|\\move\(\d+,\d+,\d+,(\d+)/g)].map((m) => +(m[1] ?? m[2])))].sort((a, b) => a - b);
+    const span = (lh: number) => { const y = ys(lh); return y[y.length - 1] - y[0]; };
+    assert.ok(span(2) > span(1.01) * 1.6, `${id}: lines further apart (${span(1.01)} → ${span(2)})`);
+  }
 });
 
 test("Word Cut picks out no word: no highlight, keyword colour or hand-coloured word, in the MP4 too", async () => {

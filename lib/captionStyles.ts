@@ -756,6 +756,8 @@ export function buildAss(cues: Cue[], o: Opts) {
     // (libass has no line spacing; a line is as tall as its font). The editor breaks at the same words (lineCount).
     const grad = s.gradient ?? null;
     const g = spacesLines(s) ? s.lineHeight ?? 1 : 1, ownLines = (Math.abs(g - 1) > 0.005 && spacesLines(s)) || !!grad;
+    // line spacing in the layouts that set their own lines (reveals, Rise Up, stacks, hooks): each line placed itself
+    const gl = takesLineSpacing(s) && !spacesLines(s) ? s.lineHeight ?? 1 : 1, gapped = Math.abs(gl - 1) > 0.005;
     const ratio = o.width / o.height, room = (o.width - marginL - marginR) * 0.95;
     // A line's natural height, in font f at scale z (Tamil in it: as tall as the Tamil font's line).
     const natOf = (text: string, z = 1, f = s.font) => fs * Math.max(lineScale(f), /[஀-௿]/.test(text) ? lineScale(s.fontTa ?? TAMIL_FONT) : 0) * z;
@@ -941,7 +943,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       const rise = (t0: string) => `{\\an${an}\\move(${Math.round(ax)},${Math.round(ay + dy)},${Math.round(ax)},${Math.round(ay)},0,${ms})}` + t0;
       const tagsFor = reveal === "flicker" ? flickerTags(FLICKER2) : `\\alpha&HFF&\\t(0,${ms},\\alpha&H00&)`;
       for (const g of groups) {
-        if (grad || s.stagger) { // each line its own event (so its strips can be cut, or it sits on its own side), a word's layer only its line
+        if (grad || s.stagger || gapped) { // each line its own event (so its strips can be cut, or it sits on its own side), a word's layer only its line
           const rows: [number, number][] = [];
           for (let j = g.from; j < g.to; j++) if (j === g.from || glueK(j) === "\\N") rows.push([j, j + 1]); else rows[rows.length - 1][1] = j + 1;
           const st = s.stagger, last = rows.length - 1, mid = rows.length > 2 ? 1 : -1;
@@ -955,7 +957,7 @@ export function buildAss(cues: Cue[], o: Opts) {
             return natOf(words[j].w, zOf(j) * rowZ[r] * (j === kw && k?.scale ? k.scale : 1), (j === kw && k?.font) || rowFont(r)) * (st?.tight ?? 1);
           };
           const nats = rows.map(([a, b]) => Math.max(...words.slice(a, b).map((_, n) => natW(a + n))));
-          const p = stackAt(nats);
+          const p = stackAt(nats.map((n) => n * gl));
           // stagger: the block as wide as its widest line (centred where the caption goes), the first line on its left
           // edge, the middle centred, the last on its right edge; each line in its colour, the middle one heavier
           const rowW = rows.map((_, r) => textWidth(isBig(r) ? rowText(r).toUpperCase() : rowText(r), rowFont(r), s.fontTa) * fs * rowZ[r]);
@@ -1004,9 +1006,9 @@ export function buildAss(cues: Cue[], o: Opts) {
         const grow = `\\fscx${Math.round(z * 40)}\\fscy${Math.round(z * 40)}\\t(0,220,\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)})`;
         // with a gradient the big word takes it too (unless the user coloured it)
         const big = `{\\r\\fn${s.stack.font}\\b0${grad && !colors?.[p.idx[1]] ? "" : `\\1c${colorOnly(bigCol)}`}${glowBig}${grow}${wordLookTags(looks?.[p.idx[1]])}}${b}`;
-        if (grad) { // the lines placed one by one (so their strips can be cut); the red and cyan copies only the big word
+        if (grad || gapped) { // the lines placed one by one (so their strips can be cut, or spaced); the red and cyan copies only the big word
           const parts = [a && [natOf(p.parts[0], 0.6), `{${small}}${a}`], [natOf(p.parts[1], z, s.stack.font), big], d && [natOf(p.parts[2], 0.6), `{${small}}${d}`]].filter(Boolean) as [number, string][];
-          const at2 = stackAt(parts.map((x) => x[0]), false), bigAt = a ? 1 : 0;
+          const at2 = stackAt(parts.map((x) => x[0] * gl), false), bigAt = a ? 1 : 0;
           if (s.stack.rgb) {
             const dx = Math.max(2, Math.round(px(0.05)));
             for (const [col, x] of [["#FF2040", ax + dx], ["#00E5FF", ax - dx]] as const)
@@ -1038,8 +1040,8 @@ export function buildAss(cues: Cue[], o: Opts) {
           // a word the user coloured keeps its colour
           return [natOf(ln.text, z, f ?? s.font), ln.text.split(" ").map((w, n) => `{${head}${colors?.[ln.idx[n]] ? `\\1c${colorOnly(colors[ln.idx[n]]!)}` : ""}${wordLookTags(looks?.[ln.idx[n]])}${reveal}}${esc(w)}`).join(" ")] as const;
         });
-        if (grad) { // each line placed here (so its strips can be cut), the English under them
-          const at2 = stackAt(text.map((t) => t[0]));
+        if (grad || gapped) { // each line placed here (so its strips can be cut, or spaced), the English under them
+          const at2 = stackAt(text.map((t) => t[0] * gl));
           text.forEach(([nat, t], j) => line(p.s, p.e, "", at2.ys[j], nat, "{\\q2}" + t));
           subAt(p.s, p.e, "", at2.subY);
           continue;
@@ -1201,7 +1203,8 @@ ${events.join("\n")}
  */
 export const spacesLines = (s: CaptionStyle) => !((s.effect && s.effect !== "wobble") || s.reveal || s.wordLines || s.keyword?.line);
 /** Styles the line spacing reaches: the plain layout's, and Cinematic's three lines. */
-export const takesLineSpacing = (s: CaptionStyle) => spacesLines(s) || s.effect === "cine";
+export const takesLineSpacing = (s: CaptionStyle) =>
+  spacesLines(s) || ["cine", "stack", "hook", "typo"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
 
 /** How tall a line of this text is, × the em: its fonts' own line height (what libass draws, so the editor matches). */
 export const lineBox = (s: CaptionStyle, text: string) =>
