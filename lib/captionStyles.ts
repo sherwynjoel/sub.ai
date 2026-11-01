@@ -970,7 +970,10 @@ export function buildAss(cues: Cue[], o: Opts) {
     if (s.effect === "stack" && s.stack) {
       const small = "\\fscx60\\fscy60";
       // A small line word by word, so a word the user coloured keeps its colour (then back to the line's own).
-      const smallLine = (text: string, idx: number[]) => text.split(" ").map((w, k) => colors?.[idx[k]] ? `{\\1c${colorOnly(colors[idx[k]]!)}}${esc(w)}{\\r${small}}` : esc(w)).join(" ");
+      const smallLine = (text: string, idx: number[]) => text.split(" ").map((w, k) => {
+        const own = (colors?.[idx[k]] ? `\\1c${colorOnly(colors[idx[k]]!)}` : "") + wordLookTags(looks?.[idx[k]]); // its colour and look (picked on the video)
+        return own ? `{${own}}${esc(w)}{\\r${small}}` : esc(w);
+      }).join(" ");
       for (const p of stackChunks(caseOf(s, main), sub, c.start, c.end)) {
         const a = smallLine(p.parts[0], p.idx[0]), b = esc(p.parts[1]), d = p.idx[2].length ? smallLine(p.parts[2], p.idx[2]) : esc(p.parts[2]);
         const z = stackBig(p.parts[1]); // a long word gets smaller instead of running off the frame
@@ -978,7 +981,7 @@ export function buildAss(cues: Cue[], o: Opts) {
         const glowBig = s.stack.glow ? `\\3c${colorOnly(bigCol)}\\3a&H60&\\bord${px(0.07)}\\blur${px(0.22)}` : "";
         const grow = `\\fscx${Math.round(z * 40)}\\fscy${Math.round(z * 40)}\\t(0,220,\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)})`;
         // with a gradient the big word takes it too (unless the user coloured it)
-        const big = `{\\r\\fn${s.stack.font}\\b0${grad && !colors?.[p.idx[1]] ? "" : `\\1c${colorOnly(bigCol)}`}${glowBig}${grow}}${b}`;
+        const big = `{\\r\\fn${s.stack.font}\\b0${grad && !colors?.[p.idx[1]] ? "" : `\\1c${colorOnly(bigCol)}`}${glowBig}${grow}${wordLookTags(looks?.[p.idx[1]])}}${b}`;
         if (grad) { // the lines placed one by one (so their strips can be cut); the red and cyan copies only the big word
           const parts = [a && [natOf(p.parts[0], 0.6), `{${small}}${a}`], [natOf(p.parts[1], z, s.stack.font), big], d && [natOf(p.parts[2], 0.6), `{${small}}${d}`]].filter(Boolean) as [number, string][];
           const at2 = stackAt(parts.map((x) => x[0]), false), bigAt = a ? 1 : 0;
@@ -1011,7 +1014,7 @@ export function buildAss(cues: Cue[], o: Opts) {
           const head = `\\r\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)}${grad ? "" : `\\1c${colorOnly(col)}`}${f ? `\\fn${f}` : ""}`;
           const reveal = `\\alpha&HFF&\\blur${px(0.15)}\\t(${at},${at + 180},\\alpha&H00&\\blur0)`;
           // a word the user coloured keeps its colour
-          return [natOf(ln.text, z, f ?? s.font), ln.text.split(" ").map((w, n) => `{${head}${colors?.[ln.idx[n]] ? `\\1c${colorOnly(colors[ln.idx[n]]!)}` : ""}${reveal}}${esc(w)}`).join(" ")] as const;
+          return [natOf(ln.text, z, f ?? s.font), ln.text.split(" ").map((w, n) => `{${head}${colors?.[ln.idx[n]] ? `\\1c${colorOnly(colors[ln.idx[n]]!)}` : ""}${wordLookTags(looks?.[ln.idx[n]])}${reveal}}${esc(w)}`).join(" ")] as const;
         });
         if (grad) { // each line placed here (so its strips can be cut), the English under them
           const at2 = stackAt(text.map((t) => t[0]));
@@ -1086,11 +1089,13 @@ export function buildAss(cues: Cue[], o: Opts) {
       }
       continue;
     }
+    // Center Stage: a word's own colour and look (picked on the video)
+    const soloOwn = (j: number) => (colors?.[j] ? `\\1c${colorOnly(colors[j]!)}` : "") + wordLookTags(looks?.[j]);
     words.forEach((wt, i) => {
       const end = i === words.length - 1 ? c.end : words[i + 1].s;
       let text: string;
       if (s.effect === "solo" && grad) {
-        rowsAt(wt.s, end, [...(i > 0 ? [[natOf(words[i - 1].w, 0.45), `{\\fscx45\\fscy45\\1a&H60&}${esc(words[i - 1].w)}`] as [number, string]] : []), [natOf(wt.w), `{\\r\\t(0,120,\\fscx108\\fscy108)}${esc(wt.w)}`]]);
+        rowsAt(wt.s, end, [...(i > 0 ? [[natOf(words[i - 1].w, 0.45), `{\\fscx45\\fscy45\\1a&H60&${soloOwn(i - 1)}}${esc(words[i - 1].w)}`] as [number, string]] : []), [natOf(wt.w), `{\\r\\t(0,120,\\fscx108\\fscy108)${soloOwn(i)}}${esc(wt.w)}`]]);
         return;
       } else if (s.effect === "punch" && words.length > 2 && grad) {
         // the set-up small and the punch big, each broken into lines that fit
@@ -1107,7 +1112,7 @@ export function buildAss(cues: Cue[], o: Opts) {
         rowsAt(wt.s, end, [...rowsOf(0, cut, 0.55), ...rowsOf(cut, words.length, 1.4)]);
         return;
       } else if (s.effect === "solo") {
-        text = (i > 0 ? `{\\fscx45\\fscy45\\1a&H60&}${esc(words[i - 1].w)}\\N` : "") + `{\\r\\t(0,120,\\fscx108\\fscy108)}${esc(wt.w)}`;
+        text = (i > 0 ? `{\\fscx45\\fscy45\\1a&H60&${soloOwn(i - 1)}}${esc(words[i - 1].w)}{\\r}\\N` : "") + `{\\r\\t(0,120,\\fscx108\\fscy108)${soloOwn(i)}}${esc(wt.w)}`;
       } else if (s.effect === "punch" && words.length > 2) {
         const cut = words.length - Math.min(2, words.length - 1);
         const setup = words.slice(0, cut).map((_, j) => word(j, i)).join(" ");

@@ -396,3 +396,14 @@ test("A word picked on the video: its own font, size, bold, italic in the MP4, k
   const bad = buildAss([{ ...c, wf: [{ font: "X}{\\pos(0,0)" }, null, null] }], { styleId: "tall-caps", lang: "ta", width: 1080, height: 1920 });
   assert.ok(!bad.includes("X}"));
 });
+
+test("Words picked on the video keep their look in the layouts that set their own lines (stacks, hooks, Center Stage)", () => {
+  const ids = CAPTION_STYLES.filter((s) => ["stack", "hook", "solo"].includes(s.effect ?? "")).map((s) => s.id);
+  assert.ok(ids.length >= 4);
+  for (const id of ids) {
+    const words = "make great videos for every business owner".split(" ");
+    const cue = { start: 0, end: 4, ta: words.join(" "), en: "", wf: words.map(() => ({ font: "Lobster", italic: true })) };
+    const ass = buildAss([cue], { styleId: id, lang: "ta", width: 1080, height: 1920 });
+    assert.ok(/\\fnLobster/.test(ass) && /\\i1/.test(ass), `${id}: the word's own font and slant`);
+  }
+});
