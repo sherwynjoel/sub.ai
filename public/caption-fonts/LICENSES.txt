@@ -18,3 +18,4 @@ fonts, fixed Bold styles given their own family names as above: Figtree Bold, Os
 Luckiest Guy: Apache License 2.0, from https://github.com/google/fonts (apache/luckiestguy).
 Great Vibes, Figtree and GFS Didot are free look-alikes of the commercial Snell Roundhand, Avenir and Didot.
 Alex Brush and Pinyon Script: SIL Open Font License 1.1, from https://github.com/google/fonts (ofl/alexbrush, ofl/pinyonscript); free look-alikes of the commercial Snell Roundhand / Snell BT.
+Poppins Light: SIL Open Font License 1.1, from https://github.com/google/fonts (ofl/poppins), given its own family name (as Inter Bold above).
