@@ -454,3 +454,16 @@ test("Letter Rise: its letters flow in one wave from when the caption appears; 8
   assert.ok(u[u.length - 1].s < 2 + 2.3 * 0.6 + 1e-9, "the last letter well before the caption ends");
   assert.ok(u.find((x) => x.j === 2)!.s < 3, "a later word starts before it's said");
 });
+
+test("Letter Rise: three lines (before the keyword, the keyword, after it), however long the caption", async () => {
+  const { keywordRows } = await import("./captionStyles");
+  const w = (t: string) => t.split(" ");
+  assert.deepEqual([...keywordRows(w("do you wonder why every Business needs a website today"), 5)].sort(), [4, 5]);
+  assert.equal(keywordRows(w("Business needs a website today my friend"), 0).size, 2, "keyword first: the rest on two lines");
+  assert.equal(keywordRows(w("do you wonder about Business"), 4).size, 2, "keyword last: the rest on two lines");
+  for (const t of ["do you wonder why every business needs a website today my friend", "EveryCut makes it simple", "website? 70% of customers check online before buying anything today"]) {
+    const ass = buildAss([{ start: 0, end: 4, ta: t, en: "" }], { styleId: "cc-letter-rise", lang: "ta", width: 1080, height: 1920 });
+    const ys = new Set([...ass.matchAll(/\\move\(\d+,\d+,\d+,(\d+)/g)].map((m) => m[1]));
+    assert.ok(ys.size <= 3, `${t}: ${ys.size} lines`);
+  }
+});
