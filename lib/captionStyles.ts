@@ -160,7 +160,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
-  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-corners", "cc-letter-rise", "cc-typo-block",
+  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker",
   "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-rgb", "tpl-reels-simple", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
