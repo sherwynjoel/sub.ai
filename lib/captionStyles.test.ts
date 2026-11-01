@@ -429,6 +429,7 @@ test("Rise Up's glow is its Shadow: the colour, the size, or off", () => {
 test("styles start at their own line spacing: Typo Block 70%, Rise Up 80% (the slider still changes it)", () => {
   assert.equal(resolveStyle("cc-typo-block").lineHeight, 0.7);
   assert.equal(resolveStyle("cc-rise").lineHeight, 0.8);
+  assert.equal(resolveStyle("cc-cinematic").lineHeight, 0.7);
   assert.equal(resolveStyle("cc-rise", { lineHeight: 1.4 }).lineHeight, 1.4);
   assert.equal(resolveStyle("tall-caps").lineHeight, undefined);
 });
