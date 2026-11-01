@@ -1,6 +1,7 @@
 "use client";
 import ColorPicker from "@/components/ColorPicker";
-import { ANIMS, BLENDS, CAPTION_FONTS, FONT_LIKE, highlights, takesLineSpacing, HIGHLIGHTS, TAMIL_FONTS, type Anim, type Blend, type CaptionCustom, type CaptionStyle, type Highlight, type Placement } from "@/lib/captionStyles";
+import FontPicker from "@/components/FontPicker";
+import { ANIMS, BLENDS, CAPTION_FONTS, highlights, takesLineSpacing, HIGHLIGHTS, TAMIL_FONTS, type Anim, type Blend, type CaptionCustom, type CaptionStyle, type Highlight, type Placement } from "@/lib/captionStyles";
 
 type Props = {
   look: CaptionStyle & Placement;   // the resolved look these controls show
@@ -30,18 +31,14 @@ export default function LookControls({ look, own, set, tamil, project, setAll }:
     <div className="look">
       <fieldset>
         <legend>Text</legend>
-        <label>Font
-          <select value={project ? own.font ?? "" : look.font} onChange={(e) => set({ font: e.target.value || undefined })}>
-            {project && <option value="">Project ({project.font})</option>}
-            {CAPTION_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f}{FONT_LIKE[f] ? ` (like ${FONT_LIKE[f]})` : ""}</option>)}
-          </select>
-        </label>
-        {tamil && <label>Tamil font
-          <select value={project ? own.fontTa ?? "" : look.fontTa ?? "Noto Sans Tamil"} onChange={(e) => set({ fontTa: e.target.value || undefined })}>
-            {project && <option value="">Project ({project.fontTa ?? "Noto Sans Tamil"})</option>}
-            {TAMIL_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f} — தமிழ்</option>)}
-          </select>
-        </label>}
+        <div className="fp-field"><span>Font</span>
+          <FontPicker value={project ? own.font ?? "" : look.font} onChange={(f) => set({ font: f || undefined })} fonts={CAPTION_FONTS} label="Font"
+            none={project ? `Project (${project.font})` : undefined} sample="Make great videos" />
+        </div>
+        {tamil && <div className="fp-field"><span>Tamil font</span>
+          <FontPicker value={project ? own.fontTa ?? "" : look.fontTa ?? "Noto Sans Tamil"} onChange={(f) => set({ fontTa: f || undefined })} fonts={TAMIL_FONTS} label="Tamil font"
+            none={project ? `Project (${project.fontTa ?? "Noto Sans Tamil"})` : undefined} sample="தமிழ் எழுத்துகள்" />
+        </div>}
         <label>Size <span className="cz-val">{Math.round(look.scale * 100)}%</span>
           <input type="range" min={0.4} max={2.6} step={0.05} value={look.scale} onChange={(e) => set({ size: +e.target.value })} title="100% is the standard size every style starts at" />
         </label>
