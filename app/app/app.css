@@ -574,7 +574,7 @@ a.signout { text-decoration: none; }
 .out-warn { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 12px; margin: 10px auto 0; padding: 8px 12px; max-width: 640px; border-radius: 12px; background: #fff1f0; border: 1px solid #ffb4ad; color: #9b1c12; font-size: .9rem; font-weight: 600; }
 .out-scan { position: absolute; inset: 0; visibility: hidden; pointer-events: none; }
 .w-picked { outline: 2px solid #d4ff3f; outline-offset: .06em; border-radius: .12em; }
-.word-bar { position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 6px; padding: 6px; width: max-content; max-width: min(96cqw, 560px); flex-wrap: wrap; justify-content: center;
+.word-bar { position: fixed; z-index: 900; display: flex; align-items: center; gap: 6px; padding: 6px; width: max-content; max-width: min(calc(100vw - 16px), 560px); flex-wrap: wrap; justify-content: center;
   pointer-events: auto; cursor: default; background: rgb(14 14 22 / .94); border: 1px solid rgb(255 255 255 / .14); border-radius: 12px; box-shadow: 0 10px 28px rgb(0 0 0 / .45); font: 600 13px/1 var(--font-body); color: #fff; text-align: left; mix-blend-mode: normal; }
 .word-bar select { max-width: 150px; height: 32px; padding: 0 6px; border-radius: 8px; border: 1px solid rgb(255 255 255 / .2); background: #1d1d2a; color: #fff; font: inherit; }
 .word-bar button { min-width: 32px; height: 32px; padding: 0 8px; border-radius: 8px; border: 1px solid rgb(255 255 255 / .2); background: #1d1d2a; color: #fff; font: inherit; cursor: pointer; }
@@ -901,3 +901,5 @@ a.signout { text-decoration: none; }
 .auto-zoom { margin-bottom: 18px; }
 .auto-zoom .insp-head .cz-check { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: .9rem; font-weight: 500; line-height: 1; }
 .auto-zoom .insp-head .cz-check input { width: 16px; height: 16px; margin: 0; }
+/* the colour swatch in the word bar shows its colour (the bar's button style mustn't paint over it) */
+.word-bar .cp-swatch { padding: 0; background: linear-gradient(var(--cp), var(--cp)), repeating-conic-gradient(#ccc 0 25%, #fff 0 50%) 0 0 / 10px 10px; box-shadow: inset 0 0 0 2px rgb(255 255 255 / .55); }

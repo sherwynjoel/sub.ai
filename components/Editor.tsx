@@ -380,8 +380,29 @@ function WordBar({ word, look, color, base, onChange, onClose }: {
   const size = look?.size ?? 1;
   const resize = (d: number) => { const n = Math.round(Math.min(3, Math.max(0.4, size + d)) * 10) / 10; onChange({ look: { size: Math.abs(n - 1) < 0.001 ? undefined : n } }); };
   const stop = (e: React.SyntheticEvent) => e.stopPropagation(); // not a drag of the caption
-  return (
-    <div className="word-bar" role="toolbar" aria-label={`Word: ${word}`} onPointerDown={stop} onDoubleClick={stop} onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}>
+  // Drawn over the page (the video clips what's inside it): above the caption, or under it when there's no room
+  // above (a caption near the top), kept on screen; placed again whenever the caption changes size or the page moves.
+  const anchor = useRef<HTMLSpanElement>(null), bar = useRef<HTMLDivElement>(null);
+  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
+  const place = useCallback(() => {
+    const cap = anchor.current?.parentElement?.getBoundingClientRect(), b = bar.current;
+    if (!cap || !b) return;
+    const w = b.offsetWidth, h = b.offsetHeight, gap = 10;
+    const left = Math.min(Math.max(8, cap.left + cap.width / 2 - w / 2), innerWidth - w - 8);
+    const top = cap.top - gap - h >= 8 ? cap.top - gap - h : cap.bottom + gap + h <= innerHeight - 8 ? cap.bottom + gap : Math.max(8, innerHeight - h - 8);
+    setAt((p) => (p && Math.abs(p.left - left) < 0.5 && Math.abs(p.top - top) < 0.5 ? p : { left, top }));
+  }, []);
+  useLayoutEffect(place);
+  useEffect(() => {
+    addEventListener("resize", place);
+    addEventListener("scroll", place, true);
+    return () => { removeEventListener("resize", place); removeEventListener("scroll", place, true); };
+  }, [place]);
+  return (<>
+    <span ref={anchor} hidden />
+    {createPortal(
+    <div ref={bar} className="word-bar" role="toolbar" aria-label={`Word: ${word}`} onPointerDown={stop} onDoubleClick={stop} onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
+      style={at ? { left: at.left, top: at.top } : { left: 0, top: 0, visibility: "hidden" }}>
       <select value={look?.font ?? ""} onChange={(e) => onChange({ look: { font: e.target.value || undefined } })} aria-label="Word font" style={{ fontFamily: look?.font ? `"${look.font}"` : undefined }}>
         <option value="">Font: caption&apos;s</option>
         {CAPTION_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: `"${f}"` }}>{f}</option>)}
@@ -396,8 +417,8 @@ function WordBar({ word, look, color, base, onChange, onClose }: {
       <button aria-pressed={look?.italic ?? !!base.italic} onClick={() => onChange({ look: { italic: !(look?.italic ?? !!base.italic) } })} style={{ fontStyle: "italic" }} title="Italic">I</button>
       <button onClick={() => onChange({ look: null, color: null })} disabled={!look && !color} title="Back to the caption's look">Reset</button>
       <button onClick={onClose} aria-label="Close" title="Close (Esc)">×</button>
-    </div>
-  );
+    </div>, document.body)}
+  </>);
 }
 
 function follow(e: React.PointerEvent, frame: DOMRect, onMove: (x: number, y: number) => void, edge: number, around?: HTMLElement | null) {
