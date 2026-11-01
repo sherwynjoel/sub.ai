@@ -11,10 +11,11 @@ const API = "https://api.sarvam.ai/speech-to-text/job/v1";
  * time. (Text translation, sentence by sentence, was tried: sarvam-translate and Mayura both mistranslated
  * code-mixed Tamil far more often than Saaras translating the speech.)
  */
-export const sarvam: Provider = async (audio, _dur, cfg, lang, want) => {
+export const sarvam: Provider = async (audio, dur, cfg, lang, want) => {
   const key = await getSecret("SARVAM_API_KEY");
   if (!key) throw new Error("No Sarvam API key: set SARVAM_API_KEY in the server's .env.local.");
-  const [native, english = []] = await Promise.all(passesFor(want.script, want.english).map((mode) => batch(audio, key, cfg.model, mode, lang)));
+  const [native, english = []] = (await Promise.all(passesFor(want.script, want.english).map((mode) => batch(audio, key, cfg.model, mode, lang))))
+    .map((pieces) => spanPieces(pieces, dur));
   // Saaras windows are 10–30 s, so each paired window is cut into readable cues by sentence (English sentences matched
   // to the native sentences they translate).
   return pairChunks(native, english).flatMap((c) => layoutCue(c));
@@ -25,6 +26,20 @@ type Mode = (typeof MODE)[Script] | "translate";
 
 /** Saaras modes to run: one for the main line's script, plus translate when an English line is wanted. */
 export const passesFor = (script: Script, english: boolean): Mode[] => [MODE[script], ...(english ? ["translate" as const] : [])];
+
+/**
+ * Phrases whose times say nothing (end not after start: Saaras sometimes returns a whole clip as one phrase stamped
+ * 0.32–0.32) made zero-length cues that were all dropped, leaving no subtitles. Such a phrase runs to the next
+ * phrase's start, or to the end of the audio; the word timing then places its words in the speech.
+ */
+export function spanPieces(pieces: Piece[], dur: number): Piece[] {
+  return pieces.map((p, i) => {
+    const start = Number.isFinite(p.start) ? Math.max(0, p.start) : i ? pieces[i - 1].end : 0;
+    if (Number.isFinite(p.end) && p.end > start + 0.05) return { ...p, start };
+    const next = pieces.slice(i + 1).find((q) => Number.isFinite(q.start) && q.start > start + 0.05)?.start;
+    return { ...p, start, end: Math.max(start + 0.5, next ?? dur) };
+  });
+}
 
 /** One Batch STT job: create → upload → start → poll → download. Returns the timestamped phrases. */
 async function batch(audio: Buffer, key: string, model: string, mode: Mode, lang: string): Promise<Piece[]> {
