@@ -889,3 +889,15 @@ a.signout { text-decoration: none; }
 /* The free plan's watermark on the preview, where and as big as the MP4 draws it (lib/render.ts watermarkGraph) */
 .wm-preview { position: absolute; right: 3cqmin; bottom: 3cqmin; z-index: 4; font: 700 2.8cqmin/1 "Poppins", var(--font-body); color: rgb(255 255 255 / .75); text-shadow: 1px 1px 0 rgb(0 0 0 / .5); pointer-events: none; }
 .wm-note { flex-basis: 100%; margin: 4px 0 0; }
+
+/* Highlight keywords (Style panel): the options on one even row, the two buttons under them, no shadows spilling */
+.auto-hl { margin-bottom: 18px; }
+.auto-hl .hl-opts { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin: 12px 0 14px; }
+.auto-hl .hl-color, .auto-hl .hl-check { display: inline-flex; align-items: center; gap: 8px; font-size: .9rem; font-weight: 500; color: var(--ink-2); cursor: pointer; }
+.auto-hl .hl-color .cp-swatch { width: 36px; height: 28px; }
+.auto-hl .hl-check input { width: 16px; height: 16px; margin: 0; }
+.auto-hl .hl-acts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.auto-hl .hl-acts .btn { box-shadow: none; transform: none; }
+.auto-zoom { margin-bottom: 18px; }
+.auto-zoom .insp-head .cz-check { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: .9rem; font-weight: 500; line-height: 1; }
+.auto-zoom .insp-head .cz-check input { width: 16px; height: 16px; margin: 0; }
