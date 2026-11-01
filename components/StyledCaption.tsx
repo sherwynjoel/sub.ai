@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, CAPTION_FONTS, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -220,15 +220,16 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     // the middle one heavier (an outline of its own colour)
     const st = s.stagger, starts = [0, ...[...brk].filter((b) => b < words.length - 1).sort((a, b) => a - b).map((b) => b + 1)];
     const n = starts.length, last = n - 1, mid = n > 2 ? 1 : -1, roomCqw = (1 - s.safe.left - s.safe.right) * 95;
-    // as the MP4's blurred edge and shadow: strong behind the big line, faint behind the thin ones
-    const glowOf = (big: boolean) => (st.glow ? (big ? `.035em .035em .07em ${st.glow}bb, 0 0 .1em ${st.glow}99` : `.035em .035em .07em ${st.glow}5c, 0 0 .1em ${st.glow}4d`) : undefined);
+    // as the MP4's blurred edge and shadow (the Shadow's colour and size): strong behind the big line, faint behind the thin ones
+    const gk = (s.shadow ?? 0) / GLOW, gc = (s.shadowColor ?? "#7F011F").slice(0, 7), em = (n: number) => `${(n * gk).toFixed(3)}em`;
+    const glowOf = (big: boolean) => (st.glow && s.shadow ? `${em(0.035)} ${em(0.035)} ${em(0.07)} ${gc}${big ? "bb" : "5c"}, 0 0 ${em(0.1)} ${gc}${big ? "99" : "4d"}` : "none");
     body = <span className="stagger">{starts.map((a, r) => {
       const col = st.colors[r === last && n > 1 ? 2 : r === mid ? 1 : 0] ?? s.color, to = r + 1 < n ? starts[r + 1] : words.length;
       const big = !!st.big && r === mid, font = big && st.bigFont ? st.bigFont : s.font;
       const tw = Math.max(0.3, textWidth(words.slice(a, to).map((w) => (big ? w.w.toUpperCase() : w.w)).join(" "), font, s.fontTa)).toFixed(3);
       return <span key={a} style={{ textAlign: n === 1 || r === mid ? "center" : r === 0 ? "left" : r === last ? "right" : "center", ...(grad ? {} : { color: col }),
         ...(r === mid && st.bold ? { WebkitTextStroke: `${st.bold * 2}em ${col}` } : {}),
-        ...(st.glow && !grad ? { textShadow: glowOf(big) } : {}),
+        ...(st.glow && !grad ? { textShadow: glowOf(big) } : {}), // (none when the Shadow is off: not the caption's own)
         ...(st.tight ? { lineHeight: lineScale(font) * st.tight } : {}),
         ...(big ? { fontFamily: stack(font, s.fontTa), textTransform: "uppercase", fontSize: `min(${st.big}em, calc(${roomCqw.toFixed(1)}cqw / ${tw}))` } : {}) }}>
         {join(a, to).filter((x) => typeof x !== "object" || x === null || (x as React.ReactElement).type !== "br")}</span>;
