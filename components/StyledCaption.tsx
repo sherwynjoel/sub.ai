@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, staggerBreaks, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -33,7 +33,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   // Lines as tall as libass draws them (its font's own line height), × the line spacing in the plain layout; with
   // spacing set, broken at the same words as the MP4 (lineCount), which places each line itself.
   const g = takesLineSpacing(s) ? s.lineHeight ?? 1 : 1, lh = lineBox(s, text) * g;
-  const brk = typedBreaks(text) ?? lineBreaks(words.map((w) => w.w), ratio && spacesLines(s) && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : linesOf(s));
+  const brk = typedBreaks(text) ?? (s.stagger ? staggerBreaks(words.length) : null) ?? lineBreaks(words.map((w) => w.w), ratio && spacesLines(s) && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : linesOf(s));
   let i = words.findIndex((w) => time < w.e);
   if (i < 0) i = words.length - 1;
   const p = Math.min(1, Math.max(0, (time - start) / Math.max(0.01, end - start)));
