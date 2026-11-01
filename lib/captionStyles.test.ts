@@ -432,3 +432,13 @@ test("styles start at their own line spacing: Typo Block 70%, Rise Up 80% (the s
   assert.equal(resolveStyle("cc-rise", { lineHeight: 1.4 }).lineHeight, 1.4);
   assert.equal(resolveStyle("tall-caps").lineHeight, undefined);
 });
+
+test("Typo Block: three lines at most, however long the caption (typed lines win)", async () => {
+  const { typoBreaks } = await import("./captionStyles");
+  for (let n = 1; n <= 24; n++) assert.ok(typoBreaks(n).size <= 2, `${n} words`);
+  assert.deepEqual([...typoBreaks(4, new Set([0, 1, 2]))], [0, 1, 2], "typed lines kept");
+  const words = "do you wonder why every business needs a website today my friend".split(" ");
+  const ass = buildAss([{ start: 0, end: 4, ta: words.join(" "), en: "" }], { styleId: "cc-typo-block", lang: "ta", width: 1080, height: 1920 });
+  const ys = new Set([...ass.matchAll(/\\move\(\d+,\d+,\d+,(\d+)/g)].map((m) => m[1]));
+  assert.ok(ys.size <= 3, `${ys.size} lines`);
+});

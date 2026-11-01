@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreak, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -146,7 +146,8 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     }
     return <span key={j} data-j={j} className={`cw${pickedWord === j ? " w-picked" : ""}`} style={st}>{words[j].w}</span>;
   };
-  const breakBefore = (j: number) => brk.has(j - 1) || !!s.wordLines || (s.effect === "typo" && typoBreak(j - 1, words.length)) || (!!s.keyword?.line && (j === kw || j === kw + 1));
+  const typoBrk = s.effect === "typo" ? typoBreaks(words.length, typedBreaks(text)) : null; // three lines at most (as the MP4)
+  const breakBefore = (j: number) => (typoBrk ? typoBrk.has(j - 1) : brk.has(j - 1)) || !!s.wordLines || (!!s.keyword?.line && (j === kw || j === kw + 1));
   const join = (from: number, to: number) => words.slice(from, to).flatMap((_, k) => [k ? (breakBefore(from + k) ? <br key={`br${from + k}`} /> : " ") : null, word(from + k)]);
 
   let body: React.ReactNode;
@@ -221,6 +222,16 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     body = <><span className="punch-a">{join(0, cut)}</span><span className="punch-b">{join(cut, words.length)}</span></>;
   } else if (s.effect === "vhs" || s.effect === "crawl") {
     body = breakLines(caseOf(s, text), s.lines);
+  } else if (s.effect === "typo" && typoBrk) {
+    // Typo Block: three lines at most, each shrunk to fit the width when it's long (as the MP4)
+    const roomCqw = (1 - s.safe.left - s.safe.right) * 95, starts = [0, ...[...typoBrk].sort((a, b) => a - b).map((b) => b + 1)].filter((a) => a < words.length);
+    body = starts.map((a, r) => {
+      const to = r + 1 < starts.length ? starts[r + 1] : words.length;
+      const em = (j: number) => textWidth(words[j].w, (typoSize(j) > 1 && s.typoBig?.font) || s.font, s.fontTa) * typoSize(j);
+      const tw = Math.max(0.3, words.slice(a, to).reduce((t, _, n) => t + em(a + n), 0) + (to - a - 1) * textWidth(" ", s.font, s.fontTa) * 0.55);
+      return <span key={a} className="typo-row" style={{ fontSize: `min(1em, calc(${roomCqw.toFixed(1)}cqw / ${tw.toFixed(3)}))` }}>
+        {words.slice(a, to).map((_, n) => [n ? " " : null, word(a + n)])}</span>;
+    });
   } else if (s.stagger) {
     // staggered lines (as the MP4): the first flush left, the middle centred, the last flush right, each its colour,
     // the middle one heavier (an outline of its own colour)
