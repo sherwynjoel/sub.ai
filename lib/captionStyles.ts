@@ -179,9 +179,10 @@ export const CAPTION_FONTS = [
   // more free fonts (Great Vibes, Figtree and GFS Didot: free look-alikes of the commercial Snell Roundhand, Avenir, Didot)
   "Great Vibes", "Figtree Bold", "GFS Didot", "Oswald Bold", "Bebas Neue", "Lobster", "Pacifico", "Caveat Bold", "Righteous",
   "Archivo Black", "Abril Fatface", "Alfa Slab One", "Comfortaa Bold", "Luckiest Guy", "Titan One",
+  "Alex Brush", "Pinyon Script", // more free look-alikes of the commercial Snell (Bold)
 ] as const;
 /** The commercial font a free one stands in for (shown in the font menu). */
-export const FONT_LIKE: Partial<Record<string, string>> = { "Great Vibes": "Snell", "Figtree Bold": "Avenir", "GFS Didot": "Didot" };
+export const FONT_LIKE: Partial<Record<string, string>> = { "Great Vibes": "Snell", "Alex Brush": "Snell Bold", "Pinyon Script": "Snell", "Figtree Bold": "Avenir", "GFS Didot": "Didot" };
 
 /** Fonts for Tamil letters (bundled in public/caption-fonts; Noto Sans Tamil is also installed on the server). */
 export const TAMIL_FONTS = ["Noto Sans Tamil", "Mukta Malar ExtraBold", "Hind Madurai", "Kavivanar", "Pavanam", "Meera Inimai"] as const;
