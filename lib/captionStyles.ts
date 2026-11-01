@@ -59,6 +59,7 @@ export type CaptionStyle = {
   // big: the middle line that many times the others (shrunk to fit the width), in bigFont and capitals; glow: the
   // shadow drawn as a soft glow behind every line (its colour and strength the Shadow settings, so they're editable);
   // tight: the lines' height × this (set closer than the fonts' own).
+  flow?: boolean;                // a reveal's letters rise in one wave from when the caption appears (not as each word is said)
   stagger?: { colors: string[]; bold: number; big?: number; bigFont?: string; glow?: boolean; tight?: number };
   typoBig?: { font: string; gradient: [string, string] }; // "typo": the big words' font and top → bottom colours // "hook": each line's size (em), colour and font, in turn
   spacing?: number;              // letter spacing, em
@@ -90,7 +91,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-rise-spaced", name: "Rise Spaced", group: "Typography", blurb: "Airy, spaced-out words rising in one by one.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, spacing: 0.05, reveal: "rise" },
   { id: "cc-corners", name: "Corner Block", group: "Typography", blurb: "Small capitals pinned to a block's edges, popping on one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.96, caps: true, color: W, shadow: 0.04, effect: "corners" },
   { id: "cc-bold-flicker", name: "Bold Flicker", group: "Typography", blurb: "Big capitals that strobe on, word by word.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 0.96, caps: true, color: W, shadow: 0.04, reveal: "flicker", wordLines: true },
-  { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Letters rise in one by one around a huge black keyword.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, reveal: "letters", keyword: { font: "Open Sauce Sans Black", scale: 1.57, line: true } },
+  { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Letters rise in one by one around a huge black keyword.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Open Sauce Sans Black", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
   // Helvetica / Neue Haas Grotesk (commercial) become Inter Bold, Helvetica Rounded becomes Nunito ExtraBold.
@@ -538,11 +539,16 @@ export const hookFit = (text: string, size: number, widthEm: number, font = "Int
 export const HOOK_STEP = 0.12;
 
 /** Revealing words (or letters) as they're said: how long each takes to come in, and how far it rises (em). */
-export const RISE = 0.27, RISE_DY = 0.25, LETTER_STEP = 0.05;
+export const RISE = 0.27, RISE_DY = 0.25, LETTER_STEP = 0.05, FLOW_STEP = 0.035;
 /** Letters only in plain Latin words: splitting other scripts would break their shaping. */
 export const byLetters = (w: string) => /^[\x21-\x7E]+$/.test(w);
 /** What comes in, in order: each word, or each letter of the Latin words, with when it starts. */
-export function revealUnits(words: { w: string; s: number; e: number }[], letters: boolean) {
+export function revealUnits(words: { w: string; s: number; e: number }[], letters: boolean, flow?: [number, number]) {
+  if (flow) { // one wave through the whole caption from when it appears, not word by word as they're said
+    const units = words.flatMap((w, j) => (letters && byLetters(w.w) ? [...w.w].map((_, k) => ({ j, k: k as number | null })) : [{ j, k: null as number | null }]));
+    const span = Math.min((flow[1] - flow[0]) * 0.6, units.length * FLOW_STEP), step = span / Math.max(1, units.length);
+    return units.map((u, i) => ({ ...u, s: flow[0] + i * step }));
+  }
   return words.flatMap((w, j) => {
     if (!letters || !byLetters(w.w)) return [{ j, k: null as number | null, s: w.s }];
     const step = Math.min(LETTER_STEP, (w.e - w.s) / Math.max(1, w.w.length));
@@ -1005,7 +1011,7 @@ export function buildAss(cues: Cue[], o: Opts) {
             return (grad ? "" : `\\1c${col}`) + (r === mid && st.bold ? `\\bord${px(st.bold)}\\3c${col}` : "") + glow + big;
           };
           const upper = (txt: string) => txt.replace(/(^|\})([^{]*)/g, (_, a: string, b: string) => a + b.toUpperCase()); // capitals outside the tags
-          for (const u of revealUnits(words.slice(g.from, g.to), letters)) {
+          for (const u of revealUnits(words.slice(g.from, g.to), letters, s.flow ? [g.s, g.e] : undefined)) {
             // the strips span this word (a smaller word sits on the line's baseline, ~80% down a line)
             const j = g.from + u.j, r = rows.findIndex(([a, b]) => j >= a && j < b), n = natW(j), cy = p.ys[r] + 0.3 * (nats[r] - n);
             const [lead, dy, ms2] = st ? at(reveal === "flicker" ? "" : rise(""), p.ys[r], cx + (side(r) * blockW) / 2, side(r)) : at(reveal === "flicker" ? "" : rise(""), p.ys[r]);
@@ -1016,7 +1022,7 @@ export function buildAss(cues: Cue[], o: Opts) {
           subAt(g.s, g.e, "", p.subY);
           continue;
         }
-        for (const u of revealUnits(words.slice(g.from, g.to), letters))
+        for (const u of revealUnits(words.slice(g.from, g.to), letters, s.flow ? [g.s, g.e] : undefined))
           add(Math.max(g.s, u.s), g.e, (reveal === "flicker" ? pos : rise("")) + q + body((j, k) => j === g.from + u.j && (u.k === null || k === u.k), tagsFor, g) + hiddenTail, 1, wrapM, wrapM);
         if (tail) add(g.s, g.e, pos + body(() => false, "", g) + tail, 0, wrapM, wrapM);
       }

@@ -443,3 +443,14 @@ test("Typo Block: three lines at most, however long the caption (typed lines win
   const ys = new Set([...ass.matchAll(/\\move\(\d+,\d+,\d+,(\d+)/g)].map((m) => m[1]));
   assert.ok(ys.size <= 3, `${ys.size} lines`);
 });
+
+test("Letter Rise: its letters flow in one wave from when the caption appears; 80% line spacing", () => {
+  const s = resolveStyle("cc-letter-rise");
+  assert.ok(s.flow && s.lineHeight === 0.8);
+  const words = [{ w: "website", s: 2, e: 2.6 }, { w: "70%", s: 2.6, e: 3 }, { w: "customers", s: 3, e: 4 }];
+  const u = revealUnits(words, true, [2, 4.3]);
+  assert.equal(u[0].s, 2, "the first letter as the caption appears");
+  assert.ok(u.every((x, i) => !i || x.s > u[i - 1].s), "one after another");
+  assert.ok(u[u.length - 1].s < 2 + 2.3 * 0.6 + 1e-9, "the last letter well before the caption ends");
+  assert.ok(u.find((x) => x.j === 2)!.s < 3, "a later word starts before it's said");
+});
