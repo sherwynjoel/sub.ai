@@ -491,3 +491,13 @@ test("Rise Up: a short caption still has its big capital line (two lines: the se
     assert.ok(last.length >= 1, `${ta}: a big Anton line`);
   }
 });
+
+test("Rise Up: always three lines from three words up, a short big middle (as the reference)", async () => {
+  const { staggerBreaks } = await import("./captionStyles");
+  const rows = (n: number) => { const b = [...staggerBreaks(n)].sort((x, y) => x - y), out: number[] = []; let a = 0; for (const j of [...b, n - 1]) { out.push(j + 1 - a); a = j + 1; } return out; };
+  assert.deepEqual(rows(7), [3, 2, 2], "my name is / SHEWYN JOYL / from cbe");
+  assert.deepEqual(rows(3), [1, 1, 1]);
+  assert.deepEqual(rows(4), [2, 1, 1]);
+  assert.deepEqual(rows(2), [1, 1]);
+  for (let n = 3; n <= 14; n++) assert.equal(rows(n).length, 3, `${n} words`);
+});

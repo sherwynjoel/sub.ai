@@ -454,7 +454,8 @@ export function shownLines(styleId: string, custom: CaptionCustom, text: string,
   const s = resolveStyle(styleId, custom), words = text.split(/\s+/).filter(Boolean);
   const g = s.lineHeight ?? 1;
   const brk = s.effect === "cine" ? new Set(cineRows(words.length).slice(0, -1).map(([, b]) => b - 1))
-    : spacesLines(s) || s.stagger ? lineBreaks(words, !s.stagger && ratio && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : linesOf(s)) : new Set<number>();
+    : s.stagger ? staggerBreaks(words.length)
+    : spacesLines(s) ? lineBreaks(words, ratio && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : linesOf(s)) : new Set<number>();
   return words.map((w, i) => w + (brk.has(i) ? "\n" : " ")).join("").trim();
 }
 
@@ -584,6 +585,18 @@ export function keywordRows(words: string[], kw: number, typed?: Set<number> | n
  * Typo Block's line breaks for n words: after runs of big words, but at most three lines (a long caption keeps the
  * breaks nearest a third and two thirds of its words); lines the user typed win.
  */
+/**
+ * Rise Up's three lines (as the reference: "my name is / SHEWYN JOYL / from cbe"): a short big middle line between
+ * two small ones, the first a word longer when they can't be even; the breaks after these word indexes. Three words
+ * or more always make three lines; two words: small then big.
+ */
+export function staggerBreaks(n: number) {
+  if (n < 2) return new Set<number>();
+  if (n === 2) return new Set([0]);
+  const mid = Math.max(1, Math.round(n * 0.28)), first = Math.ceil((n - mid) / 2);
+  return new Set([first - 1, first + mid - 1]);
+}
+
 export function typoBreaks(n: number, typed?: Set<number> | null, max = 3) {
   if (typed) return typed;
   const all = Array.from({ length: Math.max(0, n - 1) }, (_, j) => j).filter((j) => typoBreak(j, n));
@@ -864,7 +877,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       subAt(start, end, ev, p.subY);
     };
     // (a word a line and Typo Block break their own way)
-    const brk = typedBreaks(main) ?? lineBreaks(words.map((w) => w.w), ownLines && !s.wordLines && s.effect !== "typo" ? lineCount(s, caseOf(s, main), ratio) : linesOf(s));
+    const brk = typedBreaks(main) ?? (s.stagger ? staggerBreaks(words.length) : null) ?? lineBreaks(words.map((w) => w.w), ownLines && !s.wordLines && s.effect !== "typo" ? lineCount(s, caseOf(s, main), ratio) : linesOf(s));
     const glue = (j: number) => (j ? (brk.has(j - 1) ? "\\N" : " ") : "");
     const q = s.lines === 1 ? "{\\q2}" : ""; // one line: no auto-wrap
 
