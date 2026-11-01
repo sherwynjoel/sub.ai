@@ -11,7 +11,10 @@ type Props = {
   looks?: (WordLook | null)[];   // a font / size / bold / italic per word the user picked out
   pickedWord?: number;           // the word picked on the video (outlined)
   ratio?: number;                // the frame's width ÷ height: with line spacing, lines break where the MP4's do
+  part?: "plain" | "punch";      // a punch-only blend (Setup & Punch Pro): all but the punch words, or only them
 };
+
+const hide: React.CSSProperties = { visibility: "hidden" };
 
 /** A font for the Latin letters, then the Tamil font for Tamil letters (the Latin caption fonts have none). */
 const stack = (font: string, tamil?: string) => `"${font}", ${tamil ? `"${tamil}", ` : ""}"Noto Emoji", var(--font-tamil), "Nirmala UI", "Noto Sans", sans-serif`; // one-colour emoji, as in the MP4
@@ -20,7 +23,7 @@ const stack = (font: string, tamil?: string) => `"${font}", ${tamil ? `"${tamil}
  * A caption line drawn in a caption style at a moment in time. Mirrors buildAss() in lib/captionStyles.ts
  * so the editor preview matches the burned-in MP4. Sized in container units: the parent needs container-type: size.
  */
-export default function StyledCaption({ styleId, custom, text, sub, start, end, time, starts, colors: picked, looks, pickedWord, ratio }: Props) {
+export default function StyledCaption({ styleId, custom, text, sub, start, end, time, starts, colors: picked, looks, pickedWord, ratio, part }: Props) {
   const s = resolveStyle(styleId, custom);
   const colors = highlights(s) ? picked : undefined; // Word Cut: no words picked out
   // Gradient text: the letters filled top colour → bottom colour on each line (a word with its own colour keeps it).
@@ -226,7 +229,8 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     body = <>{i > 0 && <span className="solo-prev">{pick(i - 1, words[i - 1].w)}</span>}<span key={i} className="solo-now">{pick(i, words[i].w)}</span></>;
   } else if (s.effect === "punch" && words.length > 2) {
     const cut = words.length - Math.min(2, words.length - 1);
-    body = <><span className="punch-a">{join(0, cut)}</span><span className="punch-b">{join(cut, words.length)}</span></>;
+    // Setup & Punch Pro: the editor draws the caption twice, plain without the punch and blended with only it (as the MP4)
+    body = <><span className="punch-a" style={part === "punch" ? hide : undefined}>{join(0, cut)}</span><span className="punch-b" style={part === "plain" ? hide : undefined}>{join(cut, words.length)}</span></>;
   } else if (s.effect === "vhs" || s.effect === "crawl") {
     body = breakLines(caseOf(s, text), s.lines);
   } else if (s.keyword?.line && typoBrk) {
@@ -271,13 +275,15 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   } else {
     body = join(0, words.length);
   }
+  // a punch-only blend: a caption too short to have a set-up is all punch
+  const allPunch = part === "plain" && !(s.effect === "punch" && words.length > 2);
 
   return (
-    <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}${s.textAlign && s.textAlign !== "center" ? ` ta-${s.textAlign}` : ""}`} style={{ "--p": p, ...wrap, mixBlendMode: s.blend ? BLENDS[s.blend][1] : undefined } as React.CSSProperties}>
-      <span className={`cap-main${grad ? " grad" : ""}`} style={grad ? { ...gradBase, "--grad": `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` } as React.CSSProperties : base} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>
+    <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}${s.textAlign && s.textAlign !== "center" ? ` ta-${s.textAlign}` : ""}`} style={{ "--p": p, ...wrap, mixBlendMode: s.blend && !part ? BLENDS[s.blend][1] : undefined } as React.CSSProperties}>
+      <span className={`cap-main${grad ? " grad" : ""}`} style={{ ...(grad ? { ...gradBase, "--grad": `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` } as React.CSSProperties : base), ...(allPunch ? hide : {}) }} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>
         {grad ? <span className="cap-grad">{body}</span> : body}
       </span>
-      {sub && !stacked && <span className="cap-sub" style={{ fontFamily: stack(s.font, s.fontTa), letterSpacing: s.spacing ? `${s.spacing}em` : undefined, lineHeight: lineScale(s.font), marginTop: `${(g - 1) * 0.5 * lineBox(s, text)}em` }}>{sub}</span>}
+      {sub && !stacked && <span className="cap-sub" style={{ ...(part === "punch" ? hide : {}), fontFamily: stack(s.font, s.fontTa), letterSpacing: s.spacing ? `${s.spacing}em` : undefined, lineHeight: lineScale(s.font), marginTop: `${(g - 1) * 0.5 * lineBox(s, text)}em` }}>{sub}</span>}
     </div>
   );
 }

@@ -1,11 +1,11 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import type { Cue, WordLook } from "@/db/schema";
 import { LANGUAGES, languageOf, shortCode } from "@/lib/languages";
-import { BLENDS, CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCustom, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type CaptionStyle, type Placement, type SafeZoneId, type TextLayer, pushDown, shownLines } from "@/lib/captionStyles";
+import { BLENDS, CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCustom, punchBlend, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type CaptionStyle, type Placement, type SafeZoneId, type TextLayer, pushDown, shownLines } from "@/lib/captionStyles";
 import { insertAt, insertBetween, mergeCues, removeCue, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
@@ -74,18 +74,20 @@ const NEW_FONTS: string[] = ["Alex Brush", "Pinyon Script", "Great Vibes", "Figt
 
 /** Where a caption sits over the player (as the MP4 places it): its box's CSS. */
 function placeOf(styleId: string, own: CaptionCustom, portrait: boolean) {
-  const { position, offset, x, y, safe, textAlign, blend } = resolveStyle(styleId, own, portrait);
+  const look = resolveStyle(styleId, own, portrait), { position, offset, x, y, safe, textAlign, blend } = look;
   const free = x !== undefined && y !== undefined;
   const pct = (n: number) => `${n * 100}%`;
   const sides = { left: pct(safe.left), right: pct(safe.right), textAlign };
   // Dragged with the text aligned to a side: the lines flush to that side of a column centred on the point (as the MP4)
   const column = 2 * Math.min(0.5 - Math.max(safe.left, safe.right), x !== undefined ? Math.min(x - safe.left, 1 - safe.right - x) : 0.5);
-  const mix: React.CSSProperties = blend ? { mixBlendMode: BLENDS[blend][1] } : {}; // the text blended with the video (as the MP4)
+  // the text blended with the video (as the MP4); with only the punch blended, its copy is (punchMix)
+  const mix: React.CSSProperties = blend && !punchBlend(look) ? { mixBlendMode: BLENDS[blend][1] } : {};
   const place: React.CSSProperties = free ? { ...mix, left: pct(x), top: pct(y), ...(textAlign && textAlign !== "center" ? { width: pct(column), textAlign } : { maxWidth: pct(Math.min(0.92, 2 * Math.min(x - safe.left, 1 - safe.right - x))) }) }
     : position === "top" ? { ...mix, ...sides, top: pct(offset), bottom: "auto" }
     : position === "middle" ? { ...mix, ...sides, top: pct((safe.top + 1 - safe.bottom) / 2), bottom: "auto", transform: "translateY(-50%)" }
     : { ...mix, ...sides, bottom: pct(offset) };
-  return { free, place };
+  const punchMix: React.CSSProperties | null = blend && punchBlend(look) ? { ...place, mixBlendMode: BLENDS[blend][1] } : null;
+  return { free, place, punchMix };
 }
 
 /**
@@ -183,7 +185,7 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
   if (!main.trim()) return null;
   const own = mergeCustom(custom, c.style);
   const { scale } = resolveStyle(styleId, own, portrait);
-  const { free, place } = placeOf(styleId, own, portrait);
+  const { free, place, punchMix } = placeOf(styleId, own, portrait);
   const drag = (e: React.PointerEvent<HTMLDivElement>) => {
     const frame = video.current?.parentElement?.getBoundingClientRect();
     if (!frame) return;
@@ -253,7 +255,7 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
       </>) : (
       <div className="drag-handle" onPointerDown={drag} onDoubleClick={onEditOpen} title="Tap to pick, drag to move, double-click to edit the text">
         <StyledCaption styleId={styleId} custom={own} text={main} sub={view === "both" ? c.en : undefined} start={c.start} end={c.end} time={ghost ? c.end - 0.01 : t}
-          starts={line === "en" ? c.we : c.w} colors={line === "en" ? c.wce : c.wc} looks={line === "en" ? c.wfe : c.wf} ratio={ratio}
+          starts={line === "en" ? c.we : c.w} colors={line === "en" ? c.wce : c.wc} looks={line === "en" ? c.wfe : c.wf} ratio={ratio} part={punchMix ? "plain" : undefined}
           pickedWord={wordBar?.cue === i && video.current?.paused !== false ? wordBar.j : undefined} />
         {wordBar?.cue === i && video.current?.paused !== false && wordsOf(main)[wordBar.j] && (
           <WordBar word={wordsOf(main)[wordBar.j]} look={(line === "en" ? c.wfe : c.wf)?.[wordBar.j] ?? null} color={(line === "en" ? c.wce : c.wc)?.[wordBar.j] ?? null}
@@ -264,6 +266,13 @@ function LiveCaption({ video, cues, styleId, custom, portrait, ratio, view, sele
       </div>
       )}
     </div>
+    {/* Setup & Punch Pro: the punch words alone, blended with the video, over the plain caption */}
+    {punchMix && editing === null && <div className={`overlay styled punch-copy${free ? " free" : ""}${ghost ? " ghost" : ""}`} style={punchMix} aria-hidden="true">
+      <div className="drag-handle">
+        <StyledCaption styleId={styleId} custom={own} text={main} sub={view === "both" ? c.en : undefined} start={c.start} end={c.end} time={ghost ? c.end - 0.01 : t}
+          starts={line === "en" ? c.we : c.w} colors={line === "en" ? c.wce : c.wc} looks={line === "en" ? c.wfe : c.wf} ratio={ratio} part="punch" />
+      </div>
+    </div>}
   </>);
 }
 
@@ -299,15 +308,19 @@ function LayerViews({ layers, t, paused, styleId, custom, selected, onSelect, on
     const on = t >= l.start && t < l.end;
     if (!on && !(paused && i === selected)) return null;
     const own = mergeCustom({ ...custom, highlight: "none" }, l.style);
-    const words = l.text.split(/\s+/).filter(Boolean), blend = resolveStyle(styleId, own).blend;
-    return (
-      <div key={i} className={`layer-view${i === selected ? " on" : ""}`} style={{ left: `${l.x * 100}%`, top: `${l.y * 100}%`, mixBlendMode: blend ? BLENDS[blend][1] : undefined }}
+    const words = l.text.split(/\s+/).filter(Boolean), look = resolveStyle(styleId, own), blend = look.blend, split = punchBlend(look);
+    const at = { left: `${l.x * 100}%`, top: `${l.y * 100}%` };
+    return (<Fragment key={i}>
+      <div className={`layer-view${i === selected ? " on" : ""}`} style={{ ...at, mixBlendMode: blend && !split ? BLENDS[blend][1] : undefined }}
         onPointerDown={(e) => { onSelect(i); dragIn(e, (x, y) => onMove(i, x, y)); }}>
-        <StyledCaption styleId={styleId} custom={own} text={l.text} start={l.start} end={l.end} time={on ? t : l.end - 0.01} starts={words.map(() => l.start)} />
+        <StyledCaption styleId={styleId} custom={own} text={l.text} start={l.start} end={l.end} time={on ? t : l.end - 0.01} starts={words.map(() => l.start)} part={split ? "plain" : undefined} />
         {i === selected && <span className="rs-handle" title="Drag to resize" aria-hidden="true"
           onPointerDown={(e) => resizeFrom(e, resolveStyle(styleId, own).scale, 0.4, 2.6, 0.05, (s) => onResize(i, s))} />}
       </div>
-    );
+      {split && <div className="layer-view punch-copy" style={{ ...at, mixBlendMode: BLENDS[blend!][1] }} aria-hidden="true">
+        <StyledCaption styleId={styleId} custom={own} text={l.text} start={l.start} end={l.end} time={on ? t : l.end - 0.01} starts={words.map(() => l.start)} part="punch" />
+      </div>}
+    </Fragment>);
   })}</>;
 }
 

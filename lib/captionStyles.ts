@@ -66,6 +66,7 @@ export type CaptionStyle = {
   lineHeight?: number;           // space between lines: × the font's own line height (1 = as the font sets it)
   textAlign?: TextAlign;         // lines flush left / centred / flush right (the caption against that side of the safe zone)
   blend?: Blend;                 // the text blended with the video under it (see BLENDS)
+  blendPunch?: boolean;          // "punch": only the big punch words are blended (the set-up stays plain text)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
@@ -127,6 +128,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "pr-typewriter-green", name: "Typewriter Green", group: "Premiere", blurb: "Typed out in glowing green (Typewriter 11 and 13).", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: "#39FF14", glow: "#39FF14", effect: "typewriter" },
   { id: "pr-zoom-in", name: "Zoom In", group: "Premiere", blurb: "Heavy cyan with a bright glow, zooming in.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: "#2EE6FF", glow: "#2EE6FF", anim: "zoom" },
   { id: "setup-punch", name: "Setup & Punch", group: "Bold", blurb: "A quiet lead-in, then the last words land big, one by one.", font: "Poppins", fontTa: "Hind Madurai", size: 1.11, bold: true, color: "#FFFFFF", future: null, shadow: 0.05, effect: "punch" },
+  { id: "setup-punch-pro", name: "Setup & Punch Pro", group: "Bold", blurb: "Setup & Punch on the left, the big words a negative of the video (change the blend in Colour).", font: "Poppins", fontTa: "Hind Madurai", size: 1.11, bold: true, color: "#FFFFFF", future: null, shadow: 0.05, effect: "punch", textAlign: "left", blend: "difference", blendPunch: true },
   { id: "comic-pop", name: "Comic Pop", group: "Bold", blurb: "Comic caps with a black ring; the keyword turns gold and grows.", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 0.99, caps: true, color: "#FFFFFF", outline: ["#000000", 0.09], keyword: { color: GOLD, grow: true } },
   { id: "butter-serif", name: "Butter Script", group: "Bold", blurb: "Soft script with a hairline edge and a butter-yellow keyword.", font: "Satisfy", fontTa: "Kavivanar", size: 1.24, color: "#FFFFFF", outline: ["#000000", 0.03], keyword: { color: BUTTER } },
   { id: "word-box", name: "Word Box", group: "Bold", blurb: "One dark box; words fill in left to right, keyword in gold.", font: "Anton", fontTa: "Mukta Malar ExtraBold", size: 0.82, caps: true, color: "#FFFFFF", future: null, box: "#0B0B0BE6", keyword: { color: GOLD } },
@@ -166,10 +168,12 @@ const OFFERED = [
   "tpl-blur", "tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker",
   "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-rgb", "tpl-reels-simple", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
-  "setup-punch", "comic-pop", "butter-serif", "handwritten", "trending-1", "trending-2", "trending-3", "neon-aura",
+  "setup-punch", "setup-punch-pro", "comic-pop", "butter-serif", "handwritten", "trending-1", "trending-2", "trending-3", "neon-aura",
   "editorial-cut", "center-stage", "marker-swipe", "spotlight", "highlighter-paper", "highlighter-clean",
   "editorial-mix", "tall-caps", "typewriter", "flip-card",
 ];
+/** A look whose punch words alone are blended with the video (Setup & Punch Pro): drawn as two parts. */
+export const punchBlend = (s: CaptionStyle) => !!(s.blend && s.blendPunch && s.effect === "punch");
 export const STYLE_CHOICES = CAPTION_STYLES.filter((s) => OFFERED.includes(s.id));
 /** The groups that have styles on offer, in order. */
 export const STYLE_GROUPS = (["Typography", "Templates", "Premiere", "Bold", "Soft", "Simple", "Playful"] as const).filter((g) => STYLE_CHOICES.some((s) => s.group === g));
@@ -694,7 +698,9 @@ export function tamilRuns(text: string, fonts: Record<string, string>, style: st
   return out;
 }
 
-type Opts = { styleId: string; custom?: CaptionCustom; lang: "ta" | "en" | "both"; width: number; height: number };
+// part: for a look whose punch alone is blended (blendPunch), "plain" draws everything but the punch words and "punch"
+// only them (the blend's mask).
+type Opts = { styleId: string; custom?: CaptionCustom; lang: "ta" | "en" | "both"; width: number; height: number; part?: "plain" | "punch" };
 
 /** A full .ass file for the cues in the chosen style, sized to the video. */
 export function buildAss(cues: Cue[], o: Opts) {
@@ -785,9 +791,10 @@ export function buildAss(cues: Cue[], o: Opts) {
     const looks = o.lang === "en" ? c.wfe : c.wf; // a word's own font, size, bold, italic (picked on the video)
     const sub = o.lang === "both" ? c.en.trim() : "";
     // English in the caption's font, turned and spaced like it.
-    const tail = sub ? `\\N{\\rSecond\\fn${s.font}${s.rotate ? `\\frz${-s.rotate}` : ""}${s.spacing ? `\\fsp${px(s.spacing * 0.55)}` : ""}}${esc(breakLines(sub, s.lines))}` : "";
+    const tail = sub ? `\\N{\\rSecond${o.part === "punch" && s.blendPunch ? "\\alpha&HFF&" : ""}\\fn${s.font}${s.rotate ? `\\frz${-s.rotate}` : ""}${s.spacing ? `\\fsp${px(s.spacing * 0.55)}` : ""}}${esc(breakLines(sub, s.lines))}` : "";
     const words = wordTimes(caseOf(s, main), c.start, c.end, o.lang === "en" ? c.we : c.w);
     // A keyword on a line of its own (Letter Rise) is a name when there is one, as in the reference ("EveryCut").
+    const punchCut = words.length > 2 ? words.length - Math.min(2, words.length - 1) : 0;
     const kw = s.keyword?.line ? nameOrKeyword(wordTimes(main, c.start, c.end).map((w) => w.w)) : keywordIndex(words.map((w) => w.w));
     // Line spacing other than the font's own: the lines are broken here and each is placed at its own height
     // (libass has no line spacing; a line is as tall as its font). The editor breaks at the same words (lineCount).
@@ -889,6 +896,8 @@ export function buildAss(cues: Cue[], o: Opts) {
       if (s.activeGrow && state === "active") t += "\\t(0,120,\\fscx115\\fscy115)";
       if (colors?.[j] && state !== "future") t += `\\1c${colorOnly(colors[j]!)}`;
       t += wordLookTags(looks?.[j]);
+      // a punch-only blend: each part drawn on its own (a caption of two words or fewer is all punch)
+      if (o.part && s.blendPunch && s.effect === "punch" && (j >= punchCut) === (o.part === "plain")) t += "\\alpha&HFF&";
       return `{${t}}${w}`;
     };
 

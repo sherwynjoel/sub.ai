@@ -147,7 +147,7 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
 });
 
 test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 5 + Pro, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 42);
+  assert.equal(STYLE_CHOICES.length, 43);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 16);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 6);
   assert.ok(!STYLE_CHOICES.some((s) => s.id === "cc-bold-flicker" || s.id === "cc-corners"), "Bold Flicker and Corner Block no longer offered");
@@ -466,4 +466,20 @@ test("Letter Rise: three lines (before the keyword, the keyword, after it), howe
     const ys = new Set([...ass.matchAll(/\\move\(\d+,\d+,\d+,(\d+)/g)].map((m) => m[1]));
     assert.ok(ys.size <= 3, `${t}: ${ys.size} lines`);
   }
+});
+
+test("Setup & Punch Pro: left-aligned, only the punch words blended (two parts in the MP4)", () => {
+  const s = resolveStyle("setup-punch-pro");
+  assert.equal(s.textAlign, "left");
+  assert.equal(s.blend, "difference");
+  const cue = { start: 0, end: 3, ta: "this is the big punch", en: "" } as unknown as Parameters<typeof buildAss>[0][number];
+  const o = { styleId: "setup-punch-pro", lang: "ta" as const, width: 1080, height: 1920 };
+  const last = (part: "plain" | "punch") => buildAss([cue], { ...o, part }).split("\n").filter((l) => l.startsWith("Dialogue")).pop()!;
+  // when every word is said: the plain part hides "big punch", the punch part hides the set-up
+  assert.match(last("plain"), /\\alpha&HFF&\}big /);
+  assert.doesNotMatch(last("plain"), /\\alpha&HFF&\}this /);
+  assert.match(last("punch"), /\\alpha&HFF&\}this /);
+  assert.doesNotMatch(last("punch"), /\\alpha&HFF&\}punch/);
+  // other styles ignore the part
+  assert.equal(buildAss([cue], { ...o, styleId: "setup-punch", part: "plain" }), buildAss([cue], { ...o, styleId: "setup-punch" }));
 });
