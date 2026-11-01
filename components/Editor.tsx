@@ -20,6 +20,7 @@ import Timeline from "@/components/Timeline";
 import WordStrip, { type WordRef } from "@/components/WordStrip";
 import Presets, { type Preset } from "@/components/Presets";
 import ColorPicker from "@/components/ColorPicker";
+import FontPicker from "@/components/FontPicker";
 import { applyPreset } from "@/lib/presets";
 import { pickKeywords } from "@/lib/keywords";
 import { zoomAt, zoomMoments, zoomOf } from "@/lib/zoom";
@@ -412,7 +413,7 @@ function FormatBar({ look, all, onAll, onLook, onDone }: {
   const finish = useRef(onDone);
   useLayoutEffect(() => { finish.current = onDone; });
   useEffect(() => {
-    const away = (e: PointerEvent) => { if (!(e.target as Element | null)?.closest?.(".cap-inline, .fmt-bar, .cp-pop")) finish.current(); };
+    const away = (e: PointerEvent) => { if (!(e.target as Element | null)?.closest?.(".cap-inline, .fmt-bar, .cp-pop, .fp-pop")) finish.current(); };
     document.addEventListener("pointerdown", away, true);
     return () => document.removeEventListener("pointerdown", away, true);
   }, []);
@@ -421,9 +422,7 @@ function FormatBar({ look, all, onAll, onLook, onDone }: {
     <span ref={anchor} hidden />
     {createPortal(
       <div ref={bar} className="word-bar fmt-bar" role="toolbar" aria-label="Caption look" style={at} onPointerDown={(e) => e.stopPropagation()}>
-        <select value={look.font} onChange={(e) => onLook({ font: e.target.value })} aria-label="Font" style={{ fontFamily: `"${look.font}"` }}>
-          {CAPTION_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: `"${f}"` }}>{f}</option>)}
-        </select>
+        <FontPicker value={look.font} onChange={(f) => onLook({ font: f })} fonts={CAPTION_FONTS} label="Font" sample="Make great videos" className="fp-dark" />
         <span className="wb-size">
           <button onClick={() => resize(-0.1)} aria-label="Smaller" title="Smaller">A−</button>
           <b>{Math.round(size * 100)}%</b>
@@ -466,10 +465,7 @@ function WordBar({ word, look, color, base, onChange, onClose }: {
     {createPortal(
     <div ref={bar} className="word-bar" role="toolbar" aria-label={`Word: ${word}`} onPointerDown={stop} onDoubleClick={stop} onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
       style={at ? { left: at.left, top: at.top } : { left: 0, top: 0, visibility: "hidden" }}>
-      <select value={look?.font ?? ""} onChange={(e) => onChange({ look: { font: e.target.value || undefined } })} aria-label="Word font" style={{ fontFamily: look?.font ? `"${look.font}"` : undefined }}>
-        <option value="">Font: caption&apos;s</option>
-        {CAPTION_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: `"${f}"` }}>{f}</option>)}
-      </select>
+      <FontPicker value={look?.font ?? ""} onChange={(f) => onChange({ look: { font: f || undefined } })} fonts={CAPTION_FONTS} label="Word font" none="Font: caption's" sample={word} className="fp-dark" />
       <span className="wb-size">
         <button onClick={() => resize(-0.1)} aria-label="Smaller" title="Smaller">A−</button>
         <b>{Math.round(size * 100)}%</b>
