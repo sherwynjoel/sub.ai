@@ -1388,12 +1388,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               <section className="auto-hl" aria-label="Highlight keywords">
                 <div className="insp-head"><h3>Highlight keywords</h3></div>
                 <p className="muted small">Picks the words that matter in every caption (numbers, money, names, strong words) and makes them stand out. Change any word after by tapping it on the video.</p>
-                <div className="look-row">
-                  <span className="cz-color">Colour<ColorPicker value={hlColor} onChange={setHlColor} label="Keyword colour" /></span>
-                  <label className="cz-check"><input type="checkbox" checked={hlBig} onChange={(e) => setHlBig(e.target.checked)} /> Bigger and bold</label>
+                <div className="hl-opts">
+                  <span className="hl-color">Colour<ColorPicker value={hlColor} onChange={setHlColor} label="Keyword colour" /></span>
+                  <label className="hl-check"><input type="checkbox" checked={hlBig} onChange={(e) => setHlBig(e.target.checked)} /> Bigger and bold</label>
                 </div>
-                <div className="look-row">
-                  <button className="btn small" onClick={autoHighlight} disabled={!cues.length}>✨ Highlight keywords</button>
+                <div className="hl-acts">
+                  <button className="btn small" onClick={autoHighlight} disabled={!cues.length}>Highlight keywords</button>
                   <button className="btn ghost small" onClick={clearHighlights} disabled={!cues.some((c) => c.wc || c.wce || c.wf || c.wfe)}>Clear word styles</button>
                 </div>
                 {!highlights(look) && <p className="muted small">This style shows no coloured words: the colour won&apos;t show, the size and bold will.</p>}
