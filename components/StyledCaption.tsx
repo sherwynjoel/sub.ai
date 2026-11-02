@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, STAR_SPIN, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -274,8 +274,9 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     const sp = s.spark, starts = [0, ...[...brk].filter((b) => b < words.length - 1).sort((a, b) => a - b).map((b) => b + 1)];
     const n = starts.length, mid = n > 2 ? 1 : n - 1, last = n - 1, roomCqw = (1 - s.safe.left - s.safe.right) * 95;
     const ms = Math.max(0, (time - start) * 1000), [slideMs, slideEm] = SPARK_SLIDE, slid = Math.min(1, ms / slideMs);
-    // the star slides up into place, then spins once (libass's \t accel 0.5: progress ** 0.5)
-    const [upMs, upEm] = STAR_SLIDE, rise = (1 - Math.min(1, ms / upMs)) * upEm, spin = 360 * Math.sqrt(Math.min(1, Math.max(0, (ms - upMs) / STAR_SPIN)));
+    // the star slides up into place, then spins slowly and evenly until every word is in (as the MP4)
+    const [upMs, upEm] = STAR_SLIDE, rise = (1 - Math.min(1, ms / upMs)) * upEm, turn = starSpin(Math.max(0, words[words.length - 1].s - start) * 1000);
+    const spin = turn.deg * Math.min(1, Math.max(0, (ms - turn.from) / (turn.to - turn.from)));
     // a later line's word slides up as it's said (hidden before)
     const [wordMs, wordEm] = SPARK_WORD_UP;
     const wordUp = (j: number): React.CSSProperties => {

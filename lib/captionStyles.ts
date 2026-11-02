@@ -111,12 +111,22 @@ export function starPoints(): [number, number][] {
 /**
  * "spark" timing: the first line slides in (ms, and from how far left, in em); each later word slides up as it's said
  * (ms, from how far below, in its line's em); the star slides up into place (ms, from how far below, em), then spins
- * once where it is (ms, easing out).
+ * slowly where it is until every word is in (starSpin).
  */
 export const SPARK_SLIDE: [number, number] = [380, 1.6];
 export const SPARK_WORD_UP: [number, number] = [300, 0.5];
 export const STAR_SLIDE: [number, number] = [400, 2.5];
-export const STAR_SPIN = 1800;
+/** How fast the star turns (degrees a second). */
+export const STAR_SPIN_SPEED = 90;
+/**
+ * The star's spin: from when it's in place until the last word is in (all three lines out; at least a second), turning
+ * slowly and evenly, stopping on a point (a whole number of eighths of a turn: it looks as it started). ms from the
+ * caption's start, and degrees.
+ */
+export function starSpin(lastWordMs: number) {
+  const from = STAR_SLIDE[0], to = Math.round(Math.max(from + 1000, lastWordMs + SPARK_WORD_UP[0]));
+  return { from, to, deg: Math.max(45, Math.round(((to - from) / 1000) * STAR_SPIN_SPEED / 45) * 45) };
+}
 /** Where the star sits (its centre, from the first line's start and middle, in em) and its radius (em). */
 export const STAR_AT = { dx: 0.22, dy: -0.2, r: 1.6 };
 /** Every line no wider than this much of the room (the star sticks out to the left of the block). */
@@ -1067,11 +1077,12 @@ export function buildAss(cues: Cue[], o: Opts) {
         for (let j = a; j < b; j++)
           strips(Math.max(c.start, Math.min(words[j].s, c.end - 0.05)), c.end, `{\\an4\\move(${x0},${y + dy},${x0},${y},0,${ms})\\fad(${Math.round(ms * 0.5)},0)}`, y, nats[r], textOf(j), 1, 0, 0, [[y + dy, nats[r]], [y, nats[r]]], ms);
       });
-      // the star: a drawing sliding up into place from below, then one spin where it is (clockwise, easing out; it
-      // turns about its centre, where it's placed)
+      // the star: a drawing sliding up into place from below, then spinning slowly where it is until every word is in
+      // (clockwise; it turns about its centre, where it's placed)
       const R = STAR_AT.r * fs, sx = Math.round(x0 + STAR_AT.dx * fs), sy = Math.round(p.ys[0] + STAR_AT.dy * fs), [upMs, upEm] = STAR_SLIDE;
+      const spin = starSpin(Math.max(0, words[words.length - 1].s - c.start) * 1000);
       const shape = "m " + starPoints().map(([x, y], k) => `${k === 1 ? "l " : ""}${Math.round((x + 1) * R * 10) / 10} ${Math.round((y + 1) * R * 10) / 10}`).join(" ");
-      add(c.start, c.end, `{\\an5\\move(${sx},${Math.round(sy + upEm * fs)},${sx},${sy},0,${upMs})\\fad(${Math.round(upMs * 0.4)},0)\\t(${upMs},${upMs + STAR_SPIN},0.5,\\frz-360)` +
+      add(c.start, c.end, `{\\an5\\move(${sx},${Math.round(sy + upEm * fs)},${sx},${sy},0,${upMs})\\fad(${Math.round(upMs * 0.4)},0)\\t(${spin.from},${spin.to},\\frz-${spin.deg})` +
         `\\bord0\\shad0\\1c${colorOnly(sp.star)}\\1a&H${alphaOf(sp.star)}&\\p1}${shape}{\\p0}`, 0);
       subAt(c.start, c.end, "", p.subY);
       continue;
