@@ -34,6 +34,8 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   // spacing set, broken at the same words as the MP4 (lineCount), which places each line itself.
   const g = takesLineSpacing(s) ? s.lineHeight ?? 1 : 1, lh = lineBox(s, text) * g;
   const brk = typedBreaks(text) ?? (s.stagger ? staggerBreaks(words.length) : null) ?? lineBreaks(words.map((w) => w.w), ratio && spacesLines(s) && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : linesOf(s));
+  // a middle line in its own font (Blur Animation's Inter Italic), when there are three (as the MP4)
+  const rowAt = [0, ...[...brk].sort((a, b) => a - b).map((b) => b + 1)], midRow = s.midFont && rowAt.length === 3 ? rowAt.slice(1) : null;
   let i = words.findIndex((w) => time < w.e);
   if (i < 0) i = words.length - 1;
   const p = Math.min(1, Math.max(0, (time - start) / Math.max(0.01, end - start)));
@@ -100,6 +102,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   const word = (j: number) => {
     const state = j < i ? "past" : j === i ? "active" : "future";
     const st: React.CSSProperties = {};
+    if (midRow && j >= midRow[0] && j < midRow[1]) st.fontFamily = stack(s.midFont!, s.fontTa);
     if (state === "future") {
       if (s.future === null) st.visibility = "hidden";
       else if (s.future) st.color = s.future;
