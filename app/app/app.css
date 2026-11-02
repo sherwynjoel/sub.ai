@@ -912,3 +912,4 @@ a.signout { text-decoration: none; }
 /* Setup & Punch Pro: the blended punch copy over the caption lets taps through to it */
 .overlay.punch-copy, .layer-view.punch-copy { pointer-events: none; }
 .overlay.punch-copy .drag-handle, .layer-view.punch-copy * { pointer-events: none !important; }
+.insp-actions .render-stale { flex-basis: 100%; margin: 2px 0 0; color: var(--warn, #b26b00); }

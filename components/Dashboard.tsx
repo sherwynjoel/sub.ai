@@ -57,7 +57,7 @@ function ProjectFolder({ job, index }: { job: Job; index: number }) {
           { name: "Transcript.txt", meta: "Plain text", href: `/api/jobs/${job.id}/export?lang=${lang}&fmt=txt` },
           { name: "Subtitles.vtt", meta: "Web players", href: `/api/jobs/${job.id}/export?lang=${lang}&fmt=vtt` },
           { name: "Subtitles.srt", meta: "Premiere · YouTube", href: `/api/jobs/${job.id}/export?lang=${lang}&fmt=srt` },
-          ...(job.renderStatus === "done" ? [{ name: "Styled video.mp4", meta: "With captions", href: `/api/jobs/${job.id}/render`, art: "ember" as const }] : []),
+          ...(job.renderStatus === "done" || job.renderStatus === "stale" ? [{ name: "Styled video.mp4", meta: job.renderStatus === "stale" ? "Made before your latest changes" : "With captions", href: `/api/jobs/${job.id}/render`, art: "ember" as const }] : []),
           { name: "Edit captions", meta: `${job.cueCount} subtitles`, href: open, art: "aurora" as const },
         ];
   const type = typeLabel({ script: job.script, captionCustom: job.captionCustom }, languageOf(job.language).name);

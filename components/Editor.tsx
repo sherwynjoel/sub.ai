@@ -573,6 +573,9 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [styleId, setStyleId] = useState(initial.captionStyle || "minimal");
   const [hoverStyle, setHoverStyle] = useState<string | null>(null); // a style pointed at in the picker, shown on the video
   const [custom, setCustom] = useState<CaptionCustom>(initial.captionCustom ?? {});
+  // the look the last MP4 was made in: a changed one means that MP4 is out of date
+  const [renderedLook, setRenderedLook] = useState(() => JSON.stringify([initial.captionStyle || "minimal", initial.captionCustom ?? {}]));
+  const lookChanged = JSON.stringify([styleId, custom]) !== renderedLook;
   const [portrait, setPortrait] = useState(false);
   const [ratio, setRatio] = useState(16 / 9);
   const [showZones, setShowZones] = useState(false);
@@ -763,7 +766,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     if (dirty && !(await save())) return;
     await saveLook({ captionStyle: styleId, captionCustom: custom });
     const res = await fetch(`/api/jobs/${job.id}/render`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ style: styleId, lang: view }) });
-    if (res.ok) setJob((j) => ({ ...j, renderStatus: "queued", renderProgress: 0, renderError: null, renderLang: view, captionStyle: styleId }));
+    if (res.ok) { setJob((j) => ({ ...j, renderStatus: "queued", renderProgress: 0, renderError: null, renderLang: view, captionStyle: styleId })); setRenderedLook(JSON.stringify([styleId, custom])); }
     else setMsg((await res.json().catch(() => ({}))).error || "Couldn't start the render.");
   }
 
@@ -1558,7 +1561,11 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               ) : (
                 <div className="insp-actions">
                   <button className="btn" onClick={render} disabled={!videoHere}>{coming ? `Video uploading · ${local ? progressOf(local) : 0}%` : dirty ? "Save and export MP4" : "Export MP4"}</button>
-                  {job.renderStatus === "done" && <a className="btn ghost" href={`/api/jobs/${job.id}/render`} download>Download MP4</a>}
+                  {job.renderStatus === "done" && !dirty && !lookChanged && <a className="btn ghost" href={`/api/jobs/${job.id}/render`} download>Download MP4</a>}
+                  {(job.renderStatus === "stale" || (job.renderStatus === "done" && (dirty || lookChanged))) && <>
+                    <p className="muted small render-stale">Your last MP4 was made before your latest changes. Export again to get them in the video.</p>
+                    <a className="btn ghost" href={`/api/jobs/${job.id}/render`} download>Download the older MP4</a>
+                  </>}
                   {freePlan && <p className="muted small wm-note">Free plan videos carry a small &ldquo;Made with {BRAND.name}&rdquo; mark. <a href="/pricing">Upgrade</a> to export without it.</p>}
                 </div>
               )}
