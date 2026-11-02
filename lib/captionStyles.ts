@@ -70,6 +70,7 @@ export type CaptionStyle = {
   midFont?: string;              // three lines, the middle one in this font (the others in the style's)
   startSize?: number;            // the size a project starts at (1 = the standard 100%; the Size control shows it)
   blendPunch?: boolean;          // "punch": only the big punch words are blended (the set-up stays plain text)
+  blendMid?: boolean;            // staggered lines: only the big middle line is blended (the others stay plain text)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
@@ -103,6 +104,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-rise-spaced", name: "Rise Spaced", group: "Typography", blurb: "Airy, spaced-out words rising in one by one.", font: "Inter", fontTa: "Hind Madurai", size: 1.1, color: W, shadow: 0.04, spacing: 0.05, reveal: "rise" },
   { id: "cc-corners", name: "Corner Block", group: "Typography", blurb: "Small capitals pinned to a block's edges, popping on one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.96, caps: true, color: W, shadow: 0.04, effect: "corners" },
   { id: "cc-bold-flicker", name: "Bold Flicker", group: "Typography", blurb: "Big capitals that strobe on, word by word.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 0.96, caps: true, color: W, shadow: 0.04, reveal: "flicker", wordLines: true },
+  { id: "cc-rise-ultra", name: "Riseup Ultra", group: "Typography", blurb: "Rise Up in white: elegant Bodoni italic lines around a big Anton middle line that shows the video as a negative (change the blend in Colour).", font: "Bodoni Moda Italic", fontTa: "Hind Madurai", size: 1.15, color: W, lineHeight: 0.8, reveal: "rise", stagger: { colors: [W, W, W], bold: 0, big: 3.1, bigFont: "Anton", tight: 0.72 }, blend: "difference", blendMid: true },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
@@ -175,7 +177,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
-  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-letter-rise", "cc-typo-block",
+  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker",
   "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-rgb", "tpl-reels-simple", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
@@ -184,7 +186,7 @@ const OFFERED = [
   "editorial-mix", "tall-caps", "typewriter", "flip-card",
 ];
 /** A look whose punch words alone are blended with the video (Setup & Punch Pro): drawn as two parts. */
-export const punchBlend = (s: CaptionStyle) => !!(s.blend && s.blendPunch && s.effect === "punch");
+export const punchBlend = (s: CaptionStyle) => !!(s.blend && ((s.blendPunch && s.effect === "punch") || (s.blendMid && s.stagger)));
 export const STYLE_CHOICES = CAPTION_STYLES.filter((s) => OFFERED.includes(s.id));
 /** The groups that have styles on offer, in order. */
 export const STYLE_GROUPS = (["Typography", "Templates", "Premiere", "Bold", "Soft", "Simple", "Playful"] as const).filter((g) => STYLE_CHOICES.some((s) => s.group === g));
@@ -204,6 +206,7 @@ export const CAPTION_FONTS = [
   "Alex Brush", "Pinyon Script", // more free look-alikes of the commercial Snell (Bold)
   "Poppins Light",
   "Poppins Medium",
+  "Bodoni Moda Italic",
 ] as const;
 /** The commercial font a free one stands in for (shown in the font menu). */
 export const FONT_LIKE: Partial<Record<string, string>> = { "Great Vibes": "Snell", "Alex Brush": "Snell Bold", "Pinyon Script": "Snell", "Figtree Bold": "Avenir", "GFS Didot": "Didot" };
@@ -736,8 +739,8 @@ export function tamilRuns(text: string, fonts: Record<string, string>, style: st
   return out;
 }
 
-// part: for a look whose punch alone is blended (blendPunch), "plain" draws everything but the punch words and "punch"
-// only them (the blend's mask).
+// part: for a look whose punch (or staggered middle line) alone is blended (punchBlend), "plain" draws everything but
+// those words and "punch" only them (the blend's mask).
 type Opts = { styleId: string; custom?: CaptionCustom; lang: "ta" | "en" | "both"; width: number; height: number; part?: "plain" | "punch" };
 
 /** A full .ass file for the cues in the chosen style, sized to the video. */
@@ -829,7 +832,7 @@ export function buildAss(cues: Cue[], o: Opts) {
     const looks = o.lang === "en" ? c.wfe : c.wf; // a word's own font, size, bold, italic (picked on the video)
     const sub = o.lang === "both" ? c.en.trim() : "";
     // English in the caption's font, turned and spaced like it.
-    const tail = sub ? `\\N{\\rSecond${o.part === "punch" && s.blendPunch ? "\\alpha&HFF&" : ""}\\fn${s.font}${s.rotate ? `\\frz${-s.rotate}` : ""}${s.spacing ? `\\fsp${px(s.spacing * 0.55)}` : ""}}${esc(breakLines(sub, s.lines))}` : "";
+    const tail = sub ? `\\N{\\rSecond${o.part === "punch" && punchBlend(s) ? "\\alpha&HFF&" : ""}\\fn${s.font}${s.rotate ? `\\frz${-s.rotate}` : ""}${s.spacing ? `\\fsp${px(s.spacing * 0.55)}` : ""}}${esc(breakLines(sub, s.lines))}` : "";
     const words = wordTimes(caseOf(s, main), c.start, c.end, o.lang === "en" ? c.we : c.w);
     // A keyword on a line of its own (Letter Rise) is a name when there is one, as in the reference ("EveryCut").
     const punchCut = words.length > 2 ? words.length - Math.min(2, words.length - 1) : 0;
@@ -1092,6 +1095,7 @@ export function buildAss(cues: Cue[], o: Opts) {
           for (const u of revealUnits(words.slice(g.from, g.to), letters, s.flow ? [g.s, g.e] : undefined)) {
             // the strips span this word (a smaller word sits on the line's baseline, ~80% down a line)
             const j = g.from + u.j, r = rows.findIndex(([a, b]) => j >= a && j < b), n = natW(j), cy = p.ys[r] + 0.3 * (nats[r] - n);
+            if (o.part && s.blendMid && punchBlend(s) && isBig(r) === (o.part === "plain")) continue; // the blended middle line drawn apart
             const [lead, dy, ms2] = st ? at(reveal === "flicker" ? "" : rise(""), p.ys[r], cx + (side(r) * blockW) / 2, side(r)) : at(reveal === "flicker" ? "" : rise(""), p.ys[r]);
             const text0 = body((jj, kk) => jj === j && (u.k === null || kk === u.k), tagsFor, g, ...rows[r]).replace(/\{\\r/g, `{\\r${rowTag(r)}`);
             const text = isBig(r) ? upper(text0) : text0;

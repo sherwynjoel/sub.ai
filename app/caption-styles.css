@@ -37,6 +37,7 @@
 @font-face { font-family: "Alex Brush"; src: url("/caption-fonts/AlexBrush-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Pinyon Script"; src: url("/caption-fonts/PinyonScript-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Poppins Light"; src: url("/caption-fonts/Poppins-Light.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Bodoni Moda Italic"; src: url("/caption-fonts/BodoniModa-Italic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Poppins Medium"; src: url("/caption-fonts/Poppins-Medium.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 
 .cap { display: grid; justify-items: center; gap: .25em; text-align: center; line-height: 1.25; pointer-events: none; }
