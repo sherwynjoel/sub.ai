@@ -147,9 +147,9 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
 });
 
 test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 5 + Pro, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 44);
+  assert.equal(STYLE_CHOICES.length, 45);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 16);
-  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 7);
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 8);
   assert.ok(!STYLE_CHOICES.some((s) => s.id === "cc-bold-flicker" || s.id === "cc-corners"), "Bold Flicker and Corner Block no longer offered");
   assert.equal(STYLE_GROUPS[0], "Typography");
   assert.ok(STYLE_CHOICES.some((s) => s.id === DEFAULT_STYLE));
@@ -542,4 +542,26 @@ test("Riseup Ultra: white Bodoni italic lines, only the big Anton middle line bl
   const ev = (part: "plain" | "punch") => buildAss([cue], { ...o, part }).split("\n").filter((l) => l.startsWith("Dialogue"));
   assert.ok(ev("plain").length > 0 && ev("plain").every((l) => !/\\fnAnton/.test(l)), "plain: the outer lines only");
   assert.ok(ev("punch").length > 0 && ev("punch").every((l) => /\\fnAnton/.test(l)), "mask: the middle line only");
+});
+
+test("Spark Slide: three lines flush left, the first slides in, a star bobs in behind it in Claude orange", async () => {
+  const { starPoints, STAR_BOB } = await import("./captionStyles");
+  const s = resolveStyle("cc-spark");
+  assert.equal(s.spark?.star, "#D97757");
+  assert.equal(resolveStyle("cc-spark", { accent: "#00FF00" }).spark?.star, "#00FF00", "the star's colour is editable");
+  const pts = starPoints();
+  assert.ok(pts.length > 100 && pts.every(([x, y]) => Math.hypot(x, y) <= 1.001), "the traced star, radius 1");
+  const ass = buildAss([{ start: 0, end: 3, ta: "my name is Shewyn Joyl from cbe iam 23 years", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-spark", lang: "ta", width: 1080, height: 1920 });
+  const ev = ass.split("\n").filter((l) => l.startsWith("Dialogue"));
+  const text = ev.filter((l) => /\\an4/.test(l));
+  assert.equal(text.length, 3, "three lines");
+  const [, from, to] = text[0].match(/\\an4\\move\((-?\d+),\d+,(\d+),\d+,0,380\)/)!.map(Number);
+  assert.ok(from < to, "the first slides in from the left");
+  assert.match(text[1], /\\fnAnton/, "the big middle line in Anton");
+  assert.match(text[2], /\\fnPoppins Light Italic/, "the last in the light italic");
+  const leftOf = (l: string) => +(l.match(/\\pos\((\d+)/)?.[1] ?? l.match(/\\move\(-?\d+,\d+,(\d+)/)![1]);
+  assert.equal(new Set(text.map(leftOf)).size, 1, "all flush left");
+  const star = ev.filter((l) => /\\p1/.test(l));
+  assert.equal(star.length, STAR_BOB.length, "the star rises, dips, rises and settles");
+  assert.ok(star.every((l) => l.startsWith("Dialogue: 0,")), "the star under the text");
 });

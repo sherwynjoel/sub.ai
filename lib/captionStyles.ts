@@ -25,7 +25,7 @@ export const BLENDS = {
   dodge: ["Colour dodge", "color-dodge", "dodge"],
 } as const;
 export type Blend = keyof typeof BLENDS;
-export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine";
+export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark";
 /** How a caption comes in (the last few from the Premiere template pack's presets). */
 export const ANIMS = {
   none: "None", fade: "Fade in", pop: "Pop", slide: "Slide up", bounce: "Bounce", zoom: "Zoom in",
@@ -70,7 +70,10 @@ export type CaptionStyle = {
   midFont?: string;              // three lines, the middle one in this font (the others in the style's)
   startSize?: number;            // the size a project starts at (1 = the standard 100%; the Size control shows it)
   blendPunch?: boolean;          // "punch": only the big punch words are blended (the set-up stays plain text)
-  blendMid?: boolean;            // staggered lines: only the big middle line is blended (the others stay plain text)
+  blendMid?: boolean;
+  // "spark": three lines flush left (the first sliding in from the left, a big middle line in its own font and capitals,
+  // the last in its own font), an eight-point star (the user's PNG, traced) bobbing in behind the first line's start
+  spark?: { bigFont: string; big: number; lastFont: string; star: string; tight?: number };            // staggered lines: only the big middle line is blended (the others stay plain text)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
@@ -90,6 +93,28 @@ const W = "#FFFFFF";
  */
 export const SLANT = 0.21;
 export const needsSlant = (word: string) => /[\u0900-\u0DFF]/.test(word);
+/**
+ * The star of "spark" (the user's eight-point star PNG, traced): its radius every 0.5° from a point (1) to halfway
+ * between two points (22.5°), the same at each of the eight.
+ */
+const STAR_PROFILE = [1.0,0.9717,0.8216,0.7368,0.6738,0.6265,0.596,0.5619,0.5388,0.5182,0.4999,0.4825,0.4653,0.4504,0.4397,0.4252,0.4147,0.4043,0.393,0.3865,0.3762,0.37,0.3601,0.3551,0.3479,0.3419,0.3357,0.3307,0.3253,0.3203,0.3157,0.3105,0.3062,0.302,0.2983,0.2943,0.2907,0.2871,0.2838,0.2804,0.2772,0.2743,0.2711,0.2694,0.2672,0.2669];
+/** The star's outline, radius 1 around (0, 0), y down: finely around each point, coarser between. */
+export function starPoints(): [number, number][] {
+  const out: [number, number][] = [];
+  for (let d = 0; d < 360;) {
+    const off = d % 45, near = Math.min(off, 45 - off), r = STAR_PROFILE[Math.round(near / 0.5)], t = (d * Math.PI) / 180;
+    out.push([Math.round(r * Math.sin(t) * 1000) / 1000, Math.round(-r * Math.cos(t) * 1000) / 1000]);
+    d += near < 4 ? 0.5 : 2.5;
+  }
+  return out;
+}
+/** "spark" timing: the first line slides in (ms, and from how far left, in em), and the star's bob: [ms, dy em] keyframes. */
+export const SPARK_SLIDE: [number, number] = [380, 1.6];
+export const STAR_BOB: [number, number][] = [[0, 0.9], [180, -0.35], [330, 0.15], [460, 0]];
+/** Where the star sits (its centre, from the first line's start and middle, in em) and its radius (em). */
+export const STAR_AT = { dx: 0.22, dy: -0.2, r: 1.6 };
+/** Every line no wider than this much of the room (the star sticks out to the left of the block). */
+export const SPARK_FIT = 0.86;
 /** "Word by word, popping up": how long a word takes to pop up (ms). */
 export const POP_MS = 180;
 /** A staggered style's glow at its usual strength (its Shadow size; bigger or smaller scales it). */
@@ -105,6 +130,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-corners", name: "Corner Block", group: "Typography", blurb: "Small capitals pinned to a block's edges, popping on one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.96, caps: true, color: W, shadow: 0.04, effect: "corners" },
   { id: "cc-bold-flicker", name: "Bold Flicker", group: "Typography", blurb: "Big capitals that strobe on, word by word.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 0.96, caps: true, color: W, shadow: 0.04, reveal: "flicker", wordLines: true },
   { id: "cc-rise-ultra", name: "Riseup Ultra", group: "Typography", blurb: "Rise Up in white: elegant Bodoni italic lines around a big Anton middle line that shows the video as a negative (change the blend in Colour).", font: "Bodoni Moda Italic", fontTa: "Hind Madurai", size: 1.15, color: W, lineHeight: 0.8, reveal: "rise", stagger: { colors: [W, W, W], bold: 0, big: 3.1, bigFont: "Anton", tight: 0.72 }, blend: "difference", blendMid: true },
+  { id: "cc-spark", name: "Spark Slide", group: "Typography", blurb: "A star bobs in behind the first line as it slides in from the left; a big Anton line and a light italic one under it (change the star's colour in Colour).", font: "Poppins Regular", fontTa: "Hind Madurai", size: 1.13, startSize: 0.9, color: W, lineHeight: 0.9, effect: "spark", spark: { big: 2.5, bigFont: "Anton", lastFont: "Poppins Light Italic", star: "#D97757", tight: 0.8 } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
@@ -177,7 +203,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
-  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-letter-rise", "cc-typo-block",
+  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker",
   "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-rgb", "tpl-reels-simple", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
@@ -207,6 +233,8 @@ export const CAPTION_FONTS = [
   "Poppins Light",
   "Poppins Medium",
   "Bodoni Moda Italic",
+  "Poppins Regular",
+  "Poppins Light Italic",
 ] as const;
 /** The commercial font a free one stands in for (shown in the font menu). */
 export const FONT_LIKE: Partial<Record<string, string>> = { "Great Vibes": "Snell", "Alex Brush": "Snell Bold", "Pinyon Script": "Snell", "Figtree Bold": "Avenir", "GFS Didot": "Didot" };
@@ -357,7 +385,8 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
     if (typeof s.future === "string") s.future = c.color + "66"; // dimmed version of the new colour
   }
   if (c.accent) {
-    if (s.mark) s.mark = c.accent;
+    if (s.spark) s.spark = { ...s.spark, star: c.accent };
+    else if (s.mark) s.mark = c.accent;
     else if (s.keyword) s.keyword.color = c.accent;
     else if (s.active) s.active = c.accent;
     else s.keyword = { color: c.accent };
@@ -469,7 +498,7 @@ export function shownLines(styleId: string, custom: CaptionCustom, text: string,
   const s = resolveStyle(styleId, custom), words = text.split(/\s+/).filter(Boolean);
   const g = s.lineHeight ?? 1;
   const brk = s.effect === "cine" ? new Set(cineRows(words.length).slice(0, -1).map(([, b]) => b - 1))
-    : s.stagger ? staggerBreaks(words.length)
+    : s.stagger || s.spark ? staggerBreaks(words.length)
     : spacesLines(s) ? lineBreaks(words, ratio && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : linesOf(s)) : new Set<number>();
   return words.map((w, i) => w + (brk.has(i) ? "\n" : " ")).join("").trim();
 }
@@ -904,7 +933,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       subAt(start, end, ev, p.subY);
     };
     // (a word a line and Typo Block break their own way)
-    const brk = typedBreaks(main) ?? (s.stagger ? staggerBreaks(words.length) : null) ?? lineBreaks(words.map((w) => w.w), ownLines && !s.wordLines && s.effect !== "typo" ? lineCount(s, caseOf(s, main), ratio) : linesOf(s));
+    const brk = typedBreaks(main) ?? (s.stagger || s.spark ? staggerBreaks(words.length) : null) ?? lineBreaks(words.map((w) => w.w), ownLines && !s.wordLines && s.effect !== "typo" ? lineCount(s, caseOf(s, main), ratio) : linesOf(s));
     const glue = (j: number) => (j ? (brk.has(j - 1) ? "\\N" : " ") : "");
     // a middle line in its own font (Blur Animation's Inter Italic), when there are three
     const rowAt = [0, ...[...brk].sort((a, b) => a - b).map((b) => b + 1)], midRow = s.midFont && rowAt.length === 3 ? rowAt.slice(1) : null;
@@ -994,6 +1023,43 @@ export function buildAss(cues: Cue[], o: Opts) {
           strips(words[j].s, c.end, `{\\an5\\pos(${Math.round(cx)},${Math.round(p.ys[r])})\\fad(300,0)}`, p.ys[r], nats[r], "{\\q2}" + body);
         }
       });
+      subAt(c.start, c.end, "", p.subY);
+      continue;
+    }
+    if (s.effect === "spark" && s.spark) {
+      // Three lines flush left in a block centred where the caption goes (or against its side): the first sliding in
+      // from the left, the big middle one in its font and capitals (shrunk to fit the width), the last in its font;
+      // the star bobbing in behind the first line's start (drawn under the text). The words all shown at once.
+      const sp = s.spark, starts = [0, ...[...brk].filter((b) => b < words.length - 1).sort((a, b) => a - b).map((b) => b + 1)];
+      const n = starts.length, mid = n > 2 ? 1 : n - 1, last = n - 1;
+      const rows = starts.map((a, r) => [a, r + 1 < n ? starts[r + 1] : words.length] as [number, number]);
+      const rowText = (r: number) => words.slice(rows[r][0], rows[r][1]).map((w) => w.w).join(" ");
+      const fontOf = (r: number) => (r === mid ? sp.bigFont : r === last && n > 2 ? sp.lastFont : s.font);
+      // each line shrunk to fit (the big one as big as asked, at most)
+      const zOf = (r: number) => Math.min(r === mid ? sp.big : 1, (room * SPARK_FIT) / (Math.max(0.3, textWidth(r === mid ? rowText(r).toUpperCase() : rowText(r), fontOf(r), s.fontTa)) * fs));
+      const rowW = rows.map((_, r) => textWidth(r === mid ? rowText(r).toUpperCase() : rowText(r), fontOf(r), s.fontTa) * fs * zOf(r));
+      const blockW = Math.max(...rowW), x0 = Math.round(ax - ((hz + 1) * blockW) / 2);
+      const nats = rows.map((_, r) => natOf(rowText(r), zOf(r), fontOf(r)) * (sp.tight ?? 1));
+      const p = stackAt(nats.map((h) => h * gl));
+      const upper = (txt: string) => txt.replace(/(^|\})([^{]*)/g, (_, a: string, b: string) => a + b.toUpperCase());
+      rows.forEach(([a, b], r) => {
+        const z = zOf(r), tags = `\\fn${fontOf(r)}` + (z === 1 ? "" : `\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)}`);
+        const text0 = words.slice(a, b).map((_, m) => (m ? " " : "") + word(a + m, words.length)).join("").replace(/\{\\r/g, `{\\r${tags}`);
+        const y = Math.round(p.ys[r]), [ms, d] = SPARK_SLIDE;
+        const lead = r === 0 ? `{\\an4\\move(${Math.round(x0 - d * fs)},${y},${x0},${y},0,${ms})\\fad(${Math.round(ms * 0.6)},0)}` : `{\\an4\\pos(${x0},${y})}`;
+        strips(c.start, c.end, lead, y, nats[r], "{\\q2}" + (r === mid ? upper(text0) : text0), 1);
+      });
+      // the star: a drawing, in steps (a move each) for its rise, dip and settle; it grows in as it starts
+      const R = STAR_AT.r * fs, sx = Math.round(x0 + STAR_AT.dx * fs), sy = p.ys[0] + STAR_AT.dy * fs;
+      const shape = "m " + starPoints().map(([x, y], k) => `${k === 1 ? "l " : ""}${Math.round((x + 1) * R * 10) / 10} ${Math.round((y + 1) * R * 10) / 10}`).join(" ");
+      const draw = (t0: number, t1: number, y0: number, y1: number, extra = "") =>
+        add(c.start + t0 / 1000, Math.min(c.end, c.start + t1 / 1000), `{\\an5\\move(${sx},${Math.round(sy + y0 * fs)},${sx},${Math.round(sy + y1 * fs)},0,${Math.max(1, t1 - t0)})\\bord0\\shad0\\1c${colorOnly(sp.star)}\\1a&H${alphaOf(sp.star)}&${extra}\\p1}${shape}{\\p0}`, 0);
+      STAR_BOB.slice(1).forEach(([t1, y1], k) => {
+        const [t0, y0] = STAR_BOB[k];
+        if (c.start + t0 / 1000 < c.end) draw(t0, t1, y0, y1, k === 0 ? `\\fad(120,0)\\fscx0\\fscy0\\t(0,${t1},\\fscx100\\fscy100)` : "");
+      });
+      const [tEnd] = STAR_BOB[STAR_BOB.length - 1];
+      if (c.start + tEnd / 1000 < c.end) draw(tEnd, (c.end - c.start) * 1000, 0, 0);
       subAt(c.start, c.end, "", p.subY);
       continue;
     }
@@ -1323,7 +1389,7 @@ ${events.join("\n")}
 export const spacesLines = (s: CaptionStyle) => !((s.effect && s.effect !== "wobble") || s.reveal || s.wordLines || s.keyword?.line);
 /** Styles the line spacing reaches: the plain layout's, and Cinematic's three lines. */
 export const takesLineSpacing = (s: CaptionStyle) =>
-  spacesLines(s) || ["cine", "stack", "hook", "typo"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
+  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
 
 /** How tall a line of this text is, × the em: its fonts' own line height (what libass draws, so the editor matches). */
 export const lineBox = (s: CaptionStyle, text: string) =>
