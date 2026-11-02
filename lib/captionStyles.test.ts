@@ -544,8 +544,8 @@ test("Riseup Ultra: white Bodoni italic lines, only the big Anton middle line bl
   assert.ok(ev("punch").length > 0 && ev("punch").every((l) => /\\fnAnton/.test(l)), "mask: the middle line only");
 });
 
-test("Spark Slide: three lines flush left, the first slides in, a star bobs in behind it in Claude orange", async () => {
-  const { starPoints, STAR_BOB } = await import("./captionStyles");
+test("Spark Slide: three lines flush left, the first slides in, the later words slide up one by one, the star slides up and spins", async () => {
+  const { starPoints, STAR_SLIDE, STAR_SPIN } = await import("./captionStyles");
   const s = resolveStyle("cc-spark");
   assert.equal(s.spark?.star, "#D97757");
   assert.equal(resolveStyle("cc-spark", { accent: "#00FF00" }).spark?.star, "#00FF00", "the star's colour is editable");
@@ -554,14 +554,22 @@ test("Spark Slide: three lines flush left, the first slides in, a star bobs in b
   const ass = buildAss([{ start: 0, end: 3, ta: "my name is Shewyn Joyl from cbe iam 23 years", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-spark", lang: "ta", width: 1080, height: 1920 });
   const ev = ass.split("\n").filter((l) => l.startsWith("Dialogue"));
   const text = ev.filter((l) => /\\an4/.test(l));
-  assert.equal(text.length, 3, "three lines");
+  assert.equal(text.length, 1 + 6, "the first line (4 words), then each of the later lines' 6 words");
   const [, from, to] = text[0].match(/\\an4\\move\((-?\d+),\d+,(\d+),\d+,0,380\)/)!.map(Number);
   assert.ok(from < to, "the first slides in from the left");
   assert.match(text[1], /\\fnAnton/, "the big middle line in Anton");
-  assert.match(text[2], /\\fnPoppins Light Italic/, "the last in the light italic");
-  const leftOf = (l: string) => +(l.match(/\\pos\((\d+)/)?.[1] ?? l.match(/\\move\(-?\d+,\d+,(\d+)/)![1]);
+  assert.match(text.at(-1)!, /\\fnPoppins Light Italic/, "the last in the light italic");
+  for (const l of text.slice(1)) {
+    const [, x0, y0, x1, y1] = l.match(/\\move\((\d+),(\d+),(\d+),(\d+),0,300\)/)!.map(Number);
+    assert.ok(x0 === x1 && y0 > y1, "a later word slides up");
+    assert.equal((l.match(/\\alpha&HFF&/g) ?? []).length, (l.match(/\{\\r/g) ?? []).length - 1, "only that word showing");
+  }
+  const leftOf = (l: string) => +l.match(/\\move\(-?\d+,\d+,(\d+)/)![1];
   assert.equal(new Set(text.map(leftOf)).size, 1, "all flush left");
   const star = ev.filter((l) => /\\p1/.test(l));
-  assert.equal(star.length, STAR_BOB.length, "the star rises, dips, rises and settles");
+  assert.equal(star.length, 1);
+  assert.match(star[0], new RegExp(`\\\\t\\(${STAR_SLIDE[0]},${STAR_SLIDE[0] + STAR_SPIN},0\\.5,\\\\frz-360\\)`), "slides up, then spins once");
+  const [, , sy0, , sy1] = star[0].match(/\\move\((\d+),(\d+),(\d+),(\d+)/)!.map(Number);
+  assert.ok(sy0 > sy1, "from below");
   assert.ok(star.every((l) => l.startsWith("Dialogue: 0,")), "the star under the text");
 });
