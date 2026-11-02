@@ -67,6 +67,8 @@ export type CaptionStyle = {
   lineHeight?: number;           // space between lines: × the font's own line height (1 = as the font sets it)
   textAlign?: TextAlign;         // lines flush left / centred / flush right (the caption against that side of the safe zone)
   blend?: Blend;                 // the text blended with the video under it (see BLENDS)
+  midFont?: string;              // three lines, the middle one in this font (the others in the style's)
+  startSize?: number;            // the size a project starts at (1 = the standard 100%; the Size control shows it)
   blendPunch?: boolean;          // "punch": only the big punch words are blended (the set-up stays plain text)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
@@ -99,7 +101,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
   // Helvetica / Neue Haas Grotesk (commercial) become Inter Bold, Helvetica Rounded becomes Nunito ExtraBold.
-  { id: "tpl-blur", name: "Blur Animation", group: "Templates", blurb: "Heavy orange words, each popping up out of a blur as it's said.", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: "#FF7800", shadow: 0.05, anim: "wordpop" },
+  { id: "tpl-blur", name: "Blur Animation", group: "Templates", blurb: "Three white lines, an Inter Italic middle between Montserrat ones; each word pops up out of a blur as it's said.", font: "Montserrat SemiBold", fontTa: "Mukta Malar ExtraBold", size: 1.13, startSize: 0.8, color: "#FFFFFF", shadow: 0.05, anim: "wordpop", midFont: "Inter Italic" },
   { id: "tpl-bounce", name: "Bounce Text", group: "Templates", blurb: "Bold red that bounces in.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF0000", shadow: 0.05, anim: "bounce" },
   { id: "tpl-bouncy-fadeout", name: "Bouncy Fadeout", group: "Templates", blurb: "Rounded pink that bounces in and fades away.", font: "Nunito ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.16, color: "#FE006C", shadow: 0.05, anim: "bouncyout" },
   { id: "tpl-fade-up", name: "Fade Animation", group: "Templates", blurb: "Bold orange that fades up into place.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF7800", shadow: 0.05, anim: "slide" },
@@ -359,7 +361,8 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   else if (c.shadow === true && !s.shadow) s.shadow = 0.05;
   if (c.case) { s.caps = c.case === "upper"; s.lower = c.case === "lower"; }
   // Every style starts at the standard size, in any font or case; the user's size is relative to it (1 = 100%).
-  s.size = Math.round((s.size ?? 1) * (tall0 / looksTall(s.font, s.caps)) * (c.size ?? 1) * 1000) / 1000;
+  const scale = c.size ?? s.startSize ?? 1;
+  s.size = Math.round((s.size ?? 1) * (tall0 / looksTall(s.font, s.caps)) * scale * 1000) / 1000;
   if (c.bold !== undefined) s.bold = c.bold;
   if (c.italic !== undefined) s.italic = c.italic;
   if (c.spacing !== undefined) s.spacing = c.spacing;
@@ -396,7 +399,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   const position = c.position ?? "bottom";
   const offset = Math.max(c.offset ?? (portrait ? 0.2 : 0.09), position === "top" ? safe.top : safe.bottom);
   const inside = (v: number | undefined, lo: number, hi: number) => (v === undefined ? undefined : Math.min(hi, Math.max(lo, v)));
-  return { ...s, position, offset, lines: c.lines, x: inside(c.x, safe.left, 1 - safe.right), y: inside(c.y, safe.top, 1 - safe.bottom), safe, scale: c.size ?? 1 };
+  return { ...s, position, offset, lines: c.lines, x: inside(c.x, safe.left, 1 - safe.right), y: inside(c.y, safe.top, 1 - safe.bottom), safe, scale };
 }
 /** The project's customisation with one caption's own on top (a caption given a position drops the project's drag point). */
 export function mergeCustom(project: CaptionCustom = {}, own?: CaptionCustom): CaptionCustom {
@@ -480,7 +483,7 @@ export function pushDown(text: string, at: number): { text: string; at: number }
   return { text: out, at: start + (before ? before.length + 1 : 0) };
 }
 /** How many lines a caption is laid out on (the user's choice; staggered styles three), or unset to wrap by width. */
-export const linesOf = (s: CaptionStyle & Placement) => s.lines ?? (s.stagger ? 3 : undefined);
+export const linesOf = (s: CaptionStyle & Placement) => s.lines ?? (s.stagger || s.midFont ? 3 : undefined);
 export const cineBig = (rows: unknown[]) => (rows.length > 1 ? 1 : 0);
 /** The big line's size (× the style's), at most: it shrinks to fit the width. */
 export const CINE_BIG = 1.45;
@@ -894,6 +897,8 @@ export function buildAss(cues: Cue[], o: Opts) {
     // (a word a line and Typo Block break their own way)
     const brk = typedBreaks(main) ?? (s.stagger ? staggerBreaks(words.length) : null) ?? lineBreaks(words.map((w) => w.w), ownLines && !s.wordLines && s.effect !== "typo" ? lineCount(s, caseOf(s, main), ratio) : linesOf(s));
     const glue = (j: number) => (j ? (brk.has(j - 1) ? "\\N" : " ") : "");
+    // a middle line in its own font (Blur Animation's Inter Italic), when there are three
+    const rowAt = [0, ...[...brk].sort((a, b) => a - b).map((b) => b + 1)], midRow = s.midFont && rowAt.length === 3 ? rowAt.slice(1) : null;
     const q = s.lines === 1 ? "{\\q2}" : ""; // one line: no auto-wrap
 
     // One word, in a given state, with its override tags.
@@ -930,6 +935,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       if (s.effect === "wobble") t += `\\frz${j % 2 ? -4 : 3}`;
       if (s.activeGrow && state === "active") t += "\\t(0,120,\\fscx115\\fscy115)";
       if (colors?.[j] && state !== "future") t += `\\1c${colorOnly(colors[j]!)}`;
+      if (midRow && j >= midRow[0] && j < midRow[1]) t += `\\fn${s.midFont}`;
       t += wordLookTags(looks?.[j]);
       // a punch-only blend: each part drawn on its own (a caption of two words or fewer is all punch)
       if (o.part && s.blendPunch && s.effect === "punch" && (j >= punchCut) === (o.part === "plain")) t += "\\alpha&HFF&";
@@ -1318,7 +1324,7 @@ export const lineBox = (s: CaptionStyle, text: string) =>
  * width needs between the side margins. The editor and the MP4 break at the same words with it.
  */
 export function lineCount(s: CaptionStyle & Placement, text: string, ratio: number) {
-  if (s.lines) return s.lines;
+  if (s.lines || s.midFont) return s.lines ?? 3;
   const w = Math.max(ratio, 1), em = 0.075 * (s.size ?? 1); // in short sides: the frame is w wide, the em 7.5% of it
   const room = s.x !== undefined ? 2 * Math.min(s.x - s.safe.left, 1 - s.safe.right - s.x) : 1 - s.safe.left - s.safe.right;
   return Math.max(1, Math.ceil((textWidth(text, s.font, s.fontTa) * em) / (w * room * 0.95) - 1e-6));

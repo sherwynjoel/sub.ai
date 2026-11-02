@@ -216,10 +216,11 @@ test("every style starts at the standard size, in any font or case; the user's s
   const standard = looksTall("Inter Bold") * 1.1;
   for (const st of STYLE_CHOICES) {
     const r = resolveStyle(st.id);
-    assert.ok(Math.abs(looks(r) / standard - 1) < 0.02, `${st.id} looks ${(looks(r) / standard * 100).toFixed(0)}% of standard`);
-    assert.equal(r.scale, 1);
+    const at = st.startSize ?? 1; // (a style can start smaller or bigger: its Size shows it)
+    assert.ok(Math.abs(looks(r) / standard - at) < 0.02, `${st.id} looks ${(looks(r) / standard * 100).toFixed(0)}% of standard`);
+    assert.equal(r.scale, at);
     const anton = resolveStyle(st.id, { font: "Anton", case: "upper" });
-    assert.ok(Math.abs(looks(anton) / standard - 1) < 0.02, `${st.id} in Anton caps`);
+    assert.ok(Math.abs(looks(anton) / standard - at) < 0.02, `${st.id} in Anton caps`);
     const big = resolveStyle(st.id, { size: 1.5 });
     assert.ok(Math.abs(looks(big) / standard - 1.5) < 0.03, `${st.id} at 150%`);
     assert.equal(big.scale, 1.5);
@@ -274,7 +275,7 @@ test("gradient: each line drawn in strips from the top colour to the bottom, the
   }
   assert.deepEqual(sanitizeCustom({ gradient: ["#ff0000", "#0000ff"] }).gradient, ["#ff0000", "#0000ff"]);
   assert.equal(sanitizeCustom({ gradient: ["red", "#0000ff"] }).gradient, undefined, "only colours");
-  const ass = buildAss([{ start: 0, end: 2, ta: "one two", en: "" }], { styleId: "tpl-blur", lang: "ta", width: 1080, height: 1920, custom: { gradient: ["#ff0000", "#0000ff"] } });
+  const ass = buildAss([{ start: 0, end: 2, ta: "one two", en: "" }], { styleId: "tpl-bounce", lang: "ta", width: 1080, height: 1920, custom: { gradient: ["#ff0000", "#0000ff"] } });
   const first = ass.split("\n").filter((l) => l.startsWith("Dialogue: 0,0:00:00.00,"));
   assert.equal(first.length, 10, "one line, 10 strips");
   const clips = first.map((l) => l.match(/\\clip\(0,(-?\d+),1080,(-?\d+)\)/)!.slice(1).map(Number));
@@ -509,9 +510,12 @@ test("Rise Up: lines set to the big line's edges only when it's the widest, else
   assert.equal(staggerFlush(["my name is", "shewyn joyl", "from cbe"], s), true, "a wide big line: to its edges");
 });
 
-test("Blur Animation: Roboto Black, each word pops up out of a blur as it's said (only its height grows)", () => {
+test("Blur Animation: Montserrat around an Inter Italic middle line, each word pops up out of a blur as it's said (only its height grows)", () => {
   const s = resolveStyle("tpl-blur");
-  assert.equal(s.font, "Roboto Black");
+  assert.equal(s.font, "Montserrat SemiBold");
+  assert.equal(s.midFont, "Inter Italic");
+  assert.equal(s.color, "#FFFFFF");
+  assert.equal(s.scale, 0.8, "starts at 80%");
   assert.equal(s.anim, "wordpop");
   const ass = buildAss([{ start: 0, end: 2, ta: "grow your sales", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "tpl-blur", lang: "ta", width: 1080, height: 1920 });
   const first = ass.split("\n").find((l) => l.startsWith("Dialogue"))!;
