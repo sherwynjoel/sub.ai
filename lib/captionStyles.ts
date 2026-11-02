@@ -108,9 +108,15 @@ export function starPoints(): [number, number][] {
   }
   return out;
 }
-/** "spark" timing: the first line slides in (ms, and from how far left, in em), and the star's bob: [ms, dy em] keyframes. */
+/**
+ * "spark" timing: the first line slides in (ms, and from how far left, in em); each later word slides up as it's said
+ * (ms, from how far below, in its line's em); the star slides up into place (ms, from how far below, em), then spins
+ * once where it is (ms, easing out).
+ */
 export const SPARK_SLIDE: [number, number] = [380, 1.6];
-export const STAR_BOB: [number, number][] = [[0, 0.9], [180, -0.35], [330, 0.15], [460, 0]];
+export const SPARK_WORD_UP: [number, number] = [300, 0.5];
+export const STAR_SLIDE: [number, number] = [400, 2.5];
+export const STAR_SPIN = 700;
 /** Where the star sits (its centre, from the first line's start and middle, in em) and its radius (em). */
 export const STAR_AT = { dx: 0.22, dy: -0.2, r: 1.6 };
 /** Every line no wider than this much of the room (the star sticks out to the left of the block). */
@@ -130,7 +136,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-corners", name: "Corner Block", group: "Typography", blurb: "Small capitals pinned to a block's edges, popping on one by one.", font: "Inter", fontTa: "Hind Madurai", size: 0.96, caps: true, color: W, shadow: 0.04, effect: "corners" },
   { id: "cc-bold-flicker", name: "Bold Flicker", group: "Typography", blurb: "Big capitals that strobe on, word by word.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 0.96, caps: true, color: W, shadow: 0.04, reveal: "flicker", wordLines: true },
   { id: "cc-rise-ultra", name: "Riseup Ultra", group: "Typography", blurb: "Rise Up in white: elegant Bodoni italic lines around a big Anton middle line that shows the video as a negative (change the blend in Colour).", font: "Bodoni Moda Italic", fontTa: "Hind Madurai", size: 1.15, color: W, lineHeight: 0.8, reveal: "rise", stagger: { colors: [W, W, W], bold: 0, big: 3.1, bigFont: "Anton", tight: 0.72 }, blend: "difference", blendMid: true },
-  { id: "cc-spark", name: "Spark Slide", group: "Typography", blurb: "A star bobs in behind the first line as it slides in from the left; a big Anton line and a light italic one under it (change the star's colour in Colour).", font: "Poppins Regular", fontTa: "Hind Madurai", size: 1.13, startSize: 0.9, color: W, lineHeight: 0.9, effect: "spark", spark: { big: 2.5, bigFont: "Anton", lastFont: "Poppins Light Italic", star: "#D97757", tight: 0.8 } },
+  { id: "cc-spark", name: "Spark Slide", group: "Typography", blurb: "A star slides up and spins behind the first line as it slides in from the left; the big Anton line and the light italic one come in word by word, sliding up (change the star's colour in Colour).", font: "Poppins Regular", fontTa: "Hind Madurai", size: 1.13, startSize: 0.9, color: W, lineHeight: 0.9, effect: "spark", spark: { big: 2.5, bigFont: "Anton", lastFont: "Poppins Light Italic", star: "#D97757", tight: 0.8 } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
@@ -1044,22 +1050,29 @@ export function buildAss(cues: Cue[], o: Opts) {
       const upper = (txt: string) => txt.replace(/(^|\})([^{]*)/g, (_, a: string, b: string) => a + b.toUpperCase());
       rows.forEach(([a, b], r) => {
         const z = zOf(r), tags = `\\fn${fontOf(r)}` + (z === 1 ? "" : `\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)}`);
-        const text0 = words.slice(a, b).map((_, m) => (m ? " " : "") + word(a + m, words.length)).join("").replace(/\{\\r/g, `{\\r${tags}`);
-        const y = Math.round(p.ys[r]), [ms, d] = SPARK_SLIDE;
-        const lead = r === 0 ? `{\\an4\\move(${Math.round(x0 - d * fs)},${y},${x0},${y},0,${ms})\\fad(${Math.round(ms * 0.6)},0)}` : `{\\an4\\pos(${x0},${y})}`;
-        strips(c.start, c.end, lead, y, nats[r], "{\\q2}" + (r === mid ? upper(text0) : text0), 1);
+        // the line, only word `only` showing (all of them when null): every word keeps its place
+        const textOf = (only: number | null) => {
+          const t = words.slice(a, b).map((_, m) => (m ? " " : "") + (only === null || a + m === only ? word(a + m, words.length) : word(a + m, words.length).replace("}", "\\alpha&HFF&}")))
+            .join("").replace(/\{\\r/g, `{\\r${tags}`);
+          return "{\\q2}" + (r === mid ? upper(t) : t);
+        };
+        const y = Math.round(p.ys[r]);
+        if (r === 0) { // the first line slides in from the left
+          const [ms, d] = SPARK_SLIDE;
+          strips(c.start, c.end, `{\\an4\\move(${Math.round(x0 - d * fs)},${y},${x0},${y},0,${ms})\\fad(${Math.round(ms * 0.6)},0)}`, y, nats[r], textOf(null), 1);
+          return;
+        }
+        // the later lines: each word slides up as it's said
+        const [ms, d] = SPARK_WORD_UP, dy = Math.round(d * fs * z);
+        for (let j = a; j < b; j++)
+          strips(Math.max(c.start, Math.min(words[j].s, c.end - 0.05)), c.end, `{\\an4\\move(${x0},${y + dy},${x0},${y},0,${ms})\\fad(${Math.round(ms * 0.5)},0)}`, y, nats[r], textOf(j), 1, 0, 0, [[y + dy, nats[r]], [y, nats[r]]], ms);
       });
-      // the star: a drawing, in steps (a move each) for its rise, dip and settle; it grows in as it starts
-      const R = STAR_AT.r * fs, sx = Math.round(x0 + STAR_AT.dx * fs), sy = p.ys[0] + STAR_AT.dy * fs;
+      // the star: a drawing sliding up into place from below, then one spin where it is (clockwise, easing out; it
+      // turns about its centre, where it's placed)
+      const R = STAR_AT.r * fs, sx = Math.round(x0 + STAR_AT.dx * fs), sy = Math.round(p.ys[0] + STAR_AT.dy * fs), [upMs, upEm] = STAR_SLIDE;
       const shape = "m " + starPoints().map(([x, y], k) => `${k === 1 ? "l " : ""}${Math.round((x + 1) * R * 10) / 10} ${Math.round((y + 1) * R * 10) / 10}`).join(" ");
-      const draw = (t0: number, t1: number, y0: number, y1: number, extra = "") =>
-        add(c.start + t0 / 1000, Math.min(c.end, c.start + t1 / 1000), `{\\an5\\move(${sx},${Math.round(sy + y0 * fs)},${sx},${Math.round(sy + y1 * fs)},0,${Math.max(1, t1 - t0)})\\bord0\\shad0\\1c${colorOnly(sp.star)}\\1a&H${alphaOf(sp.star)}&${extra}\\p1}${shape}{\\p0}`, 0);
-      STAR_BOB.slice(1).forEach(([t1, y1], k) => {
-        const [t0, y0] = STAR_BOB[k];
-        if (c.start + t0 / 1000 < c.end) draw(t0, t1, y0, y1, k === 0 ? `\\fad(120,0)\\fscx0\\fscy0\\t(0,${t1},\\fscx100\\fscy100)` : "");
-      });
-      const [tEnd] = STAR_BOB[STAR_BOB.length - 1];
-      if (c.start + tEnd / 1000 < c.end) draw(tEnd, (c.end - c.start) * 1000, 0, 0);
+      add(c.start, c.end, `{\\an5\\move(${sx},${Math.round(sy + upEm * fs)},${sx},${sy},0,${upMs})\\fad(${Math.round(upMs * 0.4)},0)\\t(${upMs},${upMs + STAR_SPIN},0.5,\\frz-360)` +
+        `\\bord0\\shad0\\1c${colorOnly(sp.star)}\\1a&H${alphaOf(sp.star)}&\\p1}${shape}{\\p0}`, 0);
       subAt(c.start, c.end, "", p.subY);
       continue;
     }

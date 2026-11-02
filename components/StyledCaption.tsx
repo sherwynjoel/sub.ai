@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_BOB, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, STAR_SPIN, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -274,16 +274,23 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     const sp = s.spark, starts = [0, ...[...brk].filter((b) => b < words.length - 1).sort((a, b) => a - b).map((b) => b + 1)];
     const n = starts.length, mid = n > 2 ? 1 : n - 1, last = n - 1, roomCqw = (1 - s.safe.left - s.safe.right) * 95;
     const ms = Math.max(0, (time - start) * 1000), [slideMs, slideEm] = SPARK_SLIDE, slid = Math.min(1, ms / slideMs);
-    const k = STAR_BOB.findIndex(([t]) => t > ms), [t0, y0] = STAR_BOB[k < 1 ? STAR_BOB.length - 1 : k - 1], [t1, y1] = k < 1 ? [t0, y0] : STAR_BOB[k];
-    const bob = t1 > t0 ? y0 + ((y1 - y0) * (ms - t0)) / (t1 - t0) : y0, grow = Math.min(1, ms / STAR_BOB[1][0]);
+    // the star slides up into place, then spins once (libass's \t accel 0.5: progress ** 0.5)
+    const [upMs, upEm] = STAR_SLIDE, rise = (1 - Math.min(1, ms / upMs)) * upEm, spin = 360 * Math.sqrt(Math.min(1, Math.max(0, (ms - upMs) / STAR_SPIN)));
+    // a later line's word slides up as it's said (hidden before)
+    const [wordMs, wordEm] = SPARK_WORD_UP;
+    const wordUp = (j: number): React.CSSProperties => {
+      const v = Math.min(1, Math.max(0, (time - words[j].s) * 1000 / wordMs));
+      return time < words[j].s ? { display: "inline-block", visibility: "hidden" } : { display: "inline-block", transform: `translateY(${((1 - v) * wordEm).toFixed(3)}em)`, opacity: Math.min(1, v * 2) };
+    };
     body = <span className="stagger">{starts.map((a, r) => {
       const to = r + 1 < n ? starts[r + 1] : words.length, big = r === mid, font = big ? sp.bigFont : r === last && n > 2 ? sp.lastFont : s.font;
       const tw = Math.max(0.3, textWidth(words.slice(a, to).map((w) => (big ? w.w.toUpperCase() : w.w)).join(" "), font, s.fontTa)).toFixed(3);
-      const text = join(a, to).filter((x) => typeof x !== "object" || x === null || (x as React.ReactElement).type !== "br");
+      const text = r === 0 ? join(a, to).filter((x) => typeof x !== "object" || x === null || (x as React.ReactElement).type !== "br")
+        : words.slice(a, to).flatMap((_, m) => [m ? " " : null, <span key={`u${a + m}`} style={wordUp(a + m)}>{word(a + m)}</span>]);
       return <span key={a} style={{ textAlign: "left", position: "relative", fontFamily: stack(font, s.fontTa), lineHeight: lineScale(font) * (sp.tight ?? 1) * (s.lineHeight ?? 1),
         ...(big ? { textTransform: "uppercase" } : {}), fontSize: `min(${big ? sp.big : 1}em, calc(${(roomCqw * SPARK_FIT).toFixed(1)}cqw / ${tw}))` }}>
-        {r === 0 && <svg className="spark-star" viewBox="-1 -1 2 2" aria-hidden="true" style={{ left: `${STAR_AT.dx - STAR_AT.r}em`, top: `calc(50% + ${(STAR_AT.dy - STAR_AT.r + bob).toFixed(3)}em)`,
-          width: `${2 * STAR_AT.r}em`, height: `${2 * STAR_AT.r}em`, opacity: Math.min(1, ms / 120), transform: `scale(${grow.toFixed(3)})` }}>
+        {r === 0 && <svg className="spark-star" viewBox="-1 -1 2 2" aria-hidden="true" style={{ left: `${STAR_AT.dx - STAR_AT.r}em`, top: `calc(50% + ${(STAR_AT.dy - STAR_AT.r + rise).toFixed(3)}em)`,
+          width: `${2 * STAR_AT.r}em`, height: `${2 * STAR_AT.r}em`, opacity: Math.min(1, ms / (upMs * 0.4)), transform: `rotate(${spin.toFixed(1)}deg)` }}>
           <path d={STAR_PATH} fill={sp.star} />
         </svg>}
         <span style={{ position: "relative", display: "inline-block", ...(r === 0 ? { transform: `translateX(${(-(1 - slid) * slideEm).toFixed(3)}em)`, opacity: Math.min(1, ms / (slideMs * 0.6)) } : {}) }}>{text}</span>
