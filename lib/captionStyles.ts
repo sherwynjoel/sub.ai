@@ -135,22 +135,10 @@ export const SPARK_FIT = 0.86;
  * wipe and the punch's rise (ms), and the box's padding and height (em of the punch).
  */
 export const boxPunchCut = (n: number) => (n > 2 ? n - 2 : 0);
-export const BOX_WIPE = 520, BOX_RISE = 520;
-/** The cinematic easing (libass's \\t accel: progress ** this, fast then settling). */
-export const BOX_EASE = 0.4;
-/** The punch rises in from a blur (em) and spread letters (em), both easing to none. */
-export const BOX_RISE_FX: [number, number] = [0.12, 0.18];
-/** The shine crossing the box: its width (× the box's height), how long it takes (ms), its alpha (ASS hex, 00 solid). */
-export const BOX_SHINE = { w: 0.45, ms: 520, alpha: "90" };
+export const BOX_WIPE = 350, BOX_RISE = 420;
 export const BOX_PAD = { x: 0.28, h: 1.4, lift: 0.08 }; // lift: the text a little above the box's middle (its tails fit)
-/**
- * When the box starts (ms from the caption's start): so the punch has risen in as it's said (the box opening, the text
- * rising from a little after the box starts), and always done a little before the caption ends.
- */
-export const boxStart = (punchMs: number, captionMs: number) => {
-  const lands = BOX_WIPE * 0.55 + BOX_RISE * 0.7; // from the box's start to the text in place
-  return Math.round(Math.max(0, Math.min(punchMs - lands, captionMs - lands - BOX_RISE * 0.3 - 250)));
-};
+/** When the box starts its wipe (ms from the caption's start): just before the punch is said, so the text arrives on it. */
+export const boxStart = (punchMs: number) => Math.max(0, Math.round(punchMs - BOX_WIPE));
 /** The set-up's lines: one, or two when it wouldn't fit on one at the style's size (breaks after these word indexes). */
 export function boxPunchRows(setup: string[], s: CaptionStyle & Placement, ratio = 9 / 16): [number, number][] {
   if (!setup.length) return [];
@@ -174,7 +162,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-bold-flicker", name: "Bold Flicker", group: "Typography", blurb: "Big capitals that strobe on, word by word.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 0.96, caps: true, color: W, shadow: 0.04, reveal: "flicker", wordLines: true },
   { id: "cc-rise-ultra", name: "Riseup Ultra", group: "Typography", blurb: "Rise Up in white: elegant Bodoni italic lines around a big Anton middle line that shows the video as a negative (change the blend in Colour).", font: "Bodoni Moda Italic", fontTa: "Hind Madurai", size: 1.15, color: W, lineHeight: 0.8, reveal: "rise", stagger: { colors: [W, W, W], bold: 0, big: 3.1, bigFont: "Anton", tight: 0.72 }, blend: "difference", blendMid: true },
   { id: "cc-spark", name: "Spark Slide", group: "Typography", blurb: "A star slides up and spins behind the first line as it slides in from the left; the big Anton line and the light italic one come in word by word, sliding up (change the star's colour in Colour).", font: "Poppins Regular", fontTa: "Hind Madurai", size: 1.13, startSize: 0.9, color: W, lineHeight: 0.9, effect: "spark", spark: { big: 2.5, bigFont: "Anton", lastFont: "Poppins Light Italic", star: "#D97757", tight: 0.8 } },
-  { id: "cc-box-punch", name: "Box Punch", group: "Typography", blurb: "The set-up's words appear as they're said; then a box wipes in and the punch rises into it in handwriting (change the box colour in Colour).", font: "Poppins Light", fontTa: "Hind Madurai", size: 1.12, color: W, effect: "boxpunch", boxPunch: { font: "Sriracha", scale: 1.7, color: "#B87A5E" } },
+  { id: "cc-box-punch", name: "Box Punch", group: "Typography", blurb: "The set-up's words appear as they're said; then a box wipes in and the punch rises into it in handwriting (change the box colour in Colour).", font: "Poppins Light", fontTa: "Hind Madurai", size: 1.12, startSize: 0.8, color: W, effect: "boxpunch", boxPunch: { font: "Sriracha", scale: 1.7, color: "#B87A5E" } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
@@ -1073,9 +1061,8 @@ export function buildAss(cues: Cue[], o: Opts) {
       continue;
     }
     if (s.effect === "boxpunch" && s.boxPunch && words.length) {
-      // The set-up on a line or two (its words appearing as said), the punch under it in a box. Cinematic: the box
-      // sweeps open from the left (easing out) and a shine crosses it; the punch rises into it from below (cut off by
-      // the box) out of a blur, its letters drawing together as it fades in. Timed to land as the punch is said.
+      // The set-up on a line or two (its words appearing as said), the punch under it in a box: the box wipes in from the
+      // left just before the punch is said, then the punch rises into it from below (cut off by the box), fading in.
       const bp = s.boxPunch, cut = boxPunchCut(words.length), textOf = (a: number, b: number) => words.slice(a, b).map((w) => w.w).join(" ");
       const setRows = boxPunchRows(words.slice(0, cut).map((w) => w.w), s, ratio);
       // (both set-up lines one size: the widest fitting)
@@ -1094,19 +1081,15 @@ export function buildAss(cues: Cue[], o: Opts) {
           strips(j ? Math.min(words[j].s, c.end - 0.05) : c.start, c.end, `{\\an${5 + hz}\\pos(${Math.round(ax)},${y0})}`, y0, nats[r], "{\\q2}" + t, 1);
         }
       });
-      const t0 = boxStart((words[cut].s - c.start) * 1000, (c.end - c.start) * 1000), clipAt = (w: number) => `\\clip(${bx},${by},${bx + w},${by + boxH})`;
+      const t0 = boxStart((words[cut].s - c.start) * 1000), clipAt = (w: number) => `\\clip(${bx},${by},${bx + w},${by + boxH})`;
       const when = (ms: number) => Math.min(c.end - 0.05, c.start + ms / 1000);
-      // the box sweeps open, left to right, easing out
-      add(when(t0), c.end, `{\\an7\\pos(${bx},${by})${clipAt(0)}\\t(0,${BOX_WIPE},${BOX_EASE},${clipAt(boxW)})\\bord0\\shad0\\1c${colorOnly(bp.color)}\\1a&H${alphaOf(bp.color)}&\\p1}m 0 0 l ${boxW} 0 ${boxW} ${boxH} 0 ${boxH}{\\p0}`, 0);
-      // a shine crossing it once it's open: a slanted soft white band, cut off at the box
-      const gw = Math.round(boxH * BOX_SHINE.w), sk = Math.round(boxH * 0.35), tg = t0 + BOX_WIPE * 0.7;
-      add(when(tg), Math.min(c.end, c.start + (tg + BOX_SHINE.ms) / 1000), `{\\an7\\move(${bx - gw - sk},${by},${bx + boxW},${by},0,${BOX_SHINE.ms})${clipAt(boxW)}\\bord0\\shad0\\blur${px(0.06 * z1)}\\1c&HFFFFFF&\\1a&H${BOX_SHINE.alpha}&\\p1}m ${sk} 0 l ${sk + gw} 0 ${gw} ${boxH} 0 ${boxH}{\\p0}`, 0);
-      // then the punch rises into it: out of a blur, letters drawing together, fading in (cut off at the box)
-      const [blurEm, trackEm] = BOX_RISE_FX;
-      const rise = `\\alpha&HFF&\\blur${px(blurEm * z1)}\\fsp${px(trackEm * z1)}\\t(0,${BOX_RISE},${BOX_EASE},\\alpha&H00&\\blur0\\fsp0)`;
+      // the box wipes in, left to right
+      add(when(t0), c.end, `{\\an7\\pos(${bx},${by})${clipAt(0)}\\t(0,${BOX_WIPE},${clipAt(boxW)})\\bord0\\shad0\\1c${colorOnly(bp.color)}\\1a&H${alphaOf(bp.color)}&\\p1}m 0 0 l ${boxW} 0 ${boxW} ${boxH} 0 ${boxH}{\\p0}`, 0);
+      // then the punch rises into it from below, cut off at the box, fading in
+      const rise = `\\alpha&HFF&\\t(0,${BOX_RISE},\\alpha&H00&)`;
       const punch = words.slice(cut).map((_, m) => (m ? " " : "") + word(cut + m, words.length)).join("").replace(/\{\\r/g, `{\\r${sized(z1, bp.font)}${rise}`);
       const yT = Math.round(yB - BOX_PAD.lift * em1);
-      add(when(t0 + BOX_WIPE * 0.55), c.end, `{\\an5\\move(${cx},${yT + boxH},${cx},${yT},0,${Math.round(BOX_RISE * 0.7)})${clipAt(boxW)}\\shad0}{\\q2}` + punch, 1);
+      add(when(t0 + BOX_WIPE), c.end, `{\\an5\\move(${cx},${yT + boxH},${cx},${yT},0,${BOX_RISE})${clipAt(boxW)}\\shad0}{\\q2}` + punch, 1);
       subAt(c.start, c.end, "", p.subY);
       continue;
     }
