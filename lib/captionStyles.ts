@@ -116,7 +116,7 @@ export function starPoints(): [number, number][] {
 export const SPARK_SLIDE: [number, number] = [380, 1.6];
 export const SPARK_WORD_UP: [number, number] = [300, 0.5];
 export const STAR_SLIDE: [number, number] = [400, 2.5];
-export const STAR_SPIN = 700;
+export const STAR_SPIN = 1800;
 /** Where the star sits (its centre, from the first line's start and middle, in em) and its radius (em). */
 export const STAR_AT = { dx: 0.22, dy: -0.2, r: 1.6 };
 /** Every line no wider than this much of the room (the star sticks out to the left of the block). */
