@@ -135,10 +135,29 @@ export const SPARK_FIT = 0.86;
  * wipe and the punch's rise (ms), and the box's padding and height (em of the punch).
  */
 export const boxPunchCut = (n: number) => (n > 2 ? n - 2 : 0);
-export const BOX_WIPE = 350, BOX_RISE = 420;
+export const BOX_WIPE = 520, BOX_RISE = 520;
+/** The cinematic easing (libass's \\t accel: progress ** this, fast then settling). */
+export const BOX_EASE = 0.4;
+/** The punch rises in from a blur (em) and spread letters (em), both easing to none. */
+export const BOX_RISE_FX: [number, number] = [0.12, 0.18];
+/** The shine crossing the box: its width (× the box's height), how long it takes (ms), its alpha (ASS hex, 00 solid). */
+export const BOX_SHINE = { w: 0.45, ms: 520, alpha: "90" };
 export const BOX_PAD = { x: 0.28, h: 1.4, lift: 0.08 }; // lift: the text a little above the box's middle (its tails fit)
-/** When the box starts its wipe (ms from the caption's start): just before the punch is said, so the text arrives on it. */
-export const boxStart = (punchMs: number) => Math.max(0, Math.round(punchMs - BOX_WIPE));
+/**
+ * When the box starts (ms from the caption's start): so the punch has risen in as it's said (the box opening, the text
+ * rising from a little after the box starts), and always done a little before the caption ends.
+ */
+export const boxStart = (punchMs: number, captionMs: number) => {
+  const lands = BOX_WIPE * 0.55 + BOX_RISE * 0.7; // from the box's start to the text in place
+  return Math.round(Math.max(0, Math.min(punchMs - lands, captionMs - lands - BOX_RISE * 0.3 - 250)));
+};
+/** The set-up's lines: one, or two when it wouldn't fit on one at the style's size (breaks after these word indexes). */
+export function boxPunchRows(setup: string[], s: CaptionStyle & Placement, ratio = 9 / 16): [number, number][] {
+  if (!setup.length) return [];
+  const brk = lineCount({ ...s, lines: undefined }, setup.join(" "), ratio) > 1 ? lineBreaks(setup, 2) : new Set<number>();
+  const cut = [...brk][0];
+  return cut === undefined ? [[0, setup.length]] : [[0, cut + 1], [cut + 1, setup.length]];
+}
 /** "Word by word, popping up": how long a word takes to pop up (ms). */
 export const POP_MS = 180;
 /** A staggered style's glow at its usual strength (its Shadow size; bigger or smaller scales it). */
@@ -1054,33 +1073,40 @@ export function buildAss(cues: Cue[], o: Opts) {
       continue;
     }
     if (s.effect === "boxpunch" && s.boxPunch && words.length) {
-      // The set-up on a line (its words appearing as said), the punch under it in a box: the box wipes in from the left
-      // just before the punch is said, then the punch rises into it from below (cut off by the box), fading in.
+      // The set-up on a line or two (its words appearing as said), the punch under it in a box. Cinematic: the box
+      // sweeps open from the left (easing out) and a shine crosses it; the punch rises into it from below (cut off by
+      // the box) out of a blur, its letters drawing together as it fades in. Timed to land as the punch is said.
       const bp = s.boxPunch, cut = boxPunchCut(words.length), textOf = (a: number, b: number) => words.slice(a, b).map((w) => w.w).join(" ");
-      const z0 = cut ? Math.min(1, room / (Math.max(0.3, textWidth(textOf(0, cut), s.font, s.fontTa)) * fs)) : 1;
+      const setRows = boxPunchRows(words.slice(0, cut).map((w) => w.w), s, ratio);
+      // (both set-up lines one size: the widest fitting)
+      const zs = Math.min(1, ...setRows.map((r) => room / (Math.max(0.3, textWidth(textOf(...r), s.font, s.fontTa)) * fs)));
       const z1 = Math.min(bp.scale, (room * 0.92) / (Math.max(0.3, textWidth(textOf(cut, words.length), bp.font, s.fontTa) + 2 * BOX_PAD.x) * fs));
       const em1 = fs * z1, boxW = Math.round((textWidth(textOf(cut, words.length), bp.font, s.fontTa) + 2 * BOX_PAD.x) * em1), boxH = Math.round(BOX_PAD.h * em1);
-      const nat0 = natOf(textOf(0, cut), z0);
-      const p = stackAt(cut ? [nat0, boxH] : [boxH]), yB = Math.round(p.ys[cut ? 1 : 0]);
+      const nats = setRows.map((r) => natOf(textOf(...r), zs));
+      const p = stackAt([...nats, boxH]), yB = Math.round(p.ys[setRows.length]);
       const bx = Math.round(hz < 0 ? ax : hz > 0 ? ax - boxW : ax - boxW / 2), by = Math.round(yB - boxH / 2), cx = bx + Math.round(boxW / 2);
       const sized = (z: number, f: string) => `\\fn${f}` + (z === 1 ? "" : `\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)}`);
-      // the set-up: each word from when it's said (the others hidden, so every word keeps its place)
-      if (cut) {
-        const y0 = Math.round(p.ys[0]);
-        for (let j = 0; j < cut; j++) {
-          const t = words.slice(0, cut).map((_, m) => (m ? " " : "") + (m === j ? word(m, words.length) : word(m, words.length).replace("}", "\\alpha&HFF&}"))).join("").replace(/\{\\r/g, `{\\r${sized(z0, s.font)}`);
-          strips(j ? Math.min(words[j].s, c.end - 0.05) : c.start, c.end, `{\\an${5 + hz}\\pos(${Math.round(ax)},${y0})}`, y0, nat0, "{\\q2}" + t, 1);
+      // the set-up: each word from when it's said, on its line (the others hidden, so every word keeps its place)
+      setRows.forEach(([a, b], r) => {
+        const y0 = Math.round(p.ys[r]), z = zs;
+        for (let j = a; j < b; j++) {
+          const t = words.slice(a, b).map((_, m) => (m ? " " : "") + (a + m === j ? word(a + m, words.length) : word(a + m, words.length).replace("}", "\\alpha&HFF&}"))).join("").replace(/\{\\r/g, `{\\r${sized(z, s.font)}`);
+          strips(j ? Math.min(words[j].s, c.end - 0.05) : c.start, c.end, `{\\an${5 + hz}\\pos(${Math.round(ax)},${y0})}`, y0, nats[r], "{\\q2}" + t, 1);
         }
-      }
-      // the box wipes in, left to right
-      const t0 = boxStart((words[cut].s - c.start) * 1000), clipAt = (w: number) => `\\clip(${bx},${by},${bx + w},${by + boxH})`;
+      });
+      const t0 = boxStart((words[cut].s - c.start) * 1000, (c.end - c.start) * 1000), clipAt = (w: number) => `\\clip(${bx},${by},${bx + w},${by + boxH})`;
       const when = (ms: number) => Math.min(c.end - 0.05, c.start + ms / 1000);
-      add(when(t0), c.end, `{\\an7\\pos(${bx},${by})${clipAt(0)}\\t(0,${BOX_WIPE},${clipAt(boxW)})\\bord0\\shad0\\1c${colorOnly(bp.color)}\\1a&H${alphaOf(bp.color)}&\\p1}m 0 0 l ${boxW} 0 ${boxW} ${boxH} 0 ${boxH}{\\p0}`, 0);
-      // then the punch rises into it from below, cut off at the box, fading in
-      const rise = `\\alpha&HFF&\\t(0,${BOX_RISE},\\alpha&H00&)`;
+      // the box sweeps open, left to right, easing out
+      add(when(t0), c.end, `{\\an7\\pos(${bx},${by})${clipAt(0)}\\t(0,${BOX_WIPE},${BOX_EASE},${clipAt(boxW)})\\bord0\\shad0\\1c${colorOnly(bp.color)}\\1a&H${alphaOf(bp.color)}&\\p1}m 0 0 l ${boxW} 0 ${boxW} ${boxH} 0 ${boxH}{\\p0}`, 0);
+      // a shine crossing it once it's open: a slanted soft white band, cut off at the box
+      const gw = Math.round(boxH * BOX_SHINE.w), sk = Math.round(boxH * 0.35), tg = t0 + BOX_WIPE * 0.7;
+      add(when(tg), Math.min(c.end, c.start + (tg + BOX_SHINE.ms) / 1000), `{\\an7\\move(${bx - gw - sk},${by},${bx + boxW},${by},0,${BOX_SHINE.ms})${clipAt(boxW)}\\bord0\\shad0\\blur${px(0.06 * z1)}\\1c&HFFFFFF&\\1a&H${BOX_SHINE.alpha}&\\p1}m ${sk} 0 l ${sk + gw} 0 ${gw} ${boxH} 0 ${boxH}{\\p0}`, 0);
+      // then the punch rises into it: out of a blur, letters drawing together, fading in (cut off at the box)
+      const [blurEm, trackEm] = BOX_RISE_FX;
+      const rise = `\\alpha&HFF&\\blur${px(blurEm * z1)}\\fsp${px(trackEm * z1)}\\t(0,${BOX_RISE},${BOX_EASE},\\alpha&H00&\\blur0\\fsp0)`;
       const punch = words.slice(cut).map((_, m) => (m ? " " : "") + word(cut + m, words.length)).join("").replace(/\{\\r/g, `{\\r${sized(z1, bp.font)}${rise}`);
       const yT = Math.round(yB - BOX_PAD.lift * em1);
-      add(when(t0 + BOX_WIPE), c.end, `{\\an5\\move(${cx},${yT + boxH},${cx},${yT},0,${BOX_RISE})${clipAt(boxW)}\\shad0}{\\q2}` + punch, 1);
+      add(when(t0 + BOX_WIPE * 0.55), c.end, `{\\an5\\move(${cx},${yT + boxH},${cx},${yT},0,${Math.round(BOX_RISE * 0.7)})${clipAt(boxW)}\\shad0}{\\q2}` + punch, 1);
       subAt(c.start, c.end, "", p.subY);
       continue;
     }
