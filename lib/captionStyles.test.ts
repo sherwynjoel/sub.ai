@@ -568,10 +568,11 @@ test("Spark Slide: three lines flush left, the first slides in, the later words 
   assert.equal(new Set(text.map(leftOf)).size, 1, "all flush left");
   const star = ev.filter((l) => /\\p1/.test(l));
   assert.equal(star.length, 1);
-  const [, t0, t1, deg] = star[0].match(/\\t\((\d+),(\d+),\\frz-(\d+)\)/)!.map(Number);
+  const [, t0, t1, deg] = star[0].match(/\\t\((\d+),(\d+),\\frz-([\d.]+)\)/)!.map(Number);
   assert.equal(t0, STAR_SLIDE[0], "spins once it's in place");
-  assert.ok(t1 >= 2570 && t1 === starSpin(t1 - 300).to, "until the last word (\"years\", 2.57 s in) is in");
-  assert.ok(deg % 45 === 0 && deg / ((t1 - t0) / 1000) <= 120, "slowly, stopping on a point");
+  assert.equal(t1, 3000, "spinning till the caption ends");
+  assert.ok(deg > 0 && deg / ((t1 - t0) / 1000) <= 60, "slowly");
+  assert.equal(starSpin(3000).deg, deg);
   const [, , sy0, , sy1] = star[0].match(/\\move\((\d+),(\d+),(\d+),(\d+)/)!.map(Number);
   assert.ok(sy0 > sy1, "from below");
   assert.ok(star.every((l) => l.startsWith("Dialogue: 0,")), "the star under the text");
