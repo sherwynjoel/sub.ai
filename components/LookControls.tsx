@@ -78,7 +78,7 @@ export default function LookControls({ look, own, set, tamil, project, setAll }:
             <span className="cz-color">Top<ColorPicker value={hex(look.gradient[0], "#ffffff")} onChange={(c) => set({ gradient: [c, look.gradient![1]] })} label="Gradient top colour" /></span>
             <span className="cz-color">Bottom<ColorPicker value={hex(look.gradient[1], "#ffb37a")} onChange={(c) => set({ gradient: [look.gradient![0], c] })} label="Gradient bottom colour" /></span>
           </> : <span className="cz-color">Text<ColorPicker value={hex(look.color, "#ffffff")} onChange={(c) => set({ color: c })} label="Text colour" /></span>}
-          {highlights(look) && <span className="cz-color">{look.spark ? "Star" : "Highlight"}<ColorPicker value={hex(own.accent ?? look.spark?.star ?? look.mark ?? look.keyword?.color ?? look.active, "#ffe14d")} onChange={(c) => set({ accent: c })} label={look.spark ? "Star colour" : "Highlight colour"} /></span>}
+          {highlights(look) && <span className="cz-color">{look.spark ? "Star" : look.boxPunch ? "Box" : "Highlight"}<ColorPicker value={hex(own.accent ?? look.spark?.star ?? look.boxPunch?.color ?? look.mark ?? look.keyword?.color ?? look.active, "#ffe14d")} onChange={(c) => set({ accent: c })} label={look.spark ? "Star colour" : look.boxPunch ? "Box colour" : "Highlight colour"} /></span>}
         </div>
         {(!project || setAll) && <label>Text blend{project && " (all captions)"}
           <select value={look.blend ?? ""} onChange={(e) => (setAll ?? set)({ blend: (e.target.value || null) as Blend | null })}

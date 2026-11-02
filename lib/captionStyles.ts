@@ -25,7 +25,7 @@ export const BLENDS = {
   dodge: ["Colour dodge", "color-dodge", "dodge"],
 } as const;
 export type Blend = keyof typeof BLENDS;
-export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark";
+export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch";
 /** How a caption comes in (the last few from the Premiere template pack's presets). */
 export const ANIMS = {
   none: "None", fade: "Fade in", pop: "Pop", slide: "Slide up", bounce: "Bounce", zoom: "Zoom in",
@@ -73,7 +73,10 @@ export type CaptionStyle = {
   blendMid?: boolean;
   // "spark": three lines flush left (the first sliding in from the left, a big middle line in its own font and capitals,
   // the last in its own font), an eight-point star (the user's PNG, traced) bobbing in behind the first line's start
-  spark?: { bigFont: string; big: number; lastFont: string; star: string; tight?: number };            // staggered lines: only the big middle line is blended (the others stay plain text)
+  spark?: { bigFont: string; big: number; lastFont: string; star: string; tight?: number };
+  // "boxpunch": Setup & Punch's two parts, the set-up's words appearing as said, then a box wiping in under the punch
+  // (left to right) and the punch rising into it, fading in; the punch in this font, this many em, on this colour
+  boxPunch?: { font: string; scale: number; color: string };            // staggered lines: only the big middle line is blended (the others stay plain text)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
@@ -127,6 +130,15 @@ export function starSpin(captionMs: number) {
 export const STAR_AT = { dx: 0.22, dy: -0.2, r: 1.6 };
 /** Every line no wider than this much of the room (the star sticks out to the left of the block). */
 export const SPARK_FIT = 0.86;
+/**
+ * "boxpunch": where the punch starts (the last two words; a caption of two words or fewer is all punch), the box's
+ * wipe and the punch's rise (ms), and the box's padding and height (em of the punch).
+ */
+export const boxPunchCut = (n: number) => (n > 2 ? n - 2 : 0);
+export const BOX_WIPE = 350, BOX_RISE = 420;
+export const BOX_PAD = { x: 0.28, h: 1.4, lift: 0.08 }; // lift: the text a little above the box's middle (its tails fit)
+/** When the box starts its wipe (ms from the caption's start): just before the punch is said, so the text arrives on it. */
+export const boxStart = (punchMs: number) => Math.max(0, Math.round(punchMs - BOX_WIPE));
 /** "Word by word, popping up": how long a word takes to pop up (ms). */
 export const POP_MS = 180;
 /** A staggered style's glow at its usual strength (its Shadow size; bigger or smaller scales it). */
@@ -143,6 +155,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-bold-flicker", name: "Bold Flicker", group: "Typography", blurb: "Big capitals that strobe on, word by word.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 0.96, caps: true, color: W, shadow: 0.04, reveal: "flicker", wordLines: true },
   { id: "cc-rise-ultra", name: "Riseup Ultra", group: "Typography", blurb: "Rise Up in white: elegant Bodoni italic lines around a big Anton middle line that shows the video as a negative (change the blend in Colour).", font: "Bodoni Moda Italic", fontTa: "Hind Madurai", size: 1.15, color: W, lineHeight: 0.8, reveal: "rise", stagger: { colors: [W, W, W], bold: 0, big: 3.1, bigFont: "Anton", tight: 0.72 }, blend: "difference", blendMid: true },
   { id: "cc-spark", name: "Spark Slide", group: "Typography", blurb: "A star slides up and spins behind the first line as it slides in from the left; the big Anton line and the light italic one come in word by word, sliding up (change the star's colour in Colour).", font: "Poppins Regular", fontTa: "Hind Madurai", size: 1.13, startSize: 0.9, color: W, lineHeight: 0.9, effect: "spark", spark: { big: 2.5, bigFont: "Anton", lastFont: "Poppins Light Italic", star: "#D97757", tight: 0.8 } },
+  { id: "cc-box-punch", name: "Box Punch", group: "Typography", blurb: "The set-up's words appear as they're said; then a box wipes in and the punch rises into it in handwriting (change the box colour in Colour).", font: "Poppins Light", fontTa: "Hind Madurai", size: 1.12, color: W, effect: "boxpunch", boxPunch: { font: "Sriracha", scale: 1.7, color: "#B87A5E" } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
@@ -215,7 +228,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
-  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-letter-rise", "cc-typo-block",
+  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker",
   "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-rgb", "tpl-reels-simple", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
@@ -247,6 +260,7 @@ export const CAPTION_FONTS = [
   "Bodoni Moda Italic",
   "Poppins Regular",
   "Poppins Light Italic",
+  "Sriracha",
 ] as const;
 /** The commercial font a free one stands in for (shown in the font menu). */
 export const FONT_LIKE: Partial<Record<string, string>> = { "Great Vibes": "Snell", "Alex Brush": "Snell Bold", "Pinyon Script": "Snell", "Figtree Bold": "Avenir", "GFS Didot": "Didot" };
@@ -398,6 +412,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   }
   if (c.accent) {
     if (s.spark) s.spark = { ...s.spark, star: c.accent };
+    else if (s.boxPunch) s.boxPunch = { ...s.boxPunch, color: c.accent };
     else if (s.mark) s.mark = c.accent;
     else if (s.keyword) s.keyword.color = c.accent;
     else if (s.active) s.active = c.accent;
@@ -1035,6 +1050,37 @@ export function buildAss(cues: Cue[], o: Opts) {
           strips(words[j].s, c.end, `{\\an5\\pos(${Math.round(cx)},${Math.round(p.ys[r])})\\fad(300,0)}`, p.ys[r], nats[r], "{\\q2}" + body);
         }
       });
+      subAt(c.start, c.end, "", p.subY);
+      continue;
+    }
+    if (s.effect === "boxpunch" && s.boxPunch && words.length) {
+      // The set-up on a line (its words appearing as said), the punch under it in a box: the box wipes in from the left
+      // just before the punch is said, then the punch rises into it from below (cut off by the box), fading in.
+      const bp = s.boxPunch, cut = boxPunchCut(words.length), textOf = (a: number, b: number) => words.slice(a, b).map((w) => w.w).join(" ");
+      const z0 = cut ? Math.min(1, room / (Math.max(0.3, textWidth(textOf(0, cut), s.font, s.fontTa)) * fs)) : 1;
+      const z1 = Math.min(bp.scale, (room * 0.92) / (Math.max(0.3, textWidth(textOf(cut, words.length), bp.font, s.fontTa) + 2 * BOX_PAD.x) * fs));
+      const em1 = fs * z1, boxW = Math.round((textWidth(textOf(cut, words.length), bp.font, s.fontTa) + 2 * BOX_PAD.x) * em1), boxH = Math.round(BOX_PAD.h * em1);
+      const nat0 = natOf(textOf(0, cut), z0);
+      const p = stackAt(cut ? [nat0, boxH] : [boxH]), yB = Math.round(p.ys[cut ? 1 : 0]);
+      const bx = Math.round(hz < 0 ? ax : hz > 0 ? ax - boxW : ax - boxW / 2), by = Math.round(yB - boxH / 2), cx = bx + Math.round(boxW / 2);
+      const sized = (z: number, f: string) => `\\fn${f}` + (z === 1 ? "" : `\\fscx${Math.round(z * 100)}\\fscy${Math.round(z * 100)}`);
+      // the set-up: each word from when it's said (the others hidden, so every word keeps its place)
+      if (cut) {
+        const y0 = Math.round(p.ys[0]);
+        for (let j = 0; j < cut; j++) {
+          const t = words.slice(0, cut).map((_, m) => (m ? " " : "") + (m === j ? word(m, words.length) : word(m, words.length).replace("}", "\\alpha&HFF&}"))).join("").replace(/\{\\r/g, `{\\r${sized(z0, s.font)}`);
+          strips(j ? Math.min(words[j].s, c.end - 0.05) : c.start, c.end, `{\\an${5 + hz}\\pos(${Math.round(ax)},${y0})}`, y0, nat0, "{\\q2}" + t, 1);
+        }
+      }
+      // the box wipes in, left to right
+      const t0 = boxStart((words[cut].s - c.start) * 1000), clipAt = (w: number) => `\\clip(${bx},${by},${bx + w},${by + boxH})`;
+      const when = (ms: number) => Math.min(c.end - 0.05, c.start + ms / 1000);
+      add(when(t0), c.end, `{\\an7\\pos(${bx},${by})${clipAt(0)}\\t(0,${BOX_WIPE},${clipAt(boxW)})\\bord0\\shad0\\1c${colorOnly(bp.color)}\\1a&H${alphaOf(bp.color)}&\\p1}m 0 0 l ${boxW} 0 ${boxW} ${boxH} 0 ${boxH}{\\p0}`, 0);
+      // then the punch rises into it from below, cut off at the box, fading in
+      const rise = `\\alpha&HFF&\\t(0,${BOX_RISE},\\alpha&H00&)`;
+      const punch = words.slice(cut).map((_, m) => (m ? " " : "") + word(cut + m, words.length)).join("").replace(/\{\\r/g, `{\\r${sized(z1, bp.font)}${rise}`);
+      const yT = Math.round(yB - BOX_PAD.lift * em1);
+      add(when(t0 + BOX_WIPE), c.end, `{\\an5\\move(${cx},${yT + boxH},${cx},${yT},0,${BOX_RISE})${clipAt(boxW)}\\shad0}{\\q2}` + punch, 1);
       subAt(c.start, c.end, "", p.subY);
       continue;
     }

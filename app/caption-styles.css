@@ -39,6 +39,7 @@
 @font-face { font-family: "Poppins Light"; src: url("/caption-fonts/Poppins-Light.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Poppins Regular"; src: url("/caption-fonts/Poppins-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Poppins Light Italic"; src: url("/caption-fonts/Poppins-LightItalic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Sriracha"; src: url("/caption-fonts/Sriracha-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Bodoni Moda Italic"; src: url("/caption-fonts/BodoniModa-Italic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Poppins Medium"; src: url("/caption-fonts/Poppins-Medium.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 
@@ -92,3 +93,7 @@
 .grad :is(.cw, .cw > span, .hook-line, .stack-small, .stack-big, .solo-prev, .solo-now) { -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 /* Spark Slide: the star behind the first line's start (the text over it) */
 .spark-star { position: absolute; pointer-events: none; overflow: visible; }
+/* Box Punch: the box wipes in from the left, the punch rises into it (cut off at the box) */
+.box-punch .bp-box { position: relative; display: inline-block; overflow: hidden; white-space: nowrap; }
+.box-punch .bp-bg { position: absolute; inset: 0; transform-origin: left center; }
+.box-punch .bp-text { position: relative; display: inline-block; }

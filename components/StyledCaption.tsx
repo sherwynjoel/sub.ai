@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -268,6 +268,25 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       return <span key={a} className="typo-row" style={{ fontSize: `min(1em, calc(${roomCqw.toFixed(1)}cqw / ${tw.toFixed(3)}))` }}>
         {words.slice(a, to).map((_, n) => [n ? " " : null, word(a + n)])}</span>;
     });
+  } else if (s.effect === "boxpunch" && s.boxPunch && words.length) {
+    // the set-up's words appearing as said, the punch in a box under it: the box wipes in from the left just before the
+    // punch is said, then the punch rises into it from below (cut off by the box), fading in (as the MP4)
+    const bp = s.boxPunch, cut = boxPunchCut(words.length), roomCqw = (1 - s.safe.left - s.safe.right) * 95, ms = (time - start) * 1000;
+    const t0 = boxStart((words[cut].s - start) * 1000), wipe = Math.min(1, Math.max(0, (ms - t0) / BOX_WIPE)), up = Math.min(1, Math.max(0, (ms - t0 - BOX_WIPE) / BOX_RISE));
+    const tw = (a: number, b: number, f: string) => Math.max(0.3, textWidth(words.slice(a, b).map((w) => w.w).join(" "), f, s.fontTa)).toFixed(3);
+    const side = s.textAlign === "left" ? "flex-start" : s.textAlign === "right" ? "flex-end" : "center";
+    body = <span className="stagger box-punch" style={{ alignItems: side }}>
+      {cut > 0 && <span style={{ fontSize: `min(1em, calc(${roomCqw.toFixed(1)}cqw / ${tw(0, cut, s.font)}))` }}>
+        {words.slice(0, cut).flatMap((_, m) => [m ? " " : null, <span key={`s${m}`} style={time < words[m].s && m ? { visibility: "hidden" } : undefined}>{word(m)}</span>])}
+      </span>}
+      <span className="bp-box" style={{ fontFamily: stack(bp.font, s.fontTa), padding: `0 ${BOX_PAD.x}em`, height: `${BOX_PAD.h}em`, lineHeight: `${BOX_PAD.h}em`,
+        fontSize: `min(${bp.scale}em, calc(${(roomCqw * 0.92).toFixed(1)}cqw / ${(+tw(cut, words.length, bp.font) + 2 * BOX_PAD.x).toFixed(3)}))`, visibility: ms < t0 ? "hidden" : undefined }}>
+        <span className="bp-bg" style={{ background: bp.color, transform: `scaleX(${wipe.toFixed(3)})` }} />
+        <span className="bp-text" style={{ transform: `translateY(${((1 - up) * BOX_PAD.h - BOX_PAD.lift).toFixed(3)}em)`, opacity: up }}>
+          {words.slice(cut).flatMap((_, m) => [m ? " " : null, <span key={`p${m}`}>{word(cut + m)}</span>])}
+        </span>
+      </span>
+    </span>;
   } else if (s.effect === "spark" && s.spark) {
     // three lines flush left (as the MP4): the first sliding in from the left, the big middle one in its font and
     // capitals (shrunk to fit), the last in its font; the star bobbing in behind the first line's start
