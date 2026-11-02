@@ -274,8 +274,8 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     const sp = s.spark, starts = [0, ...[...brk].filter((b) => b < words.length - 1).sort((a, b) => a - b).map((b) => b + 1)];
     const n = starts.length, mid = n > 2 ? 1 : n - 1, last = n - 1, roomCqw = (1 - s.safe.left - s.safe.right) * 95;
     const ms = Math.max(0, (time - start) * 1000), [slideMs, slideEm] = SPARK_SLIDE, slid = Math.min(1, ms / slideMs);
-    // the star slides up into place, then spins slowly and evenly until every word is in (as the MP4)
-    const [upMs, upEm] = STAR_SLIDE, rise = (1 - Math.min(1, ms / upMs)) * upEm, turn = starSpin(Math.max(0, words[words.length - 1].s - start) * 1000);
+    // the star slides up into place, then spins slowly and evenly till the caption ends (as the MP4)
+    const [upMs, upEm] = STAR_SLIDE, rise = (1 - Math.min(1, ms / upMs)) * upEm, turn = starSpin((end - start) * 1000);
     const spin = turn.deg * Math.min(1, Math.max(0, (ms - turn.from) / (turn.to - turn.from)));
     // a later line's word slides up as it's said (hidden before)
     const [wordMs, wordEm] = SPARK_WORD_UP;
