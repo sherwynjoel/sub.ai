@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, staggerBreaks, staggerFlush, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -129,6 +129,14 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     if (s.anim === "wordin") { // each word blurs in as it's said; the ones to come are hidden
       if (state === "future") st.visibility = "hidden";
       if (state === "active") { const w = Math.min(1, Math.max(0, (time - words[j].s) / 0.16)); st.opacity = w; st.filter = `blur(${((1 - w) * 0.3).toFixed(3)}em)`; }
+    }
+    if (s.anim === "wordpop") { // each word pops up out of a blur as it's said (as the MP4)
+      if (state === "future") st.visibility = "hidden";
+      if (state === "active") {
+        const ms = Math.max(0, (time - words[j].s) * 1000), sy = 0.4 + 0.6 * Math.sqrt(Math.min(1, ms / POP_MS)); // libass's \t accel 0.5
+        Object.assign(st, { opacity: Math.min(1, ms / 80), filter: `blur(${(Math.max(0, 1 - ms / 160) * 0.12).toFixed(3)}em)`,
+          transform: `scaleY(${sy.toFixed(3)})`, transformOrigin: "50% 78%", transition: "none" }); // grown off the baseline
+      }
     }
     if (s.effect === "wobble") st.transform = `${st.transform ?? ""} rotate(${j % 2 ? -4 : 3}deg)`;
     if (colors?.[j] && state !== "future") st.color = colors[j]!;
