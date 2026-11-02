@@ -590,6 +590,18 @@ export function keywordRows(words: string[], kw: number, typed?: Set<number> | n
  * two small ones, the first a word longer when they can't be even; the breaks after these word indexes. Three words
  * or more always make three lines; two words: small then big.
  */
+/**
+ * Rise Up's lines set to the big line's edges (the first on its left, the last on its right) only when the big line
+ * is the widest; with a short big line ("choose sherwin / JOEL / the artech") every line is centred. Widths in the
+ * caption's em (a big line too wide for the frame shrinks to fit, but then it's the widest anyway).
+ */
+export function staggerFlush(rows: string[], s: CaptionStyle) {
+  const st = s.stagger, mid = rows.length > 2 ? 1 : rows.length - 1;
+  if (!st?.big || rows.length < 2) return false;
+  const big = textWidth(rows[mid].toUpperCase(), st.bigFont ?? s.font, s.fontTa) * st.big;
+  return rows.every((t, r) => r === mid || textWidth(t, s.font, s.fontTa) <= big);
+}
+
 export function staggerBreaks(n: number) {
   if (n < 2) return new Set<number>();
   if (n === 2) return new Set([0]);
@@ -1043,7 +1055,8 @@ export function buildAss(cues: Cue[], o: Opts) {
           // edge, the middle centred, the last on its right edge; each line in its colour, the middle one heavier
           const rowW = rows.map((_, r) => textWidth(isBig(r) ? rowText(r).toUpperCase() : rowText(r), rowFont(r), s.fontTa) * fs * rowZ[r]);
           const blockW = Math.max(...rowW), cx = ax - (hz * blockW) / 2;
-          const side = (r: number) => (!st || rows.length === 1 || r === mid ? 0 : r === 0 ? -1 : r === last ? 1 : 0);
+          const flush = !!st && staggerFlush(rows.map((_, r) => rowText(r)), s); // else every line centred
+          const side = (r: number) => (!st || !flush || r === mid ? 0 : r === 0 ? -1 : r === last ? 1 : 0);
           const rowTag = (r: number) => {
             if (!st) return "";
             const col = colorOnly(st.colors[r === mid ? 1 : r === last ? 2 : 0] ?? s.color);

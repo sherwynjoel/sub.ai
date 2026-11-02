@@ -501,3 +501,10 @@ test("Rise Up: always three lines from three words up, a short big middle (as th
   assert.deepEqual(rows(2), [1, 1]);
   for (let n = 3; n <= 14; n++) assert.equal(rows(n).length, 3, `${n} words`);
 });
+
+test("Rise Up: lines set to the big line's edges only when it's the widest, else all centred", async () => {
+  const { staggerFlush } = await import("./captionStyles");
+  const s = resolveStyle("cc-rise");
+  assert.equal(staggerFlush(["choose sherwin", "joel", "the artech"], s), false, "a short big line: centred");
+  assert.equal(staggerFlush(["my name is", "shewyn joyl", "from cbe"], s), true, "a wide big line: to its edges");
+});
