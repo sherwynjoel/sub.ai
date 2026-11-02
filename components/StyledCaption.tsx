@@ -280,10 +280,10 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       {setRows.map(([a, b]) => <span key={`r${a}`} style={{ fontSize: `min(1em, calc(${roomCqw.toFixed(1)}cqw / ${Math.max(...setRows.map(([x, y]) => +tw(x, y, s.font))).toFixed(3)}))` }}>
         {words.slice(a, b).flatMap((_, m) => [m ? " " : null, <span key={`s${a + m}`} style={time < words[a + m].s && a + m ? { visibility: "hidden" } : undefined}>{word(a + m)}</span>])}
       </span>)}
-      <span className="bp-box" style={{ fontFamily: stack(bp.font, s.fontTa), padding: `0 ${BOX_PAD.x}em`, height: `${BOX_PAD.h}em`, lineHeight: `${BOX_PAD.h}em`,
+      <span className="bp-box" style={{ fontFamily: stack(bp.font, s.fontTa), padding: `0 ${BOX_PAD.x}em`, height: `${bp.h ?? BOX_PAD.h}em`, lineHeight: `${bp.h ?? BOX_PAD.h}em`,
         fontSize: `min(${bp.scale}em, calc(${(roomCqw * 0.92).toFixed(1)}cqw / ${(+tw(cut, words.length, bp.font) + 2 * BOX_PAD.x).toFixed(3)}))`, visibility: ms < t0 ? "hidden" : undefined }}>
         <span className="bp-bg" style={{ background: bp.color, transform: `scaleX(${wipe.toFixed(3)})` }} />
-        <span className="bp-text" style={{ transform: `translateY(${((1 - up) * BOX_PAD.h - BOX_PAD.lift).toFixed(3)}em)`, opacity: up }}>
+        <span className="bp-text" style={{ transform: `translateY(${((1 - up) * (bp.h ?? BOX_PAD.h) - BOX_PAD.lift).toFixed(3)}em)`, opacity: up }}>
           {words.slice(cut).flatMap((_, m) => [m ? " " : null, <span key={`p${m}`}>{word(cut + m)}</span>])}
         </span>
       </span>

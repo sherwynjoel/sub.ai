@@ -76,7 +76,7 @@ export type CaptionStyle = {
   spark?: { bigFont: string; big: number; lastFont: string; star: string; tight?: number };
   // "boxpunch": Setup & Punch's two parts, the set-up's words appearing as said, then a box wiping in under the punch
   // (left to right) and the punch rising into it, fading in; the punch in this font, this many em, on this colour
-  boxPunch?: { font: string; scale: number; color: string };            // staggered lines: only the big middle line is blended (the others stay plain text)
+  boxPunch?: { font: string; scale: number; color: string; h?: number }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
@@ -136,7 +136,7 @@ export const SPARK_FIT = 0.86;
  */
 export const boxPunchCut = (n: number) => (n > 2 ? n - 2 : 0);
 export const BOX_WIPE = 350, BOX_RISE = 420;
-export const BOX_PAD = { x: 0.28, h: 1.4, lift: 0.08 }; // lift: the text a little above the box's middle (its tails fit)
+export const BOX_PAD = { x: 0.28, h: 1.4, lift: 0.14 }; // lift: the text a little above the box's middle (its tails fit)
 /** When the box starts its wipe (ms from the caption's start): just before the punch is said, so the text arrives on it. */
 export const boxStart = (punchMs: number) => Math.max(0, Math.round(punchMs - BOX_WIPE));
 /** The set-up's lines: one, or two when it wouldn't fit on one at the style's size (breaks after these word indexes). */
@@ -162,7 +162,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-bold-flicker", name: "Bold Flicker", group: "Typography", blurb: "Big capitals that strobe on, word by word.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 0.96, caps: true, color: W, shadow: 0.04, reveal: "flicker", wordLines: true },
   { id: "cc-rise-ultra", name: "Riseup Ultra", group: "Typography", blurb: "Rise Up in white: elegant Bodoni italic lines around a big Anton middle line that shows the video as a negative (change the blend in Colour).", font: "Bodoni Moda Italic", fontTa: "Hind Madurai", size: 1.15, color: W, lineHeight: 0.8, reveal: "rise", stagger: { colors: [W, W, W], bold: 0, big: 3.1, bigFont: "Anton", tight: 0.72 }, blend: "difference", blendMid: true },
   { id: "cc-spark", name: "Spark Slide", group: "Typography", blurb: "A star slides up and spins behind the first line as it slides in from the left; the big Anton line and the light italic one come in word by word, sliding up (change the star's colour in Colour).", font: "Poppins Regular", fontTa: "Hind Madurai", size: 1.13, startSize: 0.9, color: W, lineHeight: 0.9, effect: "spark", spark: { big: 2.5, bigFont: "Anton", lastFont: "Poppins Light Italic", star: "#D97757", tight: 0.8 } },
-  { id: "cc-box-punch", name: "Box Punch", group: "Typography", blurb: "The set-up's words appear as they're said; then a box wipes in and the punch rises into it in handwriting (change the box colour in Colour).", font: "Poppins Light", fontTa: "Hind Madurai", size: 1.12, startSize: 0.8, color: W, effect: "boxpunch", boxPunch: { font: "Sriracha", scale: 1.7, color: "#B87A5E" } },
+  { id: "cc-box-punch", name: "Box Punch", group: "Typography", blurb: "The set-up's words appear as they're said; then a box wipes in and the punch rises into it in Caveat Bold handwriting (change the box colour in Colour).", font: "Poppins Light", fontTa: "Hind Madurai", size: 1.12, startSize: 0.8, color: W, effect: "boxpunch", boxPunch: { font: "Caveat Bold", scale: 2.1, color: "#B87A5E", h: 1.15 } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
@@ -1068,7 +1068,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       // (both set-up lines one size: the widest fitting)
       const zs = Math.min(1, ...setRows.map((r) => room / (Math.max(0.3, textWidth(textOf(...r), s.font, s.fontTa)) * fs)));
       const z1 = Math.min(bp.scale, (room * 0.92) / (Math.max(0.3, textWidth(textOf(cut, words.length), bp.font, s.fontTa) + 2 * BOX_PAD.x) * fs));
-      const em1 = fs * z1, boxW = Math.round((textWidth(textOf(cut, words.length), bp.font, s.fontTa) + 2 * BOX_PAD.x) * em1), boxH = Math.round(BOX_PAD.h * em1);
+      const em1 = fs * z1, boxW = Math.round((textWidth(textOf(cut, words.length), bp.font, s.fontTa) + 2 * BOX_PAD.x) * em1), boxH = Math.round((bp.h ?? BOX_PAD.h) * em1);
       const nats = setRows.map((r) => natOf(textOf(...r), zs));
       const p = stackAt([...nats, boxH]), yB = Math.round(p.ys[setRows.length]);
       const bx = Math.round(hz < 0 ? ax : hz > 0 ? ax - boxW : ax - boxW / 2), by = Math.round(yB - boxH / 2), cx = bx + Math.round(boxW / 2);
