@@ -545,7 +545,7 @@ test("Riseup Ultra: white Bodoni italic lines, only the big Anton middle line bl
 });
 
 test("Spark Slide: three lines flush left, the first slides in, the later words slide up one by one, the star slides up and spins", async () => {
-  const { starPoints, STAR_SLIDE, STAR_SPIN } = await import("./captionStyles");
+  const { starPoints, STAR_SLIDE, starSpin } = await import("./captionStyles");
   const s = resolveStyle("cc-spark");
   assert.equal(s.spark?.star, "#D97757");
   assert.equal(resolveStyle("cc-spark", { accent: "#00FF00" }).spark?.star, "#00FF00", "the star's colour is editable");
@@ -568,7 +568,10 @@ test("Spark Slide: three lines flush left, the first slides in, the later words 
   assert.equal(new Set(text.map(leftOf)).size, 1, "all flush left");
   const star = ev.filter((l) => /\\p1/.test(l));
   assert.equal(star.length, 1);
-  assert.match(star[0], new RegExp(`\\\\t\\(${STAR_SLIDE[0]},${STAR_SLIDE[0] + STAR_SPIN},0\\.5,\\\\frz-360\\)`), "slides up, then spins once");
+  const [, t0, t1, deg] = star[0].match(/\\t\((\d+),(\d+),\\frz-(\d+)\)/)!.map(Number);
+  assert.equal(t0, STAR_SLIDE[0], "spins once it's in place");
+  assert.ok(t1 >= 2570 && t1 === starSpin(t1 - 300).to, "until the last word (\"years\", 2.57 s in) is in");
+  assert.ok(deg % 45 === 0 && deg / ((t1 - t0) / 1000) <= 120, "slowly, stopping on a point");
   const [, , sy0, , sy1] = star[0].match(/\\move\((\d+),(\d+),(\d+),(\d+)/)!.map(Number);
   assert.ok(sy0 > sy1, "from below");
   assert.ok(star.every((l) => l.startsWith("Dialogue: 0,")), "the star under the text");
