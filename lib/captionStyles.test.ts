@@ -147,9 +147,9 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
 });
 
 test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 5 + Pro, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 45);
+  assert.equal(STYLE_CHOICES.length, 46);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 16);
-  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 8);
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 9);
   assert.ok(!STYLE_CHOICES.some((s) => s.id === "cc-bold-flicker" || s.id === "cc-corners"), "Bold Flicker and Corner Block no longer offered");
   assert.equal(STYLE_GROUPS[0], "Typography");
   assert.ok(STYLE_CHOICES.some((s) => s.id === DEFAULT_STYLE));
@@ -576,4 +576,24 @@ test("Spark Slide: three lines flush left, the first slides in, the later words 
   const [, , sy0, , sy1] = star[0].match(/\\move\((\d+),(\d+),(\d+),(\d+)/)!.map(Number);
   assert.ok(sy0 > sy1, "from below");
   assert.ok(star.every((l) => l.startsWith("Dialogue: 0,")), "the star under the text");
+});
+
+test("Box Punch: the set-up's words appear as said, the box wipes in left to right, then the punch rises into it fading in", async () => {
+  const { BOX_WIPE, BOX_RISE } = await import("./captionStyles");
+  assert.equal(resolveStyle("cc-box-punch", { accent: "#123456" }).boxPunch?.color, "#123456", "the box colour is editable");
+  const ass = buildAss([{ start: 0, end: 3, ta: "my name is shewyn joyl", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-box-punch", lang: "ta", width: 1080, height: 1920 });
+  const ev = ass.split("\n").filter((l) => l.startsWith("Dialogue"));
+  const setup = ev.filter((l) => /Poppins Light/.test(l));
+  assert.equal(setup.length, 3, "each set-up word from when it's said");
+  const box = ev.find((l) => /\\p1/.test(l))!;
+  const [, x0, , x1] = box.match(/\\clip\((\d+),(\d+),(\d+),(\d+)\)\\t\(0,(\d+)/)!.map(Number);
+  assert.equal(x0, x1, "the box starts with no width");
+  assert.match(box, new RegExp(`\\\\t\\(0,${BOX_WIPE},\\\\clip`), "and wipes open");
+  const punch = ev.find((l) => /\\fnSriracha/.test(l))!;
+  const [, , ya, , yb] = punch.match(/\\move\((\d+),(\d+),(\d+),(\d+),0,(\d+)\)/)!.map(Number);
+  assert.ok(ya > yb, "the punch rises");
+  assert.match(punch, new RegExp(`\\\\alpha&HFF&\\\\t\\(0,${BOX_RISE},\\\\alpha&H00&\\)`), "fading in");
+  assert.match(punch, /\\clip\(/, "cut off at the box");
+  const t = (l: string) => l.split(",")[1];
+  assert.ok(t(punch) > t(box), "after the box");
 });
