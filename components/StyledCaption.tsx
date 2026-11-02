@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_BOB, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -15,6 +15,8 @@ type Props = {
 };
 
 const hide: React.CSSProperties = { visibility: "hidden" };
+/** The spark star's outline as an SVG path (radius 1 around 0, 0). */
+const STAR_PATH = "M" + starPoints().map(([x, y]) => `${x},${y}`).join("L") + "Z";
 
 /** A font for the Latin letters, then the Tamil font for Tamil letters (the Latin caption fonts have none). */
 const stack = (font: string, tamil?: string) => `"${font}", ${tamil ? `"${tamil}", ` : ""}"Noto Emoji", var(--font-tamil), "Nirmala UI", "Noto Sans", sans-serif`; // one-colour emoji, as in the MP4
@@ -33,7 +35,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   // Lines as tall as libass draws them (its font's own line height), × the line spacing in the plain layout; with
   // spacing set, broken at the same words as the MP4 (lineCount), which places each line itself.
   const g = takesLineSpacing(s) ? s.lineHeight ?? 1 : 1, lh = lineBox(s, text) * g;
-  const brk = typedBreaks(text) ?? (s.stagger ? staggerBreaks(words.length) : null) ?? lineBreaks(words.map((w) => w.w), ratio && spacesLines(s) && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : linesOf(s));
+  const brk = typedBreaks(text) ?? (s.stagger || s.spark ? staggerBreaks(words.length) : null) ?? lineBreaks(words.map((w) => w.w), ratio && spacesLines(s) && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : linesOf(s));
   // a middle line in its own font (Blur Animation's Inter Italic), when there are three (as the MP4)
   const rowAt = [0, ...[...brk].sort((a, b) => a - b).map((b) => b + 1)], midRow = s.midFont && rowAt.length === 3 ? rowAt.slice(1) : null;
   let i = words.findIndex((w) => time < w.e);
@@ -266,6 +268,27 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       return <span key={a} className="typo-row" style={{ fontSize: `min(1em, calc(${roomCqw.toFixed(1)}cqw / ${tw.toFixed(3)}))` }}>
         {words.slice(a, to).map((_, n) => [n ? " " : null, word(a + n)])}</span>;
     });
+  } else if (s.effect === "spark" && s.spark) {
+    // three lines flush left (as the MP4): the first sliding in from the left, the big middle one in its font and
+    // capitals (shrunk to fit), the last in its font; the star bobbing in behind the first line's start
+    const sp = s.spark, starts = [0, ...[...brk].filter((b) => b < words.length - 1).sort((a, b) => a - b).map((b) => b + 1)];
+    const n = starts.length, mid = n > 2 ? 1 : n - 1, last = n - 1, roomCqw = (1 - s.safe.left - s.safe.right) * 95;
+    const ms = Math.max(0, (time - start) * 1000), [slideMs, slideEm] = SPARK_SLIDE, slid = Math.min(1, ms / slideMs);
+    const k = STAR_BOB.findIndex(([t]) => t > ms), [t0, y0] = STAR_BOB[k < 1 ? STAR_BOB.length - 1 : k - 1], [t1, y1] = k < 1 ? [t0, y0] : STAR_BOB[k];
+    const bob = t1 > t0 ? y0 + ((y1 - y0) * (ms - t0)) / (t1 - t0) : y0, grow = Math.min(1, ms / STAR_BOB[1][0]);
+    body = <span className="stagger">{starts.map((a, r) => {
+      const to = r + 1 < n ? starts[r + 1] : words.length, big = r === mid, font = big ? sp.bigFont : r === last && n > 2 ? sp.lastFont : s.font;
+      const tw = Math.max(0.3, textWidth(words.slice(a, to).map((w) => (big ? w.w.toUpperCase() : w.w)).join(" "), font, s.fontTa)).toFixed(3);
+      const text = join(a, to).filter((x) => typeof x !== "object" || x === null || (x as React.ReactElement).type !== "br");
+      return <span key={a} style={{ textAlign: "left", position: "relative", fontFamily: stack(font, s.fontTa), lineHeight: lineScale(font) * (sp.tight ?? 1) * (s.lineHeight ?? 1),
+        ...(big ? { textTransform: "uppercase" } : {}), fontSize: `min(${big ? sp.big : 1}em, calc(${(roomCqw * SPARK_FIT).toFixed(1)}cqw / ${tw}))` }}>
+        {r === 0 && <svg className="spark-star" viewBox="-1 -1 2 2" aria-hidden="true" style={{ left: `${STAR_AT.dx - STAR_AT.r}em`, top: `calc(50% + ${(STAR_AT.dy - STAR_AT.r + bob).toFixed(3)}em)`,
+          width: `${2 * STAR_AT.r}em`, height: `${2 * STAR_AT.r}em`, opacity: Math.min(1, ms / 120), transform: `scale(${grow.toFixed(3)})` }}>
+          <path d={STAR_PATH} fill={sp.star} />
+        </svg>}
+        <span style={{ position: "relative", display: "inline-block", ...(r === 0 ? { transform: `translateX(${(-(1 - slid) * slideEm).toFixed(3)}em)`, opacity: Math.min(1, ms / (slideMs * 0.6)) } : {}) }}>{text}</span>
+      </span>;
+    })}</span>;
   } else if (s.stagger) {
     // staggered lines (as the MP4): the first flush left, the middle centred, the last flush right, each its colour,
     // the middle one heavier (an outline of its own colour)

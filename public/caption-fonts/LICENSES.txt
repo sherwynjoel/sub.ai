@@ -21,3 +21,4 @@ Alex Brush and Pinyon Script: SIL Open Font License 1.1, from https://github.com
 Poppins Light: SIL Open Font License 1.1, from https://github.com/google/fonts (ofl/poppins), given its own family name (as Inter Bold above).
 Poppins Medium: SIL Open Font License 1.1, from https://github.com/google/fonts (ofl/poppins), given its own family name (as Inter Bold above).
 Bodoni Moda Italic: SIL Open Font License 1.1, from https://github.com/google/fonts (ofl/bodonimoda), the variable italic fixed at weight 500, optical size 28, given its own family name.
+Poppins Regular and Poppins Light Italic: SIL Open Font License 1.1, from https://github.com/google/fonts (ofl/poppins), each given its own family name.
