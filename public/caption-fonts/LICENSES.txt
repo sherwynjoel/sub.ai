@@ -19,3 +19,5 @@ Luckiest Guy: Apache License 2.0, from https://github.com/google/fonts (apache/l
 Great Vibes, Figtree and GFS Didot are free look-alikes of the commercial Snell Roundhand, Avenir and Didot.
 Alex Brush and Pinyon Script: SIL Open Font License 1.1, from https://github.com/google/fonts (ofl/alexbrush, ofl/pinyonscript); free look-alikes of the commercial Snell Roundhand / Snell BT.
 Poppins Light: SIL Open Font License 1.1, from https://github.com/google/fonts (ofl/poppins), given its own family name (as Inter Bold above).
+Poppins Medium: SIL Open Font License 1.1, from https://github.com/google/fonts (ofl/poppins), given its own family name (as Inter Bold above).
+Bodoni Moda Italic: SIL Open Font License 1.1, from https://github.com/google/fonts (ofl/bodonimoda), the variable italic fixed at weight 500, optical size 28, given its own family name.

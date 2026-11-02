@@ -3,7 +3,7 @@ import { access, cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import type { Cue } from "@/db";
-import { BLENDS, buildAss, canvasSize, maskAss, resolveStyle, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, buildAss, canvasSize, maskAss, punchBlend, resolveStyle, type CaptionCustom } from "@/lib/captionStyles";
 import { audioCodec, bin, STORAGE, videoSize } from "@/lib/media";
 import { englishCues } from "@/lib/subtitles";
 import { BRAND } from "@/lib/brand";
@@ -30,7 +30,7 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
   try {
     // A blended look: the text is a window onto the video blended with the text colour (Negative: inverted). With
     // only the punch blended (Setup & Punch Pro), the rest is drawn as plain text first and the punch is the mask.
-    const look = resolveStyle(job.captionStyle, job.captionCustom), blend = look.blend, partial = !!blend && !!look.blendPunch;
+    const look = resolveStyle(job.captionStyle, job.captionCustom), blend = look.blend, partial = punchBlend(look);
     const assOf = (part?: "plain" | "punch") => buildAss(lang === "en" ? englishCues(job.cues) : job.cues, { styleId: job.captionStyle, custom: job.captionCustom, lang, width, height, part });
     await writeFile(join(dir, "subs.ass"), partial ? assOf("plain") : blend ? maskAss(assOf()) : assOf(), "utf8");
     if (partial) await writeFile(join(dir, "mask.ass"), maskAss(assOf("punch")), "utf8");
@@ -65,7 +65,7 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
     }
     // The ass filter with complex shaping: Tamil and other Indic scripts need it (otherwise vowel signs like ே land
     // after the consonant instead of before it). The server also needs a font with the script (fonts-noto-core).
-    if (partial) {
+    if (partial && blend) {
       graph.push(`[${last}]ass=subs.ass:fontsdir=fonts:shaping=complex[plain]`);
       graph.push(blendGraph("plain", BLENDS[blend][2], look.color, "mask.ass"));
     } else if (blend) graph.push(blendGraph(last, BLENDS[blend][2], look.color));

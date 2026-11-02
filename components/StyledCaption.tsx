@@ -280,19 +280,20 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     body = <span className="stagger">{starts.map((a, r) => {
       const col = st.colors[r === mid ? 1 : r === last ? 2 : 0] ?? s.color, to = r + 1 < n ? starts[r + 1] : words.length;
       const big = !!st.big && r === mid, font = big && st.bigFont ? st.bigFont : s.font;
+      const shown = !part || !s.blendMid || big === (part === "punch"); // a blended middle line: drawn apart (as the MP4)
       const tw = Math.max(0.3, textWidth(words.slice(a, to).map((w) => (big ? w.w.toUpperCase() : w.w)).join(" "), font, s.fontTa)).toFixed(3);
       return <span key={a} style={{ textAlign: !flush || r === mid ? "center" : r === 0 ? "left" : r === last ? "right" : "center", ...(grad ? {} : { color: col }),
         ...(r === mid && st.bold ? { WebkitTextStroke: `${st.bold * 2}em ${col}` } : {}),
         ...(st.glow && !grad ? { textShadow: glowOf(big) } : {}), // (none when the Shadow is off: not the caption's own)
         ...(st.tight ? { lineHeight: lineScale(font) * st.tight * (s.lineHeight ?? 1) } : {}),
-        ...(big ? { fontFamily: stack(font, s.fontTa), textTransform: "uppercase", fontSize: `min(${st.big}em, calc(${roomCqw.toFixed(1)}cqw / ${tw}))` } : {}) }}>
+        ...(big ? { fontFamily: stack(font, s.fontTa), textTransform: "uppercase", fontSize: `min(${st.big}em, calc(${roomCqw.toFixed(1)}cqw / ${tw}))` } : {}), ...(shown ? {} : hide) }}>
         {join(a, to).filter((x) => typeof x !== "object" || x === null || (x as React.ReactElement).type !== "br")}</span>;
     })}</span>;
   } else {
     body = join(0, words.length);
   }
   // a punch-only blend: a caption too short to have a set-up is all punch
-  const allPunch = part === "plain" && !(s.effect === "punch" && words.length > 2);
+  const allPunch = part === "plain" && !!s.blendPunch && !(s.effect === "punch" && words.length > 2);
 
   return (
     <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}${s.textAlign && s.textAlign !== "center" ? ` ta-${s.textAlign}` : ""}`} style={{ "--p": p, ...wrap, mixBlendMode: s.blend && !part ? BLENDS[s.blend][1] : undefined } as React.CSSProperties}>

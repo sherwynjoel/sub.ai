@@ -147,9 +147,9 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
 });
 
 test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 5 + Pro, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 43);
+  assert.equal(STYLE_CHOICES.length, 44);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 16);
-  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 6);
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 7);
   assert.ok(!STYLE_CHOICES.some((s) => s.id === "cc-bold-flicker" || s.id === "cc-corners"), "Bold Flicker and Corner Block no longer offered");
   assert.equal(STYLE_GROUPS[0], "Typography");
   assert.ok(STYLE_CHOICES.some((s) => s.id === DEFAULT_STYLE));
@@ -531,4 +531,15 @@ test("Blur Animation: Tamil in the italic middle line is slanted (Inter Italic h
   assert.doesNotMatch(last.split("\\N")[0], /\\fax/, "the first line upright");
   const en = buildAss([{ start: 0, end: 3, ta: "Do you wonder why every business needs a", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "tpl-blur", lang: "ta", width: 1080, height: 1920 });
   assert.doesNotMatch(en, /\\fax/, "English uses the real italic");
+});
+
+test("Riseup Ultra: white Bodoni italic lines, only the big Anton middle line blended (two parts in the MP4)", () => {
+  const s = resolveStyle("cc-rise-ultra");
+  assert.equal(s.font, "Bodoni Moda Italic");
+  assert.equal(s.blend, "difference");
+  const cue = { start: 0, end: 3, ta: "my name is Shewyn Joyl from cbe", en: "" } as unknown as Parameters<typeof buildAss>[0][number];
+  const o = { styleId: "cc-rise-ultra", lang: "ta" as const, width: 1080, height: 1920 };
+  const ev = (part: "plain" | "punch") => buildAss([cue], { ...o, part }).split("\n").filter((l) => l.startsWith("Dialogue"));
+  assert.ok(ev("plain").length > 0 && ev("plain").every((l) => !/\\fnAnton/.test(l)), "plain: the outer lines only");
+  assert.ok(ev("punch").length > 0 && ev("punch").every((l) => /\\fnAnton/.test(l)), "mask: the middle line only");
 });
