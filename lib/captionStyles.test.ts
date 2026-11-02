@@ -590,7 +590,7 @@ test("Box Punch: the set-up's words appear as said, the box wipes in left to rig
   const [, x0, , x1] = box.match(/\\clip\((\d+),(\d+),(\d+),(\d+)\)\\t\(0,(\d+)/)!.map(Number);
   assert.equal(x0, x1, "the box starts with no width");
   assert.match(box, new RegExp(`\\\\t\\(0,${BOX_WIPE},\\\\clip`), "and wipes open");
-  const punch = ev.find((l) => /\\fnSriracha/.test(l))!;
+  const punch = ev.find((l) => /\\fnCaveat Bold/.test(l))!;
   const [, , ya, , yb] = punch.match(/\\move\((\d+),(\d+),(\d+),(\d+),0,(\d+)\)/)!.map(Number);
   assert.ok(ya > yb, "the punch rises");
   assert.match(punch, new RegExp(`\\\\alpha&HFF&\\\\t\\(0,${BOX_RISE},\\\\alpha&H00&\\)`), "fading in");
