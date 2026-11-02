@@ -30,6 +30,7 @@ export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble
 export const ANIMS = {
   none: "None", fade: "Fade in", pop: "Pop", slide: "Slide up", bounce: "Bounce", zoom: "Zoom in",
   blur: "Blur in", flicker: "Flicker", flicker2: "Strong flicker", ramp: "Ramp up", snap: "Snap", bouncyout: "Bounce, fade out", wordin: "Word by word",
+  wordpop: "Word by word, popping up",
   cinematic: "Cinematic (zoom out of a blur)",
 } as const;
 export type Anim = keyof typeof ANIMS;
@@ -80,6 +81,8 @@ export type CaptionStyle = {
 const GOLD = "#FFC83D", BUTTER = "#FFE58A", CREAM = "#FFF4D6", INK = "#141414", HL = "#FFE14D";
 const W = "#FFFFFF";
 
+/** "Word by word, popping up": how long a word takes to pop up (ms). */
+export const POP_MS = 180;
 /** A staggered style's glow at its usual strength (its Shadow size; bigger or smaller scales it). */
 export const GLOW = 0.035;
 export const CAPTION_STYLES: CaptionStyle[] = [
@@ -96,7 +99,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
   // Helvetica / Neue Haas Grotesk (commercial) become Inter Bold, Helvetica Rounded becomes Nunito ExtraBold.
-  { id: "tpl-blur", name: "Blur Animation", group: "Templates", blurb: "Bold orange that sharpens out of a blur.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF7800", shadow: 0.05, anim: "blur" },
+  { id: "tpl-blur", name: "Blur Animation", group: "Templates", blurb: "Heavy orange words, each popping up out of a blur as it's said.", font: "Roboto Black", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: "#FF7800", shadow: 0.05, anim: "wordpop" },
   { id: "tpl-bounce", name: "Bounce Text", group: "Templates", blurb: "Bold red that bounces in.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF0000", shadow: 0.05, anim: "bounce" },
   { id: "tpl-bouncy-fadeout", name: "Bouncy Fadeout", group: "Templates", blurb: "Rounded pink that bounces in and fades away.", font: "Nunito ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.16, color: "#FE006C", shadow: 0.05, anim: "bouncyout" },
   { id: "tpl-fade-up", name: "Fade Animation", group: "Templates", blurb: "Bold orange that fades up into place.", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: "#FF7800", shadow: 0.05, anim: "slide" },
@@ -767,7 +770,7 @@ export function buildAss(cues: Cue[], o: Opts) {
      */
     const entrance = (dur: number): [string, string] => {
       const a = s.anim, t = Math.round(Math.min(250, dur * 400));
-      if (!a || a === "none" || a === "wordin") return ["", ""];
+      if (!a || a === "none" || a === "wordin" || a === "wordpop") return ["", ""];
       if (a === "blur") return [`{\\fad(${t},0)}`, `\\blur${px(0.5)}\\t(0,${Math.round(t * 1.4)},\\blur0)`];
       if (a === "flicker" || a === "flicker2") return ["", flickerTags(a === "flicker2" ? FLICKER2 : FLICKER)];
       if (a === "ramp") return [`{\\fad(${Math.round(t * 0.5)},0)}`, `\\fscx118\\fscy0\\t(0,${t},0.5,\\fscx100\\fscy100)`];
@@ -917,6 +920,12 @@ export function buildAss(cues: Cue[], o: Opts) {
       if (s.anim === "wordin") { // each word blurs in as it's said; the ones to come are hidden
         if (state === "future") t += "\\alpha&HFF&";
         if (state === "active") t += `\\alpha&HFF&\\blur${px(0.3)}\\t(0,160,\\alpha&H00&\\blur0)`;
+      }
+      // each word pops up off its baseline out of a blur as it's said, the ones to come hidden (only its height grows, and
+      // never past its own: a wider or taller word would move the rest of the caption)
+      if (s.anim === "wordpop") {
+        if (state === "future") t += "\\alpha&HFF&";
+        if (state === "active") t += `\\alpha&HFF&\\blur${px(0.12)}\\fscy40\\t(0,80,\\alpha&H00&)\\t(0,160,\\blur0)\\t(0,${POP_MS},0.5,\\fscy100)`;
       }
       if (s.effect === "wobble") t += `\\frz${j % 2 ? -4 : 3}`;
       if (s.activeGrow && state === "active") t += "\\t(0,120,\\fscx115\\fscy115)";

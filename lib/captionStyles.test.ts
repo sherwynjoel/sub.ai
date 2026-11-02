@@ -508,3 +508,14 @@ test("Rise Up: lines set to the big line's edges only when it's the widest, else
   assert.equal(staggerFlush(["choose sherwin", "joel", "the artech"], s), false, "a short big line: centred");
   assert.equal(staggerFlush(["my name is", "shewyn joyl", "from cbe"], s), true, "a wide big line: to its edges");
 });
+
+test("Blur Animation: Roboto Black, each word pops up out of a blur as it's said (only its height grows)", () => {
+  const s = resolveStyle("tpl-blur");
+  assert.equal(s.font, "Roboto Black");
+  assert.equal(s.anim, "wordpop");
+  const ass = buildAss([{ start: 0, end: 2, ta: "grow your sales", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "tpl-blur", lang: "ta", width: 1080, height: 1920 });
+  const first = ass.split("\n").find((l) => l.startsWith("Dialogue"))!;
+  assert.match(first, /\\fscy40\\t\(0,80,\\alpha&H00&\)/, "the word said pops up");
+  assert.doesNotMatch(first, /\\fscx/, "never wider (the line would move)");
+  assert.match(first, /\\alpha&HFF&\}sales/, "the words to come hidden");
+});
