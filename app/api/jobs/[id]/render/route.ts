@@ -30,7 +30,7 @@ export async function GET(_: Request, { params }: Ctx) {
   const u = await currentUser();
   if (!u) return unauthorized();
   const j = await ownJob((await params).id, u);
-  if (!j?.renderPath || j.renderStatus !== "done") return json({ error: "No styled video yet." }, 404);
+  if (!j?.renderPath || (j.renderStatus !== "done" && j.renderStatus !== "stale")) return json({ error: "No styled video yet." }, 404);
   const { size } = await stat(j.renderPath).catch(() => ({ size: -1 }));
   if (size < 0) return json({ error: "The styled video was removed. Render it again." }, 410);
   const base = j.filename.replace(/\.[^.]+$/, "").replace(/[^\w\- ]+/g, "_") || "video";

@@ -6,6 +6,9 @@ import { ownJob, publicJob } from "@/lib/jobs";
 import { CAPTION_FONTS, CAPTION_STYLES, ownLook, sanitizeCustom } from "@/lib/captionStyles";
 import { LEVEL_FRAME, loudness, removeUploads } from "@/lib/media";
 import { withWordTimes } from "@/lib/subtitles";
+
+/** An MP4 made before the captions or their look changed is kept to download, but marked as out of date. */
+const staleRender = (status: string | null) => (status === "done" ? { renderStatus: "stale" } : {});
 import { speechRegions } from "@/lib/timing";
 import { logoPath } from "@/lib/render";
 
@@ -39,9 +42,12 @@ export async function PATCH(req: Request, { params }: Ctx) {
   const { cues, captionStyle, captionCustom } = await req.json().catch(() => ({}));
   if (cues === undefined && (captionStyle !== undefined || captionCustom !== undefined)) {
     if (captionStyle !== undefined && !CAPTION_STYLES.some((s) => s.id === captionStyle)) return json({ error: "Unknown style." }, 400);
+    const look = captionCustom !== undefined ? sanitizeCustom(captionCustom) : undefined;
+    const changed = (captionStyle !== undefined && captionStyle !== j.captionStyle) || (look !== undefined && JSON.stringify(look) !== JSON.stringify(j.captionCustom));
     await db.update(jobs).set({
       ...(captionStyle !== undefined ? { captionStyle } : {}),
-      ...(captionCustom !== undefined ? { captionCustom: sanitizeCustom(captionCustom) } : {}),
+      ...(look !== undefined ? { captionCustom: look } : {}),
+      ...(changed ? staleRender(j.renderStatus) : {}),
     }).where(eq(jobs.id, j.id));
     return json({ ok: true });
   }
@@ -84,7 +90,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
     if (ef) c.wfe = ef;
     return c;
   }).sort((a, b) => a.start - b.start);
-  await db.update(jobs).set({ cues: clean, updatedAt: new Date() }).where(eq(jobs.id, j.id));
+  const changed = JSON.stringify(clean) !== JSON.stringify(j.cues);
+  await db.update(jobs).set({ cues: clean, updatedAt: new Date(), ...(changed ? staleRender(j.renderStatus) : {}) }).where(eq(jobs.id, j.id));
   return json({ ok: true });
 }
 
