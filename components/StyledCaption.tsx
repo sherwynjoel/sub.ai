@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -141,6 +141,8 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
           transform: `scaleY(${sy.toFixed(3)})`, transformOrigin: "50% 78%", transition: "none" }); // grown off the baseline
       }
     }
+    // an italic middle line's Tamil (no italic of its own): slanted (as the MP4)
+    if (midRow && j >= midRow[0] && j < midRow[1] && /italic/i.test(s.midFont!) && needsSlant(words[j].w)) st.transform = `${st.transform ?? ""} skewX(-${(Math.atan(SLANT) * 180 / Math.PI).toFixed(1)}deg)`;
     if (s.effect === "wobble") st.transform = `${st.transform ?? ""} rotate(${j % 2 ? -4 : 3}deg)`;
     if (colors?.[j] && state !== "future") st.color = colors[j]!;
     if (grad && st.color) st.WebkitTextFillColor = st.color; // its own colour, over the gradient

@@ -83,6 +83,12 @@ export type CaptionStyle = {
 const GOLD = "#FFC83D", BUTTER = "#FFE58A", CREAM = "#FFF4D6", INK = "#141414", HL = "#FFE14D";
 const W = "#FFFFFF";
 
+/**
+ * A middle line's own font (Blur Animation's Inter Italic) has only Latin letters: Tamil and the other Indian scripts
+ * there come in their own upright fonts, so they're slanted to match (about 12°, as an italic).
+ */
+export const SLANT = 0.21;
+export const needsSlant = (word: string) => /[\u0900-\u0DFF]/.test(word);
 /** "Word by word, popping up": how long a word takes to pop up (ms). */
 export const POP_MS = 180;
 /** A staggered style's glow at its usual strength (its Shadow size; bigger or smaller scales it). */
@@ -935,7 +941,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       if (s.effect === "wobble") t += `\\frz${j % 2 ? -4 : 3}`;
       if (s.activeGrow && state === "active") t += "\\t(0,120,\\fscx115\\fscy115)";
       if (colors?.[j] && state !== "future") t += `\\1c${colorOnly(colors[j]!)}`;
-      if (midRow && j >= midRow[0] && j < midRow[1]) t += `\\fn${s.midFont}`;
+      if (midRow && j >= midRow[0] && j < midRow[1]) t += `\\fn${s.midFont}` + (/italic/i.test(s.midFont!) && needsSlant(words[j].w) ? `\\fax-${SLANT}` : "");
       t += wordLookTags(looks?.[j]);
       // a punch-only blend: each part drawn on its own (a caption of two words or fewer is all punch)
       if (o.part && s.blendPunch && s.effect === "punch" && (j >= punchCut) === (o.part === "plain")) t += "\\alpha&HFF&";

@@ -523,3 +523,12 @@ test("Blur Animation: Montserrat around an Inter Italic middle line, each word p
   assert.doesNotMatch(first, /\\fscx/, "never wider (the line would move)");
   assert.match(first, /\\alpha&HFF&\}sales/, "the words to come hidden");
 });
+
+test("Blur Animation: Tamil in the italic middle line is slanted (Inter Italic has no Tamil)", () => {
+  const ass = buildAss([{ start: 0, end: 3, ta: "நீங்கள் ஏன் ஒவ்வொரு வணிகமும் ஒரு இணையதளம் வேண்டும்", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "tpl-blur", lang: "ta", width: 1080, height: 1920 });
+  const last = ass.split("\n").filter((l) => l.startsWith("Dialogue")).pop()!;
+  assert.match(last, /\\fnInter Italic\\fax-0\.21\}[^N]*?வணிகமும்/, "the middle line's Tamil slanted");
+  assert.doesNotMatch(last.split("\\N")[0], /\\fax/, "the first line upright");
+  const en = buildAss([{ start: 0, end: 3, ta: "Do you wonder why every business needs a", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "tpl-blur", lang: "ta", width: 1080, height: 1920 });
+  assert.doesNotMatch(en, /\\fax/, "English uses the real italic");
+});
