@@ -97,4 +97,3 @@
 .box-punch .bp-box { position: relative; display: inline-block; overflow: hidden; white-space: nowrap; }
 .box-punch .bp-bg { position: absolute; inset: 0; transform-origin: left center; }
 .box-punch .bp-text { position: relative; display: inline-block; }
-.box-punch .bp-shine { position: absolute; top: 0; bottom: 0; background: #fff; clip-path: polygon(26% 0, 100% 0, 74% 100%, 0 100%); filter: blur(.03em); }

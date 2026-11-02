@@ -579,8 +579,9 @@ test("Spark Slide: three lines flush left, the first slides in, the later words 
 });
 
 test("Box Punch: the set-up's words appear as said, the box wipes in left to right, then the punch rises into it fading in", async () => {
-  const { BOX_WIPE, BOX_RISE, BOX_EASE, boxPunchRows } = await import("./captionStyles");
+  const { BOX_WIPE, BOX_RISE, boxPunchRows } = await import("./captionStyles");
   assert.equal(resolveStyle("cc-box-punch", { accent: "#123456" }).boxPunch?.color, "#123456", "the box colour is editable");
+  assert.equal(resolveStyle("cc-box-punch").scale, 0.8, "starts at 80%");
   const ass = buildAss([{ start: 0, end: 3, ta: "my name is shewyn joyl", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-box-punch", lang: "ta", width: 1080, height: 1920 });
   const ev = ass.split("\n").filter((l) => l.startsWith("Dialogue"));
   const setup = ev.filter((l) => /Poppins Light/.test(l));
@@ -588,12 +589,11 @@ test("Box Punch: the set-up's words appear as said, the box wipes in left to rig
   const box = ev.find((l) => /\\p1/.test(l))!;
   const [, x0, , x1] = box.match(/\\clip\((\d+),(\d+),(\d+),(\d+)\)\\t\(0,(\d+)/)!.map(Number);
   assert.equal(x0, x1, "the box starts with no width");
-  assert.match(box, new RegExp(`\\\\t\\(0,${BOX_WIPE},${BOX_EASE},\\\\clip`), "and sweeps open, easing out");
-  assert.ok(ev.filter((l) => /\\p1/.test(l)).length === 2, "a shine crosses it");
+  assert.match(box, new RegExp(`\\\\t\\(0,${BOX_WIPE},\\\\clip`), "and wipes open");
   const punch = ev.find((l) => /\\fnSriracha/.test(l))!;
   const [, , ya, , yb] = punch.match(/\\move\((\d+),(\d+),(\d+),(\d+),0,(\d+)\)/)!.map(Number);
   assert.ok(ya > yb, "the punch rises");
-  assert.match(punch, new RegExp(`\\\\alpha&HFF&\\\\blur[\\d.]+\\\\fsp[\\d.]+\\\\t\\(0,${BOX_RISE},${BOX_EASE},\\\\alpha&H00&\\\\blur0\\\\fsp0\\)`), "out of a blur, letters drawing together, fading in");
+  assert.match(punch, new RegExp(`\\\\alpha&HFF&\\\\t\\(0,${BOX_RISE},\\\\alpha&H00&\\)`), "fading in");
   assert.match(punch, /\\clip\(/, "cut off at the box");
   const t = (l: string) => l.split(",")[1];
   assert.ok(t(punch) > t(box), "after the box");
