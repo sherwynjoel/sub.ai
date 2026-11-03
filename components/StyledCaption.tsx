@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardLines, cardSchedule, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardLines, cardSchedule, dropCap, dropLines, dropSchedule, DROP_AT, DROP_TIME, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { cssBaseline, lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -268,6 +268,39 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       return <span key={a} className="typo-row" style={{ fontSize: `min(1em, calc(${roomCqw.toFixed(1)}cqw / ${tw.toFixed(3)}))` }}>
         {words.slice(a, to).map((_, n) => [n ? " " : null, word(a + n)])}</span>;
     });
+  } else if (s.effect === "dropcap" && s.dropCap && words.length) {
+    // small words over a big line in capitals (each word's first letter big), the rest on a box under it (as the MP4,
+    // placed by the big line's baseline): the small words punch up as they're said, the big line comes in letter by
+    // letter, the box wipes in left to right and its words slide in from the left one by one, following the speech
+    const dc = s.dropCap, L = dropCap(words.map((w) => w.w), s, ratio), lines = dropLines(s);
+    const f1 = L.topSize, f3 = L.boxSize, bB = cssBaseline(s.font), b1 = cssBaseline(dc.topFont) * f1, boxH = DROP_AT.boxH * f3;
+    const Tp = L.top.length ? Math.max(0, b1 - bB - lines.topBase) : 0, base = Tp + bB;
+    const Bp = L.box.length ? Math.max(0, base + lines.boxTop + boxH - (Tp + 1)) : 0;
+    const S = dropSchedule(words.map((w) => (w.s - start) * 1000), L, (end - start) * 1000);
+    const now = (time - start) * 1000, since = (ms: number) => now - ms;
+    const punch = (ms: number): React.CSSProperties => {
+      const t = since(ms), [p1, p2] = [DROP_TIME.punch * 0.6, DROP_TIME.punch];
+      const k = t < 0 ? 0 : t < p1 ? 0.3 + (0.85 * t) / p1 : t < p2 ? 1.15 - (0.15 * (t - p1)) / (p2 - p1) : 1;
+      return { transformOrigin: "50% 100%", transform: `scale(${k.toFixed(3)})`, opacity: t < 0 ? 0 : Math.min(1, t / 60) };
+    };
+    let k = 0;
+    const letter = ([ch, isBig]: [string, boolean, number], i: number) => {
+      const e = easeInOut(since(S.big + k++ * S.step) / DROP_TIME.letter);
+      return <span key={i} className="cs-letter" style={{ fontSize: isBig ? "1em" : `${dc.small}em`, transform: `translateY(${((1 - e) * 0.3 / (isBig ? 1 : dc.small)).toFixed(3)}em) scaleY(${(0.4 + 0.6 * e).toFixed(3)})`, opacity: e }}>{ch}</span>;
+    };
+    const wipe = L.box.length ? easeInOut(since(S.box) / DROP_TIME.wipe) : 0;
+    body = <span className="drop-cap" style={{ fontFamily: stack(s.font, s.fontTa), padding: `${Tp.toFixed(3)}em 0 ${Bp.toFixed(3)}em`, fontSize: `${L.zB.toFixed(3)}em` }}>
+      {L.top.map((j, m) => <span key={j} className="dc-top" style={{ fontFamily: stack(dc.topFont, s.fontTa), fontSize: `${f1.toFixed(3)}em`,
+        left: `${(L.topX[m] / f1).toFixed(3)}em`, top: `${((base + lines.topBase - b1) / f1).toFixed(3)}em`, ...punch(S.tops[m]) }}>{word(j)}</span>)}
+      <span className="dc-big">{L.letters.map(letter)}</span>
+      {L.box.length > 0 && <span className="dc-box" style={{ left: `${L.boxLeft.toFixed(3)}em`, top: `${(base + lines.boxTop).toFixed(3)}em`, width: `${L.boxW.toFixed(3)}em`, height: `${boxH.toFixed(3)}em`,
+        borderRadius: `${(DROP_AT.radius * boxH).toFixed(3)}em`, background: dc.box, clipPath: `inset(0 ${((1 - wipe) * 100).toFixed(2)}% 0 0)`, visibility: since(S.box) < 0 ? "hidden" : undefined }}>
+        <span style={{ fontFamily: stack(dc.boxFont, s.fontTa), fontSize: `${f3.toFixed(3)}em`, color: dc.boxText, paddingLeft: `${DROP_AT.pad}em` }}>{L.box.flatMap((j, m) => {
+          const e = easeInOut(since(S.words[m]) / DROP_TIME.word);
+          return [m ? " " : null, <span key={j} className="dc-word" style={{ transform: `translateX(${(-(1 - e) * 0.6).toFixed(3)}em)`, opacity: e }}>{word(j)}</span>];
+        })}</span>
+      </span>}
+    </span>;
   } else if (s.effect === "cardslide" && s.cardSlide && words.length) {
     // a small line on a card over the big line's left part, the big line, the last word in script under its right end
     // (as the MP4, placed by the big line's baseline): the card slides in from the left fading in (easing in and out),
@@ -420,8 +453,8 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
 
   return (
     <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}${s.textAlign && s.textAlign !== "center" ? ` ta-${s.textAlign}` : ""}`} style={{ "--p": p, ...wrap, mixBlendMode: s.blend && !part ? BLENDS[s.blend][1] : undefined } as React.CSSProperties}>
-      <span className={`cap-main${grad && s.effect !== "cardslide" ? " grad" : ""}`} style={{ ...(grad && s.effect !== "cardslide" ? { ...gradBase, "--grad": `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` } as React.CSSProperties : base), ...(allPunch ? hide : {}) }} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>
-        {grad && s.effect !== "cardslide" ? <span className="cap-grad">{body}</span> : body /* (Card Slide: only its big line in the gradient) */}
+      <span className={`cap-main${grad && s.effect !== "cardslide" && s.effect !== "dropcap" ? " grad" : ""}`} style={{ ...(grad && s.effect !== "cardslide" && s.effect !== "dropcap" ? { ...gradBase, "--grad": `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` } as React.CSSProperties : base), ...(allPunch ? hide : {}) }} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>
+        {grad && s.effect !== "cardslide" && s.effect !== "dropcap" ? <span className="cap-grad">{body}</span> : body /* (Card Slide: only its big line in the gradient) */}
       </span>
       {sub && !stacked && <span className="cap-sub" style={{ ...(part === "punch" ? hide : {}), fontFamily: stack(s.font, s.fontTa), letterSpacing: s.spacing ? `${s.spacing}em` : undefined, lineHeight: lineScale(s.font), marginTop: `${(g - 1) * 0.5 * lineBox(s, text)}em` }}>{sub}</span>}
     </div>

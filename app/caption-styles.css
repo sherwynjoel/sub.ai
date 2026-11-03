@@ -110,3 +110,10 @@
 .card-slide .cs-big { position: relative; display: inline-block; }
 .card-slide .cs-letter { display: inline-block; transform-origin: 50% 100%; }
 .card-slide .cs-last { position: absolute; line-height: 1; color: #fff; }
+/* Drop Cap: placed by the big line's baseline (every line 1em tall); the box's words in its text colour */
+.drop-cap { position: relative; display: inline-block; line-height: 1; white-space: nowrap; }
+.drop-cap .dc-top { position: absolute; display: inline-block; line-height: 1; color: #fff; }
+.drop-cap .dc-big { position: relative; display: inline-block; }
+.drop-cap .dc-box { position: absolute; display: flex; align-items: center; box-sizing: border-box; overflow: hidden; }
+.drop-cap .dc-box .cw { color: inherit; }
+.drop-cap .dc-word { display: inline-block; }
