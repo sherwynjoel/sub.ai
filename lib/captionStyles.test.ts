@@ -607,9 +607,20 @@ test("Bold Bar: small words spread over a big word on a bar (punching up), the b
   const { boldBar, BAR_TIME } = await import("./captionStyles");
   const s = resolveStyle("cc-bold-bar");
   const L = boldBar("avandhan irukradhulaye periya Dangerous person".split(" "), s);
-  assert.deepEqual([L.top, L.big, L.last], [["avandhan", "irukradhulaye", "periya"], 3, 4]);
-  assert.deepEqual(boldBar(["Hi"], s).top, [], "one word: just the big one");
-  assert.ok(boldBar("a very long run of words before the big one here".split(" "), s).topSize < s.boldBar!.top, "many small words shrink to fit");
+  assert.deepEqual([L.topRows.map((r) => r.idx), L.big, L.last], [[[0, 1, 2]], 3, [4]]);
+  assert.deepEqual(boldBar(["Hi"], s).topRows, [], "one word: just the big one");
+  // the big word is a real word, never a lone letter or a little one
+  const W = "he is a very good person".split(" ");
+  const B = boldBar(W, s);
+  assert.equal(W[B.big], "good");
+  assert.equal("this is A person".split(" ")[boldBar("this is A person".split(" "), s).big], "this", "not \"A\" nor \"is\"");
+  assert.deepEqual(boldBar("this is A person".split(" "), s).last, [1, 2, 3], "the words after it on the last line");
+  // a long first line: more rows, not one tiny one
+  const mid = boldBar("people always come to me and ask how did you become a good person".split(" "), s);
+  assert.ok(mid.topRows.length >= 2 && mid.topSize > s.boldBar!.top * 0.75, "rows at (about) the full size");
+  const long = boldBar("so many people come to me and ask me how did you become such a good person".split(" "), s);
+  assert.equal(long.topRows.length, 3);
+  assert.ok(long.topSize > s.boldBar!.top * 0.6, "still readable");
   const ass = buildAss([{ start: 0, end: 3, ta: "avandhan irukradhulaye periya Dangerous person", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-bold-bar", lang: "ta", width: 1080, height: 1920 });
   const ev = ass.split("\n").filter((l) => l.startsWith("Dialogue"));
   const tops = ev.filter((l) => /Poppins Light Italic/.test(l));
