@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardWordAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { cssBaseline, lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -270,8 +270,9 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     });
   } else if (s.effect === "cardslide" && s.cardSlide && words.length) {
     // a small line on a card over the big line's left part, the big line, the last word in script under its right end
-    // (as the MP4, placed by the big line's baseline): the card and its words slide in from the left fading in (easing
-    // in and out), the big line pops in letter by letter (each fading in, sliding up), the last word writes itself on
+    // (as the MP4, placed by the big line's baseline): the card slides in from the left fading in (easing in and out),
+    // then its words pop up one by one; the big line pops in letter by letter (each fading in, sliding up); the last
+    // word writes itself on
     const cs = s.cardSlide, L = cardSlide(words.map((w) => w.w), s, ratio);
     const f1 = L.topSize, f3 = L.lastSize, bB = cssBaseline(s.font), cardH = CARD_AT.h * f1, b3 = cssBaseline(cs.lastFont) * f3;
     const Tp = L.top.length ? Math.max(0, cardH / 2 - bB - CARD_AT.mid) : 0, base = Tp + bB;
@@ -290,9 +291,13 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     const write = L.last.length ? easeInOut(since(words[L.last[0]].s) / CARD_TIME.write) : 0;
     body = <span className="card-slide" style={{ fontFamily: stack(s.font, s.fontTa), padding: `${Tp.toFixed(3)}em 0 ${Bp.toFixed(3)}em`, fontSize: `${L.zB.toFixed(3)}em` }}>
       {L.top.length > 0 && <span className="cs-card" style={{ left: `${L.cardLeft.toFixed(3)}em`, top: `${(base + CARD_AT.mid - cardH / 2).toFixed(3)}em`, width: `${L.cardW.toFixed(3)}em`, height: `${cardH.toFixed(3)}em`,
-        borderRadius: `${(CARD_AT.radius * cardH).toFixed(3)}em`, background: cs.card, transform: `translateX(${(-(1 - slide) * CARD_TIME.from * f1).toFixed(3)}em)`, opacity: slide,
+        borderRadius: `${(CARD_AT.radius * cardH).toFixed(3)}em`, background: cs.card, overflow: "hidden", // (its words rise inside it) transform: `translateX(${(-(1 - slide) * CARD_TIME.from * f1).toFixed(3)}em)`, opacity: slide,
         fontFamily: stack(cs.cardFont, s.fontTa) }}>
-        <span style={{ fontSize: `${f1.toFixed(3)}em`, lineHeight: 1, padding: `0 ${CARD_AT.pad}em` }}>{L.top.flatMap((j, m) => [m ? " " : null, <span key={j}>{word(j)}</span>])}</span>
+        <span style={{ fontSize: `${f1.toFixed(3)}em`, lineHeight: 1, padding: `0 ${CARD_AT.pad}em` }}>{L.top.flatMap((j, m) => {
+          // once the card is in, its words pop up one by one (each fading in, sliding up, easing in and out)
+          const e = easeInOut(since(words[L.top[0]].s + cardWordAt(m) / 1000) / CARD_TIME.word);
+          return [m ? " " : null, <span key={j} className="cs-letter" style={{ transform: `translateY(${((1 - e) * 0.35).toFixed(3)}em) scaleY(${(0.4 + 0.6 * e).toFixed(3)})`, opacity: e }}>{word(j)}</span>];
+        })}</span>
       </span>}
       <span className="cs-big">{letters.map(letter)}</span>
       {L.last.length > 0 && <span className="cs-last" style={{ fontFamily: stack(cs.lastFont, s.fontTa), fontSize: `${f3.toFixed(3)}em`, top: `${((base + CARD_AT.lastBase - b3) / f3).toFixed(3)}em`,
