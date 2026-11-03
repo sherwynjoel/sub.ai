@@ -138,7 +138,7 @@ export const SPARK_FIT = 0.86;
  * wipe and the punch's rise (ms), and the box's padding and height (em of the punch).
  */
 export const boxPunchCut = (n: number) => (n > 2 ? n - 2 : 0);
-export const BOX_WIPE = 350, BOX_RISE = 420;
+export const BOX_WIPE = 230, BOX_RISE = 270;
 export const BOX_PAD = { x: 0.28, h: 1.4, lift: 0.14 }; // lift: the text a little above the box's middle (its tails fit)
 /** When the box starts its wipe (ms from the caption's start): just before the punch is said, so the text arrives on it. */
 export const boxStart = (punchMs: number) => Math.max(0, Math.round(punchMs - BOX_WIPE));
