@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardWordAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardWordAt, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { cssBaseline, lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -290,7 +290,8 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     };
     const write = L.last.length ? easeInOut(since(words[L.last[0]].s) / CARD_TIME.write) : 0;
     body = <span className="card-slide" style={{ fontFamily: stack(s.font, s.fontTa), padding: `${Tp.toFixed(3)}em 0 ${Bp.toFixed(3)}em`, fontSize: `${L.zB.toFixed(3)}em` }}>
-      {L.top.length > 0 && <span className="cs-card" style={{ left: `${L.cardLeft.toFixed(3)}em`, top: `${(base + CARD_AT.mid - cardH / 2).toFixed(3)}em`, width: `${L.cardW.toFixed(3)}em`, height: `${cardH.toFixed(3)}em`,
+      {L.top.length > 0 && <span className="cs-card" style={{ left: `${L.cardLeft.toFixed(3)}em`, top: `${(base + CARD_AT.mid - cardH / 2).toFixed(3)}em`, height: `${cardH.toFixed(3)}em`,
+        width: `${cardWidthAt(cardWidths(words.map((w) => w.w), L, s), since(words[L.top[0]].s)).toFixed(3)}em`, // (growing with its words)
         borderRadius: `${(CARD_AT.radius * cardH).toFixed(3)}em`, background: cs.card, overflow: "hidden", // (its words rise inside it) transform: `translateX(${(-(1 - slide) * CARD_TIME.from * f1).toFixed(3)}em)`, opacity: slide,
         fontFamily: stack(cs.cardFont, s.fontTa) }}>
         <span style={{ fontSize: `${f1.toFixed(3)}em`, lineHeight: 1, padding: `0 ${CARD_AT.pad}em` }}>{L.top.flatMap((j, m) => {
