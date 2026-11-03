@@ -147,10 +147,12 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
 });
 
 test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 5 + Pro, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 47);
-  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 16);
+  assert.equal(STYLE_CHOICES.length, 36);
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 5);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 10);
   assert.ok(!STYLE_CHOICES.some((s) => s.id === "cc-bold-flicker" || s.id === "cc-corners"), "Bold Flicker and Corner Block no longer offered");
+  for (const id of ["tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker", "tpl-reels-rgb", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon"])
+    assert.ok(!STYLE_CHOICES.some((s) => s.id === id) && styleOf(id).id === id, `${id}: no longer offered (projects on it keep it)`);
   assert.equal(STYLE_GROUPS[0], "Typography");
   assert.ok(STYLE_CHOICES.some((s) => s.id === DEFAULT_STYLE));
   assert.ok(!STYLE_GROUPS.includes("Playful"), "a group with nothing on offer isn't shown");

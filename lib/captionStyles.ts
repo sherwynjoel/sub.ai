@@ -290,8 +290,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  */
 const OFFERED = [
   "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-letter-rise", "cc-typo-block",
-  "tpl-blur", "tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker",
-  "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-rgb", "tpl-reels-simple", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon", "tpl-hook-big-start",
+  "tpl-blur", "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-simple", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
   "setup-punch", "setup-punch-pro", "comic-pop", "butter-serif", "handwritten", "trending-1", "trending-2", "trending-3", "neon-aura",
   "editorial-cut", "center-stage", "marker-swipe", "spotlight", "highlighter-paper", "highlighter-clean",
