@@ -212,7 +212,21 @@ export const CARD_AT = { mid: -0.8, h: 1.3, pad: 0.34, radius: 0.22, left: 0.16,
 export const CARD_BASE = 0.36;
 /** "cardslide" timing (ms): the card's slide (and from how far left, em of its text), each letter's pop and the step
     between letters, the last word's write-on. */
-export const CARD_TIME = { slide: 520, from: 2.2, letter: 320, step: 45, write: 700, word: 320, wordStep: 140 };
+export const CARD_TIME = { slide: 520, from: 2.2, letter: 320, step: 45, write: 700, word: 320, wordStep: 140, grow: 220 };
+/**
+ * The card's width (em of the big line) when it holds its first k + 1 words: it starts as wide as the first word and
+ * grows to the right, easing, as each next word pops in.
+ */
+export function cardWidths(words: string[], L: ReturnType<typeof cardSlide>, s: CaptionStyle) {
+  const cs = s.cardSlide!;
+  return L.top.map((_, k) => (textWidth(L.top.slice(0, k + 1).map((j) => words[j]).join(" "), cs.cardFont, s.fontTa) + 2 * CARD_AT.pad) * L.topSize);
+}
+/** When the card starts growing for its k-th word (ms from its start): a little before the word, so it rises inside. */
+export const cardGrowAt = (k: number) => cardWordAt(k) - 100;
+/** The card's width at `ms` after it starts (em of the big line). */
+export function cardWidthAt(widths: number[], ms: number) {
+  return widths.reduce((w, wk, k) => (k ? w + (wk - widths[k - 1]) * easeInOut((ms - cardGrowAt(k)) / CARD_TIME.grow) : wk), 0);
+}
 /** When the card's k-th word pops in (ms from the card's start): once the card is in, one after another. */
 export const cardWordAt = (k: number) => CARD_TIME.slide + k * CARD_TIME.wordStep;
 /** Ease in and out (smooth start and stop), 0 → 1. */
@@ -1174,17 +1188,29 @@ export function buildAss(cues: Cue[], o: Opts) {
       if (L.top.length) {
         const t0 = when(words[L.top[0]].s), D = CARD_TIME.slide, K = 8, cw = Math.round(L.cardW * emB), ch = Math.round(cardH), r = Math.round(CARD_AT.radius * ch);
         const cx0 = x0 + Math.round(L.cardLeft * emB), cy = Math.round(yb + cardMid - cardH / 2), from = CARD_TIME.from * em1;
-        const card = `m ${r} 0 l ${cw - r} 0 b ${cw} 0 ${cw} 0 ${cw} ${r} l ${cw} ${ch - r} b ${cw} ${ch} ${cw} ${ch} ${cw - r} ${ch} l ${r} ${ch} b 0 ${ch} 0 ${ch} 0 ${ch - r} l 0 ${r} b 0 0 0 0 ${r} 0`;
+        const shape = (w: number) => `m ${r} 0 l ${w - r} 0 b ${w} 0 ${w} 0 ${w} ${r} l ${w} ${ch - r} b ${w} ${ch} ${w} ${ch} ${w - r} ${ch} l ${r} ${ch} b 0 ${ch} 0 ${ch} 0 ${ch - r} l 0 ${r} b 0 0 0 0 ${r} 0`;
+        // (it starts as wide as its first word, growing as the others come: cardWidths)
+        const widths = cardWidths(words.map((w) => w.w), L, s), wAt = (ms: number) => Math.round(cardWidthAt(widths, ms) * emB);
+        const card = shape(wAt(0)), cardTag = `\\bord0\\shad0\\1c${colorOnly(cs.card)}`;
         // its words' baseline: their capitals centred on the card (CARD_BASE em below its middle)
         const textY = Math.round(yb + cardMid + CARD_BASE * em1 - assAscent(cs.cardFont) * em1);
         const tx = (x: number) => Math.round(x + CARD_AT.pad * em1);
         const cardA = alphaOf(cs.card), cardAlpha = (a: number) => hex2(255 - (255 - parseInt(cardA, 16)) * a);
         for (let k = 0; k <= K; k++) {
           const a = k / K, b = (k + 1) / K, xa = cx0 - from * (1 - easeInOut(a)), xb = cx0 - from * (1 - easeInOut(b));
-          const start = c.start + (t0 - c.start) + (a * D) / 1000, end = k < K ? c.start + (t0 - c.start) + (b * D) / 1000 : c.end, seg = Math.round(((b - a) * D));
+          const start = t0 + (a * D) / 1000, end = k < K ? t0 + (b * D) / 1000 : widths.length > 1 ? t0 + cardGrowAt(1) / 1000 : c.end, seg = Math.round(((b - a) * D));
           if (start >= c.end) break;
           const mv = k < K ? `\\move(${Math.round(xa)},${cy},${Math.round(xb)},${cy},0,${seg})` : `\\pos(${cx0},${cy})`;
-          add(start, Math.min(end, c.end), `{\\an7${mv}\\bord0\\shad0\\1c${colorOnly(cs.card)}\\1a&H${k < K ? cardAlpha(easeInOut(a)) : cardA}&${k < K ? `\\t(0,${seg},\\1a&H${cardAlpha(easeInOut(b))}&)` : ""}\\p1}${card}{\\p0}`, 0);
+          add(start, Math.min(end, c.end), `{\\an7${mv}${cardTag}\\1a&H${k < K ? cardAlpha(easeInOut(a)) : cardA}&${k < K ? `\\t(0,${seg},\\1a&H${cardAlpha(easeInOut(b))}&)` : ""}\\p1}${card}{\\p0}`, 0);
+        }
+        // then it grows to the right as each next word comes, easing (in steps), holding its width between
+        for (let m = 1; m < widths.length; m++) {
+          const g0 = cardGrowAt(m), G = 6, hold = m + 1 < widths.length ? cardGrowAt(m + 1) : (c.end - t0) * 1000;
+          for (let g = 0; g <= G; g++) {
+            const a = g0 + (g * CARD_TIME.grow) / G, b = g < G ? g0 + ((g + 1) * CARD_TIME.grow) / G : hold, start = t0 + a / 1000;
+            if (start >= c.end || b <= a) continue;
+            add(start, Math.min(c.end, t0 + b / 1000), `{\\an7\\pos(${cx0},${cy})${cardTag}\\1a&H${cardA}&\\p1}${shape(wAt(g < G ? (a + b) / 2 : g0 + CARD_TIME.grow))}{\\p0}`, 0);
+          }
         }
         // then its words, one by one: each fading in and sliding up as it pops in (easing in, then out), the others hidden
         const Lw = CARD_TIME.word, d = Math.round(0.35 * em1);
