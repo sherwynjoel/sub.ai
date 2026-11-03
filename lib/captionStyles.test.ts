@@ -662,3 +662,16 @@ test("Card Slide: the card slides in fading (eased), the big line pops in letter
   const last = ev.find((l) => /Satisfy/.test(l))!;
   assert.match(last, new RegExp(`\\\\t\\(0,${CARD_TIME.write / 2},2,\\\\clip`), "the last word writes on");
 });
+
+test("Card Slide timing: follows the speech, in order, and always done before the caption ends", async () => {
+  const { cardSlide, cardSchedule, CARD_TIME } = await import("./captionStyles");
+  const s = resolveStyle("cc-card-slide");
+  for (const [t, dur] of [["You Hire a Smart Sales People", 3.5], ["So many people come to me and ask how did you become such a good sales person", 4], ["Do you wonder why every business needs a website", 2]] as [string, number][]) {
+    const w = wordTimes(t, 0, dur), L = cardSlide(w.map((x) => x.w), s), letters = L.big.map((j) => w[j].w).join("").length;
+    const S = cardSchedule(w.map((x) => x.s * 1000), L, dur * 1000, letters);
+    assert.ok(S.pops.every((p, m) => !m || p > S.pops[m - 1]), `${t}: the card's words one after another`);
+    assert.ok(S.big >= (S.pops.at(-1) ?? 0) && S.last >= S.big, `${t}: the big line after them, the last word after it`);
+    const done = Math.max((S.pops.at(-1) ?? 0) + CARD_TIME.word, S.big + (letters - 1) * S.step + CARD_TIME.letter, S.last + CARD_TIME.write);
+    assert.ok(done <= dur * 1000, `${t}: done by the caption's end (${Math.round(done)} ms of ${dur * 1000})`);
+  }
+});
