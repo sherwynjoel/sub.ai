@@ -221,14 +221,36 @@ export function cardWidths(words: string[], L: ReturnType<typeof cardSlide>, s: 
   const cs = s.cardSlide!;
   return L.top.map((_, k) => (textWidth(L.top.slice(0, k + 1).map((j) => words[j]).join(" "), cs.cardFont, s.fontTa) + 2 * CARD_AT.pad) * L.topSize);
 }
-/** When the card starts growing for its k-th word (ms from its start): a little before the word, so it rises inside. */
-export const cardGrowAt = (k: number) => cardWordAt(k) - 100;
-/** The card's width at `ms` after it starts (em of the big line). */
-export function cardWidthAt(widths: number[], ms: number) {
-  return widths.reduce((w, wk, k) => (k ? w + (wk - widths[k - 1]) * easeInOut((ms - cardGrowAt(k)) / CARD_TIME.grow) : wk), 0);
+/**
+ * When each part of "cardslide" comes in (ms from the caption's start), following the speech: the card slides in as its
+ * first word is said; each of its words pops in as it's said (once the card is in, and a moment after the one before);
+ * the card grows for each a little before it, so the word rises inside; the big line's letters start as it's said, once
+ * the card's words are in; the last word writes on as it's said, once the big line is under way. When that wouldn't be
+ * done before the caption ends (a long, fast sentence), it's all drawn closer together to fit.
+ */
+export function cardSchedule(starts: number[], L: ReturnType<typeof cardSlide>, captionMs: number, letters: number) {
+  const T = CARD_TIME, slide = L.top.length ? Math.max(0, starts[L.top[0]]) : 0;
+  const pops: number[] = [];
+  L.top.forEach((j, m) => pops.push(Math.max(starts[j], m ? pops[m - 1] + T.wordStep : slide + T.slide * 0.85)));
+  let big = Math.max(starts[L.big[0]] ?? 0, pops.length ? pops[pops.length - 1] + T.wordStep : 0);
+  let last = L.last.length ? Math.max(starts[L.last[0]], big + letters * T.step * 0.6) : 0, step = T.step;
+  const room = captionMs - 80;
+  const doneOf = () => Math.max(pops.length ? pops[pops.length - 1] + T.word : 0, big + Math.max(0, letters - 1) * step + T.letter, L.last.length ? last + T.write : 0);
+  // squeeze what comes after the card's start into the caption (a few passes: the animations' own lengths don't shrink)
+  for (let pass = 0; pass < 6 && doneOf() > room && doneOf() > slide; pass++) {
+    const f = Math.max(0.2, (room - slide) / (doneOf() - slide)), at = (t: number) => slide + (t - slide) * f;
+    for (let m = 0; m < pops.length; m++) pops[m] = Math.max(at(pops[m]), m ? pops[m - 1] + 40 : slide + T.slide * 0.5);
+    big = at(big); last = at(last); step = Math.max(15, step * f);
+  }
+  // (a caption too short even for that: the big line and the last word start in time to finish)
+  big = Math.max(pops.length ? pops[pops.length - 1] : 0, Math.min(big, room - Math.max(0, letters - 1) * step - T.letter));
+  if (L.last.length) last = Math.max(big, Math.min(last, room - T.write));
+  return { slide, pops, grow: pops.map((t) => Math.max(slide + T.slide, t - 100)), big, last, step };
 }
-/** When the card's k-th word pops in (ms from the card's start): once the card is in, one after another. */
-export const cardWordAt = (k: number) => CARD_TIME.slide + k * CARD_TIME.wordStep;
+/** The card's width at `ms` from the caption's start (em of the big line), growing as `grow` says. */
+export function cardWidthAt(widths: number[], ms: number, grow: number[]) {
+  return widths.reduce((w, wk, k) => (k ? w + (wk - widths[k - 1]) * easeInOut((ms - grow[k]) / CARD_TIME.grow) : wk), 0);
+}
 /** Ease in and out (smooth start and stop), 0 → 1. */
 export const easeInOut = (t: number) => { const v = Math.min(1, Math.max(0, t)); return v < 0.5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2; };
 /**
@@ -1185,51 +1207,54 @@ export function buildAss(cues: Cue[], o: Opts) {
       const when = (t: number) => Math.min(c.end - 0.05, Math.max(c.start, t));
       const hex2 = (a: number) => Math.round(Math.min(255, Math.max(0, a))).toString(16).toUpperCase().padStart(2, "0");
       // the card: sliding in from the left, fading in, easing in and out (in steps: libass moves evenly)
+      const bigText = L.big.map((j) => words[j].w).join(" "), chars = [...new Intl.Segmenter().segment(bigText)].map((g) => g.segment);
+      const S = cardSchedule(words.map((w) => (w.s - c.start) * 1000), L, (c.end - c.start) * 1000, chars.filter((ch) => !/\s/.test(ch)).length);
+      const at = (ms: number) => when(c.start + ms / 1000);
       if (L.top.length) {
-        const t0 = when(words[L.top[0]].s), D = CARD_TIME.slide, K = 8, cw = Math.round(L.cardW * emB), ch = Math.round(cardH), r = Math.round(CARD_AT.radius * ch);
+        const D = CARD_TIME.slide, K = 8, cw = Math.round(L.cardW * emB), ch = Math.round(cardH), r = Math.round(CARD_AT.radius * ch);
         const cx0 = x0 + Math.round(L.cardLeft * emB), cy = Math.round(yb + cardMid - cardH / 2), from = CARD_TIME.from * em1;
         const shape = (w: number) => `m ${r} 0 l ${w - r} 0 b ${w} 0 ${w} 0 ${w} ${r} l ${w} ${ch - r} b ${w} ${ch} ${w} ${ch} ${w - r} ${ch} l ${r} ${ch} b 0 ${ch} 0 ${ch} 0 ${ch - r} l 0 ${r} b 0 0 0 0 ${r} 0`;
         // (it starts as wide as its first word, growing as the others come: cardWidths)
-        const widths = cardWidths(words.map((w) => w.w), L, s), wAt = (ms: number) => Math.round(cardWidthAt(widths, ms) * emB);
-        const card = shape(wAt(0)), cardTag = `\\bord0\\shad0\\1c${colorOnly(cs.card)}`;
+        const widths = cardWidths(words.map((w) => w.w), L, s), wAt = (ms: number) => Math.round(cardWidthAt(widths, ms, S.grow) * emB);
+        const card = shape(Math.round(widths[0] * emB)), cardTag = `\\bord0\\shad0\\1c${colorOnly(cs.card)}`;
         // its words' baseline: their capitals centred on the card (CARD_BASE em below its middle)
         const textY = Math.round(yb + cardMid + CARD_BASE * em1 - assAscent(cs.cardFont) * em1);
         const tx = (x: number) => Math.round(x + CARD_AT.pad * em1);
         const cardA = alphaOf(cs.card), cardAlpha = (a: number) => hex2(255 - (255 - parseInt(cardA, 16)) * a);
+        const durMs = (c.end - c.start) * 1000;
+        // the card slides in, fading in, easing in and out (in steps: libass moves evenly)
         for (let k = 0; k <= K; k++) {
           const a = k / K, b = (k + 1) / K, xa = cx0 - from * (1 - easeInOut(a)), xb = cx0 - from * (1 - easeInOut(b));
-          const start = t0 + (a * D) / 1000, end = k < K ? t0 + (b * D) / 1000 : widths.length > 1 ? t0 + cardGrowAt(1) / 1000 : c.end, seg = Math.round(((b - a) * D));
-          if (start >= c.end) break;
+          const t1 = S.slide + a * D, t2 = k < K ? S.slide + b * D : widths.length > 1 ? S.grow[1] : durMs, seg = Math.round((b - a) * D);
+          if (t1 >= durMs || t2 <= t1) continue;
           const mv = k < K ? `\\move(${Math.round(xa)},${cy},${Math.round(xb)},${cy},0,${seg})` : `\\pos(${cx0},${cy})`;
-          add(start, Math.min(end, c.end), `{\\an7${mv}${cardTag}\\1a&H${k < K ? cardAlpha(easeInOut(a)) : cardA}&${k < K ? `\\t(0,${seg},\\1a&H${cardAlpha(easeInOut(b))}&)` : ""}\\p1}${card}{\\p0}`, 0);
+          add(at(t1), at(t2), `{\\an7${mv}${cardTag}\\1a&H${k < K ? cardAlpha(easeInOut(a)) : cardA}&${k < K ? `\\t(0,${seg},\\1a&H${cardAlpha(easeInOut(b))}&)` : ""}\\p1}${card}{\\p0}`, 0);
         }
         // then it grows to the right as each next word comes, easing (in steps), holding its width between
         for (let m = 1; m < widths.length; m++) {
-          const g0 = cardGrowAt(m), G = 6, hold = m + 1 < widths.length ? cardGrowAt(m + 1) : (c.end - t0) * 1000;
+          const g0 = S.grow[m], G = 6, hold = m + 1 < widths.length ? S.grow[m + 1] : durMs;
           for (let g = 0; g <= G; g++) {
-            const a = g0 + (g * CARD_TIME.grow) / G, b = g < G ? g0 + ((g + 1) * CARD_TIME.grow) / G : hold, start = t0 + a / 1000;
-            if (start >= c.end || b <= a) continue;
-            add(start, Math.min(c.end, t0 + b / 1000), `{\\an7\\pos(${cx0},${cy})${cardTag}\\1a&H${cardA}&\\p1}${shape(wAt(g < G ? (a + b) / 2 : g0 + CARD_TIME.grow))}{\\p0}`, 0);
+            const a = g0 + (g * CARD_TIME.grow) / G, b = g < G ? g0 + ((g + 1) * CARD_TIME.grow) / G : Math.max(hold, g0 + CARD_TIME.grow);
+            if (a >= durMs || b <= a) continue;
+            add(at(a), at(b), `{\\an7\\pos(${cx0},${cy})${cardTag}\\1a&H${cardA}&\\p1}${shape(wAt(g < G ? (a + b) / 2 : g0 + CARD_TIME.grow))}{\\p0}`, 0);
           }
         }
-        // then its words, one by one: each fading in and sliding up as it pops in (easing in, then out), the others hidden
+        // then its words, one by one as they're said: each fading in and sliding up as it pops in (easing in, then
+        // out), the others hidden
         const Lw = CARD_TIME.word, d = Math.round(0.35 * em1);
         L.top.forEach((j, m) => {
-          const t = when(t0 + cardWordAt(m) / 1000);
           const body = L.top.map((jj, mm) => (mm ? " " : "") + word(jj, words.length).replace(/^\{\\r/, `{\\r${size(cs.cardFont, em1)}\\1c&HFFFFFF&\\shad0\\alpha&HFF&` +
             (jj === j ? `\\fscy40\\t(0,${Lw / 2},2,\\alpha&H90&\\fscy80)\\t(${Lw / 2},${Lw},0.5,\\alpha&H00&\\fscy100)` : ""))).join("");
-          add(t, c.end, `{\\an7\\move(${tx(cx0)},${textY + d},${tx(cx0)},${textY},0,${Lw})\\clip(${cx0},${cy},${cx0 + cw},${cy + ch})}{\\q2}` + body, 1); // (rising inside the card)
+          add(at(S.pops[m]), c.end, `{\\an7\\move(${tx(cx0)},${textY + d},${tx(cx0)},${textY},0,${Lw})\\clip(${cx0},${cy},${cx0 + cw},${cy + ch})}{\\q2}` + body, 1); // (rising inside the card)
         });
       }
       // the big line, letter by letter: each fading in and sliding up as it pops in (easing in, then out)
       {
-        const text = L.big.map((j) => words[j].w).join(" "), chars = [...new Intl.Segmenter().segment(text)].map((g) => g.segment);
-        const yT = Math.round(yb - assAscent(s.font) * emB), nat = lineScale(s.font) * emB, d = Math.round(0.35 * emB), Lt = CARD_TIME.letter;
-        const t0 = when(words[L.big[0]].s), tag = size(s.font, emB);
+        const yT = Math.round(yb - assAscent(s.font) * emB), nat = lineScale(s.font) * emB, d = Math.round(0.35 * emB), Lt = CARD_TIME.letter, tag = size(s.font, emB);
         let k = 0;
         chars.forEach((ch, i) => {
           if (/\s/.test(ch)) return;
-          const start = when(t0 + (k++ * CARD_TIME.step) / 1000);
+          const start = at(S.big + k++ * S.step);
           const body = chars.map((x, m) => `{\\r${tag}\\alpha&HFF&${m === i ? `\\fscy40\\t(0,${Lt / 2},2,\\alpha&H90&\\fscy80)\\t(${Lt / 2},${Lt},0.5,\\alpha&H00&\\fscy100)` : ""}}${esc(x)}`).join("");
           strips(start, c.end, `{\\an7\\move(${x0},${yT + d},${x0},${yT},0,${Lt})}`, yT + nat / 2, nat, "{\\q2}" + body, 1, 0, 0, [[yT + nat / 2 + d, nat], [yT + nat / 2, nat]], Lt);
         });
@@ -1240,7 +1265,7 @@ export function buildAss(cues: Cue[], o: Opts) {
         const lx = Math.round(xr - L.lastW * em3 - 0.4 * em3), rx = Math.round(xr + 0.4 * em3), W = CARD_TIME.write, mid = Math.round((lx + rx) / 2);
         const clip = (x: number) => `\\clip(${lx},${Math.round(y - 0.5 * em3)},${x},${Math.round(y + nat + 0.5 * em3)})`;
         // (white: the style's gradient is the big line's)
-        add(when(words[L.last[0]].s), c.end, `{\\an9\\pos(${xr},${y})${clip(lx)}\\t(0,${W / 2},2,${clip(mid)})\\t(${W / 2},${W},0.5,${clip(rx)})\\fad(120,0)}` +
+        add(at(S.last), c.end, `{\\an9\\pos(${xr},${y})${clip(lx)}\\t(0,${W / 2},2,${clip(mid)})\\t(${W / 2},${W},0.5,${clip(rx)})\\fad(120,0)}` +
           "{\\q2}" + L.last.map((j, m) => (m ? " " : "") + word(j, words.length)).join("").replace(/\{\\r/g, `{\\r${size(cs.lastFont, em3)}\\1c&HFFFFFF&`), 1);
       }
       subAt(c.start, c.end, "", yb + bottom + subH / 2);
