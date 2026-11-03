@@ -208,6 +208,11 @@ export function boldBar(words: string[], s: CaptionStyle & Placement, ratio = 9 
  * width), the last line's baseline and how far in from the big line's right end it ends.
  */
 export const CARD_AT = { mid: -0.8, h: 1.3, pad: 0.34, radius: 0.22, left: 0.16, lastBase: 0.18, lastInset: 0.08 };
+/**
+ * Where the card's middle and the last line's baseline are (em of the big line, from its baseline), with the line
+ * spacing: 100% as CARD_AT; more moves them away from the big line, less tucks them in.
+ */
+export const cardLines = (s: CaptionStyle) => { const d = ((s.lineHeight ?? 1) - 1) * 0.8; return { mid: CARD_AT.mid - d, lastBase: CARD_AT.lastBase + d }; };
 /** The card's words' baseline below its middle (em of them): their capitals centred on it. */
 export const CARD_BASE = 0.36;
 /** "cardslide" timing (ms): the card's slide (and from how far left, em of its text), each letter's pop and the step
@@ -1198,9 +1203,9 @@ export function buildAss(cues: Cue[], o: Opts) {
       // the last word writes itself on, left to right.
       const cs = s.cardSlide, L = cardSlide(words.map((w) => w.w), s, ratio);
       const emB = fs * L.zB, em1 = emB * L.topSize, em3 = emB * L.lastSize, wB = L.bigW * emB, x0 = Math.round(ax - ((hz + 1) * wB) / 2);
-      const cardH = CARD_AT.h * em1, cardMid = CARD_AT.mid * emB;
+      const lines = cardLines(s), cardH = CARD_AT.h * em1, cardMid = lines.mid * emB;
       const top = Math.min(L.top.length ? cardMid - cardH / 2 : 0, -assAscent(s.font) * emB);
-      const bottom = L.last.length ? CARD_AT.lastBase * emB + (lineScale(cs.lastFont) - assAscent(cs.lastFont)) * em3 : (lineScale(s.font) - assAscent(s.font)) * emB;
+      const bottom = L.last.length ? lines.lastBase * emB + (lineScale(cs.lastFont) - assAscent(cs.lastFont)) * em3 : (lineScale(s.font) - assAscent(s.font)) * emB;
       const subH = sub ? subNatOf() : 0;
       const yb = Math.round(s.x !== undefined || align === 5 ? ay - (top + bottom + subH) / 2 : align === 8 ? ay - top : ay - bottom - subH);
       const size = (f: string, em: number) => `\\fn${f}\\fsz${Math.round((em / fs) * 1000) / 1000}`;
@@ -1261,7 +1266,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       }
       // the last word writes itself on, left to right (easing in, then out)
       if (L.last.length) {
-        const xr = x0 + Math.round(L.lastRight * emB), y = Math.round(yb + CARD_AT.lastBase * emB - assAscent(cs.lastFont) * em3), nat = lineScale(cs.lastFont) * em3;
+        const xr = x0 + Math.round(L.lastRight * emB), y = Math.round(yb + lines.lastBase * emB - assAscent(cs.lastFont) * em3), nat = lineScale(cs.lastFont) * em3;
         const lx = Math.round(xr - L.lastW * em3 - 0.4 * em3), rx = Math.round(xr + 0.4 * em3), W = CARD_TIME.write, mid = Math.round((lx + rx) / 2);
         const clip = (x: number) => `\\clip(${lx},${Math.round(y - 0.5 * em3)},${x},${Math.round(y + nat + 0.5 * em3)})`;
         // (white: the style's gradient is the big line's)
@@ -1725,7 +1730,7 @@ ${events.join("\n")}
 export const spacesLines = (s: CaptionStyle) => !((s.effect && s.effect !== "wobble") || s.reveal || s.wordLines || s.keyword?.line);
 /** Styles the line spacing reaches: the plain layout's, and Cinematic's three lines. */
 export const takesLineSpacing = (s: CaptionStyle) =>
-  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
+  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark", "cardslide"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
 
 /** How tall a line of this text is, × the em: its fonts' own line height (what libass draws, so the editor matches). */
 export const lineBox = (s: CaptionStyle, text: string) =>

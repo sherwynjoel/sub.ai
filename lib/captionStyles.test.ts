@@ -675,3 +675,13 @@ test("Card Slide timing: follows the speech, in order, and always done before th
     assert.ok(done <= dur * 1000, `${t}: done by the caption's end (${Math.round(done)} ms of ${dur * 1000})`);
   }
 });
+
+test("Card Slide: line spacing moves the card and the last line; the box colour is its own", async () => {
+  const { cardLines } = await import("./captionStyles");
+  const near = cardLines(resolveStyle("cc-card-slide", { lineHeight: 0.8 })), at = cardLines(resolveStyle("cc-card-slide")), far = cardLines(resolveStyle("cc-card-slide", { lineHeight: 1.6 }));
+  assert.ok(near.mid > at.mid && at.mid > far.mid, "the card further above with more spacing");
+  assert.ok(near.lastBase < at.lastBase && at.lastBase < far.lastBase, "the last line further below");
+  assert.ok(takesLineSpacing(resolveStyle("cc-card-slide")), "the Line spacing control shows");
+  const ass = buildAss([{ start: 0, end: 3, ta: "You Hire a Smart Sales People", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-card-slide", lang: "ta", width: 1080, height: 1920, custom: { accent: "#2E6BE6" } });
+  assert.ok(ass.split("\n").filter((l) => /\\p1/.test(l)).every((l) => l.includes("\\1c&HE66B2E&")), "the box in the colour picked");
+});
