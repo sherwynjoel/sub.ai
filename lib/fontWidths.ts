@@ -102,6 +102,60 @@ export const LINE: Record<string, number> = {
 /** A font's line height in em (unknown fonts: 1.45, a typical one). */
 export const lineScale = (font: string) => LINE[font] ?? 1.45;
 
+/**
+ * Where a font's baseline sits: [the MP4's ascent (libass: OS/2 winAscent), the editor's ascent and descent (the
+ * browser: hhea)], in em. Layouts placed by the baseline (Bold Bar) line up with these.
+ */
+export const ASC: Record<string, [number, number, number]> = {
+  "Poppins": [1.135, 1.05, 0.35],
+  "Poppins ExtraBold": [1.135, 1.05, 0.35],
+  "Anton": [1.404, 1.176, 0.329],
+  "Roboto Black": [1.048, 0.928, 0.244],
+  "Noto Sans Tamil": [0.87, 0.87, 0.37],
+  "Mukta Malar ExtraBold": [1.13, 1.13, 0.532],
+  "Hind Madurai": [0.982, 0.982, 0.398],
+  "Kavivanar": [1.065, 1.065, 0.417],
+  "Pavanam": [0.952, 0.952, 0.339],
+  "Meera Inimai": [0.97, 0.97, 0.586],
+  "Noto Emoji": [0.928, 0.928, 0.244],
+  "Satisfy": [0.935, 0.935, 0.489],
+  "Open Sauce Sans Black": [1.028, 1.0, 0.237],
+  "Inter Bold": [1.108, 0.969, 0.241],
+  "Nunito ExtraBold": [1.077, 1.011, 0.353],
+  "Inter": [1.108, 0.969, 0.241],
+  "Inter Italic": [1.108, 0.969, 0.241],
+  "Montserrat SemiBold": [1.109, 0.968, 0.251],
+  "Playfair Display Italic": [1.159, 1.082, 0.251],
+  "Playfair Display Bold Italic": [1.159, 1.082, 0.251],
+  "Great Vibes": [1.16, 0.851, 0.401],
+  "Figtree Bold": [0.979, 0.95, 0.25],
+  "GFS Didot": [0.947, 0.947, 0.277],
+  "Oswald Bold": [1.325, 1.193, 0.289],
+  "Bebas Neue": [0.95, 0.9, 0.3],
+  "Lobster": [1.0, 1.0, 0.25],
+  "Pacifico": [1.478, 1.303, 0.453],
+  "Caveat Bold": [0.974, 0.96, 0.3],
+  "Righteous": [0.985, 0.985, 0.257],
+  "Archivo Black": [1.035, 0.878, 0.21],
+  "Abril Fatface": [1.058, 1.058, 0.291],
+  "Alfa Slab One": [1.238, 1.036, 0.333],
+  "Comfortaa Bold": [1.285, 0.881, 0.234],
+  "Luckiest Guy": [0.979, 0.703, 0.297],
+  "Titan One": [0.97, 0.97, 0.175],
+  "Alex Brush": [0.962, 0.825, 0.425],
+  "Pinyon Script": [1.078, 0.863, 0.384],
+  "Poppins Light": [1.135, 1.05, 0.35],
+  "Poppins Medium": [1.135, 1.05, 0.35],
+  "Bodoni Moda Italic": [1.125, 1.125, 0.4],
+  "Poppins Regular": [1.135, 1.05, 0.35],
+  "Poppins Light Italic": [1.135, 1.05, 0.35],
+  "Sriracha": [1.22, 1.22, 0.55],
+};
+/** How far below the top of libass's line box a font's baseline is (em). */
+export const assAscent = (font: string) => ASC[font]?.[0] ?? lineScale(font) * 0.75;
+/** How far below the top of a line `lh` em tall the browser puts a font's baseline (em). */
+export const cssBaseline = (font: string, lh = 1) => { const [, a, d] = ASC[font] ?? [0, 1, 0.3]; return (lh - (a + d)) / 2 + a; };
+
 /** Advance widths of the Tamil letters and signs (U+0B80–U+0BFF) in the Tamil caption fonts, in em (signs that sit on
  * a letter are 0). Shaping moves some signs around a letter but keeps the sum close. */
 export const TAMIL_WIDTHS: Record<string, number[]> = {

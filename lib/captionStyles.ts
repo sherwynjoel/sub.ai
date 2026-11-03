@@ -6,7 +6,7 @@
  */
 import type { Cue, WordLook } from "@/db";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
-import { lineScale, looksTall, textWidth } from "@/lib/fontWidths";
+import { assAscent, lineScale, looksTall, textWidth } from "@/lib/fontWidths";
 
 export type TextAlign = "left" | "center" | "right";
 /**
@@ -25,7 +25,7 @@ export const BLENDS = {
   dodge: ["Colour dodge", "color-dodge", "dodge"],
 } as const;
 export type Blend = keyof typeof BLENDS;
-export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch";
+export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar";
 /** How a caption comes in (the last few from the Premiere template pack's presets). */
 export const ANIMS = {
   none: "None", fade: "Fade in", pop: "Pop", slide: "Slide up", bounce: "Bounce", zoom: "Zoom in",
@@ -76,7 +76,10 @@ export type CaptionStyle = {
   spark?: { bigFont: string; big: number; lastFont: string; star: string; tight?: number };
   // "boxpunch": Setup & Punch's two parts, the set-up's words appearing as said, then a box wiping in under the punch
   // (left to right) and the punch rising into it, fading in; the punch in this font, this many em, on this colour
-  boxPunch?: { font: string; scale: number; color: string; h?: number }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
+  boxPunch?: { font: string; scale: number; color: string; h?: number };
+  // "boldbar": the last word but one big (in the style's font) on a bar (colours left → right), the words before it spread
+  // over it in small (topFont, × the big size), the last word under its right end (lastFont); see boldBar()
+  boldBar?: { colors: [string, string]; big: number; topFont: string; top: number; lastFont: string; last: number }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
@@ -146,6 +149,23 @@ export function boxPunchRows(setup: string[], s: CaptionStyle & Placement, ratio
   const cut = [...brk][0];
   return cut === undefined ? [[0, setup.length]] : [[0, cut + 1], [cut + 1, setup.length]];
 }
+/**
+ * "boldbar" layout, in em of the big word, from its baseline (y down): which words go where (the last word but one big,
+ * the words before it on top, the last under it; one word: just the big one), the bar behind the big word, the top
+ * line's baseline and size (shrunk so its words fit over the big one), the last word's baseline. Shared by the editor
+ * and the MP4 so they line up.
+ */
+export const BAR_AT = { top: -0.6, bottom: -0.02, pad: 0.1, topBase: -0.8, lastBase: 0.42, gap: 0.4 };
+export const BAR_TIME = { punch: 240, wipe: 450, rise: 360 };
+export function boldBar(words: string[], s: CaptionStyle) {
+  const bb = s.boldBar!, n = words.length, big = n >= 2 ? n - 2 : 0, last = n >= 2 ? n - 1 : -1;
+  const top = words.slice(0, big), bigW = Math.max(0.3, textWidth(words[big] ?? "", s.font, s.fontTa));
+  const topW = top.map((w) => textWidth(w, bb.topFont, s.fontTa));
+  // the top words over the big one, spaced out: smaller if they wouldn't fit
+  const sum = topW.reduce((a, b) => a + b, 0) + BAR_AT.gap * Math.max(0, top.length - 1);
+  const topSize = top.length ? Math.min(bb.top, (bigW * 0.98) / Math.max(0.01, sum)) : bb.top;
+  return { big, last, top, bigW, topW, topSize };
+}
 /** "Word by word, popping up": how long a word takes to pop up (ms). */
 export const POP_MS = 180;
 /** A staggered style's glow at its usual strength (its Shadow size; bigger or smaller scales it). */
@@ -163,6 +183,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-rise-ultra", name: "Riseup Ultra", group: "Typography", blurb: "Rise Up in white: elegant Bodoni italic lines around a big Anton middle line that shows the video as a negative (change the blend in Colour).", font: "Bodoni Moda Italic", fontTa: "Hind Madurai", size: 1.15, color: W, lineHeight: 0.8, reveal: "rise", stagger: { colors: [W, W, W], bold: 0, big: 3.1, bigFont: "Anton", tight: 0.72 }, blend: "difference", blendMid: true },
   { id: "cc-spark", name: "Spark Slide", group: "Typography", blurb: "A star slides up and spins behind the first line as it slides in from the left; the big Anton line and the light italic one come in word by word, sliding up (change the star's colour in Colour).", font: "Poppins Regular", fontTa: "Hind Madurai", size: 1.13, startSize: 0.9, color: W, lineHeight: 0.9, effect: "spark", spark: { big: 2.5, bigFont: "Anton", lastFont: "Poppins Light Italic", star: "#D97757", tight: 0.8 } },
   { id: "cc-box-punch", name: "Box Punch", group: "Typography", blurb: "The set-up's words appear as they're said; then a box wipes in and the punch rises into it in Caveat Bold handwriting (change the box colour in Colour).", font: "Poppins Light", fontTa: "Hind Madurai", size: 1.12, startSize: 0.8, color: W, effect: "boxpunch", boxPunch: { font: "Caveat Bold", scale: 2.1, color: "#B87A5E", h: 1.15 } },
+  { id: "cc-bold-bar", name: "Bold Bar", group: "Typography", blurb: "Small words spread over a big bold word on a red bar, a script word under it: the small words punch up, the big one wipes in, the last rises (change the bar colour in Colour).", font: "Poppins", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: W, effect: "boldbar", boldBar: { colors: ["#FF1F1F", "#6E0000"], big: 3.2, topFont: "Poppins Light Italic", top: 0.27, lastFont: "Satisfy", last: 0.62 } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
@@ -235,7 +256,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
-  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-letter-rise", "cc-typo-block",
+  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker",
   "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-rgb", "tpl-reels-simple", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
@@ -420,6 +441,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   if (c.accent) {
     if (s.spark) s.spark = { ...s.spark, star: c.accent };
     else if (s.boxPunch) s.boxPunch = { ...s.boxPunch, color: c.accent };
+    else if (s.boldBar) s.boldBar = { ...s.boldBar, colors: [c.accent, mixHex(c.accent, "#000000", 0.55)] };
     else if (s.mark) s.mark = c.accent;
     else if (s.keyword) s.keyword.color = c.accent;
     else if (s.active) s.active = c.accent;
@@ -1058,6 +1080,52 @@ export function buildAss(cues: Cue[], o: Opts) {
         }
       });
       subAt(c.start, c.end, "", p.subY);
+      continue;
+    }
+    if (s.effect === "boldbar" && s.boldBar && words.length) {
+      // Small words spread over a big bold word on a bar, a script word under its right end (boldBar): each small word
+      // punches up as it's said, the big word and its bar wipe in left to right, the last word rises in. Placed by the
+      // big word's baseline (each piece by its font's own), as the editor.
+      const bb = s.boldBar, L = boldBar(words.map((w) => w.w), s);
+      const zB = Math.min(bb.big, (room * 0.9) / ((L.bigW + 2 * BAR_AT.pad) * fs)), emB = fs * zB, em1 = emB * L.topSize, em3 = emB * bb.last;
+      const wB = L.bigW * emB, x0 = Math.round(ax - ((hz + 1) * wB) / 2);
+      const top = L.top.length ? BAR_AT.topBase * emB - assAscent(bb.topFont) * em1 : -assAscent(s.font) * emB;
+      const bottom = L.last >= 0 ? BAR_AT.lastBase * emB + (lineScale(bb.lastFont) - assAscent(bb.lastFont)) * em3 : (lineScale(s.font) - assAscent(s.font)) * emB;
+      const subH = sub ? subNatOf() : 0;
+      const yb = Math.round(s.x !== undefined || align === 5 ? ay - (top + bottom + subH) / 2 : align === 8 ? ay - top : ay - bottom - subH);
+      // (its own size by \\fsz, so Tamil in it is sized too)
+      const size = (f: string, em: number) => `\\fn${f}\\fsz${Math.round((em / fs) * 1000) / 1000}`;
+      const when = (t: number) => Math.min(c.end - 0.05, Math.max(c.start, t));
+      const body = (j: number, tags: string) => "{\\q2}" + word(j, words.length).replace(/^\{\\r/, `{\\r${tags}`);
+      // the small words, spread over the big one (one: centred), each punching up from its baseline as it's said
+      const gap = L.top.length > 1 ? (wB - L.topW.reduce((a, b) => a + b, 0) * em1) / (L.top.length - 1) : 0;
+      let x = x0;
+      L.top.forEach((_, k) => {
+        const w = L.topW[k] * em1, cx = L.top.length === 1 ? x0 + wB / 2 : x + w / 2, y = yb + BAR_AT.topBase * emB + (lineScale(bb.topFont) - assAscent(bb.topFont)) * em1;
+        const [p1, p2] = [Math.round(BAR_TIME.punch * 0.6), BAR_TIME.punch];
+        const nat = lineScale(bb.topFont) * em1;
+        strips(when(words[k].s), c.end, `{\\an2\\pos(${Math.round(cx)},${Math.round(y)})\\fad(60,0)}`, y - nat / 2, nat, body(k, `${size(bb.topFont, em1)}\\fscx30\\fscy30\\t(0,${p1},\\fscx115\\fscy115)\\t(${p1},${p2},\\fscx100\\fscy100)`), 1);
+        x += w + gap;
+      });
+      // the big word on its bar (the bar in slices, its colours left → right), both wiping in left to right
+      const bx = Math.round(x0 - BAR_AT.pad * emB), bw = Math.round(wB + 2 * BAR_AT.pad * emB), btop = Math.round(yb + BAR_AT.top * emB), bh = Math.round((BAR_AT.bottom - BAR_AT.top) * emB);
+      const clipAt = (w: number) => `\\clip(${bx},${Math.round(yb - 1.3 * emB)},${bx + w},${Math.round(yb + 0.8 * emB)})`, wipe = `${clipAt(0)}\\t(0,${BAR_TIME.wipe},${clipAt(bw)})`;
+      const t0 = when(words[L.big].s), N = 24;
+      for (let k = 0; k < N; k++) {
+        const sx = bx + Math.round((k * bw) / N), sw = bx + Math.round(((k + 1) * bw) / N) - sx + (k < N - 1 ? 1 : 0), col = mixHex(bb.colors[0], bb.colors[1], k / (N - 1));
+        add(t0, c.end, `{\\an7\\pos(${sx},${btop})${wipe}\\bord0\\shad0\\1c${colorOnly(col)}\\p1}m 0 0 l ${sw} 0 ${sw} ${bh} 0 ${bh}{\\p0}`, 0);
+      }
+      const yTop = Math.round(yb - assAscent(s.font) * emB), natB = lineScale(s.font) * emB;
+      // (a gradient's strips cut the text themselves: then it fades in instead of wiping)
+      if (grad) strips(t0, c.end, `{\\an7\\pos(${x0},${yTop})\\fad(${BAR_TIME.wipe},0)}`, yTop + natB / 2, natB, body(L.big, size(s.font, emB)), 1);
+      else add(t0, c.end, `{\\an7\\pos(${x0},${yTop})${wipe}}` + body(L.big, size(s.font, emB)), 1);
+      // the last word under the big one's right end, rising in as it's said
+      if (L.last >= 0) {
+        const y = Math.round(yb + BAR_AT.lastBase * emB - assAscent(bb.lastFont) * em3), d = Math.round(0.5 * em3);
+        const nat = lineScale(bb.lastFont) * em3, yc = y + nat / 2;
+        strips(when(words[L.last].s), c.end, `{\\an9\\move(${x0 + Math.round(wB)},${y + d},${x0 + Math.round(wB)},${y},0,${BAR_TIME.rise})\\fad(${Math.round(BAR_TIME.rise * 0.7)},0)}`, yc, nat, body(L.last, size(bb.lastFont, em3)), 1, 0, 0, [[yc + d, nat], [yc, nat]], BAR_TIME.rise);
+      }
+      subAt(c.start, c.end, "", yb + bottom + subH / 2);
       continue;
     }
     if (s.effect === "boxpunch" && s.boxPunch && words.length) {
