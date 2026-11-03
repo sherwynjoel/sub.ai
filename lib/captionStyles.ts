@@ -25,7 +25,7 @@ export const BLENDS = {
   dodge: ["Colour dodge", "color-dodge", "dodge"],
 } as const;
 export type Blend = keyof typeof BLENDS;
-export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar" | "cardslide";
+export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar" | "cardslide" | "dropcap";
 /** How a caption comes in (the last few from the Premiere template pack's presets). */
 export const ANIMS = {
   none: "None", fade: "Fade in", pop: "Pop", slide: "Slide up", bounce: "Bounce", zoom: "Zoom in",
@@ -82,7 +82,10 @@ export type CaptionStyle = {
   boldBar?: { colors: [string, string]; big: number; topFont: string; top: number; lastFont: string; last: number };
   // "cardslide": a small line on a card (cardFont, × the big size, on `card`), the big line (the style's font, its
   // gradient) letter by letter, the last word in script (lastFont) under its right end; see cardSlide()
-  cardSlide?: { card: string; cardFont: string; top: number; big: number; lastFont: string; last: number }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
+  cardSlide?: { card: string; cardFont: string; top: number; big: number; lastFont: string; last: number };
+  // "dropcap": a big line in capitals, each word's first letter big and the rest small (× `small`), small words spread
+  // over it (topFont, × the big size), the rest on a box under it (boxFont in boxText, on `box`); see dropCap()
+  dropCap?: { big: number; small: number; topFont: string; top: number; boxFont: string; boxText: string; box: string; boxSize: number }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
@@ -209,6 +212,104 @@ export function boldBar(words: string[], s: CaptionStyle & Placement, ratio = 9 
  */
 export const CARD_AT = { mid: -0.8, h: 1.3, pad: 0.34, radius: 0.22, left: 0.16, lastBase: 0.18, lastInset: 0.08 };
 /**
+ * "dropcap" layout, in em of the big letters, from the big line's baseline (y down), shared by the editor and the MP4:
+ * the top words' baseline, the box's top and height (em of its text), its padding (em of its text) and radius; where the
+ * box starts (after the first big letter, plus this), its words' baseline below its middle (em of them).
+ */
+export const DROP_AT = { topBase: -0.47, boxTop: 0.24, boxH: 1.5, pad: 0.3, radius: 0.18, boxLeft: 0.3, textMid: 0.3 };
+/** "dropcap" timing (ms): a top word's punch, each big letter's pop and the step between them, the box's wipe, each box
+    word's slide and the step between them. */
+export const DROP_TIME = { punch: 240, letter: 320, step: 45, wipe: 320, word: 340, wordStep: 120 };
+/** The big line's letters: [letter, big or small, which word] (in capitals). */
+export function dropLetters(text: string) {
+  const out: [string, boolean, number][] = [];
+  text.split(/\s+/).filter(Boolean).forEach((w, k) => { // (the words run together, as the reference: SHEWYNJOYL)
+    [...new Intl.Segmenter().segment(w.toUpperCase())].forEach((g, i) => out.push([g.segment, i === 0, k]));
+  });
+  return out;
+}
+/**
+ * Which words go where and how big: two words big (one when there are three words or fewer), up to three before them on
+ * top, the rest on the box. Sizes in em of the big letters (the big letters × the style's size, fitting the room); the
+ * top words spread over the big line after its first letter; the box from after the first letter to the big line's end
+ * (or wider for its words, inside the room); the box's words shrunk only if they won't fit.
+ */
+export function dropCap(words: string[], s: CaptionStyle & Placement, ratio = 9 / 16) {
+  const dc = s.dropCap!, n = words.length, room = roomInEm(s, ratio), ids = words.map((_, i) => i);
+  const nBig = n >= 4 ? 2 : 1, nTop = n <= 2 ? 0 : n === 3 ? 1 : Math.min(3, n - 3);
+  const top = ids.slice(0, nTop), big = ids.slice(nTop, nTop + nBig).length ? ids.slice(nTop, nTop + nBig) : ids, box = ids.slice(nTop + nBig);
+  const letters = dropLetters(big.map((i) => words[i]).join(" "));
+  const wOf = (ch: string, isBig: boolean) => textWidth(ch, s.font, s.fontTa) * (isBig ? 1 : dc.small); // (a space at the small size)
+  const bigW = Math.max(0.3, letters.reduce((a, [ch, b]) => a + wOf(ch, b), 0)), firstW = letters.length ? wOf(letters[0][0], true) : 0;
+  const zB = Math.min(dc.big, (room * 0.95) / bigW), roomEm = room / zB;
+  const hz = s.x !== undefined ? 0 : s.textAlign === "left" ? -1 : s.textAlign === "right" ? 1 : 0, roomL = hz < 0 ? 0 : hz > 0 ? bigW - roomEm : (bigW - roomEm) / 2;
+  const inRoom = (left: number, w: number) => Math.min(Math.max(left, roomL), roomL + roomEm - w);
+  const tw = (idx: number[], f: string) => idx.reduce((a, i) => a + textWidth(words[i], f, s.fontTa), 0);
+  // the top words over the small letters, in the room between the big ones (after the first), spread out evenly; a word
+  // that would run into a big letter goes past it (shrunk if they'd not fit)
+  const spanL = firstW + 0.05, spanW = Math.max(0.3, bigW - spanL);
+  const segs: [number, number][] = [];
+  let x = 0, from = spanL;
+  letters.forEach(([ch, b], i) => {
+    const w = wOf(ch, b);
+    if (b && i) { if (x - 0.04 > from) segs.push([from, x - 0.04]); from = x + w + 0.04; }
+    x += w;
+  });
+  if (bigW > from) segs.push([from, bigW]);
+  if (!segs.length) segs.push([spanL, bigW]);
+  const free = segs.reduce((a, [l, r]) => a + r - l, 0), natW = top.map((i) => textWidth(words[i], dc.topFont, s.fontTa)), sumN = natW.reduce((a, b) => a + b, 0) || 1;
+  // each word in the room its middle falls in (its place along the line, as the room goes), the words in each spread out
+  const segOf: number[] = [];
+  let acc = 0;
+  natW.forEach((w) => {
+    let p = ((acc + w / 2) / sumN) * free, k = 0;
+    while (k < segs.length - 1 && p > segs[k][1] - segs[k][0]) { p -= segs[k][1] - segs[k][0]; k++; }
+    segOf.push(Math.max(k, segOf[segOf.length - 1] ?? 0)); acc += w;
+  });
+  const inSeg = segs.map((_, k) => top.map((_, m) => m).filter((m) => segOf[m] === k));
+  // the size: as asked, smaller if a room's words wouldn't fit in it
+  const topSize = top.length ? Math.min(dc.top, ...inSeg.map((ms, k) => (ms.length ? (segs[k][1] - segs[k][0]) * 0.95 / (ms.reduce((a, m) => a + natW[m], 0) + 0.4 * (ms.length - 1)) : Infinity))) : dc.top;
+  const topX: number[] = top.map(() => spanL);
+  inSeg.forEach((ms, k) => {
+    const [l, r] = segs[k], ws = ms.map((m) => natW[m] * topSize), sum = ws.reduce((a, b) => a + b, 0);
+    if (ms.length === 1) topX[ms[0]] = k === 0 ? l : l + (r - l - sum) / 2; // (one: at the start of the first room, else in the middle)
+    else { const gap = (r - l - sum) / (ms.length - 1); let x = l; ms.forEach((m, n) => { topX[m] = x; x += ws[n] + gap; }); }
+  });
+  // the box: its words a space apart, padded; from after the first letter to the big line's end, or as wide as they need
+  const boxNat = box.length ? textWidth(box.map((i) => words[i]).join(" "), dc.boxFont, s.fontTa) + 2 * DROP_AT.pad : 0;
+  const boxSize = box.length ? Math.min(dc.boxSize, (roomEm * 0.95) / boxNat) : dc.boxSize;
+  const boxW = Math.max(bigW - firstW - DROP_AT.boxLeft, boxNat * boxSize), boxLeft = inRoom(Math.min(firstW + DROP_AT.boxLeft, bigW - boxW), boxW);
+  return { top, big, box, letters, bigW, firstW, zB, topSize, topX, spanL, spanW, boxSize, boxW, boxLeft };
+}
+/** Where the top words' baseline and the box's top are (em of the big letters), with the line spacing. */
+export const dropLines = (s: CaptionStyle) => { const d = ((s.lineHeight ?? 1) - 1) * 0.6; return { topBase: DROP_AT.topBase - d, boxTop: DROP_AT.boxTop + d }; };
+/**
+ * When each part of "dropcap" comes in (ms from the caption's start), following the speech: each top word punches up as
+ * it's said (a moment after the one before); the big letters start as the big line is said, once the top words are in;
+ * the box wipes in as its first word is said, once the big line is under way, and its words slide in as they're said.
+ * Drawn closer together if it wouldn't be done before the caption ends.
+ */
+export function dropSchedule(starts: number[], L: ReturnType<typeof dropCap>, captionMs: number) {
+  const T = DROP_TIME, nLetters = L.letters.filter(([ch]) => ch !== " ").length;
+  const tops: number[] = [];
+  L.top.forEach((j, m) => tops.push(Math.max(starts[j], m ? tops[m - 1] + T.punch * 0.5 : 0)));
+  let big = Math.max(starts[L.big[0]] ?? 0, tops.length ? tops[tops.length - 1] + T.punch * 0.5 : 0), step = T.step;
+  let box = L.box.length ? Math.max(starts[L.box[0]], big + nLetters * T.step * 0.6) : 0;
+  const words: number[] = [];
+  const place = () => { words.length = 0; L.box.forEach((j, m) => words.push(Math.max(m ? starts[j] : box + T.wipe * 0.6, m ? words[m - 1] + T.wordStep : 0))); };
+  place();
+  const room = captionMs - 80, first = tops[0] ?? big;
+  const doneOf = () => Math.max(tops.length ? tops[tops.length - 1] + T.punch : 0, big + Math.max(0, nLetters - 1) * step + T.letter, words.length ? words[words.length - 1] + T.word : 0);
+  for (let pass = 0; pass < 6 && doneOf() > room && doneOf() > first; pass++) {
+    const f = Math.max(0.2, (room - first) / (doneOf() - first)), at = (t: number) => first + (t - first) * f;
+    for (let m = 0; m < tops.length; m++) tops[m] = Math.max(at(tops[m]), m ? tops[m - 1] + 40 : 0);
+    big = at(big); box = at(box); step = Math.max(15, step * f);
+    for (let m = 0; m < words.length; m++) words[m] = Math.max(at(words[m]), m ? words[m - 1] + 40 : box + T.wipe * 0.3);
+  }
+  big = Math.min(big, Math.max(0, room - Math.max(0, nLetters - 1) * step - T.letter));
+  return { tops, big, step, box, words };
+}
+/**
  * Where the card's middle and the last line's baseline are (em of the big line, from its baseline), with the line
  * spacing: 100% as CARD_AT; more moves them away from the big line, less tucks them in.
  */
@@ -297,6 +398,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-box-punch", name: "Box Punch", group: "Typography", blurb: "The set-up's words appear as they're said; then a box wipes in and the punch rises into it in Caveat Bold handwriting (change the box colour in Colour).", font: "Poppins Light", fontTa: "Hind Madurai", size: 1.12, startSize: 0.8, color: W, effect: "boxpunch", boxPunch: { font: "Caveat Bold", scale: 2.1, color: "#B87A5E", h: 1.15 } },
   { id: "cc-bold-bar", name: "Bold Bar", group: "Typography", blurb: "Small words spread over a big bold word on a red bar, a script word under it: the small words punch up, the big one wipes in, the last rises (change the bar colour in Colour).", font: "Poppins", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: W, effect: "boldbar", boldBar: { colors: ["#FF1F1F", "#6E0000"], big: 3.2, topFont: "Poppins Light Italic", top: 0.36, lastFont: "Satisfy", last: 0.62 } },
   { id: "cc-card-slide", name: "Card Slide", group: "Typography", blurb: "A green card slides in with its words, the big line pops in letter by letter, the last word writes itself on (change the card colour in Colour).", font: "Playfair Display Black Italic", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, gradient: ["#C2D89A", "#5E9324"], effect: "cardslide", cardSlide: { card: "#62A044", cardFont: "Inter Bold", top: 0.3, big: 2.8, lastFont: "Satisfy", last: 0.64 } },
+  { id: "cc-drop-cap", name: "Drop Cap", group: "Typography", blurb: "Small words punch up over a big italic name with big first letters, written letter by letter; the rest slides in word by word on a box (change the box colour in Colour).", font: "Playfair Display Bold Italic", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, effect: "dropcap", dropCap: { big: 2.4, small: 0.5, topFont: "Inter", top: 0.27, boxFont: "Poppins Light Italic", boxText: "#141414", box: "#F5BE8C", boxSize: 0.27 } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
@@ -369,7 +471,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
-  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-letter-rise", "cc-typo-block",
+  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-simple", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
   "setup-punch", "setup-punch-pro", "comic-pop", "butter-serif", "handwritten", "trending-1", "trending-2", "trending-3", "neon-aura",
@@ -555,6 +657,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
     if (s.spark) s.spark = { ...s.spark, star: c.accent };
     else if (s.boxPunch) s.boxPunch = { ...s.boxPunch, color: c.accent };
     else if (s.cardSlide) s.cardSlide = { ...s.cardSlide, card: c.accent };
+    else if (s.dropCap) s.dropCap = { ...s.dropCap, box: c.accent };
     else if (s.boldBar) s.boldBar = { ...s.boldBar, colors: [c.accent, mixHex(c.accent, "#000000", 0.55)] };
     else if (s.mark) s.mark = c.accent;
     else if (s.keyword) s.keyword.color = c.accent;
@@ -1196,6 +1299,58 @@ export function buildAss(cues: Cue[], o: Opts) {
       subAt(c.start, c.end, "", p.subY);
       continue;
     }
+    if (s.effect === "dropcap" && s.dropCap && words.length) {
+      // Small words spread over a big line in capitals (each word's first letter big), the rest on a box under it
+      // (dropCap), placed by the big line's baseline as the editor: the small words punch up as they're said, the big line
+      // comes in letter by letter (each fading in, sliding up), the box wipes in left to right and its words slide in
+      // from the left one by one (easing in and out), following the speech (dropSchedule).
+      const dc = s.dropCap, L = dropCap(words.map((w) => w.w), s, ratio), lines = dropLines(s);
+      const emB = fs * L.zB, em1 = emB * L.topSize, em3 = emB * L.boxSize, wB = L.bigW * emB, x0 = Math.round(ax - ((hz + 1) * wB) / 2);
+      const boxH = DROP_AT.boxH * em3;
+      const top = Math.min(L.top.length ? lines.topBase * emB - assAscent(dc.topFont) * em1 : 0, -assAscent(s.font) * emB);
+      const bottom = L.box.length ? lines.boxTop * emB + boxH : (lineScale(s.font) - assAscent(s.font)) * emB;
+      const subH = sub ? subNatOf() : 0;
+      const yb = Math.round(s.x !== undefined || align === 5 ? ay - (top + bottom + subH) / 2 : align === 8 ? ay - top : ay - bottom - subH);
+      const size = (f: string, em: number) => `\\fn${f}\\fsz${Math.round((em / fs) * 1000) / 1000}`;
+      const S = dropSchedule(words.map((w) => (w.s - c.start) * 1000), L, (c.end - c.start) * 1000);
+      const at = (ms: number) => Math.min(c.end - 0.05, Math.max(c.start, c.start + ms / 1000));
+      const pop = (ms: number) => `\\fscy40\\t(0,${ms / 2},2,\\alpha&H90&\\fscy80)\\t(${ms / 2},${ms},0.5,\\alpha&H00&\\fscy100)`; // (fading in, easing in then out)
+      // the small words, spread over the big line after its first letter, each punching up as it's said
+      if (L.top.length) {
+        const y = yb + lines.topBase * emB + (lineScale(dc.topFont) - assAscent(dc.topFont)) * em1, nat = lineScale(dc.topFont) * em1;
+        const [p1, p2] = [Math.round(DROP_TIME.punch * 0.6), DROP_TIME.punch];
+        L.top.forEach((j, m) => {
+          const w = textWidth(words[j].w, dc.topFont, s.fontTa) * em1, x = x0 + L.topX[m] * emB;
+          strips(at(S.tops[m]), c.end, `{\\an2\\pos(${Math.round(x + w / 2)},${Math.round(y)})\\fad(60,0)}`, y - nat / 2, nat,
+            "{\\q2}" + word(j, words.length).replace(/^\{\\r/, `{\\r${size(dc.topFont, em1)}\\fscx30\\fscy30\\t(0,${p1},\\fscx115\\fscy115)\\t(${p1},${p2},\\fscx100\\fscy100)`), 1);
+        });
+      }
+      // the big line, letter by letter: each fading in and sliding up as it pops in
+      {
+        const yT = Math.round(yb - assAscent(s.font) * emB), nat = lineScale(s.font) * emB, d = Math.round(0.3 * emB), Lt = DROP_TIME.letter;
+        let k = 0;
+        L.letters.forEach(([ch], i) => {
+          if (ch === " ") return;
+          const body = L.letters.map(([x, b], m) => `{\\r${size(s.font, b ? emB : emB * dc.small)}\\alpha&HFF&${m === i ? pop(Lt) : ""}}${esc(x)}`).join("");
+          strips(at(S.big + k++ * S.step), c.end, `{\\an7\\move(${x0},${yT + d},${x0},${yT},0,${Lt})}`, yT + nat / 2, nat, "{\\q2}" + body, 1, 0, 0, [[yT + nat / 2 + d, nat], [yT + nat / 2, nat]], Lt);
+        });
+      }
+      // the box: wiping in left to right, then its words sliding in from the left one by one (easing in, then out)
+      if (L.box.length) {
+        const bx = x0 + Math.round(L.boxLeft * emB), by = Math.round(yb + lines.boxTop * emB), bw = Math.round(L.boxW * emB), bh = Math.round(boxH), r = Math.round(DROP_AT.radius * bh);
+        const shape = `m ${r} 0 l ${bw - r} 0 b ${bw} 0 ${bw} 0 ${bw} ${r} l ${bw} ${bh - r} b ${bw} ${bh} ${bw} ${bh} ${bw - r} ${bh} l ${r} ${bh} b 0 ${bh} 0 ${bh} 0 ${bh - r} l 0 ${r} b 0 0 0 0 ${r} 0`;
+        const clip = (w: number) => `\\clip(${bx},${by},${bx + w},${by + bh})`, W = DROP_TIME.wipe;
+        add(at(S.box), c.end, `{\\an7\\pos(${bx},${by})${clip(0)}\\t(0,${W / 2},2,${clip(Math.round(bw / 2))})\\t(${W / 2},${W},0.5,${clip(bw)})\\bord0\\shad0\\1c${colorOnly(dc.box)}\\1a&H${alphaOf(dc.box)}&\\p1}${shape}{\\p0}`, 0);
+        const tx = Math.round(bx + DROP_AT.pad * em3), ty = Math.round(by + bh / 2 + DROP_AT.textMid * em3 - assAscent(dc.boxFont) * em3), from = Math.round(0.6 * em3), Lw = DROP_TIME.word;
+        L.box.forEach((j, m) => {
+          const body = L.box.map((jj, mm) => (mm ? " " : "") + word(jj, words.length).replace(/^\{\\r/, `{\\r${size(dc.boxFont, em3)}\\1c${colorOnly(dc.boxText)}\\shad0\\bord0\\alpha&HFF&` +
+            (jj === j ? `\\t(0,${Lw / 2},2,\\alpha&H90&)\\t(${Lw / 2},${Lw},0.5,\\alpha&H00&)` : ""))).join("");
+          add(at(S.words[m]), c.end, `{\\an7\\move(${tx - from},${ty},${tx},${ty},0,${Lw})${clip(bw)}}{\\q2}` + body, 1);
+        });
+      }
+      subAt(c.start, c.end, "", yb + bottom + subH / 2);
+      continue;
+    }
     if (s.effect === "cardslide" && s.cardSlide && words.length) {
       // A small line on a card over the big line's left part, the big line, the last word in script under its right end
       // (cardSlide), placed by the big line's baseline as the editor: the card slides in from the left fading in (easing
@@ -1730,7 +1885,7 @@ ${events.join("\n")}
 export const spacesLines = (s: CaptionStyle) => !((s.effect && s.effect !== "wobble") || s.reveal || s.wordLines || s.keyword?.line);
 /** Styles the line spacing reaches: the plain layout's, and Cinematic's three lines. */
 export const takesLineSpacing = (s: CaptionStyle) =>
-  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark", "cardslide"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
+  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark", "cardslide", "dropcap"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
 
 /** How tall a line of this text is, × the em: its fonts' own line height (what libass draws, so the editor matches). */
 export const lineBox = (s: CaptionStyle, text: string) =>

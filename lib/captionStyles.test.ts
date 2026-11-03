@@ -147,9 +147,9 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
 });
 
 test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 5 + Pro, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 37);
+  assert.equal(STYLE_CHOICES.length, 38);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 5);
-  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 11);
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 12);
   assert.ok(!STYLE_CHOICES.some((s) => s.id === "cc-bold-flicker" || s.id === "cc-corners"), "Bold Flicker and Corner Block no longer offered");
   for (const id of ["tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker", "tpl-reels-rgb", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon"])
     assert.ok(!STYLE_CHOICES.some((s) => s.id === id) && styleOf(id).id === id, `${id}: no longer offered (projects on it keep it)`);
@@ -684,4 +684,25 @@ test("Card Slide: line spacing moves the card and the last line; the box colour 
   assert.ok(takesLineSpacing(resolveStyle("cc-card-slide")), "the Line spacing control shows");
   const ass = buildAss([{ start: 0, end: 3, ta: "You Hire a Smart Sales People", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-card-slide", lang: "ta", width: 1080, height: 1920, custom: { accent: "#2E6BE6" } });
   assert.ok(ass.split("\n").filter((l) => /\\p1/.test(l)).every((l) => l.includes("\\1c&HE66B2E&")), "the box in the colour picked");
+});
+
+test("Drop Cap: top words punch up between the big letters, the big line letter by letter, the box wipes and its words slide in, timed to the speech", async () => {
+  const { dropCap, dropLines, dropSchedule, DROP_TIME } = await import("./captionStyles");
+  const s = resolveStyle("cc-drop-cap");
+  const W = "my name is shewyn joyl from cbe iam 23 years".split(" "), L = dropCap(W, s);
+  assert.deepEqual([L.top, L.big, L.box], [[0, 1, 2], [3, 4], [5, 6, 7, 8, 9]]);
+  assert.ok(L.letters[0][1] && !L.letters[1][1] && L.letters[6][1], "each word's first letter big");
+  assert.ok(L.topX[0] < L.topX[1] && L.topX[1] < L.topX[2], "spread left to right");
+  assert.equal(resolveStyle("cc-drop-cap", { accent: "#00AAFF" }).dropCap?.box, "#00AAFF", "the box colour is editable");
+  assert.ok(dropLines(resolveStyle("cc-drop-cap", { lineHeight: 1.5 })).boxTop > dropLines(s).boxTop, "line spacing moves the box down");
+  assert.ok(takesLineSpacing(s));
+  for (const [t, dur] of [[W.join(" "), 4], ["so many people come to me and ask how did you become such a good sales person", 3]] as [string, number][]) {
+    const w = wordTimes(t, 0, dur), L2 = dropCap(w.map((x) => x.w), s), S = dropSchedule(w.map((x) => x.s * 1000), L2, dur * 1000);
+    const done = Math.max(S.tops.at(-1)! + DROP_TIME.punch, S.big + (L2.letters.length - 1) * S.step + DROP_TIME.letter, (S.words.at(-1) ?? 0) + DROP_TIME.word);
+    assert.ok(S.tops.every((x, m) => !m || x > S.tops[m - 1]) && S.big >= S.tops.at(-1)! && S.box >= S.big, `${t}: in order`);
+    assert.ok(done <= dur * 1000, `${t}: done by the caption's end`);
+  }
+  const ass = buildAss([{ start: 0, end: 4, ta: W.join(" "), en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-drop-cap", lang: "ta", width: 1080, height: 1920 });
+  const box = ass.split("\n").find((l) => /\\p1/.test(l))!;
+  assert.match(box, /\\clip\((\d+),(\d+),\1,(\d+)\)\\t\(0,/, "the box wipes in from its left");
 });
