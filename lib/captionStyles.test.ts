@@ -147,9 +147,9 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
 });
 
 test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 5 + Pro, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 46);
+  assert.equal(STYLE_CHOICES.length, 47);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 16);
-  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 9);
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 10);
   assert.ok(!STYLE_CHOICES.some((s) => s.id === "cc-bold-flicker" || s.id === "cc-corners"), "Bold Flicker and Corner Block no longer offered");
   assert.equal(STYLE_GROUPS[0], "Typography");
   assert.ok(STYLE_CHOICES.some((s) => s.id === DEFAULT_STYLE));
@@ -601,4 +601,27 @@ test("Box Punch: the set-up's words appear as said, the box wipes in left to rig
   const s = resolveStyle("cc-box-punch");
   assert.equal(boxPunchRows("my".split(" "), s).length, 1);
   assert.equal(boxPunchRows("hello everyone my name is and i come from the city of coimbatore".split(" "), s).length, 2);
+});
+
+test("Bold Bar: small words spread over a big word on a bar (punching up), the big word wipes in, the last rises", async () => {
+  const { boldBar, BAR_TIME } = await import("./captionStyles");
+  const s = resolveStyle("cc-bold-bar");
+  const L = boldBar("avandhan irukradhulaye periya Dangerous person".split(" "), s);
+  assert.deepEqual([L.top, L.big, L.last], [["avandhan", "irukradhulaye", "periya"], 3, 4]);
+  assert.deepEqual(boldBar(["Hi"], s).top, [], "one word: just the big one");
+  assert.ok(boldBar("a very long run of words before the big one here".split(" "), s).topSize < s.boldBar!.top, "many small words shrink to fit");
+  const ass = buildAss([{ start: 0, end: 3, ta: "avandhan irukradhulaye periya Dangerous person", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-bold-bar", lang: "ta", width: 1080, height: 1920 });
+  const ev = ass.split("\n").filter((l) => l.startsWith("Dialogue"));
+  const tops = ev.filter((l) => /Poppins Light Italic/.test(l));
+  assert.equal(tops.length, 3);
+  assert.ok(tops.every((l) => /\\fscx30\\fscy30\\t\(0,\d+,\\fscx115\\fscy115\)/.test(l)), "each small word punches up");
+  const xs = tops.map((l) => +l.match(/\\pos\((\d+)/)![1]);
+  assert.ok(xs[0] < xs[1] && xs[1] < xs[2], "spread left, centre, right");
+  const big = ev.find((l) => /Dangerous/.test(l))!;
+  assert.match(big, new RegExp(`\\\\clip\\((\\d+),(-?\\d+),\\1,(-?\\d+)\\)\\\\t\\(0,${BAR_TIME.wipe},\\\\clip`), "the big word wipes in");
+  assert.equal(ev.filter((l) => /\\p1/.test(l)).length, 24, "its bar, a gradient in slices, wiping with it");
+  const last = ev.find((l) => /\\fnSatisfy/.test(l))!;
+  const [, , y0, , y1] = last.match(/\\move\((\d+),(\d+),(\d+),(\d+)/)!.map(Number);
+  assert.ok(y0 > y1, "the last word rises");
+  assert.equal(resolveStyle("cc-bold-bar", { accent: "#00AAFF" }).boldBar?.colors[0], "#00AAFF", "the bar colour is editable");
 });

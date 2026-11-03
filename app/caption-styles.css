@@ -97,3 +97,9 @@
 .box-punch .bp-box { position: relative; display: inline-block; overflow: hidden; white-space: nowrap; }
 .box-punch .bp-bg { position: absolute; inset: 0; transform-origin: left center; }
 .box-punch .bp-text { position: relative; display: inline-block; }
+/* Bold Bar: placed by the big word's baseline (every line 1em tall) */
+.bold-bar { position: relative; display: inline-block; line-height: 1; white-space: nowrap; }
+.bold-bar .bb-bar { position: absolute; }
+.bold-bar .bb-big { position: relative; display: inline-block; }
+.bold-bar .bb-top { position: absolute; left: 0; right: 0; display: flex; line-height: 1; }
+.bold-bar .bb-last { position: absolute; right: 0; line-height: 1; }

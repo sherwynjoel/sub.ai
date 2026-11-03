@@ -1,6 +1,6 @@
 "use client";
-import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
-import { lineScale, textWidth } from "@/lib/fontWidths";
+import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { cssBaseline, lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
 
@@ -268,6 +268,33 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       return <span key={a} className="typo-row" style={{ fontSize: `min(1em, calc(${roomCqw.toFixed(1)}cqw / ${tw.toFixed(3)}))` }}>
         {words.slice(a, to).map((_, n) => [n ? " " : null, word(a + n)])}</span>;
     });
+  } else if (s.effect === "boldbar" && s.boldBar && words.length) {
+    // small words spread over a big bold word on a bar, a script word under its right end (as the MP4, placed by the big
+    // word's baseline): each small word punches up as it's said, the big word and bar wipe in, the last word rises in
+    const bb = s.boldBar, L = boldBar(words.map((w) => w.w), s), roomCqw = (1 - s.safe.left - s.safe.right) * 95;
+    const f1 = L.topSize, f3 = bb.last, bB = cssBaseline(s.font), b1 = cssBaseline(bb.topFont) * f1, b3 = cssBaseline(bb.lastFont) * f3;
+    const Tp = L.top.length ? Math.max(0, b1 - bB - BAR_AT.topBase) : 0, base = Tp + bB; // the big word's baseline, from the block's top (em)
+    const lastBottom = L.last >= 0 ? base + BAR_AT.lastBase - b3 + f3 : 0, Bp = Math.max(0, lastBottom - (Tp + 1));
+    const since = (j: number) => (time - words[j].s) * 1000;
+    const punch = (j: number): React.CSSProperties => {
+      const t = since(j), [p1, p2] = [BAR_TIME.punch * 0.6, BAR_TIME.punch];
+      const k = t < 0 ? 0 : t < p1 ? 0.3 + (0.85 * t) / p1 : t < p2 ? 1.15 - (0.15 * (t - p1)) / (p2 - p1) : 1;
+      return { display: "inline-block", transformOrigin: "50% 100%", transform: `scale(${k.toFixed(3)})`, opacity: t < 0 ? 0 : Math.min(1, t / 60) };
+    };
+    const bwEm = L.bigW + 2 * BAR_AT.pad, wp = Math.min(1, Math.max(0, since(L.big) / BAR_TIME.wipe)), shown = wp * bwEm - BAR_AT.pad; // the wipe's edge, from the word's left (em)
+    const rise = L.last >= 0 ? Math.min(1, Math.max(0, since(L.last) / BAR_TIME.rise)) : 0;
+    body = <span className="bold-bar" style={{ fontFamily: stack(s.font, s.fontTa), padding: `${Tp.toFixed(3)}em 0 ${Bp.toFixed(3)}em`,
+      fontSize: `min(${bb.big}em, calc(${(roomCqw * 0.9).toFixed(1)}cqw / ${bwEm.toFixed(3)}))` }}>
+      <span className="bb-bar" style={{ top: `${(base + BAR_AT.top).toFixed(3)}em`, height: `${(BAR_AT.bottom - BAR_AT.top).toFixed(3)}em`, left: `${-BAR_AT.pad}em`, right: `${-BAR_AT.pad}em`,
+        background: `linear-gradient(90deg, ${bb.colors[0]}, ${bb.colors[1]})`, clipPath: `inset(0 ${((1 - wp) * bwEm).toFixed(3)}em 0 0)` }} />
+      {L.top.length > 0 && <span className="bb-top" style={{ fontFamily: stack(bb.topFont, s.fontTa), fontSize: `${f1.toFixed(3)}em`, top: `${((base + BAR_AT.topBase - b1) / f1).toFixed(3)}em`,
+        justifyContent: L.top.length === 1 ? "center" : "space-between" }}>
+        {L.top.map((_, k) => <span key={k} style={punch(k)}>{word(k)}</span>)}
+      </span>}
+      <span className="bb-big" style={{ clipPath: `inset(-1em ${(L.bigW - shown).toFixed(3)}em -1em -1em)`, visibility: since(L.big) < 0 ? "hidden" : undefined }}>{word(L.big)}</span>
+      {L.last >= 0 && <span className="bb-last" style={{ fontFamily: stack(bb.lastFont, s.fontTa), fontSize: `${f3}em`, top: `${((base + BAR_AT.lastBase - b3) / f3).toFixed(3)}em`,
+        transform: `translateY(${((1 - rise) * 0.5).toFixed(3)}em)`, opacity: since(L.last) < 0 ? 0 : Math.min(1, rise / 0.7) }}>{word(L.last)}</span>}
+    </span>;
   } else if (s.effect === "boxpunch" && s.boxPunch && words.length) {
     // the set-up on a line or two, its words appearing as said; the punch in a box under it (as the MP4): the box wipes
     // in from the left just before the punch is said, then the punch rises into it from below (cut off by the box), fading in
