@@ -159,31 +159,45 @@ export const roomInEm = (s: CaptionStyle & Placement, ratio = 9 / 16) => (0.95 *
 /** A word big enough to be the big one: three letters or more (not "a", "E", "is"). */
 const bigEnough = (w: string) => [...w.replace(/[^\p{L}\p{N}]/gu, "")].length >= 3;
 /**
- * Which words go where and how big: the big word (the last but one; when that's too short to stand alone, the nearest
- * real word before it), the words before it on top, the words after it under it (the last line); the big word's size
- * (× the style's, fitting the room); the top words in one row, or as many as it takes (up to three) to keep them at
- * their size, each row spread over the big word (or as wide as it needs, up to the room), shrunk only if one won't fit.
+ * Which words go where and how big. The top line is one line: the big word is the last but one, or earlier when the
+ * words before it wouldn't fit on one line over it (then more words go under it, on the last line); it's always a real
+ * word (3+ letters). The big word's size (× the style's, fitting the room); the top line spread over the big word (or as
+ * wide as it needs, up to the room), shrunk only if it still won't fit; the last line shrunk to fit the room.
  */
 export function boldBar(words: string[], s: CaptionStyle & Placement, ratio = 9 / 16) {
-  const bb = s.boldBar!, n = words.length;
-  let big = n >= 2 ? n - 2 : 0;
-  while (big > 0 && !bigEnough(words[big])) big--;
-  if (!bigEnough(words[big] ?? "")) { // no real word before the last: the longest one
-    big = words.reduce((b, w, i) => ([...w].length > [...words[b]].length ? i : b), 0);
-  }
-  const last = words.map((_, i) => i).slice(big + 1), topIdx = words.map((_, i) => i).slice(0, big);
-  const bigW = Math.max(0.3, textWidth(words[big] ?? "", s.font, s.fontTa));
-  const zB = Math.min(bb.big, (roomInEm(s, ratio) * 0.9) / (bigW + 2 * BAR_AT.pad)), roomEm = roomInEm(s, ratio) / zB;
-  const wOf = (i: number) => textWidth(words[i], bb.topFont, s.fontTa);
-  const natOf = (idx: number[]) => idx.reduce((a, i) => a + wOf(i), 0) + BAR_AT.gap * Math.max(0, idx.length - 1); // in top-font em
-  const maxW = Math.max(bigW, roomEm * 0.98);
-  // as many rows (up to three) as it takes to keep them at their size
-  const count = Math.min(3, topIdx.length, Math.max(1, Math.ceil((natOf(topIdx) * bb.top) / maxW - 1e-6)));
-  const cuts = [...lineBreaks(topIdx.map((i) => words[i]), count)].sort((a, b) => a - b);
-  const rows = topIdx.length ? [-1, ...cuts].map((a, r) => topIdx.slice(a + 1, r < cuts.length ? cuts[r] + 1 : topIdx.length)) : [];
-  const topSize = rows.length ? Math.min(bb.top, ...rows.map((r) => maxW / Math.max(0.01, natOf(r)))) : bb.top;
-  const topRows = rows.map((idx) => ({ idx, widths: idx.map(wOf), spread: Math.max(bigW, natOf(idx) * topSize) }));
-  return { big, last, topRows, bigW, topSize, zB };
+  const bb = s.boldBar!, n = words.length, room = roomInEm(s, ratio);
+  const wOf = (i: number, f: string) => textWidth(words[i], f, s.fontTa);
+  const natOf = (idx: number[], f: string) => idx.reduce((a, i) => a + wOf(i, f), 0) + BAR_AT.gap * Math.max(0, idx.length - 1); // in that font's em
+  const lastNatOf = (last: number[]) => (last.length ? natOf(last, bb.lastFont) - (BAR_AT.gap - 0.25) * (last.length - 1) : 0); // (words a space apart)
+  const layout = (big: number) => {
+    const bigW = Math.max(0.3, wOf(big, s.font)), zB = Math.min(bb.big, (room * 0.9) / (bigW + 2 * BAR_AT.pad)), roomEm = room / zB;
+    const top = words.map((_, i) => i).slice(0, big), last = words.map((_, i) => i).slice(big + 1);
+    const maxW = Math.max(bigW, roomEm * 0.98);
+    // the last line on one line, or two when it'd be smaller than that
+    const split = (idx: number[]) => { const b = [...lineBreaks(idx.map((i) => words[i]), 2)][0]; return b === undefined ? [idx] : [idx.slice(0, b + 1), idx.slice(b + 1)]; };
+    const keepOf = (rows: number[][]) => Math.min(1, ...rows.map((r) => (roomEm * 0.98) / (lastNatOf(r) * bb.last)));
+    const one = last.length ? [last] : [], two = last.length > 1 ? split(last) : one;
+    const lastRows = keepOf(two) > keepOf(one) + 0.15 ? two : one;
+    // how much of its size each line keeps (1: all of it), and how big that is on screen (beside a full-size big word)
+    const keep = Math.min(top.length ? Math.min(1, maxW / (natOf(top, bb.topFont) * bb.top)) : 1, last.length ? keepOf(lastRows) : 1);
+    return { big, bigW, zB, roomEm, top, last, lastRows, maxW, keep, shown: keep * (zB / bb.big) };
+  };
+  // the big word: the last real word but one that keeps both lines at (nearly) their size; for a sentence too long for
+  // any, the one whose lines come out biggest on screen; no real word: the longest
+  const real = words.map((_, i) => i).filter((i) => i <= Math.max(0, n - 2) && bigEnough(words[i])).reverse().map(layout);
+  const pick = real.find((l) => l.keep >= 0.85) ?? (real.length ? real.reduce((a, b) => (b.shown > a.shown + 0.02 ? b : a))
+    : layout(words.reduce((b, w, i) => ([...w].length > [...words[b]].length ? i : b), 0)));
+  const { big, bigW, zB, roomEm, top, last, lastRows, maxW } = pick;
+  const topSize = top.length ? Math.min(bb.top, maxW / Math.max(0.01, natOf(top, bb.topFont))) : bb.top;
+  // the room's left edge from the big word's (it sits centred in it, or against a side)
+  const hz = s.x !== undefined ? 0 : s.textAlign === "left" ? -1 : s.textAlign === "right" ? 1 : 0, roomL = hz < 0 ? 0 : hz > 0 ? bigW - roomEm : (bigW - roomEm) / 2;
+  const inRoom = (left: number, w: number) => Math.min(Math.max(left, roomL), roomL + roomEm - w);
+  const spread = top.length ? Math.max(bigW, natOf(top, bb.topFont) * topSize) : 0;
+  const topRows = top.length ? [{ idx: top, widths: top.map((i) => wOf(i, bb.topFont)), spread, left: inRoom((bigW - spread) / 2, spread) }] : [];
+  const lastSize = last.length ? Math.min(bb.last, ...lastRows.map((r) => (roomEm * 0.98) / Math.max(0.01, lastNatOf(r)))) : bb.last;
+  // the last line(s) under the big word's right end (moved in if one would run out of the room): each one's right end
+  const lastLines = lastRows.map((idx) => { const w = lastNatOf(idx) * lastSize; return { idx, right: inRoom(bigW - w, w) + w }; });
+  return { big, last, topRows, bigW, topSize, lastSize, lastLines, zB };
 }
 /** "Word by word, popping up": how long a word takes to pop up (ms). */
 export const POP_MS = 180;
@@ -1106,11 +1120,12 @@ export function buildAss(cues: Cue[], o: Opts) {
       // right end (boldBar): each small word punches up as it's said, the big word and its bar wipe in left to right,
       // the last line rises in. Placed by the big word's baseline (each piece by its font's own), as the editor.
       const bb = s.boldBar, L = boldBar(words.map((w) => w.w), s, ratio);
-      const emB = fs * L.zB, em1 = emB * L.topSize, em3 = emB * bb.last;
+      const emB = fs * L.zB, em1 = emB * L.topSize, em3 = emB * L.lastSize;
       const wB = L.bigW * emB, x0 = Math.round(ax - ((hz + 1) * wB) / 2);
       const rowBase = (r: number) => BAR_AT.topBase * emB - (L.topRows.length - 1 - r) * BAR_AT.rowGap * em1; // a top row's baseline
       const top = L.topRows.length ? rowBase(0) - assAscent(bb.topFont) * em1 : -assAscent(s.font) * emB;
-      const bottom = L.last.length ? BAR_AT.lastBase * emB + (lineScale(bb.lastFont) - assAscent(bb.lastFont)) * em3 : (lineScale(s.font) - assAscent(s.font)) * emB;
+      const lastBase = (r: number) => BAR_AT.lastBase * emB + r * BAR_AT.rowGap * em3; // a last line's baseline
+      const bottom = L.last.length ? lastBase(L.lastLines.length - 1) + (lineScale(bb.lastFont) - assAscent(bb.lastFont)) * em3 : (lineScale(s.font) - assAscent(s.font)) * emB;
       const subH = sub ? subNatOf() : 0;
       const yb = Math.round(s.x !== undefined || align === 5 ? ay - (top + bottom + subH) / 2 : align === 8 ? ay - top : ay - bottom - subH);
       // (its own size by \\fsz, so Tamil in it is sized too)
@@ -1119,12 +1134,12 @@ export function buildAss(cues: Cue[], o: Opts) {
       const body = (js: number[], tags: string) => "{\\q2}" + js.map((j, m) => (m ? " " : "") + word(j, words.length).replace(/^\{\\r/, `{\\r${tags}`)).join("");
       // the small words: each row spread over the big word (or as wide as it needs), each word punching up as it's said
       L.topRows.forEach((row, r) => {
-        const sum = row.widths.reduce((a, b) => a + b, 0) * em1, spread = row.spread * emB, left = x0 + (wB - spread) / 2;
+        const sum = row.widths.reduce((a, b) => a + b, 0) * em1, spread = row.spread * emB, left = x0 + row.left * emB;
         const gap = row.idx.length > 1 ? (spread - sum) / (row.idx.length - 1) : 0, nat = lineScale(bb.topFont) * em1;
         const y = yb + rowBase(r) + (lineScale(bb.topFont) - assAscent(bb.topFont)) * em1, [p1, p2] = [Math.round(BAR_TIME.punch * 0.6), BAR_TIME.punch];
         let x = left;
         row.idx.forEach((j, k) => {
-          const w = row.widths[k] * em1, cx = row.idx.length === 1 ? x0 + wB / 2 : x + w / 2;
+          const w = row.widths[k] * em1, cx = row.idx.length === 1 ? left + spread / 2 : x + w / 2;
           strips(when(words[j].s), c.end, `{\\an2\\pos(${Math.round(cx)},${Math.round(y)})\\fad(60,0)}`, y - nat / 2, nat, body([j], `${size(bb.topFont, em1)}\\fscx30\\fscy30\\t(0,${p1},\\fscx115\\fscy115)\\t(${p1},${p2},\\fscx100\\fscy100)`), 1);
           x += w + gap;
         });
@@ -1141,12 +1156,12 @@ export function buildAss(cues: Cue[], o: Opts) {
       // (a gradient's strips cut the text themselves: then it fades in instead of wiping)
       if (grad) strips(t0, c.end, `{\\an7\\pos(${x0},${yTop})\\fad(${BAR_TIME.wipe},0)}`, yTop + natB / 2, natB, body([L.big], size(s.font, emB)), 1);
       else add(t0, c.end, `{\\an7\\pos(${x0},${yTop})${wipe}}` + body([L.big], size(s.font, emB)), 1);
-      // the words after it under its right end, rising in as the first of them is said
-      if (L.last.length) {
-        const y = Math.round(yb + BAR_AT.lastBase * emB - assAscent(bb.lastFont) * em3), d = Math.round(0.5 * em3);
-        const nat = lineScale(bb.lastFont) * em3, yc = y + nat / 2;
-        strips(when(words[L.last[0]].s), c.end, `{\\an9\\move(${x0 + Math.round(wB)},${y + d},${x0 + Math.round(wB)},${y},0,${BAR_TIME.rise})\\fad(${Math.round(BAR_TIME.rise * 0.7)},0)}`, yc, nat, body(L.last, size(bb.lastFont, em3)), 1, 0, 0, [[yc + d, nat], [yc, nat]], BAR_TIME.rise);
-      }
+      // the words after it (a line or two) under its right end, rising in as the first of them is said
+      L.lastLines.forEach((line, r) => {
+        const y = Math.round(yb + lastBase(r) - assAscent(bb.lastFont) * em3), d = Math.round(0.5 * em3);
+        const nat = lineScale(bb.lastFont) * em3, yc = y + nat / 2, xr = x0 + Math.round(line.right * emB);
+        strips(when(words[L.last[0]].s), c.end, `{\\an9\\move(${xr},${y + d},${xr},${y},0,${BAR_TIME.rise})\\fad(${Math.round(BAR_TIME.rise * 0.7)},0)}`, yc, nat, body(line.idx, size(bb.lastFont, em3)), 1, 0, 0, [[yc + d, nat], [yc, nat]], BAR_TIME.rise);
+      });
       subAt(c.start, c.end, "", yb + bottom + subH / 2);
       continue;
     }

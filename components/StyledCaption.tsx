@@ -273,10 +273,11 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     // the MP4, placed by the big word's baseline): each small word punches up as it's said, the big word and bar wipe
     // in, the last line rises in
     const bb = s.boldBar, L = boldBar(words.map((w) => w.w), s, ratio), roomCqw = (1 - s.safe.left - s.safe.right) * 95;
-    const f1 = L.topSize, f3 = bb.last, bB = cssBaseline(s.font), b1 = cssBaseline(bb.topFont) * f1, b3 = cssBaseline(bb.lastFont) * f3;
+    const f1 = L.topSize, f3 = L.lastSize, bB = cssBaseline(s.font), b1 = cssBaseline(bb.topFont) * f1, b3 = cssBaseline(bb.lastFont) * f3;
     const rowBase = (r: number) => BAR_AT.topBase - (L.topRows.length - 1 - r) * BAR_AT.rowGap * f1; // a top row's baseline, from the big one's (em)
     const Tp = L.topRows.length ? Math.max(0, b1 - bB - rowBase(0)) : 0, base = Tp + bB; // the big word's baseline, from the block's top (em)
-    const lastBottom = L.last.length ? base + BAR_AT.lastBase - b3 + f3 : 0, Bp = Math.max(0, lastBottom - (Tp + 1));
+    const lastTop = (r: number) => base + BAR_AT.lastBase + r * BAR_AT.rowGap * f3 - b3; // a last line's top (em)
+    const lastBottom = L.last.length ? lastTop(L.lastLines.length - 1) + f3 : 0, Bp = Math.max(0, lastBottom - (Tp + 1));
     const since = (j: number) => (time - words[j].s) * 1000;
     const punch = (j: number): React.CSSProperties => {
       const t = since(j), [p1, p2] = [BAR_TIME.punch * 0.6, BAR_TIME.punch];
@@ -289,14 +290,14 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       <span className="bb-bar" style={{ top: `${(base + BAR_AT.top).toFixed(3)}em`, height: `${(BAR_AT.bottom - BAR_AT.top).toFixed(3)}em`, left: `${-BAR_AT.pad}em`, right: `${-BAR_AT.pad}em`,
         background: `linear-gradient(90deg, ${bb.colors[0]}, ${bb.colors[1]})`, clipPath: `inset(0 ${((1 - wp) * bwEm).toFixed(3)}em 0 0)` }} />
       {L.topRows.map((row, r) => <span key={r} className="bb-top" style={{ fontFamily: stack(bb.topFont, s.fontTa), fontSize: `${f1.toFixed(3)}em`,
-        top: `${((base + rowBase(r) - b1) / f1).toFixed(3)}em`, left: `${((L.bigW - row.spread) / 2 / f1).toFixed(3)}em`, width: `${(row.spread / f1).toFixed(3)}em`,
+        top: `${((base + rowBase(r) - b1) / f1).toFixed(3)}em`, left: `${(row.left / f1).toFixed(3)}em`, width: `${(row.spread / f1).toFixed(3)}em`,
         justifyContent: row.idx.length === 1 ? "center" : "space-between" }}>
         {row.idx.map((j) => <span key={j} style={punch(j)}>{word(j)}</span>)}
       </span>)}
       <span className="bb-big" style={{ clipPath: `inset(-1em ${(L.bigW - shown).toFixed(3)}em -1em -1em)`, visibility: since(L.big) < 0 ? "hidden" : undefined }}>{word(L.big)}</span>
-      {L.last.length > 0 && <span className="bb-last" style={{ fontFamily: stack(bb.lastFont, s.fontTa), fontSize: `${f3}em`, top: `${((base + BAR_AT.lastBase - b3) / f3).toFixed(3)}em`,
+      {L.lastLines.map((line, r) => <span key={r} className="bb-last" style={{ fontFamily: stack(bb.lastFont, s.fontTa), fontSize: `${f3}em`, top: `${(lastTop(r) / f3).toFixed(3)}em`, right: `${((L.bigW - line.right) / f3).toFixed(3)}em`,
         transform: `translateY(${((1 - rise) * 0.5).toFixed(3)}em)`, opacity: since(L.last[0]) < 0 ? 0 : Math.min(1, rise / 0.7) }}>
-        {L.last.flatMap((j, m) => [m ? " " : null, <span key={j}>{word(j)}</span>])}</span>}
+        {line.idx.flatMap((j, m) => [m ? " " : null, <span key={j}>{word(j)}</span>])}</span>)}
     </span>;
   } else if (s.effect === "boxpunch" && s.boxPunch && words.length) {
     // the set-up on a line or two, its words appearing as said; the punch in a box under it (as the MP4): the box wipes

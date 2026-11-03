@@ -615,12 +615,14 @@ test("Bold Bar: small words spread over a big word on a bar (punching up), the b
   assert.equal(W[B.big], "good");
   assert.equal("this is A person".split(" ")[boldBar("this is A person".split(" "), s).big], "this", "not \"A\" nor \"is\"");
   assert.deepEqual(boldBar("this is A person".split(" "), s).last, [1, 2, 3], "the words after it on the last line");
-  // a long first line: more rows, not one tiny one
-  const mid = boldBar("people always come to me and ask how did you become a good person".split(" "), s);
-  assert.ok(mid.topRows.length >= 2 && mid.topSize > s.boldBar!.top * 0.75, "rows at (about) the full size");
-  const long = boldBar("so many people come to me and ask me how did you become such a good person".split(" "), s);
-  assert.equal(long.topRows.length, 3);
-  assert.ok(long.topSize > s.boldBar!.top * 0.6, "still readable");
+  // the first line is always one line; a caption's usual length keeps it at its size (more words go under the big one)
+  for (const t of ["Do you wonder why every business needs a website", "So if you're serious about your business", "people always come to me and ask how did you become a good person"]) {
+    const W = t.split(" "), L2 = boldBar(W, s);
+    assert.equal(L2.topRows.length, 1, `${t}: one top line`);
+    assert.deepEqual([...L2.topRows[0].idx, L2.big, ...L2.last], W.map((_, i) => i), "every word, in order");
+    assert.ok(L2.lastLines.length <= 2);
+  }
+  assert.equal(boldBar("Do you wonder why every business needs a website".split(" "), s).topSize, s.boldBar!.top, "at its size");
   const ass = buildAss([{ start: 0, end: 3, ta: "avandhan irukradhulaye periya Dangerous person", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-bold-bar", lang: "ta", width: 1080, height: 1920 });
   const ev = ass.split("\n").filter((l) => l.startsWith("Dialogue"));
   const tops = ev.filter((l) => /Poppins Light Italic/.test(l));
