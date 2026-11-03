@@ -147,9 +147,9 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
 });
 
 test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 5 + Pro, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 36);
+  assert.equal(STYLE_CHOICES.length, 37);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 5);
-  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 10);
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 11);
   assert.ok(!STYLE_CHOICES.some((s) => s.id === "cc-bold-flicker" || s.id === "cc-corners"), "Bold Flicker and Corner Block no longer offered");
   for (const id of ["tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker", "tpl-reels-rgb", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon"])
     assert.ok(!STYLE_CHOICES.some((s) => s.id === id) && styleOf(id).id === id, `${id}: no longer offered (projects on it keep it)`);
@@ -639,4 +639,23 @@ test("Bold Bar: small words spread over a big word on a bar (punching up), the b
   const [, , y0, , y1] = last.match(/\\move\((\d+),(\d+),(\d+),(\d+)/)!.map(Number);
   assert.ok(y0 > y1, "the last word rises");
   assert.equal(resolveStyle("cc-bold-bar", { accent: "#00AAFF" }).boldBar?.colors[0], "#00AAFF", "the bar colour is editable");
+});
+
+test("Card Slide: the card slides in fading (eased), the big line pops in letter by letter, the last word writes on", async () => {
+  const { cardSlide, easeInOut, CARD_TIME } = await import("./captionStyles");
+  const s = resolveStyle("cc-card-slide");
+  const W = "You Hire a Smart Sales People".split(" "), L = cardSlide(W, s);
+  assert.deepEqual([L.top, L.big, L.last], [[0, 1, 2], [3, 4], [5]]);
+  assert.equal(easeInOut(0), 0); assert.equal(easeInOut(1), 1); assert.ok(easeInOut(0.1) < 0.1 && easeInOut(0.9) > 0.9, "eases in and out");
+  assert.equal(resolveStyle("cc-card-slide", { accent: "#FF0000" }).cardSlide?.card, "#FF0000", "the card colour is editable");
+  const ass = buildAss([{ start: 0, end: 3.5, ta: W.join(" "), en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-card-slide", lang: "ta", width: 1080, height: 1920 });
+  const ev = ass.split("\n").filter((l) => l.startsWith("Dialogue"));
+  const card = ev.filter((l) => /\\p1/.test(l));
+  const xs = card.map((l) => +(l.match(/\\move\((-?\d+)/)?.[1] ?? l.match(/\\pos\((-?\d+)/)![1]));
+  assert.ok(xs.every((x, i) => !i || x >= xs[i - 1]) && xs[0] < xs.at(-1)!, "the card slides in from the left");
+  assert.match(card[0], /\\1a&HFF&/, "from nothing");
+  const letters = ev.filter((l) => /\\fscy40\\t\(0,\d+,2,/.test(l));
+  assert.equal(letters.length / 10, "SmartSales".length, "each letter of the big line pops in (in its gradient's strips)");
+  const last = ev.find((l) => /Satisfy/.test(l))!;
+  assert.match(last, new RegExp(`\\\\t\\(0,${CARD_TIME.write / 2},2,\\\\clip`), "the last word writes on");
 });

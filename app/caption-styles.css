@@ -39,6 +39,7 @@
 @font-face { font-family: "Poppins Light"; src: url("/caption-fonts/Poppins-Light.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Poppins Regular"; src: url("/caption-fonts/Poppins-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Poppins Light Italic"; src: url("/caption-fonts/Poppins-LightItalic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Playfair Display Black Italic"; src: url("/caption-fonts/PlayfairDisplay-BlackItalic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Sriracha"; src: url("/caption-fonts/Sriracha-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Bodoni Moda Italic"; src: url("/caption-fonts/BodoniModa-Italic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Poppins Medium"; src: url("/caption-fonts/Poppins-Medium.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
@@ -103,3 +104,9 @@
 .bold-bar .bb-big { position: relative; display: inline-block; }
 .bold-bar .bb-top { position: absolute; display: flex; line-height: 1; }
 .bold-bar .bb-last { position: absolute; right: 0; line-height: 1; }
+/* Card Slide: placed by the big line's baseline (every line 1em tall); the card's and last line's words white */
+.card-slide { position: relative; display: inline-block; line-height: 1; white-space: nowrap; }
+.card-slide .cs-card { position: absolute; display: flex; align-items: center; box-sizing: border-box; color: #fff; }
+.card-slide .cs-big { position: relative; display: inline-block; }
+.card-slide .cs-letter { display: inline-block; transform-origin: 50% 100%; }
+.card-slide .cs-last { position: absolute; line-height: 1; color: #fff; }
