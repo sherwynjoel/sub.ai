@@ -25,7 +25,7 @@ export const BLENDS = {
   dodge: ["Colour dodge", "color-dodge", "dodge"],
 } as const;
 export type Blend = keyof typeof BLENDS;
-export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar";
+export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar" | "cardslide";
 /** How a caption comes in (the last few from the Premiere template pack's presets). */
 export const ANIMS = {
   none: "None", fade: "Fade in", pop: "Pop", slide: "Slide up", bounce: "Bounce", zoom: "Zoom in",
@@ -79,7 +79,10 @@ export type CaptionStyle = {
   boxPunch?: { font: string; scale: number; color: string; h?: number };
   // "boldbar": the last word but one big (in the style's font) on a bar (colours left → right), the words before it spread
   // over it in small (topFont, × the big size), the last word under its right end (lastFont); see boldBar()
-  boldBar?: { colors: [string, string]; big: number; topFont: string; top: number; lastFont: string; last: number }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
+  boldBar?: { colors: [string, string]; big: number; topFont: string; top: number; lastFont: string; last: number };
+  // "cardslide": a small line on a card (cardFont, × the big size, on `card`), the big line (the style's font, its
+  // gradient) letter by letter, the last word in script (lastFont) under its right end; see cardSlide()
+  cardSlide?: { card: string; cardFont: string; top: number; big: number; lastFont: string; last: number }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
@@ -199,6 +202,39 @@ export function boldBar(words: string[], s: CaptionStyle & Placement, ratio = 9 
   const lastLines = lastRows.map((idx) => { const w = lastNatOf(idx) * lastSize; return { idx, right: inRoom(bigW - w, w) + w }; });
   return { big, last, topRows, bigW, topSize, lastSize, lastLines, zB };
 }
+/**
+ * "cardslide" layout, in em of the big line, from its baseline (y down), shared by the editor and the MP4: the card's
+ * middle (above the big line's left part), its height and padding (em of its text), where it starts (× the big line's
+ * width), the last line's baseline and how far in from the big line's right end it ends.
+ */
+export const CARD_AT = { mid: -0.8, h: 1.3, pad: 0.34, radius: 0.22, left: 0.16, lastBase: 0.18, lastInset: 0.08 };
+/** The card's words' baseline below its middle (em of them): their capitals centred on it. */
+export const CARD_BASE = 0.36;
+/** "cardslide" timing (ms): the card's slide (and from how far left, em of its text), each letter's pop and the step
+    between letters, the last word's write-on. */
+export const CARD_TIME = { slide: 520, from: 2.2, letter: 320, step: 45, write: 700 };
+/** Ease in and out (smooth start and stop), 0 → 1. */
+export const easeInOut = (t: number) => { const v = Math.min(1, Math.max(0, t)); return v < 0.5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2; };
+/**
+ * Which words go where and how big: the last word under the big line; the big line the two words before it (one when
+ * there are only three words or fewer); the words before them on the card. Sizes in em of the big line (the big line
+ * × the style's size, fitting the room); the card and the last line fit the room too, placed inside it.
+ */
+export function cardSlide(words: string[], s: CaptionStyle & Placement, ratio = 9 / 16) {
+  const cs = s.cardSlide!, n = words.length, room = roomInEm(s, ratio);
+  const last = n >= 2 ? [n - 1] : [], bigN = n >= 4 ? 2 : 1, bigFrom = Math.max(0, n - (last.length ? 1 : 0) - bigN);
+  const big = words.map((_, i) => i).slice(bigFrom, bigFrom + bigN), top = words.map((_, i) => i).slice(0, bigFrom);
+  const widthOf = (idx: number[], f: string) => textWidth(idx.map((i) => words[i]).join(" "), f, s.fontTa);
+  const bigW = Math.max(0.3, widthOf(big, s.font)), zB = Math.min(cs.big, (room * 0.97) / bigW), roomEm = room / zB;
+  const hz = s.x !== undefined ? 0 : s.textAlign === "left" ? -1 : s.textAlign === "right" ? 1 : 0, roomL = hz < 0 ? 0 : hz > 0 ? bigW - roomEm : (bigW - roomEm) / 2;
+  const inRoom = (left: number, w: number) => Math.min(Math.max(left, roomL), roomL + roomEm - w);
+  const topW = top.length ? widthOf(top, cs.cardFont) : 0;
+  const topSize = top.length ? Math.min(cs.top, (roomEm * 0.95) / (topW + 2 * CARD_AT.pad)) : cs.top;
+  const cardW = (topW + 2 * CARD_AT.pad) * topSize, cardLeft = inRoom(CARD_AT.left * bigW, cardW);
+  const lastW = last.length ? widthOf(last, cs.lastFont) : 0, lastSize = last.length ? Math.min(cs.last, (roomEm * 0.95) / lastW) : cs.last;
+  const lastRight = last.length ? inRoom(bigW - CARD_AT.lastInset - lastW * lastSize, lastW * lastSize) + lastW * lastSize : bigW;
+  return { top, big, last, bigW, zB, topW, topSize, cardW, cardLeft, lastW, lastSize, lastRight };
+}
 /** "Word by word, popping up": how long a word takes to pop up (ms). */
 export const POP_MS = 180;
 /** A staggered style's glow at its usual strength (its Shadow size; bigger or smaller scales it). */
@@ -217,6 +253,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-spark", name: "Spark Slide", group: "Typography", blurb: "A star slides up and spins behind the first line as it slides in from the left; the big Anton line and the light italic one come in word by word, sliding up (change the star's colour in Colour).", font: "Poppins Regular", fontTa: "Hind Madurai", size: 1.13, startSize: 0.9, color: W, lineHeight: 0.9, effect: "spark", spark: { big: 2.5, bigFont: "Anton", lastFont: "Poppins Light Italic", star: "#D97757", tight: 0.8 } },
   { id: "cc-box-punch", name: "Box Punch", group: "Typography", blurb: "The set-up's words appear as they're said; then a box wipes in and the punch rises into it in Caveat Bold handwriting (change the box colour in Colour).", font: "Poppins Light", fontTa: "Hind Madurai", size: 1.12, startSize: 0.8, color: W, effect: "boxpunch", boxPunch: { font: "Caveat Bold", scale: 2.1, color: "#B87A5E", h: 1.15 } },
   { id: "cc-bold-bar", name: "Bold Bar", group: "Typography", blurb: "Small words spread over a big bold word on a red bar, a script word under it: the small words punch up, the big one wipes in, the last rises (change the bar colour in Colour).", font: "Poppins", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: W, effect: "boldbar", boldBar: { colors: ["#FF1F1F", "#6E0000"], big: 3.2, topFont: "Poppins Light Italic", top: 0.36, lastFont: "Satisfy", last: 0.62 } },
+  { id: "cc-card-slide", name: "Card Slide", group: "Typography", blurb: "A green card slides in with its words, the big line pops in letter by letter, the last word writes itself on (change the card colour in Colour).", font: "Playfair Display Black Italic", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, gradient: ["#C2D89A", "#5E9324"], effect: "cardslide", cardSlide: { card: "#62A044", cardFont: "Inter Bold", top: 0.3, big: 2.8, lastFont: "Satisfy", last: 0.64 } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
@@ -289,7 +326,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
-  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-letter-rise", "cc-typo-block",
+  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-simple", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
   "setup-punch", "setup-punch-pro", "comic-pop", "butter-serif", "handwritten", "trending-1", "trending-2", "trending-3", "neon-aura",
@@ -321,6 +358,7 @@ export const CAPTION_FONTS = [
   "Poppins Regular",
   "Poppins Light Italic",
   "Sriracha",
+  "Playfair Display Black Italic",
 ] as const;
 /** The commercial font a free one stands in for (shown in the font menu). */
 export const FONT_LIKE: Partial<Record<string, string>> = { "Great Vibes": "Snell", "Alex Brush": "Snell Bold", "Pinyon Script": "Snell", "Figtree Bold": "Avenir", "GFS Didot": "Didot" };
@@ -473,6 +511,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   if (c.accent) {
     if (s.spark) s.spark = { ...s.spark, star: c.accent };
     else if (s.boxPunch) s.boxPunch = { ...s.boxPunch, color: c.accent };
+    else if (s.cardSlide) s.cardSlide = { ...s.cardSlide, card: c.accent };
     else if (s.boldBar) s.boldBar = { ...s.boldBar, colors: [c.accent, mixHex(c.accent, "#000000", 0.55)] };
     else if (s.mark) s.mark = c.accent;
     else if (s.keyword) s.keyword.color = c.accent;
@@ -1112,6 +1151,67 @@ export function buildAss(cues: Cue[], o: Opts) {
         }
       });
       subAt(c.start, c.end, "", p.subY);
+      continue;
+    }
+    if (s.effect === "cardslide" && s.cardSlide && words.length) {
+      // A small line on a card over the big line's left part, the big line, the last word in script under its right end
+      // (cardSlide), placed by the big line's baseline as the editor: the card and its words slide in from the left
+      // fading in (easing in and out), the big line pops in letter by letter (each fading in, sliding up), the last word
+      // writes itself on, left to right.
+      const cs = s.cardSlide, L = cardSlide(words.map((w) => w.w), s, ratio);
+      const emB = fs * L.zB, em1 = emB * L.topSize, em3 = emB * L.lastSize, wB = L.bigW * emB, x0 = Math.round(ax - ((hz + 1) * wB) / 2);
+      const cardH = CARD_AT.h * em1, cardMid = CARD_AT.mid * emB;
+      const top = Math.min(L.top.length ? cardMid - cardH / 2 : 0, -assAscent(s.font) * emB);
+      const bottom = L.last.length ? CARD_AT.lastBase * emB + (lineScale(cs.lastFont) - assAscent(cs.lastFont)) * em3 : (lineScale(s.font) - assAscent(s.font)) * emB;
+      const subH = sub ? subNatOf() : 0;
+      const yb = Math.round(s.x !== undefined || align === 5 ? ay - (top + bottom + subH) / 2 : align === 8 ? ay - top : ay - bottom - subH);
+      const size = (f: string, em: number) => `\\fn${f}\\fsz${Math.round((em / fs) * 1000) / 1000}`;
+      const when = (t: number) => Math.min(c.end - 0.05, Math.max(c.start, t));
+      const hex2 = (a: number) => Math.round(Math.min(255, Math.max(0, a))).toString(16).toUpperCase().padStart(2, "0");
+      // the card and its words: sliding in from the left, fading in, easing in and out (in steps: libass moves evenly)
+      if (L.top.length) {
+        const t0 = when(words[L.top[0]].s), D = CARD_TIME.slide, K = 8, cw = Math.round(L.cardW * emB), ch = Math.round(cardH), r = Math.round(CARD_AT.radius * ch);
+        const cx0 = x0 + Math.round(L.cardLeft * emB), cy = Math.round(yb + cardMid - cardH / 2), from = CARD_TIME.from * em1;
+        const card = `m ${r} 0 l ${cw - r} 0 b ${cw} 0 ${cw} 0 ${cw} ${r} l ${cw} ${ch - r} b ${cw} ${ch} ${cw} ${ch} ${cw - r} ${ch} l ${r} ${ch} b 0 ${ch} 0 ${ch} 0 ${ch - r} l 0 ${r} b 0 0 0 0 ${r} 0`;
+        // its words' baseline: their capitals centred on the card (CARD_BASE em below its middle)
+        const textY = Math.round(yb + cardMid + CARD_BASE * em1 - assAscent(cs.cardFont) * em1);
+        const words1 = L.top.map((j, m) => (m ? " " : "") + word(j, words.length)).join("");
+        const tx = (x: number) => Math.round(x + CARD_AT.pad * em1);
+        const cardA = alphaOf(cs.card), cardAlpha = (a: number) => hex2(255 - (255 - parseInt(cardA, 16)) * a);
+        for (let k = 0; k <= K; k++) {
+          const a = k / K, b = (k + 1) / K, xa = cx0 - from * (1 - easeInOut(a)), xb = cx0 - from * (1 - easeInOut(b));
+          const start = c.start + (t0 - c.start) + (a * D) / 1000, end = k < K ? c.start + (t0 - c.start) + (b * D) / 1000 : c.end, seg = Math.round(((b - a) * D));
+          if (start >= c.end) break;
+          const mv = k < K ? `\\move(${Math.round(xa)},${cy},${Math.round(xb)},${cy},0,${seg})` : `\\pos(${cx0},${cy})`;
+          const al = k < K ? `\\alpha&H${hex2(255 * (1 - easeInOut(a)))}&\\t(0,${seg},\\alpha&H${hex2(255 * (1 - easeInOut(b)))}&)` : "";
+          add(start, Math.min(end, c.end), `{\\an7${mv}\\bord0\\shad0\\1c${colorOnly(cs.card)}\\1a&H${k < K ? cardAlpha(easeInOut(a)) : cardA}&${k < K ? `\\t(0,${seg},\\1a&H${cardAlpha(easeInOut(b))}&)` : ""}\\p1}${card}{\\p0}`, 0);
+          const mvT = k < K ? `\\move(${tx(xa)},${textY},${tx(xb)},${textY},0,${seg})` : `\\pos(${tx(cx0)},${textY})`;
+          add(start, Math.min(end, c.end), `{\\an7${mvT}}{\\q2}` + words1.replace(/\{\\r/g, `{\\r${size(cs.cardFont, em1)}\\1c&HFFFFFF&\\shad0${al}`), 1);
+        }
+      }
+      // the big line, letter by letter: each fading in and sliding up as it pops in (easing in, then out)
+      {
+        const text = L.big.map((j) => words[j].w).join(" "), chars = [...new Intl.Segmenter().segment(text)].map((g) => g.segment);
+        const yT = Math.round(yb - assAscent(s.font) * emB), nat = lineScale(s.font) * emB, d = Math.round(0.35 * emB), Lt = CARD_TIME.letter;
+        const t0 = when(words[L.big[0]].s), tag = size(s.font, emB);
+        let k = 0;
+        chars.forEach((ch, i) => {
+          if (/\s/.test(ch)) return;
+          const start = when(t0 + (k++ * CARD_TIME.step) / 1000);
+          const body = chars.map((x, m) => `{\\r${tag}\\alpha&HFF&${m === i ? `\\fscy40\\t(0,${Lt / 2},2,\\alpha&H90&\\fscy80)\\t(${Lt / 2},${Lt},0.5,\\alpha&H00&\\fscy100)` : ""}}${esc(x)}`).join("");
+          strips(start, c.end, `{\\an7\\move(${x0},${yT + d},${x0},${yT},0,${Lt})}`, yT + nat / 2, nat, "{\\q2}" + body, 1, 0, 0, [[yT + nat / 2 + d, nat], [yT + nat / 2, nat]], Lt);
+        });
+      }
+      // the last word writes itself on, left to right (easing in, then out)
+      if (L.last.length) {
+        const xr = x0 + Math.round(L.lastRight * emB), y = Math.round(yb + CARD_AT.lastBase * emB - assAscent(cs.lastFont) * em3), nat = lineScale(cs.lastFont) * em3;
+        const lx = Math.round(xr - L.lastW * em3 - 0.4 * em3), rx = Math.round(xr + 0.4 * em3), W = CARD_TIME.write, mid = Math.round((lx + rx) / 2);
+        const clip = (x: number) => `\\clip(${lx},${Math.round(y - 0.5 * em3)},${x},${Math.round(y + nat + 0.5 * em3)})`;
+        // (white: the style's gradient is the big line's)
+        add(when(words[L.last[0]].s), c.end, `{\\an9\\pos(${xr},${y})${clip(lx)}\\t(0,${W / 2},2,${clip(mid)})\\t(${W / 2},${W},0.5,${clip(rx)})\\fad(120,0)}` +
+          "{\\q2}" + L.last.map((j, m) => (m ? " " : "") + word(j, words.length)).join("").replace(/\{\\r/g, `{\\r${size(cs.lastFont, em3)}\\1c&HFFFFFF&`), 1);
+      }
+      subAt(c.start, c.end, "", yb + bottom + subH / 2);
       continue;
     }
     if (s.effect === "boldbar" && s.boldBar && words.length) {
