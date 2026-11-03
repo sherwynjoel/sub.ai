@@ -654,7 +654,10 @@ test("Card Slide: the card slides in fading (eased), the big line pops in letter
   const xs = card.map((l) => +(l.match(/\\move\((-?\d+)/)?.[1] ?? l.match(/\\pos\((-?\d+)/)![1]));
   assert.ok(xs.every((x, i) => !i || x >= xs[i - 1]) && xs[0] < xs.at(-1)!, "the card slides in from the left");
   assert.match(card[0], /\\1a&HFF&/, "from nothing");
-  const letters = ev.filter((l) => /\\fscy40\\t\(0,\d+,2,/.test(l));
+  const letters = ev.filter((l) => /\\fscy40\\t\(0,\d+,2,/.test(l) && /Playfair/.test(l));
+  const cardWords = ev.filter((l) => /\\fscy40\\t\(0,\d+,2,/.test(l) && /Inter Bold/.test(l));
+  assert.equal(cardWords.length, 3, "then the card's words pop up one by one");
+  assert.ok(cardWords.every((l) => /\\move\(\d+,(\d+),\d+,(\d+)/.test(l) && +l.match(/\\move\(\d+,(\d+)/)![1] > +l.match(/\\move\(\d+,\d+,\d+,(\d+)/)![1]), "sliding up");
   assert.equal(letters.length / 10, "SmartSales".length, "each letter of the big line pops in (in its gradient's strips)");
   const last = ev.find((l) => /Satisfy/.test(l))!;
   assert.match(last, new RegExp(`\\\\t\\(0,${CARD_TIME.write / 2},2,\\\\clip`), "the last word writes on");
