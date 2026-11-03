@@ -1238,7 +1238,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       const R = STAR_AT.r * fs, sx = Math.round(x0 + STAR_AT.dx * fs), sy = Math.round(p.ys[0] + STAR_AT.dy * fs), [upMs, upEm] = STAR_SLIDE;
       const spin = starSpin((c.end - c.start) * 1000);
       const shape = "m " + starPoints().map(([x, y], k) => `${k === 1 ? "l " : ""}${Math.round((x + 1) * R * 10) / 10} ${Math.round((y + 1) * R * 10) / 10}`).join(" ");
-      add(c.start, c.end, `{\\an5\\move(${sx},${Math.round(sy + upEm * fs)},${sx},${sy},0,${upMs})\\fad(${Math.round(upMs * 0.4)},0)\\t(${spin.from},${spin.to},\\frz-${spin.deg})` +
+      add(c.start, c.end, `{\\an5\\move(${sx},${Math.round(sy + upEm * fs)},${sx},${sy},0,${upMs})\\fad(${upMs},0)\\t(${spin.from},${spin.to},\\frz-${spin.deg})` +
         `\\bord0\\shad0\\1c${colorOnly(sp.star)}\\1a&H${alphaOf(sp.star)}&\\p1}${shape}{\\p0}`, 0);
       subAt(c.start, c.end, "", p.subY);
       continue;

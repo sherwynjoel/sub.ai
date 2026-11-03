@@ -342,7 +342,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       return <span key={a} style={{ textAlign: "left", position: "relative", fontFamily: stack(font, s.fontTa), lineHeight: lineScale(font) * (sp.tight ?? 1) * (s.lineHeight ?? 1),
         ...(big ? { textTransform: "uppercase" } : {}), fontSize: `min(${big ? sp.big : 1}em, calc(${(roomCqw * SPARK_FIT).toFixed(1)}cqw / ${tw}))` }}>
         {r === 0 && <svg className="spark-star" viewBox="-1 -1 2 2" aria-hidden="true" style={{ left: `${STAR_AT.dx - STAR_AT.r}em`, top: `calc(50% + ${(STAR_AT.dy - STAR_AT.r + rise).toFixed(3)}em)`,
-          width: `${2 * STAR_AT.r}em`, height: `${2 * STAR_AT.r}em`, opacity: Math.min(1, ms / (upMs * 0.4)), transform: `rotate(${spin.toFixed(1)}deg)` }}>
+          width: `${2 * STAR_AT.r}em`, height: `${2 * STAR_AT.r}em`, opacity: Math.min(1, ms / upMs), transform: `rotate(${spin.toFixed(1)}deg)` }}>
           <path d={STAR_PATH} fill={sp.star} />
         </svg>}
         <span style={{ position: "relative", display: "inline-block", ...(r === 0 ? { transform: `translateX(${(-(1 - slid) * slideEm).toFixed(3)}em)`, opacity: Math.min(1, ms / (slideMs * 0.6)) } : {}) }}>{text}</span>
