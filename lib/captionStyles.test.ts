@@ -745,3 +745,13 @@ test("Light Sweep: four tight lines as the reference, words rising as said, then
   const ass = buildAss([{ start: 0, end: 3, ta: "here's how can you create", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-light-sweep", lang: "ta", width: 1080, height: 1920 });
   assert.ok(ass.split("\n").filter((l) => /\\clip\(-?\d+,\d+,-?\d+,\d+\)\\t\(0,\d+,0\.8,\\clip/.test(l)).length === 3, "the light sweeps (a soft band)");
 });
+
+test("Light Sweep: a long caption in parts at a good size; each line's shadow cast up onto the one above", async () => {
+  const { stackPages, heroStack, STACK_SHADOW } = await import("./captionStyles");
+  const s = resolveStyle("cc-light-sweep");
+  assert.deepEqual(stackPages("here's how can you create".split(" ")), [[0, 5]], "a short caption in one");
+  const W = "so many people come to me and ask how did you become such a good sales person".split(" "), P = stackPages(W);
+  assert.ok(P.length >= 3 && P.every(([a, b]) => b - a <= 6) && P[0][0] === 0 && P.at(-1)![1] === W.length, "a long one in parts of six words at most");
+  for (const [a, b] of P) assert.ok(heroStack(W.slice(a, b), s).rows.every((r) => r.em > s.stack4!.big * 0.5), "each part at a good size");
+  assert.ok(STACK_SHADOW.y < 0, "the shadow cast up (onto the line above)");
+});

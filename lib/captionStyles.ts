@@ -287,11 +287,11 @@ export function revealSchedule(starts: number[], L: ReturnType<typeof textReveal
 }
 /**
  * "stack4": how far apart the lines' baselines are (em of the incoming line, at 100% line spacing: they overlap, as the
- * reference "here's / how can / you / create"), the soft shadow (em of the text, at the usual Shadow size: spread,
- * offset down, blur, how dark), the timing (ms: each word's rise, the least between two words, the light's sweep).
+ * reference "here's / how can / you / create"), the shadow giving it depth (em of the text, at the usual Shadow size:
+ * spread, offset (up: each line's falls on the one above), blur, how dark), the timing (ms: each word's rise, the least between two words, the light's sweep).
  */
 export const STACK_AT = { step: 0.5, track: -0.02, apos: 0.07 }; // apos: an apostrophe drawn this much tighter (em)
-export const STACK_SHADOW = { spread: 0.03, y: 0.015, blur: 0.06, alpha: 0.5 };
+export const STACK_SHADOW = { spread: 0.05, y: -0.035, blur: 0.09, alpha: 0.78 }; // (cast up: onto the line above)
 export const STACK_TIME = { rise: 300, gap: 90, sweep: 750 };
 /**
  * Which words go where and how big: the last word on the last line (in the accent), the others on up to three lines
@@ -316,11 +316,12 @@ export function heroStack(words: string[], s: CaptionStyle & Placement, ratio = 
   else for (let a = 1; a < rest.length - 1; a++) for (let b = a + 1; b < rest.length; b++) tryCuts([a, b]);
   const lines = [...groups.map((idx) => ({ idx, font: s.font, rel: 1, accent: false })), { idx: [n - 1], font: st.lastFont, rel: st.last, accent: true }];
   const gap = STACK_AT.step + ((s.lineHeight ?? 1) - 1) * 0.6;
-  let y = 0;
+  let y = 0, prev = 0;
   const rows = lines.map((l, r) => {
     const w0 = textWidth(l.idx.map((i) => words[i]).join(" "), l.font, s.fontTa) + STACK_AT.track * l.idx.map((i) => words[i]).join(" ").length;
     const em = Math.min(st.big * l.rel, (room * 0.97) / Math.max(0.3, w0));
-    if (r) y += gap * em;
+    if (r) y += gap * Math.max(em, prev); // (by the bigger of the two: a small line never piles into its neighbour)
+    prev = em;
     return { ...l, em, w: w0 * em, base: y };
   });
   const W = Math.max(...rows.map((r) => r.w)), N = rows.length;
@@ -329,6 +330,17 @@ export function heroStack(words: string[], s: CaptionStyle & Placement, ratio = 
     (r as typeof r & { left: number }).left = fromEnd <= 1 ? W - r.w : fromEnd === 2 ? 0 : (W - r.w) * 0.45;
   });
   return { rows: rows as (typeof rows[number] & { left: number })[], W };
+}
+/**
+ * A long caption in parts, each shown as its own stack at a good size: up to six words (and about 30 letters) a part,
+ * the parts as even as can be. [from, to) word indexes.
+ */
+export function stackPages(words: string[]) {
+  const n = words.length, letters = words.join(" ").length;
+  const parts = Math.max(1, Math.ceil(n / 6), Math.ceil(letters / 30));
+  if (parts === 1 || n < 4) return [[0, n]] as [number, number][];
+  const cuts = [...lineBreaks(words, Math.min(parts, Math.floor(n / 2)))].sort((a, b) => a - b);
+  return [-1, ...cuts].map((a, r) => [a + 1, r < cuts.length ? cuts[r] + 1 : n]) as [number, number][];
 }
 /**
  * When each word rises in and the light sweeps (ms from the caption's start): each word as it's said (a moment after the
@@ -1441,38 +1453,47 @@ export function buildAss(cues: Cue[], o: Opts) {
       continue;
     }
     if (s.effect === "stack4" && s.stack4 && words.length) {
-      // Up to four tightly overlapping lines (heroStack), each later one over the one before, with a soft shadow: every
-      // word rises in as it's said (fading in), then a light sweeps across the last line (stackSchedule).
-      const st = s.stack4, H = heroStack(words.map((w) => w.w.replace(/'/g, "’")), s, ratio), x0 = Math.round(ax - ((hz + 1) * H.W * fs) / 2);
-      const top = Math.min(...H.rows.map((r) => r.base - assAscent(r.font) * r.em)) * fs;
-      const bottom = Math.max(...H.rows.map((r) => r.base + (lineScale(r.font) - assAscent(r.font)) * r.em)) * fs;
-      const subH = sub ? subNatOf() : 0;
-      const yb = Math.round(s.x !== undefined || align === 5 ? ay - (top + bottom + subH) / 2 : align === 8 ? ay - top : ay - bottom - subH);
-      const S = stackSchedule(words.map((w) => (w.s - c.start) * 1000), (c.end - c.start) * 1000);
-      const at = (ms: number) => Math.min(c.end - 0.05, Math.max(c.start, c.start + ms / 1000));
+      // Up to four tightly overlapping lines (heroStack), each later one over the one before and casting its shadow up
+      // onto it: every word rises in as it's said (fading in), then a light sweeps across the last line (stackSchedule).
+      // A long caption is shown a part at a time (stackPages), each part from when its first word is said.
+      const st = s.stack4, all = words.map((w) => w.w.replace(/'/g, "’")), pages = stackPages(all);
       const hex2 = (v: number) => Math.round(Math.min(255, Math.max(0, v))).toString(16).toUpperCase().padStart(2, "0");
       const k = (s.shadow ?? 0) / 0.05, sa = hex2(255 * (1 - STACK_SHADOW.alpha)), sc = colorOnly(s.shadowColor ?? "#000000");
       const shadow = (em: number) => (k ? `\\bord${Math.round(STACK_SHADOW.spread * em * k * 10) / 10}\\3a&HFF&\\xshad0\\yshad${Math.round(STACK_SHADOW.y * em * k)}\\4c${sc}\\4a&H${sa}&\\blur${Math.round(STACK_SHADOW.blur * em * k * 10) / 10}` : "\\bord0\\shad0");
       // (the typographic apostrophe, as the reference, drawn a little tighter to its letters: em: the line's size)
       const R = STACK_TIME.rise, curly = (t: string, em: number) => t.replace(/['’]/g, `{\\fsp${Math.round((STACK_AT.track - STACK_AT.apos) * em)}}’{\\fsp${Math.round(STACK_AT.track * em)}}`);
-      H.rows.forEach((row, r) => {
-        const em = row.em * fs, x = x0 + Math.round(row.left * fs), yT = Math.round(yb + row.base * fs - assAscent(row.font) * em), nat = lineScale(row.font) * em, d = Math.round(0.45 * em);
-        const col = row.accent ? st.accent : s.color, tags = `\\fn${row.font}\\fsz${Math.round(row.em * 1000) / 1000}\\fsp${Math.round(STACK_AT.track * em)}\\1c${colorOnly(col)}${shadow(em)}`;
-        row.idx.forEach((j) => {
-          const body = row.idx.map((jj, m) => (m ? " " : "") + word(jj, words.length).replace(/^\{\\r/, `{\\r${tags}` + (jj === j ? `\\1a&HFF&\\4a&HFF&\\t(0,${R},0.6,\\1a&H00&\\4a&H${sa}&)` : "\\alpha&HFF&"))).join("");
-          strips(at(S.words[j]), c.end, `{\\an7\\move(${x},${yT + d},${x},${yT},0,${R})}`, yT + nat / 2, nat, "{\\q2}" + curly(body, em), 1 + r, 0, 0, [[yT + nat / 2 + d, nat], [yT + nat / 2, nat]], R);
-        });
-        // the light sweeping across the last line: its words again in the light, seen through a band moving left to right
-        if (row.accent && S.sweep < (c.end - c.start) * 1000) {
-          const text = (alpha: string) => row.idx.map((jj, m) => (m ? " " : "") + word(jj, words.length).replace(/^\{\\r/, `{\\r\\fn${row.font}\\fsz${Math.round(row.em * 1000) / 1000}\\fsp${Math.round(STACK_AT.track * em)}\\1c${colorOnly(mixHex(col, st.shine, 0.75))}\\bord0\\shad0\\alpha&H${alpha}&`)).join("");
-          const y1 = yT - Math.round(0.2 * em), y2 = Math.round(yT + nat + 0.2 * em), w = Math.round(row.w * fs), tilt = Math.round(0.25 * em);
-          for (const [bw, alpha] of [[0.5, "B0"], [0.22, "40"], [0.1, "00"]] as [number, string][]) {
-            const b = Math.round(bw * em), clip = (cx: number) => `\\clip(${cx - b},${y1},${cx + b},${y2})`;
-            add(at(S.sweep), at(S.sweep + S.sweepMs), `{\\an7\\pos(${x},${yT})${clip(x - b - tilt)}\\t(0,${Math.round(S.sweepMs)},0.8,${clip(x + w + b + tilt)})}{\\q2}` + curly(text(alpha), em), 9);
+      const durMs = (c.end - c.start) * 1000;
+      let subY = 0;
+      pages.forEach(([from, to], p) => {
+        const pageWords = all.slice(from, to), H = heroStack(pageWords, s, ratio), x0 = Math.round(ax - ((hz + 1) * H.W * fs) / 2);
+        const p0 = p ? (words[from].s - c.start) * 1000 : 0, p1 = p + 1 < pages.length ? (words[to].s - c.start) * 1000 : durMs; // (ms from the caption's start)
+        const top = Math.min(...H.rows.map((r) => r.base - assAscent(r.font) * r.em)) * fs;
+        const bottom = Math.max(...H.rows.map((r) => r.base + (lineScale(r.font) - assAscent(r.font)) * r.em)) * fs;
+        const subH = sub ? subNatOf() : 0;
+        const yb = Math.round(s.x !== undefined || align === 5 ? ay - (top + bottom + subH) / 2 : align === 8 ? ay - top : ay - bottom - subH);
+        if (!p) subY = yb + bottom + subH / 2;
+        const S = stackSchedule(words.slice(from, to).map((w) => (w.s - c.start) * 1000 - p0), p1 - p0);
+        const at = (ms: number) => Math.min(c.start + (p1 - 50) / 1000, Math.max(c.start + p0 / 1000, c.start + (p0 + ms) / 1000)), endAt = c.start + p1 / 1000;
+        const wordOf = (m: number) => word(from + m, words.length);
+        H.rows.forEach((row, r) => {
+          const em = row.em * fs, x = x0 + Math.round(row.left * fs), yT = Math.round(yb + row.base * fs - assAscent(row.font) * em), nat = lineScale(row.font) * em, d = Math.round(0.45 * em);
+          const col = row.accent ? st.accent : s.color, tags = `\\fn${row.font}\\fsz${Math.round(row.em * 1000) / 1000}\\fsp${Math.round(STACK_AT.track * em)}\\1c${colorOnly(col)}${shadow(em)}`;
+          row.idx.forEach((j) => {
+            const body = row.idx.map((jj, m) => (m ? " " : "") + wordOf(jj).replace(/^\{\\r/, `{\\r${tags}` + (jj === j ? `\\1a&HFF&\\4a&HFF&\\t(0,${R},0.6,\\1a&H00&\\4a&H${sa}&)` : "\\alpha&HFF&"))).join("");
+            strips(at(S.words[j]), endAt, `{\\an7\\move(${x},${yT + d},${x},${yT},0,${R})}`, yT + nat / 2, nat, "{\\q2}" + curly(body, em), 1 + r, 0, 0, [[yT + nat / 2 + d, nat], [yT + nat / 2, nat]], R);
+          });
+          // the light sweeping across the last line: its words again in the light, seen through a band moving left to right
+          if (row.accent && S.sweep < p1 - p0) {
+            const text = (alpha: string) => row.idx.map((jj, m) => (m ? " " : "") + wordOf(jj).replace(/^\{\\r/, `{\\r\\fn${row.font}\\fsz${Math.round(row.em * 1000) / 1000}\\fsp${Math.round(STACK_AT.track * em)}\\1c${colorOnly(mixHex(col, st.shine, 0.75))}\\bord0\\shad0\\alpha&H${alpha}&`)).join("");
+            const y1 = yT - Math.round(0.2 * em), y2 = Math.round(yT + nat + 0.2 * em), w = Math.round(row.w * fs), tilt = Math.round(0.25 * em);
+            for (const [bw, alpha] of [[0.5, "B0"], [0.22, "40"], [0.1, "00"]] as [number, string][]) {
+              const b = Math.round(bw * em), clip = (cx: number) => `\\clip(${cx - b},${y1},${cx + b},${y2})`;
+              add(at(S.sweep), at(S.sweep + S.sweepMs), `{\\an7\\pos(${x},${yT})${clip(x - b - tilt)}\\t(0,${Math.round(S.sweepMs)},0.8,${clip(x + w + b + tilt)})}{\\q2}` + curly(text(alpha), em), 9);
+            }
           }
-        }
+        });
       });
-      subAt(c.start, c.end, "", yb + bottom + subH / 2);
+      subAt(c.start, c.end, "", subY);
       continue;
     }
     if (s.effect === "reveal4" && s.reveal4 && words.length) {
