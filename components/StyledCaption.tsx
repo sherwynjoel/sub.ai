@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardLines, cardSchedule, dropCap, dropLines, dropSchedule, DROP_AT, DROP_TIME, textReveal, revealLines, revealSchedule, REVEAL_AT, REVEAL_TIME, REVEAL_SHADOW, REVEAL_LAYER, heroStack, stackPages, stackSchedule, dotStack, dotSchedule, DOT_AT, DOT_SHADOW, DOT_TIME, STACK_AT, STACK_SHADOW, STACK_TIME, mixHex, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardLines, cardSchedule, dropCap, dropLines, dropSchedule, DROP_AT, DROP_TIME, textReveal, revealLines, revealSchedule, REVEAL_AT, REVEAL_TIME, REVEAL_SHADOW, REVEAL_LAYER, heroStack, stackPages, stackSchedule, dotStack, dotSchedule, DOT_AT, DOT_SHADOW, DOT_TIME, outlineCut, cutSchedule, CUT_AT, CUT_TIME, STACK_AT, STACK_SHADOW, STACK_TIME, mixHex, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { cssBaseline, lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -270,6 +270,55 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       return <span key={a} className="typo-row" style={{ fontSize: `min(1em, calc(${roomCqw.toFixed(1)}cqw / ${tw.toFixed(3)}))` }}>
         {words.slice(a, to).map((_, n) => [n ? " " : null, word(a + n)])}</span>;
     });
+  } else if (s.effect === "cutout" && s.cutOut && words.length) {
+    // a small top line, a huge italic word, a huge bold word under it cut where the italic one crosses it (an SVG mask:
+    // the italic letters, fattened by the gap, taken out of it), a small last line (as the MP4, placed by the italic
+    // word's baseline; sizes in its em): words slide in, letters swing up, the bold word zooms in; a part at a time
+    const co = s.cutOut, all = words.map((w) => w.w), pages = stackPages(all, 9, 50), T = CUT_TIME;
+    const pIdx = Math.max(0, pages.findIndex(([, to], p) => p === pages.length - 1 || time < words[to].s)), [from, to] = pages[pIdx];
+    const q0 = pIdx ? (words[from].s - start) * 1000 : 0, q1 = pIdx + 1 < pages.length ? (words[to].s - start) * 1000 : (end - start) * 1000;
+    const L = outlineCut(all.slice(from, to), s, ratio), letters = [...new Intl.Segmenter().segment(all[from + L.it[0]])].map((g) => g.segment);
+    const S = cutSchedule(words.slice(from, to).map((w) => (w.s - start) * 1000 - q0), L, letters.length, q1 - q0);
+    const now = (time - start) * 1000 - q0, prog = (t: number, ms: number) => Math.min(1, Math.max(0, (now - t) / ms));
+    const bS = cssBaseline(L.smallFont), bI = cssBaseline(co.serif), bB = cssBaseline(s.font) * CUT_AT.boldRel;
+    const topE = Math.min(L.top.length ? L.base1 - bS * L.r1 : 0, -bI), bottomE = Math.max(1 - bI, L.bold.length ? L.base3 - bB + CUT_AT.boldRel : 0, L.last.length ? L.base4 - bS * L.r4 + L.r4 : 0);
+    const H = bottomE - topE, heavy = CUT_AT.heavy, gap = co.cut, id = `cut${Math.round(start * 1000)}-${from}`;
+    const slide = (t: number, dir: number): React.CSSProperties => {
+      const e = 1 - Math.pow(1 - prog(t, T.word), 2);
+      return { display: "inline-block", transform: `translateX(${(-dir * (1 - e) * 0.5).toFixed(3)}em)`, opacity: now < t ? 0 : e, filter: e < 1 ? `blur(${((1 - e) * 0.12).toFixed(3)}em)` : undefined };
+    };
+    const smallLine = (idx: number[], rel: number, left: number, base: number, dir: number, times: number[]) => (
+      <span className="co-small" style={{ fontFamily: stack(L.smallFont, s.fontTa), fontSize: `${rel.toFixed(3)}em`, left: `${(left / rel).toFixed(3)}em`, top: `${((base - topE) / rel - bS).toFixed(3)}em`, letterSpacing: `${CUT_AT.smallTrack}em`, color: s.color }}>
+        {idx.flatMap((m, k) => [k ? " " : null, <span key={from + m} style={slide(times[k], dir)}>{word(from + m)}</span>])}
+      </span>
+    );
+    // the italic word's letters: where each starts (em), and each one's swing and rise
+    let lx = L.L2;
+    const placed = letters.map((ch, i) => {
+      const w = textWidth(ch, co.serif, s.fontTa) + CUT_AT.track, x = lx; lx += w;
+      const v = prog(S.it + i * S.step, T.letter), e = 1 - Math.pow(1 - v, 2);
+      return { ch, x, ox: x + w / 2, dy: (1 - e) * 0.35, rot: -14 * (1 - Math.pow(v, 0.45)), op: Math.min(1, (now - (S.it + i * S.step)) / (T.letter * 0.6)) };
+    });
+    const letterEls = (fill: string, stroke: string, sw: number) => placed.map((p, i) => p.op <= 0 ? null : (
+      <text key={i} x={p.x} y={p.dy} fontSize={1} fill={fill} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" style={{ paintOrder: "stroke" }} opacity={Math.max(0, p.op)}
+        transform={`rotate(${p.rot.toFixed(2)} ${p.ox.toFixed(3)} 0)`}>{p.ch}</text>
+    ));
+    const z = L.bold.length ? Math.pow(prog(S.bold, T.zoom), 0.4) : 0, bx = L.L3 + L.w3 / 2, sc = 1.35 - 0.35 * z;
+    body = <span className="outline-cut" style={{ fontSize: `${L.E.toFixed(3)}em`, width: `${L.W.toFixed(3)}em`, height: `${H.toFixed(3)}em` }}>
+      {L.top.length > 0 && smallLine(L.top, L.r1, 0, L.base1, 1, S.tops)}
+      <svg className="co-svg" viewBox={`0 ${topE.toFixed(3)} ${L.W.toFixed(3)} ${H.toFixed(3)}`} width={`${L.W.toFixed(3)}em`} height={`${H.toFixed(3)}em`} aria-hidden="true" style={{ overflow: "visible" }}>
+        <defs><mask id={id} maskUnits="userSpaceOnUse" x={-2} y={topE - 2} width={L.W + 4} height={H + 4}>
+          <rect x={-2} y={topE - 2} width={L.W + 4} height={H + 4} fill="#fff" />
+          <g style={{ fontFamily: stack(co.serif, s.fontTa) }}>{letterEls("#000", "#000", 2 * (heavy + gap))}</g>
+        </mask></defs>
+        {L.bold.length > 0 && now >= S.bold && <g mask={`url(#${id})`}>
+          <text x={bx} y={L.base3} fontSize={CUT_AT.boldRel} textAnchor="middle" fill={co.bold} opacity={z} style={{ fontFamily: stack(s.font, s.fontTa), letterSpacing: `${CUT_AT.track * CUT_AT.boldRel}px`, filter: z < 1 ? `blur(${((1 - z) * 0.08).toFixed(3)}px)` : undefined }}
+            transform={`translate(${bx} ${L.base3}) scale(${sc.toFixed(3)}) translate(${-bx} ${-L.base3})`}>{all[from + L.bold[0]]}</text>
+        </g>}
+        <g style={{ fontFamily: stack(co.serif, s.fontTa) }}>{letterEls(s.color, s.color, 2 * heavy)}</g>
+      </svg>
+      {L.last.length > 0 && smallLine(L.last, L.r4, L.left4, L.base4, -1, S.lasts)}
+    </span>;
   } else if (s.effect === "dotstack" && s.dotStack && words.length) {
     // a huge word with a dot, smaller lines tucked under it, each casting a soft shadow up onto the one above (as the
     // MP4, placed by the huge word's baseline): each word pops in as it's said, the dot drops in; a part at a time
@@ -546,8 +595,8 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
 
   return (
     <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}${s.textAlign && s.textAlign !== "center" ? ` ta-${s.textAlign}` : ""}`} style={{ "--p": p, ...wrap, mixBlendMode: s.blend && !part ? BLENDS[s.blend][1] : undefined } as React.CSSProperties}>
-      <span className={`cap-main${grad && !["cardslide", "dropcap", "reveal4", "stack4", "dotstack"].includes(s.effect ?? "") ? " grad" : ""}`} style={{ ...(grad && !["cardslide", "dropcap", "reveal4", "stack4", "dotstack"].includes(s.effect ?? "") ? { ...gradBase, "--grad": `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` } as React.CSSProperties : base), ...(allPunch ? hide : {}) }} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>
-        {grad && !["cardslide", "dropcap", "reveal4", "stack4", "dotstack"].includes(s.effect ?? "") ? <span className="cap-grad">{body}</span> : body /* (Card Slide: only its big line in the gradient) */}
+      <span className={`cap-main${grad && !["cardslide", "dropcap", "reveal4", "stack4", "dotstack", "cutout"].includes(s.effect ?? "") ? " grad" : ""}`} style={{ ...(grad && !["cardslide", "dropcap", "reveal4", "stack4", "dotstack", "cutout"].includes(s.effect ?? "") ? { ...gradBase, "--grad": `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` } as React.CSSProperties : base), ...(allPunch ? hide : {}) }} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>
+        {grad && !["cardslide", "dropcap", "reveal4", "stack4", "dotstack", "cutout"].includes(s.effect ?? "") ? <span className="cap-grad">{body}</span> : body /* (Card Slide: only its big line in the gradient) */}
       </span>
       {sub && !stacked && <span className="cap-sub" style={{ ...(part === "punch" ? hide : {}), fontFamily: stack(s.font, s.fontTa), letterSpacing: s.spacing ? `${s.spacing}em` : undefined, lineHeight: lineScale(s.font), marginTop: `${(g - 1) * 0.5 * lineBox(s, text)}em` }}>{sub}</span>}
     </div>

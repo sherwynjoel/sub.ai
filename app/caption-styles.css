@@ -42,6 +42,9 @@
 @font-face { font-family: "Playfair Display Black Italic"; src: url("/caption-fonts/PlayfairDisplay-BlackItalic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Inter Bold Italic"; src: url("/caption-fonts/Inter-BoldItalic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Inter Black"; src: url("/caption-fonts/Inter-Black.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Instrument Serif Italic"; src: url("/caption-fonts/InstrumentSerif-Italic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Inter SemiBold"; src: url("/caption-fonts/Inter-SemiBold.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Inter Medium"; src: url("/caption-fonts/Inter-Medium.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Sriracha"; src: url("/caption-fonts/Sriracha-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Bodoni Moda Italic"; src: url("/caption-fonts/BodoniModa-Italic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Poppins Medium"; src: url("/caption-fonts/Poppins-Medium.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
@@ -132,3 +135,7 @@
 .dot-stack .ds-line { position: absolute; display: inline-block; line-height: 1; }
 .dot-stack .ds-word { display: inline-block; transform-origin: 50% 85%; }
 .dot-stack .ds-dot { position: absolute; border-radius: 50%; transform-origin: 50% 100%; }
+/* Outline Cut: placed by the italic word's baseline (sizes in its em; small lines 1em tall), the huge words an SVG */
+.outline-cut { position: relative; display: inline-block; line-height: 1; white-space: nowrap; text-align: left; }
+.outline-cut .co-small { position: absolute; display: inline-block; line-height: 1; z-index: 2; }
+.outline-cut .co-svg { position: absolute; left: 0; top: 0; z-index: 1; }
