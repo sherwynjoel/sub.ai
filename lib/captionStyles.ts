@@ -221,7 +221,10 @@ export const CARD_AT = { mid: -0.8, h: 1.3, pad: 0.34, radius: 0.22, left: 0.16,
  */
 export const REVEAL_AT = { smallBase: -0.66, bigBase: 0.57, lastBase: 0.79, track: -0.03, lastInset: 0.08 };
 /** "reveal4" timing (ms): the small line's letters (each, and the step), the blur-in, the rise, the write-on (each letter, step). */
-export const REVEAL_TIME = { letter: 300, step: 35, blur: 420, rise: 380, write: 140, writeStep: 60 };
+export const REVEAL_TIME = { letter: 210, step: 24, blur: 290, rise: 260, write: 100, writeStep: 40 };
+/** Which line is drawn over which (the reference): the first huge word at the back, the second over it, the small
+    first line and the last line on top. */
+export const REVEAL_LAYER = { small: 4, a: 1, b: 2, last: 3 };
 /** The soft drop shadow (em of the text, at the style's usual Shadow size): offset down, blur, how dark. */
 export const REVEAL_SHADOW = { x: 0.012, y: 0.05, blur: 0.1, alpha: 0.65 };
 export const revealLines = (s: CaptionStyle) => { const d = ((s.lineHeight ?? 1) - 1) * 0.6; return { smallBase: REVEAL_AT.smallBase - d, bigBase: REVEAL_AT.bigBase + d, lastBase: REVEAL_AT.lastBase + 2 * d }; };
@@ -467,7 +470,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-bold-bar", name: "Bold Bar", group: "Typography", blurb: "Small words spread over a big bold word on a red bar, a script word under it: the small words punch up, the big one wipes in, the last rises (change the bar colour in Colour).", font: "Poppins", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: W, effect: "boldbar", boldBar: { colors: ["#FF1F1F", "#6E0000"], big: 3.2, topFont: "Poppins Light Italic", top: 0.36, lastFont: "Satisfy", last: 0.62 } },
   { id: "cc-card-slide", name: "Card Slide", group: "Typography", blurb: "A green card slides in with its words, the big line pops in letter by letter, the last word writes itself on (change the card colour in Colour).", font: "Playfair Display Black Italic", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, gradient: ["#C2D89A", "#5E9324"], effect: "cardslide", cardSlide: { card: "#62A044", cardFont: "Inter Bold", top: 0.3, big: 2.8, lastFont: "Satisfy", last: 0.64 } },
   { id: "cc-drop-cap", name: "Drop Cap", group: "Typography", blurb: "Small words punch up over a big italic name with big first letters, written letter by letter; the rest slides in word by word on a box (change the box colour in Colour).", font: "Playfair Display Bold Italic", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, effect: "dropcap", dropCap: { big: 2.4, small: 0.5, topFont: "Inter", top: 0.27, boxFont: "Poppins Light Italic", boxText: "#141414", box: "#F5BE8C", boxSize: 0.27 } },
-  { id: "cc-text-reveal", name: "Text Reveal", group: "Typography", blurb: "Four overlapping lines with a soft shadow: serif letters rise in, a huge yellow word blurs in, a huge white one rises, the last word writes on letter by letter (change both colours in Colour).", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: W, shadow: 0.05, shadowColor: "#000000", effect: "reveal4", reveal4: { accent: "#E6B33C", big: 3.6, smallFont: "Playfair Display Bold Italic", small: 0.34, lastFont: "Playfair Display Italic", last: 0.42, silver: ["#FFFFFF", "#9C9C9C"] } },
+  { id: "cc-text-reveal", name: "Text Reveal", group: "Typography", blurb: "Four overlapping lines with a soft shadow: serif letters rise in, a huge yellow word blurs in, a huge white one rises, the last word writes on letter by letter (change both colours in Colour).", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: W, shadow: 0.05, shadowColor: "#000000", effect: "reveal4", reveal4: { accent: "#E6B33C", big: 3.6, smallFont: "Playfair Display Bold Italic", small: 0.34, lastFont: "Playfair Display Italic", last: 0.42, silver: ["#FFFFFF", "#FFFFFF"] } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
@@ -1392,19 +1395,19 @@ export function buildAss(cues: Cue[], o: Opts) {
       const smallChars = lettersOf(textOf(L.top)), lastChars = lettersOf(textOf(L.last));
       const S = revealSchedule(words.map((w) => (w.s - c.start) * 1000), L, smallChars.filter((ch) => ch !== " ").length, lastChars.filter((ch) => ch !== " ").length, (c.end - c.start) * 1000);
       // one line of letters, each in its own event (the others hidden, every letter keeping its place)
-      const letterLine = (chars: string[], tags: string, x: number, y: number, nat: number, grad: [string, string] | null, each: (i: number, n: number) => { t: number; anim: string; lead: string; path?: [number, number][]; ms?: number }) => {
+      const letterLine = (layer: number, chars: string[], tags: string, x: number, y: number, nat: number, grad: [string, string] | null, each: (i: number, n: number) => { t: number; anim: string; lead: string; path?: [number, number][]; ms?: number }) => {
         let n = 0;
         chars.forEach((ch, i) => {
           if (ch === " ") return;
           const e = each(i, n++);
           const body = chars.map((x2, m) => `{\\r${tags}${m === i ? e.anim : hidden}}${esc(x2)}`).join("");
-          strips(at(e.t), c.end, e.lead, y, nat, "{\\q2}" + body, 1, 0, 0, e.path ?? [], e.ms ?? 0, grad);
+          strips(at(e.t), c.end, e.lead, y, nat, "{\\q2}" + body, layer, 0, 0, e.path ?? [], e.ms ?? 0, grad);
         });
       };
       // the small line: silver, its letters rising in one after another
       if (L.top.length) {
         const x = x0 + Math.round(L.topLeft * emB), yT = Math.round(yb + lines.smallBase * emB - assAscent(rv.smallFont) * em1), nat = lineScale(rv.smallFont) * em1, d = Math.round(0.35 * em1), Lt = REVEAL_TIME.letter;
-        letterLine(smallChars, `${size(rv.smallFont, em1)}${shadow(em1)}`, x, yT + nat / 2, nat, rv.silver, (_, n) => ({
+        letterLine(REVEAL_LAYER.small, smallChars, `${size(rv.smallFont, em1)}${shadow(em1)}`, x, yT + nat / 2, nat, rv.silver, (_, n) => ({
           t: S.small + n * S.step, anim: fadeIn(Lt), lead: `{\\an7\\move(${x},${yT + d},${x},${yT},0,${Lt})}`, path: [[yT + nat / 2 + d, nat], [yT + nat / 2, nat]], ms: Lt }));
       }
       const bigTags = (col: string, em = emB) => `${size(s.font, em)}\\fsp${Math.round(REVEAL_AT.track * em)}\\1c${colorOnly(col)}`;
@@ -1412,19 +1415,19 @@ export function buildAss(cues: Cue[], o: Opts) {
       if (L.a.length) {
         const x = x0 + Math.round(L.aLeft * emB), yT = Math.round(yb - assAscent(s.font) * emB), B = REVEAL_TIME.blur, text = esc(textOf(L.a));
         const nat = lineScale(s.font) * emB, yc = yT + nat / 2; // (a gradient set in Colour: its strips)
-        strips(at(S.a), at(S.a + B), `{\\an7\\pos(${x},${yT})}`, yc, nat, `{\\q2}{\\r${bigTags(rv.accent)}\\bord0\\shad0\\blur${Math.round(0.22 * emB)}\\alpha&HFF&\\t(0,${B},0.5,\\blur0\\alpha&H00&)}${text}`, 1);
-        if (S.a + B < (c.end - c.start) * 1000) strips(at(S.a + B), c.end, `{\\an7\\pos(${x},${yT})}`, yc, nat, `{\\q2}{\\r${bigTags(rv.accent)}${shadow(emB)}}${text}`, 1);
+        strips(at(S.a), at(S.a + B), `{\\an7\\pos(${x},${yT})}`, yc, nat, `{\\q2}{\\r${bigTags(rv.accent)}\\bord0\\shad0\\blur${Math.round(0.22 * emB)}\\alpha&HFF&\\t(0,${B},0.5,\\blur0\\alpha&H00&)}${text}`, REVEAL_LAYER.a);
+        if (S.a + B < (c.end - c.start) * 1000) strips(at(S.a + B), c.end, `{\\an7\\pos(${x},${yT})}`, yc, nat, `{\\q2}{\\r${bigTags(rv.accent)}${shadow(emB)}}${text}`, REVEAL_LAYER.a);
       }
       // the second huge word (its own size): rising in, fading in
       {
         const em2 = emB * L.bRel, x = x0 + Math.round(L.bLeft * emB), yT = Math.round(yb + lines.bigBase * emB - assAscent(s.font) * em2), d = Math.round(0.4 * em2), R = REVEAL_TIME.rise;
         const nat = lineScale(s.font) * em2, yc = yT + nat / 2;
-        strips(at(S.b), c.end, `{\\an7\\move(${x},${yT + d},${x},${yT},0,${R})}`, yc, nat, `{\\q2}{\\r${bigTags(s.color, em2)}${shadow(em2)}${fadeIn(R)}}${esc(textOf(L.b))}`, 1, 0, 0, [[yc + d, nat], [yc, nat]], R);
+        strips(at(S.b), c.end, `{\\an7\\move(${x},${yT + d},${x},${yT},0,${R})}`, yc, nat, `{\\q2}{\\r${bigTags(s.color, em2)}${shadow(em2)}${fadeIn(R)}}${esc(textOf(L.b))}`, REVEAL_LAYER.b, 0, 0, [[yc + d, nat], [yc, nat]], R);
       }
       // the last line: written on letter by letter, in the accent
       if (L.last.length) {
         const x = x0 + Math.round(L.lastLeft * emB), yT = Math.round(yb + lines.lastBase * emB - assAscent(rv.lastFont) * em4), nat = lineScale(rv.lastFont) * em4;
-        letterLine(lastChars, `${size(rv.lastFont, em4)}\\1c${colorOnly(rv.accent)}${shadow(em4)}`, x, yT + nat / 2, nat, null, (_, n) => ({
+        letterLine(REVEAL_LAYER.last, lastChars, `${size(rv.lastFont, em4)}\\1c${colorOnly(rv.accent)}${shadow(em4)}`, x, yT + nat / 2, nat, null, (_, n) => ({
           t: S.last + n * S.wStep, anim: fadeIn(REVEAL_TIME.write, false), lead: `{\\an7\\pos(${x},${yT})}` }));
       }
       subAt(c.start, c.end, "", yb + bottom + subH / 2);
