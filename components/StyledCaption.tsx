@@ -282,9 +282,9 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     const now = (time - start) * 1000 - p0;
     const topOf = Math.min(...H.rows.map((r) => r.base - cssBaseline(r.font) * r.em)), bottomOf = Math.max(...H.rows.map((r) => r.base - cssBaseline(r.font) * r.em + r.em));
     const k = (s.shadow ?? 0) / 0.05, sc = s.shadowColor ?? "#000000";
-    // (a wide soft one cast up onto the line above, and a close one for the edge: CSS shadows don't spread, as the MP4's do)
+    // (a wide soft one cast up onto the line above, as the MP4)
     const sa = Math.round(STACK_SHADOW.alpha * 255).toString(16).padStart(2, "0");
-    const shadow = k ? `0 ${(STACK_SHADOW.y * k).toFixed(3)}em ${(STACK_SHADOW.blur * k * 1.6).toFixed(3)}em ${sc}${sa}, 0 ${(STACK_SHADOW.y * k * 0.4).toFixed(3)}em ${(STACK_SHADOW.blur * k * 0.5).toFixed(3)}em ${sc}${sa}` : "none";
+    const shadow = k ? `0 ${(STACK_SHADOW.y * k).toFixed(3)}em ${(STACK_SHADOW.blur * k * 1.5).toFixed(3)}em ${sc}${sa}` : "none";
     const curly = (t: string) => t.split(/(’)/).map((x, i) => (x === "’" ? <span key={i} style={{ letterSpacing: `${STACK_AT.track - STACK_AT.apos}em` }}>’</span> : x));
     const sweep = Math.min(1, Math.max(0, (now - S.sweep) / S.sweepMs)), sweeping = now >= S.sweep && sweep < 1;
     body = <span className="hero-stack" style={{ fontFamily: stack(s.font, s.fontTa), width: `${H.W.toFixed(3)}em`, height: `${(bottomOf - topOf).toFixed(3)}em`, textShadow: shadow }}>
