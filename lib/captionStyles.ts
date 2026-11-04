@@ -291,7 +291,7 @@ export function revealSchedule(starts: number[], L: ReturnType<typeof textReveal
  * spread, offset (up: each line's falls on the one above), blur, how dark), the timing (ms: each word's rise, the least between two words, the light's sweep).
  */
 export const STACK_AT = { step: 0.5, track: -0.02, apos: 0.07 }; // apos: an apostrophe drawn this much tighter (em)
-export const STACK_SHADOW = { spread: 0.05, y: -0.035, blur: 0.09, alpha: 0.78 }; // (cast up: onto the line above)
+export const STACK_SHADOW = { spread: 0.02, y: -0.045, blur: 0.18, alpha: 0.45 }; // (soft and light, cast up: onto the line above)
 export const STACK_TIME = { rise: 300, gap: 90, sweep: 750 };
 /**
  * Which words go where and how big: the last word on the last line (in the accent), the others on up to three lines
@@ -315,7 +315,7 @@ export function heroStack(words: string[], s: CaptionStyle & Placement, ratio = 
   else if (R === 2) for (let a = 1; a < rest.length; a++) tryCuts([a]);
   else for (let a = 1; a < rest.length - 1; a++) for (let b = a + 1; b < rest.length; b++) tryCuts([a, b]);
   const lines = [...groups.map((idx) => ({ idx, font: s.font, rel: 1, accent: false })), { idx: [n - 1], font: st.lastFont, rel: st.last, accent: true }];
-  const gap = STACK_AT.step + ((s.lineHeight ?? 1) - 1) * 0.6;
+  const gap = STACK_AT.step + ((s.lineHeight ?? 1) - 1) * 1.0; // (150%: the lines just apart; less, they overlap more)
   let y = 0, prev = 0;
   const rows = lines.map((l, r) => {
     const w0 = textWidth(l.idx.map((i) => words[i]).join(" "), l.font, s.fontTa) + STACK_AT.track * l.idx.map((i) => words[i]).join(" ").length;
