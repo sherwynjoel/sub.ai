@@ -41,6 +41,7 @@
 @font-face { font-family: "Poppins Light Italic"; src: url("/caption-fonts/Poppins-LightItalic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Playfair Display Black Italic"; src: url("/caption-fonts/PlayfairDisplay-BlackItalic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Inter Bold Italic"; src: url("/caption-fonts/Inter-BoldItalic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Inter Black"; src: url("/caption-fonts/Inter-Black.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Sriracha"; src: url("/caption-fonts/Sriracha-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Bodoni Moda Italic"; src: url("/caption-fonts/BodoniModa-Italic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Poppins Medium"; src: url("/caption-fonts/Poppins-Medium.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
@@ -126,3 +127,8 @@
 .hero-stack .hs-line { position: absolute; display: inline-block; line-height: 1; }
 .hero-stack .hs-word { display: inline-block; white-space: pre; }
 .hero-stack .hs-shine { position: absolute; left: 0; top: 0; text-shadow: none; color: transparent; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; pointer-events: none; }
+/* Bold Dot: lines placed by the huge word's baseline (every line 1em tall); each word scaled about its baseline */
+.dot-stack { position: relative; display: inline-block; line-height: 1; white-space: nowrap; text-align: left; }
+.dot-stack .ds-line { position: absolute; display: inline-block; line-height: 1; }
+.dot-stack .ds-word { display: inline-block; transform-origin: 50% 85%; }
+.dot-stack .ds-dot { position: absolute; border-radius: 50%; transform-origin: 50% 100%; }
