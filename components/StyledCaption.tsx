@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardLines, cardSchedule, dropCap, dropLines, dropSchedule, DROP_AT, DROP_TIME, textReveal, revealLines, revealSchedule, REVEAL_AT, REVEAL_TIME, REVEAL_SHADOW, REVEAL_LAYER, heroStack, stackSchedule, STACK_AT, STACK_SHADOW, STACK_TIME, mixHex, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardLines, cardSchedule, dropCap, dropLines, dropSchedule, DROP_AT, DROP_TIME, textReveal, revealLines, revealSchedule, REVEAL_AT, REVEAL_TIME, REVEAL_SHADOW, REVEAL_LAYER, heroStack, stackPages, stackSchedule, STACK_AT, STACK_SHADOW, STACK_TIME, mixHex, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { cssBaseline, lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -273,22 +273,28 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   } else if (s.effect === "stack4" && s.stack4 && words.length) {
     // up to four tightly overlapping lines with a soft shadow (as the MP4, placed by the first line's baseline), each
     // word rising in as it's said, then a light sweeping across the last line
-    const st = s.stack4, H = heroStack(words.map((w) => w.w.replace(/'/g, "’")), s, ratio), T = STACK_TIME;
-    const S = stackSchedule(words.map((w) => (w.s - start) * 1000), (end - start) * 1000);
-    const now = (time - start) * 1000;
+    // (a long caption a part at a time, each from when its first word is said: as the MP4)
+    const st = s.stack4, all = words.map((w) => w.w.replace(/'/g, "’")), pages = stackPages(all), T = STACK_TIME;
+    const pIdx = Math.max(0, pages.findIndex(([, to], p) => p === pages.length - 1 || time < words[to].s)), [from, to] = pages[pIdx];
+    const p0 = pIdx ? (words[from].s - start) * 1000 : 0, p1 = pIdx + 1 < pages.length ? (words[to].s - start) * 1000 : (end - start) * 1000;
+    const H = heroStack(all.slice(from, to), s, ratio);
+    const S = stackSchedule(words.slice(from, to).map((w) => (w.s - start) * 1000 - p0), p1 - p0);
+    const now = (time - start) * 1000 - p0;
     const topOf = Math.min(...H.rows.map((r) => r.base - cssBaseline(r.font) * r.em)), bottomOf = Math.max(...H.rows.map((r) => r.base - cssBaseline(r.font) * r.em + r.em));
     const k = (s.shadow ?? 0) / 0.05, sc = s.shadowColor ?? "#000000";
-    const shadow = k ? `0 ${(STACK_SHADOW.y * k).toFixed(3)}em ${(STACK_SHADOW.blur * k * 1.8).toFixed(3)}em ${sc}${Math.round(STACK_SHADOW.alpha * 255).toString(16).padStart(2, "0")}` : "none";
+    // (a wide soft one cast up onto the line above, and a close one for the edge: CSS shadows don't spread, as the MP4's do)
+    const sa = Math.round(STACK_SHADOW.alpha * 255).toString(16).padStart(2, "0");
+    const shadow = k ? `0 ${(STACK_SHADOW.y * k).toFixed(3)}em ${(STACK_SHADOW.blur * k * 1.6).toFixed(3)}em ${sc}${sa}, 0 ${(STACK_SHADOW.y * k * 0.4).toFixed(3)}em ${(STACK_SHADOW.blur * k * 0.5).toFixed(3)}em ${sc}${sa}` : "none";
     const curly = (t: string) => t.split(/(’)/).map((x, i) => (x === "’" ? <span key={i} style={{ letterSpacing: `${STACK_AT.track - STACK_AT.apos}em` }}>’</span> : x));
     const sweep = Math.min(1, Math.max(0, (now - S.sweep) / S.sweepMs)), sweeping = now >= S.sweep && sweep < 1;
     body = <span className="hero-stack" style={{ fontFamily: stack(s.font, s.fontTa), width: `${H.W.toFixed(3)}em`, height: `${(bottomOf - topOf).toFixed(3)}em`, textShadow: shadow }}>
       {H.rows.map((row, r) => {
-        const col = row.accent ? st.accent : s.color, text = row.idx.map((j) => words[j].w.replace(/'/g, "’"));
+        const col = row.accent ? st.accent : s.color, text = row.idx.map((j) => all[from + j]);
         return <span key={r} className="hs-line" style={{ zIndex: r + 1, left: `${(row.left / row.em).toFixed(3)}em`, fontFamily: stack(row.font, s.fontTa), fontSize: `${row.em.toFixed(3)}em`,
           top: `${((row.base - cssBaseline(row.font) * row.em - topOf) / row.em).toFixed(3)}em`, color: col, letterSpacing: `${STACK_AT.track}em` }}>
           {row.idx.flatMap((j, m) => {
             const e = easeInOut((now - S.words[j]) / T.rise);
-            return [m ? " " : null, <span key={j} className="hs-word" style={{ transform: `translateY(${((1 - e) * 0.45).toFixed(3)}em)`, opacity: now < S.words[j] ? 0 : e }}>{curly(text[m])}</span>];
+            return [m ? " " : null, <span key={from + j} className="hs-word" style={{ transform: `translateY(${((1 - e) * 0.45).toFixed(3)}em)`, opacity: now < S.words[j] ? 0 : e }}>{curly(text[m])}</span>];
           })}
           {row.accent && sweeping && <span className="hs-shine" aria-hidden="true" style={{ backgroundImage: `linear-gradient(100deg, transparent ${(sweep * 130 - 30 - 14).toFixed(1)}%, ${mixHexCss(col, st.shine)} ${(sweep * 130 - 30).toFixed(1)}%, transparent ${(sweep * 130 - 30 + 14).toFixed(1)}%)` }}>{text.join(" ")}</span>}
         </span>;
