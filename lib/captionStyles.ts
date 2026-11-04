@@ -1404,10 +1404,10 @@ export function buildAss(cues: Cue[], o: Opts) {
           strips(at(e.t), c.end, e.lead, y, nat, "{\\q2}" + body, layer, 0, 0, e.path ?? [], e.ms ?? 0, grad);
         });
       };
-      // the small line: silver, its letters rising in one after another
+      // the small line: in the text colour (pure white), its letters rising in one after another
       if (L.top.length) {
         const x = x0 + Math.round(L.topLeft * emB), yT = Math.round(yb + lines.smallBase * emB - assAscent(rv.smallFont) * em1), nat = lineScale(rv.smallFont) * em1, d = Math.round(0.35 * em1), Lt = REVEAL_TIME.letter;
-        letterLine(REVEAL_LAYER.small, smallChars, `${size(rv.smallFont, em1)}${shadow(em1)}`, x, yT + nat / 2, nat, rv.silver, (_, n) => ({
+        letterLine(REVEAL_LAYER.small, smallChars, `${size(rv.smallFont, em1)}\\1c${colorOnly(s.color)}${shadow(em1)}`, x, yT + nat / 2, nat, grad, (_, n) => ({
           t: S.small + n * S.step, anim: fadeIn(Lt), lead: `{\\an7\\move(${x},${yT + d},${x},${yT},0,${Lt})}`, path: [[yT + nat / 2 + d, nat], [yT + nat / 2, nat]], ms: Lt }));
       }
       const bigTags = (col: string, em = emB) => `${size(s.font, em)}\\fsp${Math.round(REVEAL_AT.track * em)}\\1c${colorOnly(col)}`;
