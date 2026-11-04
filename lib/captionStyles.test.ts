@@ -147,9 +147,9 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
 });
 
 test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 5 + Pro, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 38);
+  assert.equal(STYLE_CHOICES.length, 39);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 5);
-  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 12);
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 13);
   assert.ok(!STYLE_CHOICES.some((s) => s.id === "cc-bold-flicker" || s.id === "cc-corners"), "Bold Flicker and Corner Block no longer offered");
   for (const id of ["tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker", "tpl-reels-rgb", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon"])
     assert.ok(!STYLE_CHOICES.some((s) => s.id === id) && styleOf(id).id === id, `${id}: no longer offered (projects on it keep it)`);
@@ -705,4 +705,24 @@ test("Drop Cap: top words punch up between the big letters, the big line letter 
   const ass = buildAss([{ start: 0, end: 4, ta: W.join(" "), en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-drop-cap", lang: "ta", width: 1080, height: 1920 });
   const box = ass.split("\n").find((l) => /\\p1/.test(l))!;
   assert.match(box, /\\clip\((\d+),(\d+),\1,(\d+)\)\\t\(0,/, "the box wipes in from its left");
+});
+
+test("Text Reveal: four lines in order with a soft shadow, fitting long and short captions", async () => {
+  const { textReveal, revealSchedule, revealLines, REVEAL_TIME } = await import("./captionStyles");
+  const s = resolveStyle("cc-text-reveal");
+  const L = textReveal("30 second text reveal effect".split(" "), s);
+  assert.deepEqual([L.top, L.a, L.b, L.last], [[0, 1], [2], [3], [4]]);
+  assert.equal(resolveStyle("cc-text-reveal", { accent: "#FF0066" }).reveal4?.accent, "#FF0066", "the accent colour is editable");
+  assert.ok(revealLines(resolveStyle("cc-text-reveal", { lineHeight: 1.5 })).lastBase > revealLines(s).lastBase && takesLineSpacing(s), "line spacing");
+  for (const [t, dur] of [["30 second text reveal effect", 3], ["so many people come to me and ask how did you become such a good sales person", 3.5], ["hello friends", 1.2]] as [string, number][]) {
+    const w = wordTimes(t, 0, dur), L2 = textReveal(w.map((x) => x.w), s);
+    const nS = L2.top.map((j) => w[j].w).join("").length, nL = L2.last.map((j) => w[j].w).join("").length;
+    const S = revealSchedule(w.map((x) => x.s * 1000), L2, nS, nL, dur * 1000);
+    assert.ok(L2.top.length + L2.a.length + L2.b.length + L2.last.length === w.length, `${t}: every word`);
+    assert.ok(L2.smallSize > s.reveal4!.small * 0.3 && L2.lastSize > s.reveal4!.last * 0.3, `${t}: readable`);
+    const done = Math.max(nS ? S.small + (nS - 1) * S.step + REVEAL_TIME.letter : 0, L2.a.length ? S.a + REVEAL_TIME.blur : 0, S.b + REVEAL_TIME.rise, nL ? S.last + (nL - 1) * S.wStep + REVEAL_TIME.write : 0);
+    assert.ok(done <= dur * 1000, `${t}: done by the caption's end`);
+  }
+  const ass = buildAss([{ start: 0, end: 3, ta: "30 second text reveal effect", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-text-reveal", lang: "ta", width: 1080, height: 1920 });
+  assert.ok(/\\yshad\d+\\4c&H000000&\\4a&H[0-9A-F]{2}&\\blur/.test(ass), "the soft drop shadow");
 });
