@@ -25,7 +25,7 @@ export const BLENDS = {
   dodge: ["Colour dodge", "color-dodge", "dodge"],
 } as const;
 export type Blend = keyof typeof BLENDS;
-export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar" | "cardslide" | "dropcap";
+export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar" | "cardslide" | "dropcap" | "reveal4";
 /** How a caption comes in (the last few from the Premiere template pack's presets). */
 export const ANIMS = {
   none: "None", fade: "Fade in", pop: "Pop", slide: "Slide up", bounce: "Bounce", zoom: "Zoom in",
@@ -85,7 +85,10 @@ export type CaptionStyle = {
   cardSlide?: { card: string; cardFont: string; top: number; big: number; lastFont: string; last: number };
   // "dropcap": a big line in capitals, each word's first letter big and the rest small (× `small`), small words spread
   // over it (topFont, × the big size), the rest on a box under it (boxFont in boxText, on `box`); see dropCap()
-  dropCap?: { big: number; small: number; topFont: string; top: number; boxFont: string; boxText: string; box: string; boxSize: number }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
+  dropCap?: { big: number; small: number; topFont: string; top: number; boxFont: string; boxText: string; box: string; boxSize: number };
+  // "reveal4": four lines (textReveal): small serif words in a silver gradient, a huge word in the accent, a huge word in
+  // the text colour, a serif word in the accent; a soft drop shadow (the Shadow's size and colour)
+  reveal4?: { accent: string; big: number; smallFont: string; small: number; lastFont: string; last: number; silver: [string, string] }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
@@ -211,6 +214,71 @@ export function boldBar(words: string[], s: CaptionStyle & Placement, ratio = 9 
  * width), the last line's baseline and how far in from the big line's right end it ends.
  */
 export const CARD_AT = { mid: -0.8, h: 1.3, pad: 0.34, radius: 0.22, left: 0.16, lastBase: 0.18, lastInset: 0.08 };
+/**
+ * "reveal4" layout, in em of the huge words, from the first huge word's baseline (y down), as the reference ("30 second /
+ * text / reveal / effect"): each line's baseline, the tracking of the huge words, how far in from the second huge word's
+ * end the last line ends. Line spacing spreads them (revealLines).
+ */
+export const REVEAL_AT = { smallBase: -0.66, bigBase: 0.57, lastBase: 0.79, track: -0.03, lastInset: 0.08 };
+/** "reveal4" timing (ms): the small line's letters (each, and the step), the blur-in, the rise, the write-on (each letter, step). */
+export const REVEAL_TIME = { letter: 300, step: 35, blur: 420, rise: 380, write: 140, writeStep: 60 };
+/** The soft drop shadow (em of the text, at the style's usual Shadow size): offset down, blur, how dark. */
+export const REVEAL_SHADOW = { x: 0.012, y: 0.05, blur: 0.1, alpha: 0.65 };
+export const revealLines = (s: CaptionStyle) => { const d = ((s.lineHeight ?? 1) - 1) * 0.6; return { smallBase: REVEAL_AT.smallBase - d, bigBase: REVEAL_AT.bigBase + d, lastBase: REVEAL_AT.lastBase + 2 * d }; };
+/**
+ * Which words go where and how big: a huge word (in the accent), the next huge (in the text colour), the words after
+ * them on the last line, the words before them on the small line. The huge pair is the last but one and the one before
+ * (always real words: 3+ letters), or earlier when the small line wouldn't keep (nearly) its size; for a very long
+ * sentence, the pair keeping both small lines biggest. Sizes in em of the huge words (× the style's, fitting the room);
+ * each line's left (from the block's left) and width.
+ */
+export function textReveal(words: string[], s: CaptionStyle & Placement, ratio = 9 / 16) {
+  const rv = s.reveal4!, n = words.length, room = roomInEm(s, ratio), ids = words.map((_, i) => i);
+  const big = (w: string) => textWidth(w, s.font, s.fontTa) + REVEAL_AT.track * [...w].length;
+  const tw = (idx: number[], f: string) => (idx.length ? textWidth(idx.map((i) => words[i]).join(" "), f, s.fontTa) : 0);
+  const layout = (k: number) => { // the huge words: k and k + 1
+    const a = n >= 2 ? [k] : [], b = n >= 2 ? [k + 1] : [k], top = ids.slice(0, k), last = ids.slice(k + (n >= 2 ? 2 : 1));
+    // each huge word as wide as it fits (as the reference: "text" bigger than "reveal"), within a third of the other's size
+    const wA0 = a.length ? Math.max(0.3, big(words[a[0]])) : 0, wB0 = Math.max(0.3, big(words[b[0]]));
+    const fitA = a.length ? Math.min(rv.big * 1.25, (room * 0.97) / wA0) : 0, fitB0 = Math.min(rv.big * 1.25, (room * 0.97) / wB0);
+    const zA = a.length ? Math.min(fitA, fitB0 * 1.35) : fitB0, zBig = a.length ? Math.min(fitB0, zA * 1.35) : fitB0;
+    const zB = zA, bRel = zBig / zA, roomEm = room / zB; // (sizes in em of the first huge word)
+    const wA = wA0, wB = wB0 * bRel, wBig = Math.max(wA, wB);
+    const smallSize = top.length ? Math.min(rv.small, (roomEm * 0.95) / tw(top, rv.smallFont)) : rv.small;
+    const lastSize = last.length ? Math.min(rv.last, (roomEm * 0.95) / tw(last, rv.lastFont)) : rv.last;
+    const keep = Math.min(smallSize / rv.small, lastSize / rv.last);
+    return { a, b, top, last, wA, wB, wBig, zB, bRel, roomEm, smallSize, lastSize, keep, shown: keep * (zB / rv.big) };
+  };
+  const real = (i: number) => [...words[i].replace(/[^\p{L}\p{N}]/gu, "")].length >= 3;
+  const ks = n >= 2 ? ids.filter((k) => k + 1 < n && (n < 3 || k + 2 < n || n === 2) && (n <= 3 || (real(k) && real(k + 1)))).reverse() : [0];
+  const all = (ks.length ? ks : [Math.max(0, n - 3)]).map(layout);
+  const L = all.find((l) => l.keep >= 0.85) ?? all.reduce((p, q) => (q.shown > p.shown + 0.02 ? q : p));
+  // each line centred on the block (or against its side); the last line's end under the second huge word's end
+  const hz = s.x !== undefined ? 0 : s.textAlign === "left" ? -1 : s.textAlign === "right" ? 1 : 0;
+  const wTop = tw(L.top, rv.smallFont) * L.smallSize, wLast = tw(L.last, rv.lastFont) * L.lastSize;
+  const W = Math.max(L.wBig, wTop, wLast), leftOf = (w: number) => (hz < 0 ? 0 : hz > 0 ? W - w : (W - w) / 2);
+  const bLeft = leftOf(L.wB), lastLeft = Math.min(W - wLast, Math.max(0, bLeft + L.wB - REVEAL_AT.lastInset - wLast));
+  return { ...L, W, topLeft: leftOf(wTop), aLeft: leftOf(L.wA), bLeft, lastLeft, wTop, wLast };
+}
+/**
+ * When each line comes in (ms from the caption's start), following the speech, in order: the small line's letters as
+ * its first word is said, the first huge word as it's said (once the small line is under way), the second as it's said,
+ * the last line as it's said; drawn closer together if it wouldn't be done before the caption ends.
+ */
+export function revealSchedule(starts: number[], L: ReturnType<typeof textReveal>, smallLetters: number, lastLetters: number, captionMs: number) {
+  const T = REVEAL_TIME;
+  let small = L.top.length ? starts[L.top[0]] : 0;
+  let a = L.a.length ? Math.max(starts[L.a[0]], L.top.length ? small + smallLetters * T.step * 0.5 : 0) : 0;
+  let b = Math.max(starts[L.b[0]], L.a.length ? a + T.blur * 0.5 : 0);
+  let last = L.last.length ? Math.max(starts[L.last[0]], b + T.rise * 0.5) : 0, step = T.step, wStep = T.writeStep;
+  const room = captionMs - 80, first = L.top.length ? small : L.a.length ? a : b;
+  const doneOf = () => Math.max(L.top.length ? small + (smallLetters - 1) * step + T.letter : 0, L.a.length ? a + T.blur : 0, b + T.rise, L.last.length ? last + (lastLetters - 1) * wStep + T.write : 0);
+  for (let pass = 0; pass < 6 && doneOf() > room && doneOf() > first; pass++) {
+    const f = Math.max(0.2, (room - first) / (doneOf() - first)), at = (t: number) => first + (t - first) * f;
+    small = at(small); a = at(a); b = at(b); last = at(last); step = Math.max(12, step * f); wStep = Math.max(20, wStep * f);
+  }
+  return { small, a, b, last, step, wStep };
+}
 /**
  * "dropcap" layout, in em of the big letters, from the big line's baseline (y down), shared by the editor and the MP4:
  * the top words' baseline, the box's top and height (em of its text), its padding (em of its text) and radius; where the
@@ -399,6 +467,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-bold-bar", name: "Bold Bar", group: "Typography", blurb: "Small words spread over a big bold word on a red bar, a script word under it: the small words punch up, the big one wipes in, the last rises (change the bar colour in Colour).", font: "Poppins", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: W, effect: "boldbar", boldBar: { colors: ["#FF1F1F", "#6E0000"], big: 3.2, topFont: "Poppins Light Italic", top: 0.36, lastFont: "Satisfy", last: 0.62 } },
   { id: "cc-card-slide", name: "Card Slide", group: "Typography", blurb: "A green card slides in with its words, the big line pops in letter by letter, the last word writes itself on (change the card colour in Colour).", font: "Playfair Display Black Italic", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, gradient: ["#C2D89A", "#5E9324"], effect: "cardslide", cardSlide: { card: "#62A044", cardFont: "Inter Bold", top: 0.3, big: 2.8, lastFont: "Satisfy", last: 0.64 } },
   { id: "cc-drop-cap", name: "Drop Cap", group: "Typography", blurb: "Small words punch up over a big italic name with big first letters, written letter by letter; the rest slides in word by word on a box (change the box colour in Colour).", font: "Playfair Display Bold Italic", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, effect: "dropcap", dropCap: { big: 2.4, small: 0.5, topFont: "Inter", top: 0.27, boxFont: "Poppins Light Italic", boxText: "#141414", box: "#F5BE8C", boxSize: 0.27 } },
+  { id: "cc-text-reveal", name: "Text Reveal", group: "Typography", blurb: "Four overlapping lines with a soft shadow: serif letters rise in, a huge yellow word blurs in, a huge white one rises, the last word writes on letter by letter (change both colours in Colour).", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: W, shadow: 0.05, shadowColor: "#000000", effect: "reveal4", reveal4: { accent: "#E6B33C", big: 3.6, smallFont: "Playfair Display Bold Italic", small: 0.34, lastFont: "Playfair Display Italic", last: 0.42, silver: ["#FFFFFF", "#9C9C9C"] } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
@@ -471,7 +540,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
-  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-letter-rise", "cc-typo-block",
+  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-text-reveal", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-simple", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
   "setup-punch", "setup-punch-pro", "comic-pop", "butter-serif", "handwritten", "trending-1", "trending-2", "trending-3", "neon-aura",
@@ -658,6 +727,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
     else if (s.boxPunch) s.boxPunch = { ...s.boxPunch, color: c.accent };
     else if (s.cardSlide) s.cardSlide = { ...s.cardSlide, card: c.accent };
     else if (s.dropCap) s.dropCap = { ...s.dropCap, box: c.accent };
+    else if (s.reveal4) s.reveal4 = { ...s.reveal4, accent: c.accent };
     else if (s.boldBar) s.boldBar = { ...s.boldBar, colors: [c.accent, mixHex(c.accent, "#000000", 0.55)] };
     else if (s.mark) s.mark = c.accent;
     else if (s.keyword) s.keyword.color = c.accent;
@@ -1299,6 +1369,67 @@ export function buildAss(cues: Cue[], o: Opts) {
       subAt(c.start, c.end, "", p.subY);
       continue;
     }
+    if (s.effect === "reveal4" && s.reveal4 && words.length) {
+      // Four overlapping lines (textReveal), placed by the first huge word's baseline as the editor, each with a soft drop
+      // shadow: the small serif line's letters rise in, the first huge word blurs in, the second rises in, the last line
+      // writes on letter by letter, following the speech (revealSchedule).
+      const rv = s.reveal4, L = textReveal(words.map((w) => w.w), s, ratio), lines = revealLines(s);
+      const emB = fs * L.zB, em1 = emB * L.smallSize, em4 = emB * L.lastSize, x0 = Math.round(ax - ((hz + 1) * L.W * emB) / 2);
+      const top = Math.min(L.top.length ? lines.smallBase * emB - assAscent(rv.smallFont) * em1 : 0, L.a.length ? -assAscent(s.font) * emB : lines.bigBase * emB - assAscent(s.font) * emB);
+      const bottom = L.last.length ? lines.lastBase * emB + (lineScale(rv.lastFont) - assAscent(rv.lastFont)) * em4 : lines.bigBase * emB + (lineScale(s.font) - assAscent(s.font)) * emB;
+      const subH = sub ? subNatOf() : 0;
+      const yb = Math.round(s.x !== undefined || align === 5 ? ay - (top + bottom + subH) / 2 : align === 8 ? ay - top : ay - bottom - subH);
+      const size = (f: string, em: number) => `\\fn${f}\\fsz${Math.round((em / fs) * 1000) / 1000}`;
+      const at = (ms: number) => Math.min(c.end - 0.05, Math.max(c.start, c.start + ms / 1000));
+      const hex2 = (v: number) => Math.round(Math.min(255, Math.max(0, v))).toString(16).toUpperCase().padStart(2, "0");
+      // the soft drop shadow (an invisible edge so only the shadow is blurred), and fading it all in
+      const k = (s.shadow ?? 0) / 0.05, sa = hex2(255 * (1 - REVEAL_SHADOW.alpha)), sc = colorOnly(s.shadowColor ?? "#000000");
+      const shadow = (em: number) => (k ? `\\bord${px(0.01 * em / fs)}\\3a&HFF&\\xshad${Math.round(REVEAL_SHADOW.x * em * k)}\\yshad${Math.round(REVEAL_SHADOW.y * em * k)}\\4c${sc}\\4a&H${sa}&\\blur${Math.round(REVEAL_SHADOW.blur * em * k * 10) / 10}` : "\\bord0\\shad0");
+      const hidden = "\\1a&HFF&\\4a&HFF&";
+      const fadeIn = (ms: number, accel = true) => `${hidden}\\t(0,${Math.round(ms / 2)},${accel ? 2 : 1},\\1a&H90&\\4a&H${hex2(255 - (255 - parseInt(sa, 16)) * 0.45)}&)\\t(${Math.round(ms / 2)},${ms},${accel ? 0.5 : 1},\\1a&H00&\\4a&H${sa}&)`;
+      const lettersOf = (t: string) => [...new Intl.Segmenter().segment(t)].map((g) => g.segment);
+      const textOf = (idx: number[]) => idx.map((i) => words[i].w).join(" ");
+      const smallChars = lettersOf(textOf(L.top)), lastChars = lettersOf(textOf(L.last));
+      const S = revealSchedule(words.map((w) => (w.s - c.start) * 1000), L, smallChars.filter((ch) => ch !== " ").length, lastChars.filter((ch) => ch !== " ").length, (c.end - c.start) * 1000);
+      // one line of letters, each in its own event (the others hidden, every letter keeping its place)
+      const letterLine = (chars: string[], tags: string, x: number, y: number, nat: number, grad: [string, string] | null, each: (i: number, n: number) => { t: number; anim: string; lead: string; path?: [number, number][]; ms?: number }) => {
+        let n = 0;
+        chars.forEach((ch, i) => {
+          if (ch === " ") return;
+          const e = each(i, n++);
+          const body = chars.map((x2, m) => `{\\r${tags}${m === i ? e.anim : hidden}}${esc(x2)}`).join("");
+          strips(at(e.t), c.end, e.lead, y, nat, "{\\q2}" + body, 1, 0, 0, e.path ?? [], e.ms ?? 0, grad);
+        });
+      };
+      // the small line: silver, its letters rising in one after another
+      if (L.top.length) {
+        const x = x0 + Math.round(L.topLeft * emB), yT = Math.round(yb + lines.smallBase * emB - assAscent(rv.smallFont) * em1), nat = lineScale(rv.smallFont) * em1, d = Math.round(0.35 * em1), Lt = REVEAL_TIME.letter;
+        letterLine(smallChars, `${size(rv.smallFont, em1)}${shadow(em1)}`, x, yT + nat / 2, nat, rv.silver, (_, n) => ({
+          t: S.small + n * S.step, anim: fadeIn(Lt), lead: `{\\an7\\move(${x},${yT + d},${x},${yT},0,${Lt})}`, path: [[yT + nat / 2 + d, nat], [yT + nat / 2, nat]], ms: Lt }));
+      }
+      const bigTags = (col: string, em = emB) => `${size(s.font, em)}\\fsp${Math.round(REVEAL_AT.track * em)}\\1c${colorOnly(col)}`;
+      // the first huge word: blurring in (its letters soft, then sharp), then held with its shadow
+      if (L.a.length) {
+        const x = x0 + Math.round(L.aLeft * emB), yT = Math.round(yb - assAscent(s.font) * emB), B = REVEAL_TIME.blur, text = esc(textOf(L.a));
+        const nat = lineScale(s.font) * emB, yc = yT + nat / 2; // (a gradient set in Colour: its strips)
+        strips(at(S.a), at(S.a + B), `{\\an7\\pos(${x},${yT})}`, yc, nat, `{\\q2}{\\r${bigTags(rv.accent)}\\bord0\\shad0\\blur${Math.round(0.22 * emB)}\\alpha&HFF&\\t(0,${B},0.5,\\blur0\\alpha&H00&)}${text}`, 1);
+        if (S.a + B < (c.end - c.start) * 1000) strips(at(S.a + B), c.end, `{\\an7\\pos(${x},${yT})}`, yc, nat, `{\\q2}{\\r${bigTags(rv.accent)}${shadow(emB)}}${text}`, 1);
+      }
+      // the second huge word (its own size): rising in, fading in
+      {
+        const em2 = emB * L.bRel, x = x0 + Math.round(L.bLeft * emB), yT = Math.round(yb + lines.bigBase * emB - assAscent(s.font) * em2), d = Math.round(0.4 * em2), R = REVEAL_TIME.rise;
+        const nat = lineScale(s.font) * em2, yc = yT + nat / 2;
+        strips(at(S.b), c.end, `{\\an7\\move(${x},${yT + d},${x},${yT},0,${R})}`, yc, nat, `{\\q2}{\\r${bigTags(s.color, em2)}${shadow(em2)}${fadeIn(R)}}${esc(textOf(L.b))}`, 1, 0, 0, [[yc + d, nat], [yc, nat]], R);
+      }
+      // the last line: written on letter by letter, in the accent
+      if (L.last.length) {
+        const x = x0 + Math.round(L.lastLeft * emB), yT = Math.round(yb + lines.lastBase * emB - assAscent(rv.lastFont) * em4), nat = lineScale(rv.lastFont) * em4;
+        letterLine(lastChars, `${size(rv.lastFont, em4)}\\1c${colorOnly(rv.accent)}${shadow(em4)}`, x, yT + nat / 2, nat, null, (_, n) => ({
+          t: S.last + n * S.wStep, anim: fadeIn(REVEAL_TIME.write, false), lead: `{\\an7\\pos(${x},${yT})}` }));
+      }
+      subAt(c.start, c.end, "", yb + bottom + subH / 2);
+      continue;
+    }
     if (s.effect === "dropcap" && s.dropCap && words.length) {
       // Small words spread over a big line in capitals (each word's first letter big), the rest on a box under it
       // (dropCap), placed by the big line's baseline as the editor: the small words punch up as they're said, the big line
@@ -1885,7 +2016,7 @@ ${events.join("\n")}
 export const spacesLines = (s: CaptionStyle) => !((s.effect && s.effect !== "wobble") || s.reveal || s.wordLines || s.keyword?.line);
 /** Styles the line spacing reaches: the plain layout's, and Cinematic's three lines. */
 export const takesLineSpacing = (s: CaptionStyle) =>
-  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark", "cardslide", "dropcap"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
+  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark", "cardslide", "dropcap", "reveal4"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
 
 /** How tall a line of this text is, × the em: its fonts' own line height (what libass draws, so the editor matches). */
 export const lineBox = (s: CaptionStyle, text: string) =>

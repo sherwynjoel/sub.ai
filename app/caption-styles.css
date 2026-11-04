@@ -117,3 +117,7 @@
 .drop-cap .dc-box { position: absolute; display: flex; align-items: center; box-sizing: border-box; overflow: hidden; }
 .drop-cap .dc-box .cw { color: inherit; }
 .drop-cap .dc-word { display: inline-block; }
+/* Text Reveal: four lines placed by the first huge word's baseline (every line 1em tall), the small one silver */
+.text-reveal { position: relative; display: inline-block; line-height: 1; white-space: nowrap; text-align: left; }
+.text-reveal .tr-line { position: absolute; display: inline-block; line-height: 1; }
+.text-reveal .tr-silver .cs-letter { background-image: var(--silver); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
