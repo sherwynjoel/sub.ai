@@ -25,7 +25,7 @@ export const BLENDS = {
   dodge: ["Colour dodge", "color-dodge", "dodge"],
 } as const;
 export type Blend = keyof typeof BLENDS;
-export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar" | "cardslide" | "dropcap" | "reveal4";
+export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar" | "cardslide" | "dropcap" | "reveal4" | "stack4";
 /** How a caption comes in (the last few from the Premiere template pack's presets). */
 export const ANIMS = {
   none: "None", fade: "Fade in", pop: "Pop", slide: "Slide up", bounce: "Bounce", zoom: "Zoom in",
@@ -88,6 +88,9 @@ export type CaptionStyle = {
   dropCap?: { big: number; small: number; topFont: string; top: number; boxFont: string; boxText: string; box: string; boxSize: number };
   // "reveal4": four lines (textReveal): small serif words in a silver gradient, a huge word in the accent, a huge word in
   // the text colour, a serif word in the accent; a soft drop shadow (the Shadow's size and colour)
+  // "stack4": up to four tightly overlapping lines (heroStack), the last word in the accent and its own font, a light
+  // sweeping across it; a soft shadow (the Shadow's size and colour)
+  stack4?: { accent: string; big: number; lastFont: string; last: number; shine: string };
   reveal4?: { accent: string; big: number; smallFont: string; small: number; lastFont: string; last: number; silver: [string, string] }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
@@ -283,6 +286,68 @@ export function revealSchedule(starts: number[], L: ReturnType<typeof textReveal
   return { small, a, b, last, step, wStep };
 }
 /**
+ * "stack4": how far apart the lines' baselines are (em of the incoming line, at 100% line spacing: they overlap, as the
+ * reference "here's / how can / you / create"), the soft shadow (em of the text, at the usual Shadow size: spread,
+ * offset down, blur, how dark), the timing (ms: each word's rise, the least between two words, the light's sweep).
+ */
+export const STACK_AT = { step: 0.5, track: -0.02, apos: 0.07 }; // apos: an apostrophe drawn this much tighter (em)
+export const STACK_SHADOW = { spread: 0.03, y: 0.015, blur: 0.06, alpha: 0.5 };
+export const STACK_TIME = { rise: 300, gap: 90, sweep: 750 };
+/**
+ * Which words go where and how big: the last word on the last line (in the accent), the others on up to three lines
+ * before it, balanced. Each line as big as asked (× the style's size), shrunk only if it won't fit the room; aligned as
+ * the reference: counting from the last, two to the right, then one to the left, then one in the middle. In em of the
+ * style's size, from the first line's baseline (y down).
+ */
+export function heroStack(words: string[], s: CaptionStyle & Placement, ratio = 9 / 16) {
+  const st = s.stack4!, n = words.length, room = roomInEm(s, ratio), ids = words.map((_, i) => i);
+  const rest = n > 1 ? ids.slice(0, n - 1) : [], R = Math.min(3, rest.length);
+  // the lines before the last: the split keeping the widest of them narrowest (so none shrinks much), the widest in the
+  // middle when that's as good (as the reference: "here's / how can / you")
+  const wOf = (a: number, b: number) => textWidth(words.slice(a, b).join(" "), s.font, s.fontTa);
+  let groups: number[][] = [], best = Infinity;
+  const tryCuts = (cuts: number[]) => {
+    const bounds = [0, ...cuts, rest.length], ws = bounds.slice(1).map((b, r) => wOf(bounds[r], b));
+    const widest = ws.indexOf(Math.max(...ws)), score = Math.max(...ws) * (1 + 0.12 * Math.abs(widest - Math.floor((ws.length - 1) / 2 + 0.5)));
+    if (score < best - 1e-9) { best = score; groups = bounds.slice(1).map((b, r) => rest.slice(bounds[r], b)); }
+  };
+  if (R === 1) tryCuts([]);
+  else if (R === 2) for (let a = 1; a < rest.length; a++) tryCuts([a]);
+  else for (let a = 1; a < rest.length - 1; a++) for (let b = a + 1; b < rest.length; b++) tryCuts([a, b]);
+  const lines = [...groups.map((idx) => ({ idx, font: s.font, rel: 1, accent: false })), { idx: [n - 1], font: st.lastFont, rel: st.last, accent: true }];
+  const gap = STACK_AT.step + ((s.lineHeight ?? 1) - 1) * 0.6;
+  let y = 0;
+  const rows = lines.map((l, r) => {
+    const w0 = textWidth(l.idx.map((i) => words[i]).join(" "), l.font, s.fontTa) + STACK_AT.track * l.idx.map((i) => words[i]).join(" ").length;
+    const em = Math.min(st.big * l.rel, (room * 0.97) / Math.max(0.3, w0));
+    if (r) y += gap * em;
+    return { ...l, em, w: w0 * em, base: y };
+  });
+  const W = Math.max(...rows.map((r) => r.w)), N = rows.length;
+  rows.forEach((r, k) => {
+    const fromEnd = N - 1 - k;
+    (r as typeof r & { left: number }).left = fromEnd <= 1 ? W - r.w : fromEnd === 2 ? 0 : (W - r.w) * 0.45;
+  });
+  return { rows: rows as (typeof rows[number] & { left: number })[], W };
+}
+/**
+ * When each word rises in and the light sweeps (ms from the caption's start): each word as it's said (a moment after the
+ * one before), the light across the last line once it's in; drawn closer together to finish before the caption ends.
+ */
+export function stackSchedule(starts: number[], captionMs: number) {
+  const T = STACK_TIME, words: number[] = [];
+  starts.forEach((t, j) => words.push(Math.max(t, j ? words[j - 1] + T.gap : 0)));
+  let sweep = (words[words.length - 1] ?? 0) + T.rise * 0.6, sweepMs = T.sweep;
+  const room = captionMs - 60, first = words[0] ?? 0;
+  const doneOf = () => Math.max((words[words.length - 1] ?? 0) + T.rise, sweep + sweepMs);
+  for (let pass = 0; pass < 6 && doneOf() > room && doneOf() > first; pass++) {
+    const f = Math.max(0.2, (room - first) / (doneOf() - first)), at = (t: number) => first + (t - first) * f;
+    for (let j = 0; j < words.length; j++) words[j] = Math.max(at(words[j]), j ? words[j - 1] + 30 : 0);
+    sweep = at(sweep); sweepMs = Math.max(250, sweepMs * f);
+  }
+  return { words, sweep, sweepMs };
+}
+/**
  * "dropcap" layout, in em of the big letters, from the big line's baseline (y down), shared by the editor and the MP4:
  * the top words' baseline, the box's top and height (em of its text), its padding (em of its text) and radius; where the
  * box starts (after the first big letter, plus this), its words' baseline below its middle (em of them).
@@ -471,6 +536,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-card-slide", name: "Card Slide", group: "Typography", blurb: "A green card slides in with its words, the big line pops in letter by letter, the last word writes itself on (change the card colour in Colour).", font: "Playfair Display Black Italic", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, gradient: ["#C2D89A", "#5E9324"], effect: "cardslide", cardSlide: { card: "#62A044", cardFont: "Inter Bold", top: 0.3, big: 2.8, lastFont: "Satisfy", last: 0.64 } },
   { id: "cc-drop-cap", name: "Drop Cap", group: "Typography", blurb: "Small words punch up over a big italic name with big first letters, written letter by letter; the rest slides in word by word on a box (change the box colour in Colour).", font: "Playfair Display Bold Italic", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, effect: "dropcap", dropCap: { big: 2.4, small: 0.5, topFont: "Inter", top: 0.27, boxFont: "Poppins Light Italic", boxText: "#141414", box: "#F5BE8C", boxSize: 0.27 } },
   { id: "cc-text-reveal", name: "Text Reveal", group: "Typography", blurb: "Four overlapping lines with a soft shadow: serif letters rise in, a huge yellow word blurs in, a huge white one rises, the last word writes on letter by letter (change both colours in Colour).", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: W, shadow: 0.05, shadowColor: "#000000", effect: "reveal4", reveal4: { accent: "#E6B33C", big: 3.6, smallFont: "Playfair Display Bold Italic", small: 0.34, lastFont: "Playfair Display Italic", last: 0.42, silver: ["#FFFFFF", "#FFFFFF"] } },
+  { id: "cc-light-sweep", name: "Light Sweep", group: "Typography", blurb: "Big bold words stacked tight with a soft shadow, rising in word by word; the last one in blue italic with a light sweeping across it (change the colours in Colour).", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: W, shadow: 0.05, shadowColor: "#000000", effect: "stack4", stack4: { accent: "#2C64F2", big: 2.9, lastFont: "Inter Bold Italic", last: 0.95, shine: "#FFFFFF" } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
@@ -543,7 +609,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
-  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-text-reveal", "cc-letter-rise", "cc-typo-block",
+  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-text-reveal", "cc-light-sweep", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-simple", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
   "setup-punch", "setup-punch-pro", "comic-pop", "butter-serif", "handwritten", "trending-1", "trending-2", "trending-3", "neon-aura",
@@ -575,6 +641,7 @@ export const CAPTION_FONTS = [
   "Poppins Regular",
   "Poppins Light Italic",
   "Sriracha",
+  "Inter Bold Italic",
   "Playfair Display Black Italic",
 ] as const;
 /** The commercial font a free one stands in for (shown in the font menu). */
@@ -731,6 +798,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
     else if (s.cardSlide) s.cardSlide = { ...s.cardSlide, card: c.accent };
     else if (s.dropCap) s.dropCap = { ...s.dropCap, box: c.accent };
     else if (s.reveal4) s.reveal4 = { ...s.reveal4, accent: c.accent };
+    else if (s.stack4) s.stack4 = { ...s.stack4, accent: c.accent };
     else if (s.boldBar) s.boldBar = { ...s.boldBar, colors: [c.accent, mixHex(c.accent, "#000000", 0.55)] };
     else if (s.mark) s.mark = c.accent;
     else if (s.keyword) s.keyword.color = c.accent;
@@ -1370,6 +1438,41 @@ export function buildAss(cues: Cue[], o: Opts) {
         }
       });
       subAt(c.start, c.end, "", p.subY);
+      continue;
+    }
+    if (s.effect === "stack4" && s.stack4 && words.length) {
+      // Up to four tightly overlapping lines (heroStack), each later one over the one before, with a soft shadow: every
+      // word rises in as it's said (fading in), then a light sweeps across the last line (stackSchedule).
+      const st = s.stack4, H = heroStack(words.map((w) => w.w.replace(/'/g, "’")), s, ratio), x0 = Math.round(ax - ((hz + 1) * H.W * fs) / 2);
+      const top = Math.min(...H.rows.map((r) => r.base - assAscent(r.font) * r.em)) * fs;
+      const bottom = Math.max(...H.rows.map((r) => r.base + (lineScale(r.font) - assAscent(r.font)) * r.em)) * fs;
+      const subH = sub ? subNatOf() : 0;
+      const yb = Math.round(s.x !== undefined || align === 5 ? ay - (top + bottom + subH) / 2 : align === 8 ? ay - top : ay - bottom - subH);
+      const S = stackSchedule(words.map((w) => (w.s - c.start) * 1000), (c.end - c.start) * 1000);
+      const at = (ms: number) => Math.min(c.end - 0.05, Math.max(c.start, c.start + ms / 1000));
+      const hex2 = (v: number) => Math.round(Math.min(255, Math.max(0, v))).toString(16).toUpperCase().padStart(2, "0");
+      const k = (s.shadow ?? 0) / 0.05, sa = hex2(255 * (1 - STACK_SHADOW.alpha)), sc = colorOnly(s.shadowColor ?? "#000000");
+      const shadow = (em: number) => (k ? `\\bord${Math.round(STACK_SHADOW.spread * em * k * 10) / 10}\\3a&HFF&\\xshad0\\yshad${Math.round(STACK_SHADOW.y * em * k)}\\4c${sc}\\4a&H${sa}&\\blur${Math.round(STACK_SHADOW.blur * em * k * 10) / 10}` : "\\bord0\\shad0");
+      // (the typographic apostrophe, as the reference, drawn a little tighter to its letters: em: the line's size)
+      const R = STACK_TIME.rise, curly = (t: string, em: number) => t.replace(/['’]/g, `{\\fsp${Math.round((STACK_AT.track - STACK_AT.apos) * em)}}’{\\fsp${Math.round(STACK_AT.track * em)}}`);
+      H.rows.forEach((row, r) => {
+        const em = row.em * fs, x = x0 + Math.round(row.left * fs), yT = Math.round(yb + row.base * fs - assAscent(row.font) * em), nat = lineScale(row.font) * em, d = Math.round(0.45 * em);
+        const col = row.accent ? st.accent : s.color, tags = `\\fn${row.font}\\fsz${Math.round(row.em * 1000) / 1000}\\fsp${Math.round(STACK_AT.track * em)}\\1c${colorOnly(col)}${shadow(em)}`;
+        row.idx.forEach((j) => {
+          const body = row.idx.map((jj, m) => (m ? " " : "") + word(jj, words.length).replace(/^\{\\r/, `{\\r${tags}` + (jj === j ? `\\1a&HFF&\\4a&HFF&\\t(0,${R},0.6,\\1a&H00&\\4a&H${sa}&)` : "\\alpha&HFF&"))).join("");
+          strips(at(S.words[j]), c.end, `{\\an7\\move(${x},${yT + d},${x},${yT},0,${R})}`, yT + nat / 2, nat, "{\\q2}" + curly(body, em), 1 + r, 0, 0, [[yT + nat / 2 + d, nat], [yT + nat / 2, nat]], R);
+        });
+        // the light sweeping across the last line: its words again in the light, seen through a band moving left to right
+        if (row.accent && S.sweep < (c.end - c.start) * 1000) {
+          const text = (alpha: string) => row.idx.map((jj, m) => (m ? " " : "") + word(jj, words.length).replace(/^\{\\r/, `{\\r\\fn${row.font}\\fsz${Math.round(row.em * 1000) / 1000}\\fsp${Math.round(STACK_AT.track * em)}\\1c${colorOnly(mixHex(col, st.shine, 0.75))}\\bord0\\shad0\\alpha&H${alpha}&`)).join("");
+          const y1 = yT - Math.round(0.2 * em), y2 = Math.round(yT + nat + 0.2 * em), w = Math.round(row.w * fs), tilt = Math.round(0.25 * em);
+          for (const [bw, alpha] of [[0.5, "B0"], [0.22, "40"], [0.1, "00"]] as [number, string][]) {
+            const b = Math.round(bw * em), clip = (cx: number) => `\\clip(${cx - b},${y1},${cx + b},${y2})`;
+            add(at(S.sweep), at(S.sweep + S.sweepMs), `{\\an7\\pos(${x},${yT})${clip(x - b - tilt)}\\t(0,${Math.round(S.sweepMs)},0.8,${clip(x + w + b + tilt)})}{\\q2}` + curly(text(alpha), em), 9);
+          }
+        }
+      });
+      subAt(c.start, c.end, "", yb + bottom + subH / 2);
       continue;
     }
     if (s.effect === "reveal4" && s.reveal4 && words.length) {
@@ -2019,7 +2122,7 @@ ${events.join("\n")}
 export const spacesLines = (s: CaptionStyle) => !((s.effect && s.effect !== "wobble") || s.reveal || s.wordLines || s.keyword?.line);
 /** Styles the line spacing reaches: the plain layout's, and Cinematic's three lines. */
 export const takesLineSpacing = (s: CaptionStyle) =>
-  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark", "cardslide", "dropcap", "reveal4"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
+  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark", "cardslide", "dropcap", "reveal4", "stack4"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
 
 /** How tall a line of this text is, × the em: its fonts' own line height (what libass draws, so the editor matches). */
 export const lineBox = (s: CaptionStyle, text: string) =>

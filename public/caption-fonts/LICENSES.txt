@@ -24,3 +24,4 @@ Bodoni Moda Italic: SIL Open Font License 1.1, from https://github.com/google/fo
 Poppins Regular and Poppins Light Italic: SIL Open Font License 1.1, from https://github.com/google/fonts (ofl/poppins), each given its own family name.
 Sriracha: SIL Open Font License 1.1, from https://github.com/google/fonts (ofl/sriracha).
 Playfair Display Black Italic: SIL Open Font License 1.1, from https://github.com/google/fonts (ofl/playfairdisplay), the variable italic fixed at weight 900, given its own family name.
+Inter Bold Italic: SIL Open Font License 1.1, from https://github.com/google/fonts (ofl/inter), the variable italic fixed at weight 700, optical size 32, given its own family name.

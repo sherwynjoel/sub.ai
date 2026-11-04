@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardLines, cardSchedule, dropCap, dropLines, dropSchedule, DROP_AT, DROP_TIME, textReveal, revealLines, revealSchedule, REVEAL_AT, REVEAL_TIME, REVEAL_SHADOW, REVEAL_LAYER, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardLines, cardSchedule, dropCap, dropLines, dropSchedule, DROP_AT, DROP_TIME, textReveal, revealLines, revealSchedule, REVEAL_AT, REVEAL_TIME, REVEAL_SHADOW, REVEAL_LAYER, heroStack, stackSchedule, STACK_AT, STACK_SHADOW, STACK_TIME, mixHex, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { cssBaseline, lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -15,6 +15,8 @@ type Props = {
 };
 
 const hide: React.CSSProperties = { visibility: "hidden" };
+/** A colour three quarters of the way to another (the light's colour on a line), as CSS. */
+const mixHexCss = (a: string, b: string) => mixHex(a, b, 0.75);
 /** The spark star's outline as an SVG path (radius 1 around 0, 0). */
 const STAR_PATH = "M" + starPoints().map(([x, y]) => `${x},${y}`).join("L") + "Z";
 
@@ -268,6 +270,30 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       return <span key={a} className="typo-row" style={{ fontSize: `min(1em, calc(${roomCqw.toFixed(1)}cqw / ${tw.toFixed(3)}))` }}>
         {words.slice(a, to).map((_, n) => [n ? " " : null, word(a + n)])}</span>;
     });
+  } else if (s.effect === "stack4" && s.stack4 && words.length) {
+    // up to four tightly overlapping lines with a soft shadow (as the MP4, placed by the first line's baseline), each
+    // word rising in as it's said, then a light sweeping across the last line
+    const st = s.stack4, H = heroStack(words.map((w) => w.w.replace(/'/g, "’")), s, ratio), T = STACK_TIME;
+    const S = stackSchedule(words.map((w) => (w.s - start) * 1000), (end - start) * 1000);
+    const now = (time - start) * 1000;
+    const topOf = Math.min(...H.rows.map((r) => r.base - cssBaseline(r.font) * r.em)), bottomOf = Math.max(...H.rows.map((r) => r.base - cssBaseline(r.font) * r.em + r.em));
+    const k = (s.shadow ?? 0) / 0.05, sc = s.shadowColor ?? "#000000";
+    const shadow = k ? `0 ${(STACK_SHADOW.y * k).toFixed(3)}em ${(STACK_SHADOW.blur * k * 1.8).toFixed(3)}em ${sc}${Math.round(STACK_SHADOW.alpha * 255).toString(16).padStart(2, "0")}` : "none";
+    const curly = (t: string) => t.split(/(’)/).map((x, i) => (x === "’" ? <span key={i} style={{ letterSpacing: `${STACK_AT.track - STACK_AT.apos}em` }}>’</span> : x));
+    const sweep = Math.min(1, Math.max(0, (now - S.sweep) / S.sweepMs)), sweeping = now >= S.sweep && sweep < 1;
+    body = <span className="hero-stack" style={{ fontFamily: stack(s.font, s.fontTa), width: `${H.W.toFixed(3)}em`, height: `${(bottomOf - topOf).toFixed(3)}em`, textShadow: shadow }}>
+      {H.rows.map((row, r) => {
+        const col = row.accent ? st.accent : s.color, text = row.idx.map((j) => words[j].w.replace(/'/g, "’"));
+        return <span key={r} className="hs-line" style={{ zIndex: r + 1, left: `${(row.left / row.em).toFixed(3)}em`, fontFamily: stack(row.font, s.fontTa), fontSize: `${row.em.toFixed(3)}em`,
+          top: `${((row.base - cssBaseline(row.font) * row.em - topOf) / row.em).toFixed(3)}em`, color: col, letterSpacing: `${STACK_AT.track}em` }}>
+          {row.idx.flatMap((j, m) => {
+            const e = easeInOut((now - S.words[j]) / T.rise);
+            return [m ? " " : null, <span key={j} className="hs-word" style={{ transform: `translateY(${((1 - e) * 0.45).toFixed(3)}em)`, opacity: now < S.words[j] ? 0 : e }}>{curly(text[m])}</span>];
+          })}
+          {row.accent && sweeping && <span className="hs-shine" aria-hidden="true" style={{ backgroundImage: `linear-gradient(100deg, transparent ${(sweep * 130 - 30 - 14).toFixed(1)}%, ${mixHexCss(col, st.shine)} ${(sweep * 130 - 30).toFixed(1)}%, transparent ${(sweep * 130 - 30 + 14).toFixed(1)}%)` }}>{text.join(" ")}</span>}
+        </span>;
+      })}
+    </span>;
   } else if (s.effect === "reveal4" && s.reveal4 && words.length) {
     // four overlapping lines with a soft drop shadow (as the MP4, placed by the first huge word's baseline): the small
     // serif line's letters rise in, the first huge word blurs in, the second rises in, the last line writes on letter
@@ -487,8 +513,8 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
 
   return (
     <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}${s.textAlign && s.textAlign !== "center" ? ` ta-${s.textAlign}` : ""}`} style={{ "--p": p, ...wrap, mixBlendMode: s.blend && !part ? BLENDS[s.blend][1] : undefined } as React.CSSProperties}>
-      <span className={`cap-main${grad && !["cardslide", "dropcap", "reveal4"].includes(s.effect ?? "") ? " grad" : ""}`} style={{ ...(grad && !["cardslide", "dropcap", "reveal4"].includes(s.effect ?? "") ? { ...gradBase, "--grad": `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` } as React.CSSProperties : base), ...(allPunch ? hide : {}) }} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>
-        {grad && !["cardslide", "dropcap", "reveal4"].includes(s.effect ?? "") ? <span className="cap-grad">{body}</span> : body /* (Card Slide: only its big line in the gradient) */}
+      <span className={`cap-main${grad && !["cardslide", "dropcap", "reveal4", "stack4"].includes(s.effect ?? "") ? " grad" : ""}`} style={{ ...(grad && !["cardslide", "dropcap", "reveal4", "stack4"].includes(s.effect ?? "") ? { ...gradBase, "--grad": `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` } as React.CSSProperties : base), ...(allPunch ? hide : {}) }} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>
+        {grad && !["cardslide", "dropcap", "reveal4", "stack4"].includes(s.effect ?? "") ? <span className="cap-grad">{body}</span> : body /* (Card Slide: only its big line in the gradient) */}
       </span>
       {sub && !stacked && <span className="cap-sub" style={{ ...(part === "punch" ? hide : {}), fontFamily: stack(s.font, s.fontTa), letterSpacing: s.spacing ? `${s.spacing}em` : undefined, lineHeight: lineScale(s.font), marginTop: `${(g - 1) * 0.5 * lineBox(s, text)}em` }}>{sub}</span>}
     </div>

@@ -40,6 +40,7 @@
 @font-face { font-family: "Poppins Regular"; src: url("/caption-fonts/Poppins-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Poppins Light Italic"; src: url("/caption-fonts/Poppins-LightItalic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Playfair Display Black Italic"; src: url("/caption-fonts/PlayfairDisplay-BlackItalic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Inter Bold Italic"; src: url("/caption-fonts/Inter-BoldItalic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Sriracha"; src: url("/caption-fonts/Sriracha-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Bodoni Moda Italic"; src: url("/caption-fonts/BodoniModa-Italic.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Poppins Medium"; src: url("/caption-fonts/Poppins-Medium.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
@@ -120,3 +121,8 @@
 /* Text Reveal: four lines placed by the first huge word's baseline (every line 1em tall), the small one silver */
 .text-reveal { position: relative; display: inline-block; line-height: 1; white-space: nowrap; text-align: left; }
 .text-reveal .tr-line { position: absolute; display: inline-block; line-height: 1; }
+/* Light Sweep: lines placed by the first one's baseline (every line 1em tall); the light a gradient through the text */
+.hero-stack { position: relative; display: inline-block; line-height: 1; white-space: nowrap; text-align: left; }
+.hero-stack .hs-line { position: absolute; display: inline-block; line-height: 1; }
+.hero-stack .hs-word { display: inline-block; white-space: pre; }
+.hero-stack .hs-shine { position: absolute; left: 0; top: 0; text-shadow: none; color: transparent; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; pointer-events: none; }
