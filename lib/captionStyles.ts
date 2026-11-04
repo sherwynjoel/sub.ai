@@ -25,7 +25,7 @@ export const BLENDS = {
   dodge: ["Colour dodge", "color-dodge", "dodge"],
 } as const;
 export type Blend = keyof typeof BLENDS;
-export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar" | "cardslide" | "dropcap" | "reveal4" | "stack4" | "dotstack";
+export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar" | "cardslide" | "dropcap" | "reveal4" | "stack4" | "dotstack" | "cutout";
 /** How a caption comes in (the last few from the Premiere template pack's presets). */
 export const ANIMS = {
   none: "None", fade: "Fade in", pop: "Pop", slide: "Slide up", bounce: "Bounce", zoom: "Zoom in",
@@ -93,6 +93,10 @@ export type CaptionStyle = {
   stack4?: { accent: string; big: number; lastFont: string; last: number; shine: string };
   // "dotstack": a huge word with a dot after it, then smaller lines tucked under it (dotStack); sizes × the huge one's
   dotStack?: { dot: string; big: number; mid: number; small: number };
+  // "cutout": a small line, a huge italic word, a huge bold word under it cut where the italic one crosses it (a gap the
+  // video shows through), a small last line (outlineCut); serif: the italic word's font, small: the small lines' font,
+  // bold: the bold word's colour
+  cutOut?: { serif: string; small: string; bold: string; big: number; smallRel: number; cut: number };
   reveal4?: { accent: string; big: number; smallFont: string; small: number; lastFont: string; last: number; silver: [string, string] }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
@@ -334,6 +338,62 @@ export function heroStack(words: string[], s: CaptionStyle & Placement, ratio = 
   return { rows: rows as (typeof rows[number] & { left: number })[], W };
 }
 /**
+ * "cutout" layout, as the reference ("How to create this / outline / effect / in <30 seconds"), in em of the huge italic
+ * word, from its baseline (y down): the bold word starts a third of the way along it (CUT_AT.shift), each line's baseline
+ * (line spacing spreads them), the italic word in from the left (CUT_AT.indent).
+ */
+export const CUT_AT = { indent: 0.33, shift: 0.3, top: -0.67, topHigh: -0.86, bold: 0.62, last: 0.24, boldRel: 1.08, track: -0.045, smallTrack: -0.035, heavy: 0.014 }; // heavy: the italic drawn this much bolder (em)
+export const CUT_TIME = { word: 320, wordStep: 110, letter: 360, letterStep: 38, zoom: 380 };
+export const cutsOut = (s: CaptionStyle) => s.effect === "cutout" && !!s.cutOut;
+/**
+ * Which words go where and how big: the huge pair (an italic word, then a bold one; real words of 3+ letters) with as
+ * many words before it as after it, those before on the small top line, those after on the small last line. Sizes in em
+ * of the style's size (fitting the room); the small lines shrunk only to stay within the pair's width.
+ */
+export function outlineCut(words: string[], s: CaptionStyle & Placement, ratio = 9 / 16) {
+  const co = s.cutOut!, n = words.length, room = roomInEm(s, ratio), ids = words.map((_, i) => i);
+  const real = (i: number) => [...words[i].replace(/[^\p{L}\p{N}]/gu, "")].length >= 3;
+  const smallFont = s.font === "Inter SemiBold" ? co.small : s.font; // (a font picked in the Style tab: every non-italic line)
+  let a = 0;
+  if (n >= 2) {
+    const ks = ids.filter((k) => k + 1 < n && (n <= 3 || (real(k) && real(k + 1))));
+    const cand = ks.length ? ks : ids.slice(0, n - 1);
+    a = cand.reduce((best, k) => (Math.abs(k - (n - k - 2)) <= Math.abs(best - (n - best - 2)) ? k : best), cand[0]);
+  }
+  const it = [a], bold = n >= 2 ? [a + 1] : [], top = ids.slice(0, a), last = ids.slice(a + (n >= 2 ? 2 : 1));
+  const tw = (idx: number[], f: string, tr: number) => { const t = idx.map((i) => words[i]).join(" "); return idx.length ? textWidth(t, f, s.fontTa) + tr * [...t].length : 0; };
+  const w2 = Math.max(0.3, tw(it, co.serif, CUT_AT.track)), w3 = bold.length ? tw(bold, s.font, CUT_AT.track) * CUT_AT.boldRel : 0;
+  const L2 = top.length ? CUT_AT.indent : 0, L3 = L2 + CUT_AT.shift * w2;
+  const core = Math.max(L2 + w2, bold.length ? L3 + w3 : 0);
+  const E = Math.min(co.big, (room * 0.97) / core);
+  const fit = (idx: number[]) => (idx.length ? Math.min(co.smallRel, (core * 0.98) / tw(idx, smallFont, CUT_AT.smallTrack)) : co.smallRel);
+  const r1 = fit(top), r4 = fit(last), w1 = tw(top, smallFont, CUT_AT.smallTrack) * r1, w4 = tw(last, smallFont, CUT_AT.smallTrack) * r4;
+  const d = (s.lineHeight ?? 1) - 1;
+  const base1 = (w1 > L2 + 0.3 * w2 ? CUT_AT.topHigh : CUT_AT.top) - d * 0.6, base3 = CUT_AT.bold + d * 0.8, base4 = (bold.length ? base3 : 0.2) + CUT_AT.last + d * 0.4;
+  return { top, it, bold, last, E, smallFont, r1, r4, w1, w2, w3, w4, L2, L3, W: core, base1, base3, base4, left4: core - w4 };
+}
+/**
+ * When each line comes in (ms from the part's start), following the speech, in order: the top line's words, the italic
+ * word's letters, the bold word, the last line's words, each as said (and after the one before); drawn closer together
+ * to finish before the part ends.
+ */
+export function cutSchedule(starts: number[], L: ReturnType<typeof outlineCut>, letters: number, partMs: number) {
+  const T = CUT_TIME, tops: number[] = [], lasts: number[] = [];
+  L.top.forEach((j, m) => tops.push(Math.max(starts[j], m ? tops[m - 1] + T.wordStep : 0)));
+  let it = Math.max(starts[L.it[0]], tops.length ? tops[tops.length - 1] + T.wordStep : 0);
+  let bold = L.bold.length ? Math.max(starts[L.bold[0]], it + letters * T.letterStep * 0.6) : 0, step = T.letterStep;
+  L.last.forEach((j, m) => lasts.push(Math.max(starts[j], m ? lasts[m - 1] + T.wordStep : L.bold.length ? bold + T.zoom * 0.6 : it + letters * T.letterStep)));
+  const room = partMs - 60, first = tops[0] ?? it;
+  const doneOf = () => Math.max(tops.length ? tops[tops.length - 1] + T.word : 0, it + (letters - 1) * step + T.letter, L.bold.length ? bold + T.zoom : 0, lasts.length ? lasts[lasts.length - 1] + T.word : 0);
+  for (let pass = 0; pass < 6 && doneOf() > room && doneOf() > first; pass++) {
+    const f = Math.max(0.2, (room - first) / (doneOf() - first)), at = (t: number) => first + (t - first) * f;
+    for (let m = 0; m < tops.length; m++) tops[m] = Math.max(at(tops[m]), m ? tops[m - 1] + 30 : 0);
+    it = at(it); bold = at(bold); step = Math.max(12, step * f);
+    for (let m = 0; m < lasts.length; m++) lasts[m] = Math.max(at(lasts[m]), m ? lasts[m - 1] + 30 : 0);
+  }
+  return { tops, it, step, bold, lasts };
+}
+/**
  * "dotstack" layout, as the reference ("steal. / my font / style"), in em of the style's size, from the huge word's
  * baseline (y down): the huge word (its first word), the dot after it (DOT_AT: gap, diameter, × the huge size), the next
  * line (about half the rest) and the last; each line's baseline its own x-height below the one before (they overlap,
@@ -382,12 +442,13 @@ export function dotSchedule(starts: number[], partMs: number) {
   return { words, dot };
 }
 /**
- * A long caption in parts, each shown as its own stack at a good size: up to six words (and about 30 letters) a part,
+ * A long caption in parts, each shown as its own stack at a good size: up to six words (and about 30 letters) a part
+ * (or as asked),
  * the parts as even as can be. [from, to) word indexes.
  */
-export function stackPages(words: string[]) {
+export function stackPages(words: string[], most = 6, letterMost = 30) {
   const n = words.length, letters = words.join(" ").length;
-  const parts = Math.max(1, Math.ceil(n / 6), Math.ceil(letters / 30));
+  const parts = Math.max(1, Math.ceil(n / most), Math.ceil(letters / letterMost));
   if (parts === 1 || n < 4) return [[0, n]] as [number, number][];
   const cuts = [...lineBreaks(words, Math.min(parts, Math.floor(n / 2)))].sort((a, b) => a - b);
   return [-1, ...cuts].map((a, r) => [a + 1, r < cuts.length ? cuts[r] + 1 : n]) as [number, number][];
@@ -600,6 +661,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-text-reveal", name: "Text Reveal", group: "Typography", blurb: "Four overlapping lines with a soft shadow: serif letters rise in, a huge yellow word blurs in, a huge white one rises, the last word writes on letter by letter (change both colours in Colour).", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: W, shadow: 0.05, shadowColor: "#000000", effect: "reveal4", reveal4: { accent: "#E6B33C", big: 3.6, smallFont: "Playfair Display Bold Italic", small: 0.34, lastFont: "Playfair Display Italic", last: 0.42, silver: ["#FFFFFF", "#FFFFFF"] } },
   { id: "cc-light-sweep", name: "Light Sweep", group: "Typography", blurb: "Big bold words stacked tight with a soft shadow, rising in word by word; the last one in blue italic with a light sweeping across it (change the colours in Colour).", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: W, shadow: 0.05, shadowColor: "#000000", effect: "stack4", stack4: { accent: "#2C64F2", big: 2.9, lastFont: "Inter Bold Italic", last: 0.95, shine: "#FFFFFF" } },
   { id: "cc-bold-dot", name: "Bold Dot", group: "Typography", blurb: "A huge heavy word with a yellow dot, smaller lines tucked under it with soft shadows; each word pops in as it's said, the dot drops in (change the colours, font and size in the Style tab).", font: "Inter Black", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, shadow: 0.05, shadowColor: "#000000", effect: "dotstack", dotStack: { dot: "#EBCF4A", big: 3.2, mid: 0.52, small: 0.355 } },
+  { id: "cc-outline-cut", name: "Outline Cut", group: "Typography", blurb: "A small line, a huge italic word cutting into a huge bold one under it, a small last line; words slide in, letters swing up, the bold word zooms in (change the colours and fonts in the Style tab).", font: "Inter SemiBold", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, effect: "cutout", cutOut: { serif: "Instrument Serif Italic", small: "Inter Medium", bold: W, big: 3.4, smallRel: 0.24, cut: 0.03 } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
@@ -672,7 +734,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
-  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-text-reveal", "cc-light-sweep", "cc-bold-dot", "cc-letter-rise", "cc-typo-block",
+  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-text-reveal", "cc-light-sweep", "cc-bold-dot", "cc-outline-cut", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-simple", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
   "setup-punch", "setup-punch-pro", "comic-pop", "butter-serif", "handwritten", "trending-1", "trending-2", "trending-3", "neon-aura",
@@ -704,6 +766,9 @@ export const CAPTION_FONTS = [
   "Poppins Regular",
   "Poppins Light Italic",
   "Sriracha",
+  "Instrument Serif Italic",
+  "Inter SemiBold",
+  "Inter Medium",
   "Inter Black",
   "Inter Bold Italic",
   "Playfair Display Black Italic",
@@ -864,6 +929,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
     else if (s.reveal4) s.reveal4 = { ...s.reveal4, accent: c.accent };
     else if (s.stack4) s.stack4 = { ...s.stack4, accent: c.accent };
     else if (s.dotStack) s.dotStack = { ...s.dotStack, dot: c.accent };
+    else if (s.cutOut) s.cutOut = { ...s.cutOut, bold: c.accent };
     else if (s.boldBar) s.boldBar = { ...s.boldBar, colors: [c.accent, mixHex(c.accent, "#000000", 0.55)] };
     else if (s.mark) s.mark = c.accent;
     else if (s.keyword) s.keyword.color = c.accent;
@@ -1248,8 +1314,9 @@ export function tamilRuns(text: string, fonts: Record<string, string>, style: st
 }
 
 // part: for a look whose punch (or staggered middle line) alone is blended (punchBlend), "plain" draws everything but
-// those words and "punch" only them (the blend's mask).
-type Opts = { styleId: string; custom?: CaptionCustom; lang: "ta" | "en" | "both"; width: number; height: number; part?: "plain" | "punch" };
+// those words and "punch" only them (the blend's mask). For "cutout" (cutsOut): "cutBase" everything but the bold word,
+// "cutBold" only it, "cutKnock" the italic word fattened by its gap, white (what's cut out of the bold word).
+type Opts = { styleId: string; custom?: CaptionCustom; lang: "ta" | "en" | "both"; width: number; height: number; part?: "plain" | "punch" | "cutBase" | "cutBold" | "cutKnock" };
 
 /** A full .ass file for the cues in the chosen style, sized to the video. */
 export function buildAss(cues: Cue[], o: Opts) {
@@ -1503,6 +1570,67 @@ export function buildAss(cues: Cue[], o: Opts) {
         }
       });
       subAt(c.start, c.end, "", p.subY);
+      continue;
+    }
+    if (s.effect === "cutout" && s.cutOut && words.length) {
+      // A small top line, a huge italic word, a huge bold word under it cut where the italic one crosses it, a small last
+      // line (outlineCut), placed by the italic word's baseline as the editor. The top line's words slide in from the left
+      // out of a blur, the italic word's letters rise and swing upright one by one, the bold word zooms down into place out
+      // of a blur, the last line's words slide in from the right; following the speech (cutSchedule), a part at a time.
+      // The cut: the MP4 draws the bold word apart and takes the italic word, fattened by its gap, out of it (o.part).
+      const co = s.cutOut, all = words.map((w) => w.w), pages = stackPages(all, 9, 50), durMs = (c.end - c.start) * 1000, part = o.part;
+      const show = (what: "base" | "bold" | "knock") => (!part || part === "plain" || part === "punch" ? what !== "knock" : part === "cutBase" ? what === "base" : part === "cutBold" ? what === "bold" : what === "knock");
+      let subY = 0;
+      pages.forEach(([from, to], p) => {
+        const L = outlineCut(all.slice(from, to), s, ratio), E = L.E * fs, x0 = Math.round(ax - ((hz + 1) * L.W * E) / 2);
+        const q0 = p ? (words[from].s - c.start) * 1000 : 0, q1 = p + 1 < pages.length ? (words[to].s - c.start) * 1000 : durMs;
+        const desc = (f: string) => lineScale(f) - assAscent(f);
+        const top = Math.min(L.top.length ? L.base1 * E - assAscent(L.smallFont) * L.r1 * E : 0, -assAscent(co.serif) * E);
+        const bottom = Math.max(desc(co.serif) * E, L.bold.length ? L.base3 * E + desc(s.font) * CUT_AT.boldRel * E : 0, L.last.length ? L.base4 * E + desc(L.smallFont) * L.r4 * E : 0);
+        const subH = sub ? subNatOf() : 0;
+        const yb = Math.round(s.x !== undefined || align === 5 ? ay - (top + bottom + subH) / 2 : align === 8 ? ay - top : ay - bottom - subH);
+        if (!p) subY = yb + bottom + subH / 2;
+        const itText = all[from + L.it[0]], letters = [...new Intl.Segmenter().segment(itText)].map((g) => g.segment);
+        const S = cutSchedule(words.slice(from, to).map((w) => (w.s - c.start) * 1000 - q0), L, letters.length, q1 - q0);
+        const at = (ms: number) => Math.min(c.start + (q1 - 50) / 1000, Math.max(c.start + q0 / 1000, c.start + (q0 + ms) / 1000)), endAt = c.start + q1 / 1000;
+        const T = CUT_TIME;
+        // a small line's words, each on its own (\\an1: the line box's bottom; its baseline the font's descent above it)
+        const smallLine = (idx: number[], rel: number, left: number, base: number, dir: number, times: number[]) => {
+          const em = rel * E, by = Math.round(yb + base * E + desc(L.smallFont) * em), d = Math.round(0.5 * em * dir), nat = lineScale(L.smallFont) * em, yc = by - nat / 2;
+          let x = x0 + left * E;
+          idx.forEach((m, k) => {
+            const w = all[from + m], ww = (textWidth(w, L.smallFont, s.fontTa) + CUT_AT.smallTrack * [...w].length) * em;
+            const tags = `\\fn${L.smallFont}\\fsz${Math.round((em / fs) * 1000) / 1000}\\fsp${Math.round(CUT_AT.smallTrack * em)}\\1c${colorOnly(s.color)}\\bord0\\shad0\\alpha&HFF&\\blur${Math.round(0.12 * em)}\\t(0,${T.word},0.5,\\alpha&H00&\\blur0)`;
+            strips(at(times[k]), endAt, `{\\an1\\move(${Math.round(x - d)},${by},${Math.round(x)},${by},0,${T.word})}`, yc, nat, "{\\q2}" + word(from + m, words.length).replace(/^\{\\r/, `{\\r${tags}`), 3);
+            x += ww + (textWidth(" ", L.smallFont, s.fontTa) + CUT_AT.smallTrack) * em;
+          });
+        };
+        if (show("base") && L.top.length) smallLine(L.top, L.r1, 0, L.base1, 1, S.tops);
+        if (show("base") && L.last.length) smallLine(L.last, L.r4, L.left4, L.base4, -1, S.lasts);
+        // the italic word, letter by letter: each rising and swinging upright (about its foot) as it fades in
+        if (show("base") || show("knock")) {
+          const by = Math.round(yb + desc(co.serif) * E), d = Math.round(0.35 * E), nat = lineScale(co.serif) * E, yc = by - nat / 2, x = Math.round(x0 + L.L2 * E);
+          const cut = Math.round(co.cut * E), knock = show("knock") && !show("base");
+          let lx = x;
+          letters.forEach((ch, i) => {
+            const lw = (textWidth(ch, co.serif, s.fontTa) + CUT_AT.track) * E, ox = Math.round(lx + lw / 2);
+            lx += lw;
+            const heavy = Math.round(CUT_AT.heavy * E * 10) / 10;
+            const look = knock ? `\\1c&HFFFFFF&\\3c&HFFFFFF&\\bord${heavy + cut}\\shad0` : `\\1c${colorOnly(s.color)}\\3c${colorOnly(s.color)}\\bord${heavy}\\shad0`;
+            const body = letters.map((x2, m) => `{\\r\\fn${co.serif}\\fsz${Math.round(L.E * 1000) / 1000}\\fsp${Math.round(CUT_AT.track * E)}${look}${m === i ? `\\alpha&HFF&\\t(0,${Math.round(T.letter * 0.6)},\\alpha&H00&)` : "\\alpha&HFF&"}}${esc(x2)}`).join("");
+            const lead = `{\\an1\\org(${ox},${by})\\frz14\\t(0,${T.letter},0.45,\\frz0)\\move(${x},${by + d},${x},${by},0,${T.letter})}`;
+            if (knock) add(at(S.it + i * S.step), endAt, lead + "{\\q2}" + body, 1);
+            else strips(at(S.it + i * S.step), endAt, lead, yc, nat, "{\\q2}" + body, 2, 0, 0, [[yc + d, nat], [yc, nat]], T.letter);
+          });
+        }
+        // the bold word: zooming down into place out of a blur, fading in (scaled about its foot's middle)
+        if (show("bold") && L.bold.length) {
+          const em = CUT_AT.boldRel * E, by = Math.round(yb + L.base3 * E + desc(s.font) * em), nat = lineScale(s.font) * em, cx = Math.round(x0 + (L.L3 + L.w3 / 2) * E);
+          const tags = `\\fn${s.font}\\fsz${Math.round((em / fs) * 1000) / 1000}\\fsp${Math.round(CUT_AT.track * em)}\\1c${colorOnly(co.bold)}\\bord0\\shad0\\alpha&HFF&\\fscx135\\fscy135\\blur${Math.round(0.08 * em)}\\t(0,${T.zoom},0.4,\\fscx100\\fscy100\\blur0\\alpha&H00&)`;
+          strips(at(S.bold), endAt, `{\\an2\\pos(${cx},${by})}`, by - nat / 2, nat, "{\\q2}" + word(from + L.bold[0], words.length).replace(/^\{\\r/, `{\\r${tags}`), 1);
+        }
+      });
+      if (show("base")) subAt(c.start, c.end, "", subY);
       continue;
     }
     if (s.effect === "dotstack" && s.dotStack && words.length) {
@@ -2243,7 +2371,7 @@ ${events.join("\n")}
 export const spacesLines = (s: CaptionStyle) => !((s.effect && s.effect !== "wobble") || s.reveal || s.wordLines || s.keyword?.line);
 /** Styles the line spacing reaches: the plain layout's, and Cinematic's three lines. */
 export const takesLineSpacing = (s: CaptionStyle) =>
-  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark", "cardslide", "dropcap", "reveal4", "stack4", "dotstack"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
+  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark", "cardslide", "dropcap", "reveal4", "stack4", "dotstack", "cutout"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
 
 /** How tall a line of this text is, × the em: its fonts' own line height (what libass draws, so the editor matches). */
 export const lineBox = (s: CaptionStyle, text: string) =>

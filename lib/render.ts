@@ -3,7 +3,7 @@ import { access, cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import type { Cue } from "@/db";
-import { BLENDS, buildAss, canvasSize, maskAss, punchBlend, resolveStyle, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, buildAss, canvasSize, cutsOut, maskAss, punchBlend, resolveStyle, type CaptionCustom } from "@/lib/captionStyles";
 import { audioCodec, bin, STORAGE, videoSize } from "@/lib/media";
 import { englishCues } from "@/lib/subtitles";
 import { BRAND } from "@/lib/brand";
@@ -31,8 +31,13 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
     // A blended look: the text is a window onto the video blended with the text colour (Negative: inverted). With
     // only the punch blended (Setup & Punch Pro), the rest is drawn as plain text first and the punch is the mask.
     const look = resolveStyle(job.captionStyle, job.captionCustom), blend = look.blend, partial = punchBlend(look);
-    const assOf = (part?: "plain" | "punch") => buildAss(lang === "en" ? englishCues(job.cues) : job.cues, { styleId: job.captionStyle, custom: job.captionCustom, lang, width, height, part });
-    await writeFile(join(dir, "subs.ass"), partial ? assOf("plain") : blend ? maskAss(assOf()) : assOf(), "utf8");
+    const cut = cutsOut(look); // Outline Cut: the bold word drawn apart, the italic word (fattened) taken out of it
+    const assOf = (part?: "plain" | "punch" | "cutBase" | "cutBold" | "cutKnock") => buildAss(lang === "en" ? englishCues(job.cues) : job.cues, { styleId: job.captionStyle, custom: job.captionCustom, lang, width, height, part });
+    await writeFile(join(dir, "subs.ass"), cut ? assOf("cutBase") : partial ? assOf("plain") : blend ? maskAss(assOf()) : assOf(), "utf8");
+    if (cut) {
+      await writeFile(join(dir, "bold.ass"), maskAss(assOf("cutBold")), "utf8");
+      await writeFile(join(dir, "knock.ass"), assOf("cutKnock"), "utf8");
+    }
     if (partial) await writeFile(join(dir, "mask.ass"), maskAss(assOf("punch")), "utf8");
     // Relative paths keep Windows drive colons out of the filter string, which ffmpeg would misparse.
     await cp(FONTS, join(dir, "fonts"), { recursive: true });
@@ -65,7 +70,10 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
     }
     // The ass filter with complex shaping: Tamil and other Indic scripts need it (otherwise vowel signs like ே land
     // after the consonant instead of before it). The server also needs a font with the script (fonts-noto-core).
-    if (partial && blend) {
+    if (cut) {
+      graph.push(cutGraph(last, look.cutOut!.bold));
+      graph.push(`[cut]ass=subs.ass:fontsdir=fonts:shaping=complex[out]`);
+    } else if (partial && blend) {
       graph.push(`[${last}]ass=subs.ass:fontsdir=fonts:shaping=complex[plain]`);
       graph.push(blendGraph("plain", BLENDS[blend][2], look.color, "mask.ass"));
     } else if (blend) graph.push(blendGraph(last, BLENDS[blend][2], look.color));
@@ -107,6 +115,18 @@ export function blendGraph(from: string, mode: string, color: string, mask = "su
     `[bvid][bcol]blend=all_mode=${mode}[bl];` +
     `[bm]split[bm1][bm2];[bm1]format=rgb24,drawbox=x=0:y=0:w=iw:h=ih:color=black:t=fill,ass=${mask}:fontsdir=fonts:shaping=complex,format=gray[mask];` +
     `[bl][mask]alphamerge[blm];[bm2][blm]overlay=format=auto[out]`;
+}
+
+/**
+ * Outline Cut's knock-out: the bold word as a layer of its colour seen through its mask (bold.ass, white on black) less
+ * the italic word fattened by its gap (knock.ass), over the frame, so the video shows through the gap. Output [cut].
+ */
+export function cutGraph(from: string, color: string) {
+  const c = `0x${color.slice(1, 7)}`, mask = (file: string, out: string) =>
+    `[${out}in]format=rgb24,drawbox=x=0:y=0:w=iw:h=ih:color=black:t=fill,ass=${file}:fontsdir=fonts:shaping=complex,format=gray[${out}]`;
+  return `[${from}]split=4[cv][cc][cbin][ckin];` + mask("bold.ass", "cb") + ";" + mask("knock.ass", "ck") + ";" +
+    `[cb][ck]blend=all_mode=subtract[cm];[cc]format=gbrp,drawbox=x=0:y=0:w=iw:h=ih:color=${c}:t=fill[ccol];` +
+    `[ccol][cm]alphamerge[cl];[cv][cl]overlay=format=auto[cut]`;
 }
 
 /** The free plan's mark: "Made with Vasanam", small and soft in the bottom-right corner, over everything. Output [out]. */

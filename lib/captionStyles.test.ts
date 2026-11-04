@@ -147,9 +147,9 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
 });
 
 test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 5 + Pro, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 41);
+  assert.equal(STYLE_CHOICES.length, 42);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 5);
-  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 15);
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 16);
   assert.ok(!STYLE_CHOICES.some((s) => s.id === "cc-bold-flicker" || s.id === "cc-corners"), "Bold Flicker and Corner Block no longer offered");
   for (const id of ["tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker", "tpl-reels-rgb", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon"])
     assert.ok(!STYLE_CHOICES.some((s) => s.id === id) && styleOf(id).id === id, `${id}: no longer offered (projects on it keep it)`);
@@ -772,4 +772,24 @@ test("Bold Dot: a huge word with a dot, smaller lines tucked under, words poppin
   const ev = ass.split("\n").filter((l) => l.startsWith("Dialogue"));
   assert.equal(ev.filter((l) => /\\fscx55\\fscy55/.test(l)).length, 4, "each word pops in on its own");
   assert.equal(ev.filter((l) => /\\p1/.test(l)).length, 1, "the dot");
+});
+
+test("Outline Cut: four lines as the reference, the bold word cut by the italic one, words in order within the caption", async () => {
+  const { outlineCut, cutSchedule, CUT_TIME, stackPages } = await import("./captionStyles");
+  const s = resolveStyle("cc-outline-cut");
+  const W = "How to create this outline effect in <30 seconds".split(" "), L = outlineCut(W, s);
+  assert.deepEqual([L.top, L.it, L.bold, L.last], [[0, 1, 2, 3], [4], [5], [6, 7, 8]]);
+  assert.deepEqual(stackPages(W, 9, 50), [[0, 9]], "the reference's caption in one");
+  assert.equal(resolveStyle("cc-outline-cut", { accent: "#FFD000" }).cutOut?.bold, "#FFD000", "the bold word's colour");
+  assert.equal(outlineCut(W, resolveStyle("cc-outline-cut", { font: "Anton" })).smallFont, "Anton", "a picked font for the plain lines");
+  assert.ok(outlineCut(W, resolveStyle("cc-outline-cut", { lineHeight: 1.5 })).base4 > L.base4 && takesLineSpacing(s), "line spacing");
+  const w = wordTimes(W.join(" "), 0, 2), S = cutSchedule(w.map((x) => x.s * 1000), L, W[4].length, 2000);
+  assert.ok(Math.max(S.tops.at(-1)! + CUT_TIME.word, S.it + (W[4].length - 1) * S.step + CUT_TIME.letter, S.bold + CUT_TIME.zoom, S.lasts.at(-1)! + CUT_TIME.word) <= 2000, "done by the caption's end, even fast");
+  assert.ok(S.it >= S.tops.at(-1)! && S.bold >= S.it && S.lasts[0] >= S.bold, "in order");
+  const cue = [{ start: 0, end: 3, ta: W.join(" "), en: "" } as unknown as Parameters<typeof buildAss>[0][number]];
+  const o = { styleId: "cc-outline-cut", lang: "ta" as const, width: 1080, height: 1920 };
+  const ev = (part?: "cutBase" | "cutBold" | "cutKnock") => buildAss(cue, { ...o, part }).split("\n").filter((l) => l.startsWith("Dialogue"));
+  assert.ok(ev("cutBold").length === 1 && /effect/.test(ev("cutBold")[0]), "the bold word apart");
+  assert.ok(ev("cutKnock").length === "outline".length && ev("cutKnock").every((l) => /\\bord[\d.]+/.test(l)), "the italic word fattened: the cut");
+  assert.ok(!ev("cutBase").some((l) => /effect/.test(l)), "the rest without it");
 });
