@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardLines, cardSchedule, dropCap, dropLines, dropSchedule, DROP_AT, DROP_TIME, textReveal, revealLines, revealSchedule, REVEAL_AT, REVEAL_TIME, REVEAL_SHADOW, REVEAL_LAYER, heroStack, stackPages, stackSchedule, STACK_AT, STACK_SHADOW, STACK_TIME, mixHex, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardLines, cardSchedule, dropCap, dropLines, dropSchedule, DROP_AT, DROP_TIME, textReveal, revealLines, revealSchedule, REVEAL_AT, REVEAL_TIME, REVEAL_SHADOW, REVEAL_LAYER, heroStack, stackPages, stackSchedule, dotStack, dotSchedule, DOT_AT, DOT_SHADOW, DOT_TIME, STACK_AT, STACK_SHADOW, STACK_TIME, mixHex, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { cssBaseline, lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -270,6 +270,33 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       return <span key={a} className="typo-row" style={{ fontSize: `min(1em, calc(${roomCqw.toFixed(1)}cqw / ${tw.toFixed(3)}))` }}>
         {words.slice(a, to).map((_, n) => [n ? " " : null, word(a + n)])}</span>;
     });
+  } else if (s.effect === "dotstack" && s.dotStack && words.length) {
+    // a huge word with a dot, smaller lines tucked under it, each casting a soft shadow up onto the one above (as the
+    // MP4, placed by the huge word's baseline): each word pops in as it's said, the dot drops in; a part at a time
+    const ds = s.dotStack, all = words.map((w) => w.w), pages = stackPages(all);
+    const pIdx = Math.max(0, pages.findIndex(([, to], p) => p === pages.length - 1 || time < words[to].s)), [from, to] = pages[pIdx];
+    const q0 = pIdx ? (words[from].s - start) * 1000 : 0, q1 = pIdx + 1 < pages.length ? (words[to].s - start) * 1000 : (end - start) * 1000;
+    const D = dotStack(all.slice(from, to), s, ratio), S = dotSchedule(words.slice(from, to).map((w) => (w.s - start) * 1000 - q0), q1 - q0);
+    const now = (time - start) * 1000 - q0, bl = cssBaseline(s.font);
+    const topOf = Math.min(...D.rows.map((r) => r.base - bl * r.em)), bottomOf = Math.max(...D.rows.map((r) => r.base - bl * r.em + r.em));
+    const k = (s.shadow ?? 0) / 0.05, sc = s.shadowColor ?? "#000000", sa = Math.round(DOT_SHADOW.alpha * 255).toString(16).padStart(2, "0");
+    const shadow = k ? `0 ${(DOT_SHADOW.y * k).toFixed(3)}em ${(DOT_SHADOW.blur * k * 1.5).toFixed(3)}em ${sc}${sa}` : "none";
+    const popOf = (t: number): React.CSSProperties => { // from small, past its size, settling; rising out of a blur, fading in
+      const ms = now - t, P = DOT_TIME.pop, a = P * 0.62;
+      if (ms < 0) return { opacity: 0 };
+      const e = Math.min(1, ms / a), sc2 = ms < a ? 0.55 + (1.07 - 0.55) * (1 - Math.pow(1 - e, 2)) : ms < P ? 1.07 - 0.07 * ((ms - a) / (P - a)) : 1;
+      return { opacity: Math.min(1, ms / a), transform: `translateY(${((1 - e) * 0.25).toFixed(3)}em) scale(${sc2.toFixed(3)})`, filter: e < 1 ? `blur(${((1 - e) * 0.06).toFixed(3)}em)` : undefined };
+    };
+    const dotMs = now - S.dot, T = DOT_TIME.dot, t1 = T * 0.55, t2 = T * 0.75;
+    const dotFall = dotMs < 0 ? 1 : Math.max(0, 1 - dotMs / t1), squash = dotMs < t1 || dotMs > T ? 0 : dotMs < t2 ? (dotMs - t1) / (t2 - t1) : 1 - (dotMs - t2) / (T - t2);
+    body = <span className="dot-stack" style={{ fontFamily: stack(s.font, s.fontTa), width: `${D.W.toFixed(3)}em`, height: `${(bottomOf - topOf).toFixed(3)}em`, textShadow: shadow, letterSpacing: `${DOT_AT.track}em`, color: s.color }}>
+      {D.rows.map((row, r) => <span key={r} className="ds-line" style={{ zIndex: r + 1, left: `${(row.left / row.em).toFixed(3)}em`, fontSize: `${row.em.toFixed(3)}em`, top: `${((row.base - bl * row.em - topOf) / row.em).toFixed(3)}em` }}>
+        {row.idx.flatMap((m, n) => [n ? " " : null, <span key={from + m} className="ds-word" style={popOf(S.words[m])}>{word(from + m)}</span>])}
+      </span>)}
+      <span className="ds-dot" style={{ zIndex: 1, left: `${D.dot.x.toFixed(3)}em`, width: `${D.dot.d.toFixed(3)}em`, height: `${D.dot.d.toFixed(3)}em`, top: `${(-topOf - D.dot.d).toFixed(3)}em`, background: ds.dot,
+        opacity: dotMs < 0 ? 0 : Math.min(1, dotMs / 120), boxShadow: k ? `0 ${(DOT_SHADOW.y * k * D.rows[0].em).toFixed(3)}em ${(DOT_SHADOW.blur * k * 1.5 * D.rows[0].em).toFixed(3)}em ${sc}${sa}` : undefined,
+        transform: `translateY(${(-dotFall * 0.9 * D.rows[0].em).toFixed(3)}em) scale(${(1 + 0.18 * squash).toFixed(3)}, ${(1 - 0.18 * squash).toFixed(3)})` }} />
+    </span>;
   } else if (s.effect === "stack4" && s.stack4 && words.length) {
     // up to four tightly overlapping lines with a soft shadow (as the MP4, placed by the first line's baseline), each
     // word rising in as it's said, then a light sweeping across the last line
@@ -519,8 +546,8 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
 
   return (
     <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}${s.textAlign && s.textAlign !== "center" ? ` ta-${s.textAlign}` : ""}`} style={{ "--p": p, ...wrap, mixBlendMode: s.blend && !part ? BLENDS[s.blend][1] : undefined } as React.CSSProperties}>
-      <span className={`cap-main${grad && !["cardslide", "dropcap", "reveal4", "stack4"].includes(s.effect ?? "") ? " grad" : ""}`} style={{ ...(grad && !["cardslide", "dropcap", "reveal4", "stack4"].includes(s.effect ?? "") ? { ...gradBase, "--grad": `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` } as React.CSSProperties : base), ...(allPunch ? hide : {}) }} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>
-        {grad && !["cardslide", "dropcap", "reveal4", "stack4"].includes(s.effect ?? "") ? <span className="cap-grad">{body}</span> : body /* (Card Slide: only its big line in the gradient) */}
+      <span className={`cap-main${grad && !["cardslide", "dropcap", "reveal4", "stack4", "dotstack"].includes(s.effect ?? "") ? " grad" : ""}`} style={{ ...(grad && !["cardslide", "dropcap", "reveal4", "stack4", "dotstack"].includes(s.effect ?? "") ? { ...gradBase, "--grad": `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` } as React.CSSProperties : base), ...(allPunch ? hide : {}) }} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>
+        {grad && !["cardslide", "dropcap", "reveal4", "stack4", "dotstack"].includes(s.effect ?? "") ? <span className="cap-grad">{body}</span> : body /* (Card Slide: only its big line in the gradient) */}
       </span>
       {sub && !stacked && <span className="cap-sub" style={{ ...(part === "punch" ? hide : {}), fontFamily: stack(s.font, s.fontTa), letterSpacing: s.spacing ? `${s.spacing}em` : undefined, lineHeight: lineScale(s.font), marginTop: `${(g - 1) * 0.5 * lineBox(s, text)}em` }}>{sub}</span>}
     </div>

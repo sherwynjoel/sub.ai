@@ -147,9 +147,9 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
 });
 
 test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 5 + Pro, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 40);
+  assert.equal(STYLE_CHOICES.length, 41);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 5);
-  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 14);
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 15);
   assert.ok(!STYLE_CHOICES.some((s) => s.id === "cc-bold-flicker" || s.id === "cc-corners"), "Bold Flicker and Corner Block no longer offered");
   for (const id of ["tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker", "tpl-reels-rgb", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon"])
     assert.ok(!STYLE_CHOICES.some((s) => s.id === id) && styleOf(id).id === id, `${id}: no longer offered (projects on it keep it)`);
@@ -754,4 +754,22 @@ test("Light Sweep: a long caption in parts at a good size; each line's shadow ca
   assert.ok(P.length >= 3 && P.every(([a, b]) => b - a <= 6) && P[0][0] === 0 && P.at(-1)![1] === W.length, "a long one in parts of six words at most");
   for (const [a, b] of P) assert.ok(heroStack(W.slice(a, b), s).rows.every((r) => r.em > s.stack4!.big * 0.5), "each part at a good size");
   assert.ok(STACK_SHADOW.y < 0, "the shadow cast up (onto the line above)");
+});
+
+test("Bold Dot: a huge word with a dot, smaller lines tucked under, words popping in as said, all editable", async () => {
+  const { dotStack, dotSchedule, DOT_TIME } = await import("./captionStyles");
+  const s = resolveStyle("cc-bold-dot");
+  const D = dotStack("steal my font style".split(" "), s);
+  assert.deepEqual(D.rows.map((r) => r.idx), [[0], [1, 2], [3]]);
+  assert.ok(D.rows[0].em > D.rows[1].em && D.rows[1].em > D.rows[2].em, "each line smaller");
+  assert.ok(D.dot.x >= D.rows[0].w, "the dot after the huge word");
+  assert.equal(resolveStyle("cc-bold-dot", { accent: "#FF0000" }).dotStack?.dot, "#FF0000", "the dot colour is editable");
+  assert.equal(resolveStyle("cc-bold-dot", { font: "Anton" }).font, "Anton", "the font is editable");
+  assert.ok(dotStack("steal my font style".split(" "), resolveStyle("cc-bold-dot", { lineHeight: 1.6 })).rows[2].base > D.rows[2].base && takesLineSpacing(s), "line spacing");
+  const w = wordTimes("steal my font style", 0, 1.2), S = dotSchedule(w.map((x) => x.s * 1000), 1200);
+  assert.ok(Math.max(S.words.at(-1)! + DOT_TIME.pop, S.dot + DOT_TIME.dot) <= 1200, "done by the caption's end, even a fast one");
+  const ass = buildAss([{ start: 0, end: 3, ta: "steal my font style", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-bold-dot", lang: "ta", width: 1080, height: 1920 });
+  const ev = ass.split("\n").filter((l) => l.startsWith("Dialogue"));
+  assert.equal(ev.filter((l) => /\\fscx55\\fscy55/.test(l)).length, 4, "each word pops in on its own");
+  assert.equal(ev.filter((l) => /\\p1/.test(l)).length, 1, "the dot");
 });

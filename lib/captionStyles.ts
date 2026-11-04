@@ -6,7 +6,7 @@
  */
 import type { Cue, WordLook } from "@/db";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
-import { assAscent, lineScale, looksTall, textWidth } from "@/lib/fontWidths";
+import { assAscent, HEIGHTS, lineScale, looksTall, textWidth } from "@/lib/fontWidths";
 
 export type TextAlign = "left" | "center" | "right";
 /**
@@ -25,7 +25,7 @@ export const BLENDS = {
   dodge: ["Colour dodge", "color-dodge", "dodge"],
 } as const;
 export type Blend = keyof typeof BLENDS;
-export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar" | "cardslide" | "dropcap" | "reveal4" | "stack4";
+export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar" | "cardslide" | "dropcap" | "reveal4" | "stack4" | "dotstack";
 /** How a caption comes in (the last few from the Premiere template pack's presets). */
 export const ANIMS = {
   none: "None", fade: "Fade in", pop: "Pop", slide: "Slide up", bounce: "Bounce", zoom: "Zoom in",
@@ -91,6 +91,8 @@ export type CaptionStyle = {
   // "stack4": up to four tightly overlapping lines (heroStack), the last word in the accent and its own font, a light
   // sweeping across it; a soft shadow (the Shadow's size and colour)
   stack4?: { accent: string; big: number; lastFont: string; last: number; shine: string };
+  // "dotstack": a huge word with a dot after it, then smaller lines tucked under it (dotStack); sizes × the huge one's
+  dotStack?: { dot: string; big: number; mid: number; small: number };
   reveal4?: { accent: string; big: number; smallFont: string; small: number; lastFont: string; last: number; silver: [string, string] }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
@@ -332,6 +334,54 @@ export function heroStack(words: string[], s: CaptionStyle & Placement, ratio = 
   return { rows: rows as (typeof rows[number] & { left: number })[], W };
 }
 /**
+ * "dotstack" layout, as the reference ("steal. / my font / style"), in em of the style's size, from the huge word's
+ * baseline (y down): the huge word (its first word), the dot after it (DOT_AT: gap, diameter, × the huge size), the next
+ * line (about half the rest) and the last; each line's baseline its own x-height below the one before (they overlap,
+ * the ascenders up into the line above; line spacing spreads them); the second line in a little from the left, the last
+ * ending a little in from the second's end. Each line shrunk only if it won't fit the room.
+ */
+export const DOT_AT = { gap: 0.03, size: 0.235, track: -0.045, inset: 0.077, lastIn: 0.045 };
+export const DOT_TIME = { pop: 360, gap: 80, dot: 420 };
+export const DOT_SHADOW = { spread: 0.02, y: -0.05, blur: 0.16, alpha: 0.55 };
+export function dotStack(words: string[], s: CaptionStyle & Placement, ratio = 9 / 16) {
+  const ds = s.dotStack!, n = words.length, room = roomInEm(s, ratio), ids = words.map((_, i) => i);
+  const rest = ids.slice(1), nMid = n <= 1 ? 0 : n === 2 ? 1 : Math.ceil(rest.length / 2);
+  const groups = [ids.slice(0, 1), rest.slice(0, nMid), rest.slice(nMid)].filter((g) => g.length);
+  const xh = (HEIGHTS[s.font] ?? HEIGHTS.Inter)[1]; // (the line's font: any picked one)
+  const wOf = (idx: number[]) => { const t = idx.map((i) => words[i]).join(" "); return textWidth(t, s.font, s.fontTa) + DOT_AT.track * [...t].length; };
+  const w1 = wOf(groups[0]), dotEm = DOT_AT.gap + DOT_AT.size;
+  const em1 = Math.min(ds.big, (room * 0.96) / Math.max(0.3, w1 + dotEm));
+  const rels = [1, ds.mid, ds.small], gap = 1 + ((s.lineHeight ?? 1) - 1) * 1.5;
+  let y = 0;
+  const rows = groups.map((idx, r) => {
+    const w0 = wOf(idx), em = r ? Math.min(em1 * rels[r], (room * 0.96) / Math.max(0.3, w0)) : em1;
+    if (r) y += xh * em * gap * 1.1;
+    return { idx, em, w: w0 * em, base: y, left: 0 };
+  });
+  rows[0].left = 0;
+  if (rows[1]) rows[1].left = Math.min(DOT_AT.inset * (rows[0].w + dotEm * em1), Math.max(0, room - rows[1].w));
+  if (rows[2]) rows[2].left = Math.max(0, rows[1].left + rows[1].w - DOT_AT.lastIn * rows[0].w - rows[2].w);
+  const W = Math.max(rows[0].w + dotEm * em1, ...rows.map((r) => r.left + r.w));
+  return { rows, W, dot: { x: rows[0].w + DOT_AT.gap * em1, d: DOT_AT.size * em1 } };
+}
+/**
+ * When each word pops in and the dot drops (ms from the part's start): each word as it's said (a moment after the one
+ * before), the dot once the huge word has landed; drawn closer together to finish before the part ends.
+ */
+export function dotSchedule(starts: number[], partMs: number) {
+  const T = DOT_TIME, words: number[] = [];
+  starts.forEach((t, j) => words.push(Math.max(t, j ? words[j - 1] + T.gap : 0)));
+  let dot = (words[0] ?? 0) + T.pop * 0.7;
+  const room = partMs - 60, first = words[0] ?? 0;
+  const doneOf = () => Math.max((words[words.length - 1] ?? 0) + T.pop, dot + T.dot);
+  for (let pass = 0; pass < 6 && doneOf() > room && doneOf() > first; pass++) {
+    const f = Math.max(0.2, (room - first) / (doneOf() - first)), at = (t: number) => first + (t - first) * f;
+    for (let j = 0; j < words.length; j++) words[j] = Math.max(at(words[j]), j ? words[j - 1] + 30 : 0);
+    dot = at(dot);
+  }
+  return { words, dot };
+}
+/**
  * A long caption in parts, each shown as its own stack at a good size: up to six words (and about 30 letters) a part,
  * the parts as even as can be. [from, to) word indexes.
  */
@@ -549,6 +599,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-drop-cap", name: "Drop Cap", group: "Typography", blurb: "Small words punch up over a big italic name with big first letters, written letter by letter; the rest slides in word by word on a box (change the box colour in Colour).", font: "Playfair Display Bold Italic", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, effect: "dropcap", dropCap: { big: 2.4, small: 0.5, topFont: "Inter", top: 0.27, boxFont: "Poppins Light Italic", boxText: "#141414", box: "#F5BE8C", boxSize: 0.27 } },
   { id: "cc-text-reveal", name: "Text Reveal", group: "Typography", blurb: "Four overlapping lines with a soft shadow: serif letters rise in, a huge yellow word blurs in, a huge white one rises, the last word writes on letter by letter (change both colours in Colour).", font: "Poppins ExtraBold", fontTa: "Mukta Malar ExtraBold", size: 1.11, color: W, shadow: 0.05, shadowColor: "#000000", effect: "reveal4", reveal4: { accent: "#E6B33C", big: 3.6, smallFont: "Playfair Display Bold Italic", small: 0.34, lastFont: "Playfair Display Italic", last: 0.42, silver: ["#FFFFFF", "#FFFFFF"] } },
   { id: "cc-light-sweep", name: "Light Sweep", group: "Typography", blurb: "Big bold words stacked tight with a soft shadow, rising in word by word; the last one in blue italic with a light sweeping across it (change the colours in Colour).", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: W, shadow: 0.05, shadowColor: "#000000", effect: "stack4", stack4: { accent: "#2C64F2", big: 2.9, lastFont: "Inter Bold Italic", last: 0.95, shine: "#FFFFFF" } },
+  { id: "cc-bold-dot", name: "Bold Dot", group: "Typography", blurb: "A huge heavy word with a yellow dot, smaller lines tucked under it with soft shadows; each word pops in as it's said, the dot drops in (change the colours, font and size in the Style tab).", font: "Inter Black", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, shadow: 0.05, shadowColor: "#000000", effect: "dotstack", dotStack: { dot: "#EBCF4A", big: 3.2, mid: 0.52, small: 0.355 } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
@@ -621,7 +672,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
-  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-text-reveal", "cc-light-sweep", "cc-letter-rise", "cc-typo-block",
+  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-text-reveal", "cc-light-sweep", "cc-bold-dot", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-simple", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
   "setup-punch", "setup-punch-pro", "comic-pop", "butter-serif", "handwritten", "trending-1", "trending-2", "trending-3", "neon-aura",
@@ -653,6 +704,7 @@ export const CAPTION_FONTS = [
   "Poppins Regular",
   "Poppins Light Italic",
   "Sriracha",
+  "Inter Black",
   "Inter Bold Italic",
   "Playfair Display Black Italic",
 ] as const;
@@ -811,6 +863,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
     else if (s.dropCap) s.dropCap = { ...s.dropCap, box: c.accent };
     else if (s.reveal4) s.reveal4 = { ...s.reveal4, accent: c.accent };
     else if (s.stack4) s.stack4 = { ...s.stack4, accent: c.accent };
+    else if (s.dotStack) s.dotStack = { ...s.dotStack, dot: c.accent };
     else if (s.boldBar) s.boldBar = { ...s.boldBar, colors: [c.accent, mixHex(c.accent, "#000000", 0.55)] };
     else if (s.mark) s.mark = c.accent;
     else if (s.keyword) s.keyword.color = c.accent;
@@ -1450,6 +1503,53 @@ export function buildAss(cues: Cue[], o: Opts) {
         }
       });
       subAt(c.start, c.end, "", p.subY);
+      continue;
+    }
+    if (s.effect === "dotstack" && s.dotStack && words.length) {
+      // A huge word with a dot, smaller lines tucked under it (dotStack), each later line over the one before casting a
+      // soft shadow up onto it. Each word pops in as it's said (from small, overshooting, rising out of a blur, fading in),
+      // the dot drops in bouncing once the huge word lands. A long caption a part at a time (stackPages).
+      const ds = s.dotStack, all = words.map((w) => w.w), pages = stackPages(all), durMs = (c.end - c.start) * 1000;
+      const hex2 = (v: number) => Math.round(Math.min(255, Math.max(0, v))).toString(16).toUpperCase().padStart(2, "0");
+      const k = (s.shadow ?? 0) / 0.05, sa = hex2(255 * (1 - DOT_SHADOW.alpha)), sc = colorOnly(s.shadowColor ?? "#000000");
+      const shadow = (em: number) => (k ? `\\bord${Math.round(DOT_SHADOW.spread * em * k * 10) / 10}\\3a&HFF&\\xshad0\\yshad${Math.round(DOT_SHADOW.y * em * k)}\\4c${sc}\\4a&H${sa}&\\blur${Math.round(DOT_SHADOW.blur * em * k * 10) / 10}` : "\\bord0\\shad0");
+      const P = DOT_TIME.pop, p1t = Math.round(P * 0.62);
+      let subY = 0;
+      pages.forEach(([from, to], p) => {
+        const D = dotStack(all.slice(from, to), s, ratio), x0 = Math.round(ax - ((hz + 1) * D.W * fs) / 2);
+        const q0 = p ? (words[from].s - c.start) * 1000 : 0, q1 = p + 1 < pages.length ? (words[to].s - c.start) * 1000 : durMs;
+        const top = Math.min(...D.rows.map((r) => r.base - assAscent(s.font) * r.em)) * fs;
+        const bottom = Math.max(...D.rows.map((r) => r.base + (lineScale(s.font) - assAscent(s.font)) * r.em)) * fs;
+        const subH = sub ? subNatOf() : 0;
+        const yb = Math.round(s.x !== undefined || align === 5 ? ay - (top + bottom + subH) / 2 : align === 8 ? ay - top : ay - bottom - subH);
+        if (!p) subY = yb + bottom + subH / 2;
+        const S = dotSchedule(words.slice(from, to).map((w) => (w.s - c.start) * 1000 - q0), q1 - q0);
+        const at = (ms: number) => Math.min(c.start + (q1 - 50) / 1000, Math.max(c.start + q0 / 1000, c.start + (q0 + ms) / 1000)), endAt = c.start + q1 / 1000;
+        D.rows.forEach((row, r) => {
+          const em = row.em * fs, track = DOT_AT.track * em, baseY = Math.round(yb + row.base * fs), lift = Math.round(0.25 * em);
+          let x = x0 + row.left * fs;
+          row.idx.forEach((m) => {
+            const w = all[from + m], ww = (textWidth(w, s.font, s.fontTa) + DOT_AT.track * [...w].length) * em, cx = Math.round(x + ww / 2);
+            // each word on its own, scaled about its baseline's middle: from small, past its size, settling; out of a blur
+            const pop = `\\fscx55\\fscy55\\1a&HFF&\\4a&HFF&\\blur${Math.round(0.06 * em)}\\t(0,${p1t},0.7,\\fscx107\\fscy107\\1a&H00&\\4a&H${sa}&\\blur${Math.round(DOT_SHADOW.blur * em * k * 10) / 10})\\t(${p1t},${P},1.4,\\fscx100\\fscy100)`;
+            const tags = `\\fn${s.font}\\fsz${Math.round(row.em * 1000) / 1000}\\fsp${Math.round(track)}\\1c${colorOnly(s.color)}${shadow(em)}${pop}`;
+            // (\\an1 sets the line box's bottom: the baseline is the font's descent above it)
+            const by = baseY + Math.round((lineScale(s.font) - assAscent(s.font)) * em);
+            const nat = lineScale(s.font) * em, yc = by - nat / 2; // (a gradient set in Colour: its strips, moving with it)
+            strips(at(S.words[m]), endAt, `{\\an1\\org(${cx},${baseY})\\move(${Math.round(x)},${by + lift},${Math.round(x)},${by},0,${p1t})}`, yc, nat, "{\\q2}" + word(from + m, words.length).replace(/^\{\\r/, `{\\r${tags}`), 1 + r, 0, 0, [[yc + lift, nat], [yc, nat]], p1t);
+            x += ww + (textWidth(" ", s.font, s.fontTa) + DOT_AT.track) * em;
+          });
+          // the dot after the huge word: dropping in from above, squashing as it lands, settling
+          if (!r && to - from > 0) {
+            const dd = Math.round(D.dot.d * fs), dx = Math.round(x0 + D.dot.x * fs), dy = baseY - dd, rr = dd / 2, kq = 0.5523 * rr;
+            const circle = `m ${rr} 0 b ${rr + kq} 0 ${dd} ${rr - kq} ${dd} ${rr} b ${dd} ${rr + kq} ${rr + kq} ${dd} ${rr} ${dd} b ${rr - kq} ${dd} 0 ${rr + kq} 0 ${rr} b 0 ${rr - kq} ${rr - kq} 0 ${rr} 0`;
+            const T = DOT_TIME.dot, t1 = Math.round(T * 0.55), t2 = Math.round(T * 0.75);
+            add(at(S.dot), endAt, `{\\an7\\org(${dx + rr},${baseY})\\move(${dx},${dy - Math.round(0.9 * em)},${dx},${dy},0,${t1})\\fad(120,0)\\t(${t1},${t2},\\fscx118\\fscy82)\\t(${t2},${T},\\fscx100\\fscy100)` +
+              `${shadow(em)}\\1c${colorOnly(ds.dot)}\\1a&H${alphaOf(ds.dot)}&\\p1}${circle}{\\p0}`, 1);
+          }
+        });
+      });
+      subAt(c.start, c.end, "", subY);
       continue;
     }
     if (s.effect === "stack4" && s.stack4 && words.length) {
@@ -2143,7 +2243,7 @@ ${events.join("\n")}
 export const spacesLines = (s: CaptionStyle) => !((s.effect && s.effect !== "wobble") || s.reveal || s.wordLines || s.keyword?.line);
 /** Styles the line spacing reaches: the plain layout's, and Cinematic's three lines. */
 export const takesLineSpacing = (s: CaptionStyle) =>
-  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark", "cardslide", "dropcap", "reveal4", "stack4"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
+  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark", "cardslide", "dropcap", "reveal4", "stack4", "dotstack"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
 
 /** How tall a line of this text is, × the em: its fonts' own line height (what libass draws, so the editor matches). */
 export const lineBox = (s: CaptionStyle, text: string) =>
