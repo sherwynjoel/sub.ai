@@ -147,9 +147,9 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
 });
 
 test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 5 + Pro, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 39);
+  assert.equal(STYLE_CHOICES.length, 40);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 5);
-  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 13);
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 14);
   assert.ok(!STYLE_CHOICES.some((s) => s.id === "cc-bold-flicker" || s.id === "cc-corners"), "Bold Flicker and Corner Block no longer offered");
   for (const id of ["tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker", "tpl-reels-rgb", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon"])
     assert.ok(!STYLE_CHOICES.some((s) => s.id === id) && styleOf(id).id === id, `${id}: no longer offered (projects on it keep it)`);
@@ -725,4 +725,23 @@ test("Text Reveal: four lines in order with a soft shadow, fitting long and shor
   }
   const ass = buildAss([{ start: 0, end: 3, ta: "30 second text reveal effect", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-text-reveal", lang: "ta", width: 1080, height: 1920 });
   assert.ok(/\\yshad\d+\\4c&H000000&\\4a&H[0-9A-F]{2}&\\blur/.test(ass), "the soft drop shadow");
+});
+
+test("Light Sweep: four tight lines as the reference, words rising as said, then a light across the last, all within the caption", async () => {
+  const { heroStack, stackSchedule, STACK_TIME } = await import("./captionStyles");
+  const s = resolveStyle("cc-light-sweep");
+  const W = "here’s how can you create".split(" "), H = heroStack(W, s);
+  assert.deepEqual(H.rows.map((r) => r.idx.map((i) => W[i]).join(" ")), ["here’s", "how can", "you", "create"]);
+  assert.ok(H.rows[3].accent && H.rows[2].left + H.rows[2].w > H.W - 0.01, "the last lines to the right");
+  assert.equal(resolveStyle("cc-light-sweep", { accent: "#FF00AA" }).stack4?.accent, "#FF00AA", "the accent is editable");
+  const far = heroStack(W, resolveStyle("cc-light-sweep", { lineHeight: 1.6 }));
+  assert.ok(far.rows[3].base > H.rows[3].base && takesLineSpacing(s), "line spacing spreads them");
+  for (const [t, dur] of [["here's how can you create", 3], ["so many people come to me and ask how did you become such a good sales person", 3]] as [string, number][]) {
+    const w = wordTimes(t, 0, dur), S = stackSchedule(w.map((x) => x.s * 1000), dur * 1000);
+    assert.ok(S.words.every((x, j) => !j || x > S.words[j - 1]) && S.sweep >= S.words.at(-1)!, `${t}: words in order, then the light`);
+    assert.ok(Math.max(S.words.at(-1)! + STACK_TIME.rise, S.sweep + S.sweepMs) <= dur * 1000, `${t}: done by the caption's end`);
+    assert.ok(heroStack(w.map((x) => x.w), s).rows.length <= 4);
+  }
+  const ass = buildAss([{ start: 0, end: 3, ta: "here's how can you create", en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-light-sweep", lang: "ta", width: 1080, height: 1920 });
+  assert.ok(ass.split("\n").filter((l) => /\\clip\(-?\d+,\d+,-?\d+,\d+\)\\t\(0,\d+,0\.8,\\clip/.test(l)).length === 3, "the light sweeps (a soft band)");
 });
