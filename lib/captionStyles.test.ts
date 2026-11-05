@@ -810,3 +810,16 @@ test("Lifted Dot: the huge word's i dot lifted into the italic line between its 
   assert.ok(Math.max(S.tops.at(-1)! + LIFT_TIME.word, S.big + (L.chars.length - 1) * S.step + LIFT_TIME.letter, S.lift + S.liftMs) <= 1300, "done by the caption's end, even fast");
   assert.ok(S.big >= S.tops.at(-1)! && S.lift > S.big, "in order");
 });
+
+test("Lifted Dot: with no i, a tall letter's stem grows up into the italic line instead", async () => {
+  const { liftDot } = await import("./captionStyles");
+  const s = resolveStyle("cc-lifted-dot");
+  const L = liftDot("make your content better".split(" "), s);
+  assert.equal(L.kind, "stem");
+  assert.equal(L.chars[L.iAt], "t");
+  assert.ok(L.dot.toY < L.dot.fromY, "it reaches up");
+  assert.ok(L.lefts.some((x, k) => k < L.lefts.length && x > L.dot.x) && L.lefts.some((x) => x < L.dot.x), "between the italic words");
+  assert.equal(liftDot("directly inside Premiere".split(" "), s).kind, "dot", "an i still lifts its dot");
+  assert.equal(liftDot("so so so".split(" "), s).iAt, -1, "no i or tall letter: nothing lifted");
+  assert.equal(liftDot("make your content better".split(" "), resolveStyle("cc-lifted-dot", { font: "Anton" })).iAt, -1, "a font not measured: no stem");
+});

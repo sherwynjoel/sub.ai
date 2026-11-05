@@ -143,3 +143,4 @@
 .lift-dot { position: relative; display: inline-block; line-height: 1; white-space: nowrap; text-align: left; }
 .lift-dot .ld-word, .lift-dot .ld-big { position: absolute; display: inline-block; line-height: 1; }
 .lift-dot .ld-dot { position: absolute; transform-origin: 50% 100%; }
+.lift-dot .ld-stem { position: absolute; }

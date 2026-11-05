@@ -345,6 +345,13 @@ export function heroStack(words: string[], s: CaptionStyle & Placement, ratio = 
  * left, right, bottom, top), the gap either side of the lifted dot. Timing in ms.
  */
 export const LIFT_AT = { base: -0.6, track: -0.035, topTrack: -0.01, dot: [0.042, 0.189, 0.592, 0.732], gap: 0.05 };
+/**
+ * The tall letters whose stem can grow up into the italic line, in the fonts measured (their stem's left and right, and
+ * its top, em; from the font files): when the huge word has no i or j to lift a dot from.
+ */
+export const TALL_STEMS: Record<string, Record<string, [number, number, number]>> = {
+  "Inter SemiBold": { t: [0.098, 0.222, 0.655], l: [0.055, 0.178, 0.727], d: [0.409, 0.532, 0.727], b: [0.055, 0.178, 0.727], h: [0.055, 0.178, 0.727], k: [0.055, 0.178, 0.727] },
+};
 export const LIFT_TIME = { word: 380, wordGap: 90, letter: 340, step: 32, lift: 460 };
 export const LIFT_SHADOW = { y: 0.02, blur: 0.09, alpha: 0.4 };
 /**
@@ -363,8 +370,13 @@ export function liftDot(words: string[], s: CaptionStyle & Placement, ratio = 9 
   chars.forEach((ch) => { xs.push(x); x += cw(ch); });
   const bigW = Math.max(0.3, x), E = Math.min(ld.big, (room * 0.97) / bigW), roomEm = room / E;
   const top = words.slice(0, Math.max(0, n - 1));
-  const iAt = top.length ? chars.findIndex((ch) => ch === "i" || ch === "j") : -1;
-  const [dl, dr, db, dt] = LIFT_AT.dot, d = dr - dl, dh = dt - db;
+  // what reaches up: an i's (or j's) dot, else a tall letter's stem (the one nearest the middle), in a font measured
+  const stems = TALL_STEMS[s.font] ?? {}, mid = (chars.length - 1) / 2;
+  const iDot = top.length ? chars.findIndex((ch) => ch === "i" || ch === "j") : -1;
+  const tall = top.length && iDot < 0 ? chars.map((ch, i) => (stems[ch] ? i : -1)).filter((i) => i >= 0).sort((a, b) => Math.abs(a - mid) - Math.abs(b - mid))[0] ?? -1 : -1;
+  const iAt = iDot >= 0 ? iDot : tall, kind: "dot" | "stem" = iDot >= 0 ? "dot" : "stem";
+  const [dl, dr, db, dt] = iDot >= 0 || tall < 0 ? LIFT_AT.dot : (() => { const [l, r, t] = stems[chars[tall]]; return [l, r, t, t]; })();
+  const d = dr - dl, dh = dt - db;
   const d2 = (s.lineHeight ?? 1) - 1, base1 = LIFT_AT.base - d2 * 0.8;
   const ww = (w: string, r: number) => (textWidth(w, ld.serif, s.fontTa) + LIFT_AT.topTrack * [...w].length) * r;
   const sp = (r: number) => textWidth(" ", ld.serif, s.fontTa) * r;
@@ -397,7 +409,8 @@ export function liftDot(words: string[], s: CaptionStyle & Placement, ratio = 9 
   }
   const minX = Math.min(0, ...lefts), maxX = Math.max(bigW, ...lefts.map((l, k) => l + ww(top[k], r1)));
   return { top: top.map((_, k) => k), big: n - 1, bigText, chars, xs: xs.map((v) => v - minX), bigLeft: -minX, iAt, r1, lefts: lefts.map((v) => v - minX),
-    dot: { x: dotX - minX, d, dh, fromY: -dt, toY: base1 - dh }, base1, E, W: maxX - minX };
+    // the dot: its top on the i, then on the italic line's baseline; a stem: its top from the letter's to the italic line's x-height
+    kind, dot: { x: dotX - minX, d, dh, fromY: -dt, toY: kind === "dot" ? base1 - dh : base1 - 0.52 * r1 }, base1, E, W: maxX - minX };
 }
 /**
  * When each part comes in (ms from the part's start), following the speech, in order: the italic words as said, the
@@ -1683,7 +1696,7 @@ export function buildAss(cues: Cue[], o: Opts) {
         });
         // the huge word, letter by letter (the others hidden, every letter keeping its place); its i dotless when lifted
         const by = Math.round(yb + desc(s.font) * E), nat = lineScale(s.font) * E, d = Math.round(0.3 * E), xb = Math.round(x0 + L.bigLeft * E);
-        const shown = L.chars.map((ch, i) => (i === L.iAt ? (ch === "j" ? "ȷ" : "ı") : ch));
+        const shown = L.chars.map((ch, i) => (i === L.iAt && L.kind === "dot" ? (ch === "j" ? "ȷ" : "ı") : ch));
         const tags = `\\fn${s.font}\\fsz${Math.round(L.E * 1000) / 1000}\\fsp${Math.round(LIFT_AT.track * E)}\\1c${colorOnly(s.color)}${shadow(E)}`;
         shown.forEach((_, i) => {
           if (/\s/.test(shown[i])) return;
@@ -1691,7 +1704,12 @@ export function buildAss(cues: Cue[], o: Opts) {
           strips(at(S.big + i * S.step), endAt, `{\\an1\\move(${xb},${by + d},${xb},${by},0,${T.letter})}`, by - nat / 2, nat, "{\\q2}" + body, 1, 0, 0, [[by - nat / 2 + d, nat], [by - nat / 2, nat]], T.letter);
         });
         // the lifted dot: on its i as the i lands, then flying up into the italic line, landing with a squash
-        if (L.iAt >= 0) {
+        if (L.iAt >= 0 && L.kind === "stem") {
+          // a tall letter's stem growing up from its top into the italic line, once the letter has landed
+          const sw = Math.round(L.dot.d * E), sx = Math.round(x0 + L.dot.x * E), yFrom = Math.round(yb + L.dot.fromY * E) + 2, yTo = Math.round(yb + L.dot.toY * E), M = Math.round(S.liftMs);
+          const clip = (y: number) => `\\clip(${sx - 4},${y},${sx + sw + 4},${yFrom})`;
+          add(at(S.lift), endAt, `{\\an7\\pos(${sx},${yTo})${clip(yFrom)}\\t(0,${M},0.6,${clip(yTo - 4)})${shadow(E)}\\1c${colorOnly(s.color)}\\p1}m 0 0 l ${sw} 0 ${sw} ${yFrom - yTo} 0 ${yFrom - yTo}{\\p0}`, 1);
+        } else if (L.iAt >= 0) {
           const dw = Math.round(L.dot.d * E), dh = Math.round(L.dot.dh * E), dx = Math.round(x0 + L.dot.x * E), y0 = Math.round(yb + L.dot.fromY * E), y1 = Math.round(yb + L.dot.toY * E); // (its top: on the i, then on the italic baseline)
           const tIn = S.big + L.iAt * S.step, box = `m 0 0 l ${dw} 0 ${dw} ${dh} 0 ${dh}`, look = `${shadow(E)}\\1c${colorOnly(ld.dot)}\\1a&H${alphaOf(ld.dot)}&`;
           // (on the i, rising with it)
