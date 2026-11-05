@@ -598,6 +598,11 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   // the editor's three tips, until hidden (remembered on this browser)
   const hintSeen = useSyncExternalStore(noop, () => { try { return localStorage.getItem("vs-editor-hint") === "1"; } catch { return false; } }, () => true);
   const [hintHidden, setHintGone] = useState(false), hintGone = hintSeen || hintHidden;
+  // Simple (the default): the video, the captions, Style and Export; Advanced adds the timeline, titles and logo, and
+  // every look setting. Remembered on this browser.
+  const modeSaved = useSyncExternalStore(noop, () => { try { return localStorage.getItem("vs-editor-mode") === "advanced"; } catch { return false; } }, () => false);
+  const [modeSet, setModeSet] = useState<boolean | null>(null), advanced = modeSet ?? modeSaved;
+  const setAdvanced = (on: boolean) => { setModeSet(on); try { localStorage.setItem("vs-editor-mode", on ? "advanced" : "simple"); } catch { /* private mode */ } if (!on && tab === "layers") setTab("style"); };
   const language = languageOf(job.language);
   const short = shortCode(job.language);
   const tamil = short === "ta" || initial.cues.some((c) => /[\u0B80-\u0BFF]/.test(c.ta)); // Tamil letters get their own font
@@ -616,7 +621,11 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const redo = () => { if (!future.length) return; setPast((p) => [...p, cues]); setCuesRaw(future[0]); setFuture((f) => f.slice(1)); setDirty(true); };
   const editCue = (i: number, next: Cue) => commit(cues.map((c, j) => (j === i ? next : c)));
 
-  // Poll until processing finishes.
+  // Poll until processing finishes: the time left from how fast it's going; a notice when ready if the tab is away.
+  const [eta, setEta] = useState<number | null>(null);
+  const [notify, setNotify] = useState(false);
+  const canNotify = useSyncExternalStore(noop, () => typeof Notification !== "undefined" && Notification.permission !== "denied", () => false);
+  const first = useRef<{ t: number; p: number } | null>(null);
   useEffect(() => {
     if (job.status === "done" || job.status === "failed") return;
     const t = setInterval(async () => {
@@ -624,10 +633,21 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       if (!res.ok) return;
       const j: Job = await res.json();
       setJob(j);
-      if (j.status === "done") setCuesRaw(j.cues);
+      if (j.status === "processing" && j.progress > 0) {
+        if (!first.current) first.current = { t: Date.now(), p: j.progress };
+        const dp = j.progress - first.current.p, dt = (Date.now() - first.current.t) / 1000;
+        if (dp >= 3 && dt > 4) setEta(Math.round((dt / dp) * (100 - j.progress)));
+      }
+      if (j.status === "done") {
+        setCuesRaw(j.cues);
+        if (document.hidden) {
+          document.title = `✓ Ready · ${j.filename}`;
+          try { if (notify && Notification.permission === "granted") new Notification("Your subtitles are ready", { body: j.filename }); } catch { /* not supported */ }
+        }
+      }
     }, 3000);
     return () => clearInterval(t);
-  }, [job.id, job.status]);
+  }, [job.id, job.status, notify]);
 
   // Poll while a styled MP4 renders.
   const rendering = job.renderStatus === "queued" || job.renderStatus === "rendering";
@@ -764,6 +784,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     video.current?.pause();
     seek(cues[next].start + Math.min(0.5, (cues[next].end - cues[next].start) / 2));
     select(next);
+  }
+  /** One tap: the Export tab, and the video made unless the last one is current. */
+  function exportNow() {
+    setTab("export");
+    if (rendering || (job.renderStatus === "done" && !dirty && !lookChanged) || !videoHere) return;
+    void render();
   }
   async function render() {
     if (outside.length && !confirm(`${outside.length} subtitle${outside.length === 1 ? " goes" : "s go"} outside the video and will be cut off in the MP4. Export anyway?`)) return;
@@ -1070,7 +1096,10 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           <>
             <SubtitleReveal src={src} progress={job.progress} queued={job.status === "queued"} />
             <div className="bar big" role="progressbar" aria-valuenow={job.progress} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${Math.max(job.progress, 3)}%` }} /></div>
-            <p className="muted">{job.status === "queued" ? "Waiting in line…" : `Making your subtitles · ${job.progress}%.`} The editor opens here by itself when they&apos;re ready. You can leave this page; we&apos;ll keep working.</p>
+            <p className="muted">{job.status === "queued" ? "Waiting in line…" : `Making your subtitles · ${job.progress}%${eta ? ` · about ${eta < 60 ? `${Math.max(5, Math.ceil(eta / 5) * 5)} seconds` : `${Math.ceil(eta / 60)} min`} left` : ""}.`} The editor opens here by itself when they&apos;re ready. You can leave this page; we&apos;ll keep working.</p>
+            {canNotify && (notify
+              ? <p className="muted small">We&apos;ll tell you when they&apos;re ready, even in another tab.</p>
+              : <button className="btn ghost small" onClick={async () => { try { if ((await Notification.requestPermission()) === "granted") setNotify(true); } catch { /* not supported */ } }}>Tell me when it&apos;s ready</button>)}
           </>
         )}
       </div>
@@ -1097,7 +1126,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const own = sel?.style ?? {};
 
   return (
-    <div className="editor ed" data-pane={pane} data-sheet={sheet || undefined}>
+    <div className="editor ed" data-pane={pane} data-sheet={sheet || undefined} data-mode={advanced ? "advanced" : "simple"}>
       <div className="ed-flow">
         <FlowSteps at={tab === "export" ? 4 : 3} />
         {!hintGone && <p className="ed-hint">
@@ -1163,8 +1192,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           <button className="btn ghost small" onClick={undo} disabled={!past.length} title="Undo (⌘Z)">Undo</button>
           <button className="btn ghost small" onClick={redo} disabled={!future.length} title="Redo (⇧⌘Z)">Redo</button>
           <span className="muted save-msg" aria-live="polite">{msg || (dirty ? "Unsaved changes" : "All changes saved")}{local?.state === "sending" ? ` · Video uploading ${progressOf(local)}%` : ""}</span>
+          <div className="seg ed-mode" role="group" aria-label="Editor mode" title="Simple: captions, style and export. Advanced: adds the timeline, titles and logo, and every look setting.">
+            <button aria-pressed={!advanced} onClick={() => setAdvanced(false)}>Simple</button>
+            <button aria-pressed={advanced} onClick={() => setAdvanced(true)}>Advanced</button>
+          </div>
           <button className="btn ghost" onClick={save} disabled={!dirty || saving} title="Save (⌘S)">{saving ? "Saving…" : "Save"}</button>
-          <button className="btn" onClick={() => setTab("export")} title="Export the video with captions, or subtitle files">Export</button>
+          <button className="btn" onClick={exportNow} disabled={rendering} title="Make the video with captions (it downloads from Export when ready)">{rendering ? `Exporting · ${job.renderProgress}%` : "Export video"}</button>
         </div>
       </div>
 
@@ -1200,7 +1233,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             <span className="ib-gap" />
             {local?.state === "sending" && <span className="ib-up" title="The video is uploading; you can edit meanwhile">Video {progressOf(local)}%</span>}
             <button className={`ib-save${dirty ? " on" : ""}`} onClick={save} disabled={!dirty || saving}>{saving ? "Saving…" : dirty ? "Save" : "Saved"}</button>
-            <button className="ib-export" onClick={() => openPane("export")}>Export</button>
+            <button className="ib-export" onClick={() => { openPane("export"); exportNow(); }} disabled={rendering}>{rendering ? `${job.renderProgress}%` : "Export"}</button>
           </div>
           <div className="ed-frame">
           {!playing && !sheet && (
@@ -1331,7 +1364,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             <button onClick={() => setSheet(false)}>Done</button>
           </div>
           <nav className="ed-mnav" aria-label="Editor sections">
-            {PANES.map(([k, l]) => (
+            {PANES.filter(([k]) => advanced || (k !== "timeline" && k !== "layers")).map(([k, l]) => (
               <button key={k} aria-pressed={pane === k} onClick={() => openPane(k)}>{l}</button>
             ))}
             <button className="ed-mdone" onClick={() => setSheet(false)}>Done</button>
@@ -1340,7 +1373,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
         <aside className="ed-side">
           <div className="seg ed-tabs" role="tablist" aria-label="Inspector">
-            {([["caption", "Text"], ["style", "Style"], ["layers", "Titles & logo"], ["export", "Export"]] as const).map(([k, l]) => (
+            {([["caption", "Text"], ["style", "Style"], ["layers", "Titles & logo"], ["export", "Export"]] as const).filter(([k]) => advanced || k !== "layers").map(([k, l]) => (
               <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>
             ))}
           </div>
@@ -1456,26 +1489,9 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
           {tab === "style" && (
             <div className="insp">
-              <div className="insp-canvas">
-              <h3>Canvas</h3>
-              <label>Video shape
-                <select value={cv?.ratio ?? "source"} onChange={(e) => tweak({ canvas: { ratio: e.target.value as CanvasRatio, fit: cv?.fit ?? "fit", bg: cv?.bg ?? "blur" } })}>
-                  {Object.entries(CANVAS_RATIOS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-                </select>
-              </label>
-              {shaped && <>
-                <div className="seg" role="group" aria-label="Fit">
-                  <button aria-pressed={cv!.fit === "fit"} onClick={() => tweak({ canvas: { ...cv!, fit: "fit" } })}>Fit whole video</button>
-                  <button aria-pressed={cv!.fit === "fill"} onClick={() => tweak({ canvas: { ...cv!, fit: "fill" } })}>Fill (crop)</button>
-                </div>
-                {cv!.fit === "fit" && <div className="look-row">
-                  <label className="cz-check"><input type="radio" name="bg" checked={cv!.bg === "blur"} onChange={() => tweak({ canvas: { ...cv!, bg: "blur" } })} /> Blurred video behind</label>
-                  <label className="cz-check"><input type="radio" name="bg" checked={cv!.bg !== "blur"} onChange={() => tweak({ canvas: { ...cv!, bg: cv!.bg !== "blur" ? cv!.bg : "#000000" } })} /> Colour</label>
-                  {cv!.bg !== "blur" && <ColorPicker value={cv!.bg} onChange={(c) => tweak({ canvas: { ...cv!, bg: c } })} label="Background colour" />}
-                </div>}
-              </>}
-              </div>
-
+              <h3>Project style</h3>
+              <p className="muted small">{styleOf(styleId).blurb} Applies to every caption without its own look.</p>
+              <StylePicker styleId={styleId} onPick={pickStyle} onHover={setHoverStyle} text={sample ? sample.en || sample.ta : undefined} frame={videoStill} />
               <h3>Font</h3>
               {/* Every font, written in itself: one tap sets it for the captions (the style's own font is "Style's"). */}
               <div className="font-chips" role="radiogroup" aria-label="Font">
@@ -1497,6 +1513,27 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 </div>
               )}
               <Presets styleId={styleId} custom={custom} onApply={applyLook} />
+              {advanced && <>
+              <div className="insp-canvas">
+              <h3>Canvas</h3>
+              <label>Video shape
+                <select value={cv?.ratio ?? "source"} onChange={(e) => tweak({ canvas: { ratio: e.target.value as CanvasRatio, fit: cv?.fit ?? "fit", bg: cv?.bg ?? "blur" } })}>
+                  {Object.entries(CANVAS_RATIOS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                </select>
+              </label>
+              {shaped && <>
+                <div className="seg" role="group" aria-label="Fit">
+                  <button aria-pressed={cv!.fit === "fit"} onClick={() => tweak({ canvas: { ...cv!, fit: "fit" } })}>Fit whole video</button>
+                  <button aria-pressed={cv!.fit === "fill"} onClick={() => tweak({ canvas: { ...cv!, fit: "fill" } })}>Fill (crop)</button>
+                </div>
+                {cv!.fit === "fit" && <div className="look-row">
+                  <label className="cz-check"><input type="radio" name="bg" checked={cv!.bg === "blur"} onChange={() => tweak({ canvas: { ...cv!, bg: "blur" } })} /> Blurred video behind</label>
+                  <label className="cz-check"><input type="radio" name="bg" checked={cv!.bg !== "blur"} onChange={() => tweak({ canvas: { ...cv!, bg: cv!.bg !== "blur" ? cv!.bg : "#000000" } })} /> Colour</label>
+                  {cv!.bg !== "blur" && <ColorPicker value={cv!.bg} onChange={(c) => tweak({ canvas: { ...cv!, bg: c } })} label="Background colour" />}
+                </div>}
+              </>}
+              </div>
+
               <section className="auto-hl" aria-label="Highlight keywords">
                 <div className="insp-head"><h3>Highlight keywords</h3></div>
                 <p className="muted small">Picks the words that matter in every caption (numbers, money, names, strong words) and makes them stand out. Change any word after by tapping it on the video.</p>
@@ -1525,14 +1562,13 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   </div>
                 </>}
               </section>
-              <h3>Project style</h3>
-              <p className="muted small">{styleOf(styleId).blurb} Applies to every caption without its own look.</p>
-              <StylePicker styleId={styleId} onPick={pickStyle} onHover={setHoverStyle} text={sample ? sample.en || sample.ta : undefined} frame={videoStill} />
+              </>}
               <div className="insp-head">
                 <h3>Customize</h3>
                 <button className="btn ghost small" onClick={() => { sameLook(); setCustom((c) => projectOnly(c)); }} disabled={Object.keys(custom).every((k) => PROJECT_KEYS.includes(k)) && !ownLooks}>Reset to {styleOf(styleId).name}</button>
               </div>
-              <LookControls look={look} own={custom} set={lookAll} tamil={tamil} />
+              <LookControls look={look} own={custom} set={lookAll} tamil={tamil} simple={!advanced} />
+              {!advanced && <button className="btn ghost small more-look" onClick={() => setAdvanced(true)}>More settings: outline, shadow, box, motion, position…</button>}
               <div className="cz-grid">
                 <div className="cz-field">
                   <span>Lines</span>

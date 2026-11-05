@@ -165,6 +165,14 @@ export default function Dashboard() {
       fetch("/api/me").then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
     setUpload(null);
+    // the last project's choices, ready (a returning user just checks them and generates)
+    try {
+      const last = JSON.parse(localStorage.getItem("vs-last-project") || "null");
+      if (last?.language && LANGUAGES.some((l) => l.code === last.language)) setLanguage(last.language);
+      if (last?.type) setCtype({ type: last.type, withEnglish: !!last.withEnglish });
+      if (typeof last?.safe === "string") setSafe(last.safe);
+      if (typeof last?.style === "string") setStyle(last.style);
+    } catch { /* none, or private mode */ }
     // then the user says how the captions read and look, before anything is sent
     setPreview(file.type.startsWith("video/") || /\.(mp4|m4v|mov|webm|mkv)$/i.test(file.name) ? URL.createObjectURL(file) : undefined);
     setCheck({ file, audio, seconds: seconds || 0, left: me && typeof me.secondsLeft === "number" ? me.secondsLeft : Infinity });
@@ -179,6 +187,7 @@ export default function Dashboard() {
     const body: Blob = audio ? audio.adts : file;
     const url = audio ? `${base}&audio=1&videoBytes=${file.size}&videoType=${encodeURIComponent(file.type || "video/mp4")}&shift=${audio.shift.toFixed(4)}` : base;
     setUpload({ name: file.name, pct: 0, note: audio ? "Sending the sound first…" : undefined });
+    try { localStorage.setItem("vs-last-project", JSON.stringify({ language, type: ctype.type, withEnglish: ctype.withEnglish, safe, style })); } catch { /* private mode */ }
     const xhr = new XMLHttpRequest();
     xhr.open("POST", url);
     xhr.setRequestHeader("content-type", audio ? "audio/aac" : file.type || "application/octet-stream");
