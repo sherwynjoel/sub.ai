@@ -3,11 +3,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { DEFAULT_LANGUAGE, LANGUAGES, languageOf } from "@/lib/languages";
-import { typeLabel, typeSettings, type CaptionType } from "@/lib/captionTypes";
+import { CAPTION_TYPES, typeLabel, typeSettings, type CaptionType } from "@/lib/captionTypes";
 import CaptionTypePicker from "@/components/CaptionTypePicker";
 import TetrisLoader from "@/components/TetrisLoader";
 import GlassFolder, { type FolderFile } from "@/components/GlassFolder";
-import { SAFE_ZONES } from "@/lib/captionStyles";
+import { DEFAULT_STYLE, SAFE_ZONES, styleOf } from "@/lib/captionStyles";
+import FlowSteps from "@/components/FlowSteps";
+import StylePicker from "@/components/StylePicker";
+import StyledCaption from "@/components/StyledCaption";
 import { extractAudio, type AudioTrack } from "@/lib/audioTrack";
 import { localVideo, progressOf, sendingVideos, sendVideo, subscribeUploads, uploadsVersion } from "@/lib/videoUpload";
 
@@ -98,6 +101,30 @@ export default function Dashboard() {
   const [language, setLanguage] = useState<string>(DEFAULT_LANGUAGE);
   const [ctype, setCtype] = useState<{ type: CaptionType; withEnglish: boolean }>({ type: "spoken", withEnglish: true });
   const [safe, setSafe] = useState("none");
+  // The new-project steps after a video is picked: 1 captions (language, type), 2 style; then it's sent.
+  const [step, setStep] = useState(0);
+  const [style, setStyle] = useState<string>(DEFAULT_STYLE);
+  const [preview, setPreview] = useState<string>();
+  const [demoT, setDemoT] = useState(0);
+  const still = useRef<HTMLVideoElement>(null);
+  useEffect(() => { fetch("/api/presets").then((r) => (r.ok ? r.json() : null)).then((d) => { const p = d?.find?.((x: { isDefault?: boolean }) => x.isDefault); if (p?.styleId) setStyle(p.styleId); }).catch(() => {}); }, []);
+  useEffect(() => { // the chosen style's animation, playing over the video in the style step
+    if (step !== 2) return;
+    const t0 = performance.now(), id = window.setInterval(() => setDemoT(((performance.now() - t0) / 1000) % 3.6), 60);
+    return () => clearInterval(id);
+  }, [step]);
+  /** A still of the picked video, behind the style previews. */
+  const frame = () => {
+    const v = still.current;
+    if (!v?.videoWidth) return undefined;
+    try {
+      const c = document.createElement("canvas"), k = 360 / Math.max(v.videoWidth, v.videoHeight);
+      c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k);
+      c.getContext("2d")!.drawImage(v, 0, 0, c.width, c.height);
+      return c.toDataURL("image/jpeg", 0.7);
+    } catch { return undefined; }
+  };
+  const cancel = () => { setCheck(null); setStep(0); if (preview) URL.revokeObjectURL(preview); setPreview(undefined); };
   const [query, setQuery] = useState("");
   const input = useRef<HTMLInputElement>(null);
 
@@ -138,15 +165,17 @@ export default function Dashboard() {
       fetch("/api/me").then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
     setUpload(null);
-    if (seconds && me && typeof me.secondsLeft === "number") setCheck({ file, audio, seconds, left: me.secondsLeft });
-    else send(file, audio); // length unknown here: the server checks it as before
+    // then the user says how the captions read and look, before anything is sent
+    setPreview(file.type.startsWith("video/") || /\.(mp4|m4v|mov|webm|mkv)$/i.test(file.name) ? URL.createObjectURL(file) : undefined);
+    setCheck({ file, audio, seconds: seconds || 0, left: me && typeof me.secondsLeft === "number" ? me.secondsLeft : Infinity });
+    setStep(1);
   }
 
   async function send(file: File, audio: AudioTrack | null) {
     setError("");
     setCheck(null);
     const { script, show, english } = typeSettings(ctype.type, ctype.withEnglish);
-    const base = `/api/upload?name=${encodeURIComponent(file.name)}&lang=${language}&script=${script}&english=${english ? 1 : 0}&show=${show}&safe=${safe}`;
+    const base = `/api/upload?name=${encodeURIComponent(file.name)}&lang=${language}&script=${script}&english=${english ? 1 : 0}&show=${show}&safe=${safe}&style=${encodeURIComponent(style)}`;
     const body: Blob = audio ? audio.adts : file;
     const url = audio ? `${base}&audio=1&videoBytes=${file.size}&videoType=${encodeURIComponent(file.type || "video/mp4")}&shift=${audio.shift.toFixed(4)}` : base;
     setUpload({ name: file.name, pct: 0, note: audio ? "Sending the sound first…" : undefined });
@@ -159,8 +188,8 @@ export default function Dashboard() {
       const data = JSON.parse(xhr.responseText || "{}");
       if (xhr.status >= 300) return setError(data.error || "Upload failed.");
       if (audio) sendVideo(data.id, file); // the video follows; captions are already being made
-      load();
-      router.refresh(); // update minutes left in the header
+      setStep(0);
+      router.push(`/app/jobs/${data.id}`); // on to the project: its subtitles being made, then the editor
     };
     xhr.onerror = () => { setUpload(null); setError("Upload failed. Check your connection and try again."); };
     xhr.send(body);
@@ -168,67 +197,88 @@ export default function Dashboard() {
 
   return (
     <>
-      <section className="composer" aria-label="New project">
-        <div
-          className={`drop${drag ? " over" : ""}${upload ? " uploading" : ""}`}
-          onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
-          onDragLeave={() => setDrag(false)}
-          onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f && !upload) pick(f); }}
-        >
-          {upload ? (
+      <section className={`composer${check ? " wizard" : ""}`} aria-label="New project">
+        <FlowSteps at={upload ? 3 : check ? step : 0} onStep={check && !upload ? (i) => (i === 0 ? cancel() : setStep(i)) : undefined} />
+        {upload ? (
+          <div className="drop uploading">
             <div className="drop-inner uploading-inner">
               <TetrisLoader columns={8} rows={14} cellSize={7} gap={2} label={`Uploading ${upload.name}`} />
               <strong>Uploading {upload.name}</strong>
               <div className="bar" role="progressbar" aria-valuenow={upload.pct} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${upload.pct}%` }} /></div>
               <span className="muted">{upload.note ? `${upload.note} ` : ""}{upload.pct}%{upload.pct >= 100 ? ". Starting your subtitles…" : ". Keep this tab open until it finishes."}</span>
             </div>
-          ) : check ? (
-            // What this video will use, before anything is sent.
-            <div className="drop-inner cost-check" role="dialog" aria-label="Minutes this video uses">
-              <strong className="cc-name" title={check.file.name}>{check.file.name}</strong>
-              <span className="cc-len">{mins(check.seconds)} long</span>
-              {Math.ceil(check.seconds) <= check.left ? (
+          </div>
+        ) : !check ? (
+          <div className={`drop${drag ? " over" : ""}`}
+            onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+            onDragLeave={() => setDrag(false)}
+            onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f) pick(f); }}>
+            <div className="drop-inner">
+              <strong>Start a new project</strong>
+              <span className="muted">Drop a video here, or choose one. MP4, MOV, MKV, MP3 or WAV, up to 4 GB.</span>
+              <button className="btn big" onClick={() => input.current?.click()}>Choose a video</button>
+              <span className="muted small">Next you&apos;ll pick the language, the caption type and a style.</span>
+            </div>
+          </div>
+        ) : (
+          <div className="wiz">
+            {/* the picked video, with what it uses; the chosen style playing over it in the style step */}
+            <div className="wiz-video">
+              <div className="wiz-frame">
+                {preview ? <video ref={still} src={preview} muted playsInline preload="auto" onLoadedData={(e) => { (e.currentTarget as HTMLVideoElement).currentTime = Math.min(1, check.seconds / 3); }} /> : <div className="wiz-audio">🎵</div>}
+                {step === 2 && <div className="wiz-cap"><StyledCaption styleId={style} text={(language === "ta-IN" && CAPTION_TYPES.find((t) => t.id === ctype.type)?.sample) || "This is how your captions will look"} start={0.2} end={2.9} time={Math.min(demoT, 2.89)} /></div>}
+              </div>
+              <div className="wiz-meta">
+                <strong title={check.file.name}>{check.file.name}</strong>
+                {check.seconds > 0 && <span className="muted small">{mins(check.seconds)} long · uses {minsUsed(check.seconds)} min{Number.isFinite(check.left) ? ` of your ${minsUsed(check.left)} min left` : ""}</span>}
+                <button className="btn ghost small" onClick={cancel}>Choose another video</button>
+              </div>
+            </div>
+            <div className="wiz-body">
+              {Number.isFinite(check.left) && Math.ceil(check.seconds) > check.left ? (
+                <div className="wiz-short">
+                  <h2>Not enough minutes</h2>
+                  <p>This video needs <b>{minsUsed(check.seconds)} min</b>; you have <b>{minsUsed(check.left)} min</b> left.</p>
+                  <div className="wiz-actions"><Link className="btn" href="/app/billing">See plans</Link><button className="btn ghost" onClick={cancel}>Choose another</button></div>
+                </div>
+              ) : step === 1 ? (
                 <>
-                  <span>Uses <b>{minsUsed(check.seconds)} min</b> of your <b>{minsUsed(check.left)} min</b> left.</span>
-                  <div className="cc-actions">
-                    <button className="btn" onClick={() => send(check.file, check.audio)}>Upload</button>
-                    <button className="btn ghost" onClick={() => setCheck(null)}>Cancel</button>
+                  <h2>What should the captions say?</h2>
+                  <label className="wiz-field">Language spoken in the video
+                    <select value={language} onChange={(e) => setLanguage(e.target.value)}>
+                      {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name} · {l.native}</option>)}
+                    </select>
+                  </label>
+                  <CaptionTypePicker compact language={languageOf(language).name} tamil={language === "ta-IN"} type={ctype.type} withEnglish={ctype.withEnglish}
+                    onChange={(type, withEnglish) => setCtype({ type, withEnglish })} />
+                  <details className="wiz-more">
+                    <summary>More options</summary>
+                    <label className="wiz-field">Keep captions clear of the app&apos;s buttons (safe zone)
+                      <select value={safe} onChange={(e) => setSafe(e.target.value)}>
+                        {Object.entries(SAFE_ZONES).filter(([id]) => id !== "custom").map(([id, z]) => <option key={id} value={id}>{id === "none" ? "None (full frame)" : z.name}</option>)}
+                      </select>
+                    </label>
+                  </details>
+                  <div className="wiz-actions">
+                    <button className="btn ghost" onClick={cancel}>Back</button>
+                    <button className="btn big" onClick={() => setStep(2)}>Next: choose a style</button>
                   </div>
                 </>
               ) : (
                 <>
-                  <span className="cc-short">This video needs <b>{minsUsed(check.seconds)} min</b>; you have <b>{minsUsed(check.left)} min</b> left.</span>
-                  <div className="cc-actions">
-                    <Link className="btn" href="/app/billing">See plans</Link>
-                    <button className="btn ghost" onClick={() => setCheck(null)}>Choose another</button>
+                  <h2>Choose a style <span className="muted small">· {styleOf(style).name}</span></h2>
+                  <p className="muted small">Tap one to see it on your video. You can change it, and every colour, font and size, in the editor later.</p>
+                  <div className="wiz-styles"><StylePicker styleId={style} onPick={setStyle} frame={frame} /></div>
+                  <div className="wiz-actions sticky">
+                    <button className="btn ghost" onClick={() => setStep(1)}>Back</button>
+                    <button className="btn big" onClick={() => send(check.file, check.audio)}>Generate subtitles</button>
                   </div>
                 </>
               )}
             </div>
-          ) : (
-            <div className="drop-inner">
-              <strong>Drop a video here</strong>
-              <span className="muted">MP4, MOV, MKV, MP3 or WAV, up to 4 GB</span>
-              <button className="btn" onClick={() => input.current?.click()}>Choose a file</button>
-            </div>
-          )}
-          <input ref={input} type="file" accept="video/*,audio/*,.mkv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) pick(f); e.target.value = ""; }} />
-        </div>
-        <aside className="composer-side">
-          <h2>New project</h2>
-          <label>Language
-            <select value={language} onChange={(e) => setLanguage(e.target.value)} disabled={!!upload}>
-              {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name} · {l.native}</option>)}
-            </select>
-          </label>
-          <CaptionTypePicker compact language={languageOf(language).name} tamil={language === "ta-IN"} type={ctype.type} withEnglish={ctype.withEnglish}
-            onChange={(type, withEnglish) => setCtype({ type, withEnglish })} disabled={!!upload} />
-          <label>Safe zone
-            <select value={safe} onChange={(e) => setSafe(e.target.value)} disabled={!!upload}>
-              {Object.entries(SAFE_ZONES).filter(([id]) => id !== "custom").map(([id, z]) => <option key={id} value={id}>{id === "none" ? "None (full frame)" : z.name}</option>)}
-            </select>
-          </label>
-        </aside>
+          </div>
+        )}
+        <input ref={input} type="file" accept="video/*,audio/*,.mkv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) pick(f); e.target.value = ""; }} />
       </section>
       {error && <p className="error" role="alert">{error} {error.includes("Upgrade") && <Link href="/app/billing">See plans</Link>}</p>}
       {sending.map((u) => (

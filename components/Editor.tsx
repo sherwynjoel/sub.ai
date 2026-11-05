@@ -16,6 +16,7 @@ import SubtitleReveal from "@/components/SubtitleReveal";
 import LookControls from "@/components/LookControls";
 import StyledCaption from "@/components/StyledCaption";
 import StylePicker from "@/components/StylePicker";
+import FlowSteps from "@/components/FlowSteps";
 import Timeline from "@/components/Timeline";
 import WordStrip, { type WordRef } from "@/components/WordStrip";
 import Presets, { type Preset } from "@/components/Presets";
@@ -35,7 +36,7 @@ type Job = {
 type View = "ta" | "en" | "both";
 type Tab = "caption" | "layers" | "style" | "export";
 type Pane = "list" | "caption" | "timeline" | "style" | "layers" | "export";
-const PANES: [Pane, string][] = [["list", "Captions"], ["caption", "Edit"], ["timeline", "Timeline"], ["style", "Style"], ["layers", "Layers"], ["export", "Export"]];
+const PANES: [Pane, string][] = [["list", "Captions"], ["caption", "Edit"], ["style", "Style"], ["timeline", "Timeline"], ["layers", "Layers"], ["export", "Export"]];
 const noop = () => () => {};
 /** m:ss for the phone toolbar. */
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -594,6 +595,9 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [nudging, setNudging] = useState(false);
   // Phones: the video fills the screen; the sections open as a sheet from the bottom, the video above it.
   const [sheet, setSheet] = useState(false);
+  // the editor's three tips, until hidden (remembered on this browser)
+  const hintSeen = useSyncExternalStore(noop, () => { try { return localStorage.getItem("vs-editor-hint") === "1"; } catch { return false; } }, () => true);
+  const [hintHidden, setHintGone] = useState(false), hintGone = hintSeen || hintHidden;
   const language = languageOf(job.language);
   const short = shortCode(job.language);
   const tamil = short === "ta" || initial.cues.some((c) => /[\u0B80-\u0BFF]/.test(c.ta)); // Tamil letters get their own font
@@ -1054,6 +1058,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     return (
       <div className="editor-wait panel">
         <Link href="/app" className="muted">Projects</Link>
+        <FlowSteps at={3} />
         <h1>{job.filename}</h1>
         {job.status === "failed" ? (
           <>
@@ -1065,7 +1070,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           <>
             <SubtitleReveal src={src} progress={job.progress} queued={job.status === "queued"} />
             <div className="bar big" role="progressbar" aria-valuenow={job.progress} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${Math.max(job.progress, 3)}%` }} /></div>
-            <p className="muted">{job.status === "queued" ? "Waiting in line…" : `${job.progress}% done.`} You can leave this page; we&apos;ll keep working.</p>
+            <p className="muted">{job.status === "queued" ? "Waiting in line…" : `Making your subtitles · ${job.progress}%.`} The editor opens here by itself when they&apos;re ready. You can leave this page; we&apos;ll keep working.</p>
           </>
         )}
       </div>
@@ -1093,6 +1098,15 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
   return (
     <div className="editor ed" data-pane={pane} data-sheet={sheet || undefined}>
+      <div className="ed-flow">
+        <FlowSteps at={tab === "export" ? 4 : 3} />
+        {!hintGone && <p className="ed-hint">
+          <span><b>Edit:</b> tap a caption on the video or in the list to change its words; press and hold a word to style it.</span>
+          <span><b>Style:</b> pick a look and change colours, fonts and size.</span>
+          <span><b>Export:</b> get the video with captions, or SRT / VTT files.</span>
+          <button className="ed-hint-x" onClick={() => { setHintGone(true); try { localStorage.setItem("vs-editor-hint", "1"); } catch { /* private mode */ } }} aria-label="Hide these tips">×</button>
+        </p>}
+      </div>
       <div className="ed-top">
         <div className="ed-title">
           <Link href="/app" className="muted">Projects</Link>
@@ -1149,7 +1163,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           <button className="btn ghost small" onClick={undo} disabled={!past.length} title="Undo (⌘Z)">Undo</button>
           <button className="btn ghost small" onClick={redo} disabled={!future.length} title="Redo (⇧⌘Z)">Redo</button>
           <span className="muted save-msg" aria-live="polite">{msg || (dirty ? "Unsaved changes" : "All changes saved")}{local?.state === "sending" ? ` · Video uploading ${progressOf(local)}%` : ""}</span>
-          <button className="btn" onClick={save} disabled={!dirty || saving} title="Save (⌘S)">{saving ? "Saving…" : "Save"}</button>
+          <button className="btn ghost" onClick={save} disabled={!dirty || saving} title="Save (⌘S)">{saving ? "Saving…" : "Save"}</button>
+          <button className="btn" onClick={() => setTab("export")} title="Export the video with captions, or subtitle files">Export</button>
         </div>
       </div>
 
@@ -1325,7 +1340,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
         <aside className="ed-side">
           <div className="seg ed-tabs" role="tablist" aria-label="Inspector">
-            {([["caption", "Caption"], ["layers", "Layers"], ["style", "Style"], ["export", "Export"]] as const).map(([k, l]) => (
+            {([["caption", "Text"], ["style", "Style"], ["layers", "Titles & logo"], ["export", "Export"]] as const).map(([k, l]) => (
               <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>
             ))}
           </div>
