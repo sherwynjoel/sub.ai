@@ -1,6 +1,4 @@
-import Link from "next/link";
-import AppNav from "@/components/AppNav";
-import SignOut from "@/components/SignOut";
+import AppHeader from "@/components/AppHeader";
 import { requireUser } from "@/lib/auth";
 import LegalLinks, { Credit } from "@/components/LegalLinks";
 import { BRAND, BUSINESS } from "@/lib/brand";
@@ -14,20 +12,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const left = secondsLeft(u);
   return (
     <>
-      <header className="app-head">
-        <div className="wrap site-head">
-          <Link href="/app" className="logo"><i />{BRAND.name}</Link>
-          <AppNav isAdmin={u.isAdmin} />
-          <div className="account">
-            <Link href="/app/billing" className="minutes" title={`${PLANS[plan].name} plan`}>
-              <span>{Math.floor(left / 60)} min left</span>
-              <span className="meter" aria-hidden="true"><i style={{ width: `${Math.min(1, left / total) * 100}%` }} /></span>
-            </Link>
-            <a className="signout" href={`mailto:${BUSINESS.email}?subject=${encodeURIComponent(`${BRAND.name} help (${u.email})`)}`}>Help</a>
-            <SignOut />
-          </div>
-        </div>
-      </header>
+      <AppHeader brand={BRAND.name} isAdmin={u.isAdmin} minutes={Math.floor(left / 60)} meter={Math.min(1, left / total) * 100} plan={PLANS[plan].name}
+        help={`mailto:${BUSINESS.email}?subject=${encodeURIComponent(`${BRAND.name} help (${u.email})`)}`} />
       <main className="wrap app-main">{children}</main>
       <footer className="wrap app-foot">
         <span className="muted small">Need help? Email <a href={`mailto:${BUSINESS.email}`}>{BUSINESS.email}</a></span>
