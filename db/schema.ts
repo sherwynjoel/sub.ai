@@ -130,3 +130,16 @@ export const stylePresets = pgTable("style_presets", {
   isDefault: boolean("is_default").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("style_presets_user_idx").on(t.userId)]);
+
+/**
+ * What the admin's Styles page counts, kept for good: a finished video export ("export", at = when) or a finished
+ * project deleted ("project_deleted", at = when it was made). No foreign keys, so a row outlives its project.
+ */
+export const styleEvents = pgTable("style_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  kind: text("kind").notNull(),
+  style: text("style").notNull(),
+  jobId: uuid("job_id").notNull(),
+  userId: uuid("user_id").notNull(),
+  at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("style_events_kind_idx").on(t.kind, t.at)]);

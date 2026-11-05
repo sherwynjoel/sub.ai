@@ -4,6 +4,7 @@ import { db, jobs, type Cue, type WordLook } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { ownJob, publicJob } from "@/lib/jobs";
 import { renamed } from "@/lib/projectName";
+import { recordDeleted } from "@/lib/styleUsage";
 import { CAPTION_FONTS, CAPTION_STYLES, ownLook, sanitizeCustom } from "@/lib/captionStyles";
 import { LEVEL_FRAME, loudness, removeUploads } from "@/lib/media";
 import { withWordTimes } from "@/lib/subtitles";
@@ -111,6 +112,7 @@ export async function DELETE(_: Request, { params }: Ctx) {
   // The upload and its styled MP4; a render still running notices the job is gone and removes its own file.
   await removeUploads(j);
   for (const f of [j.renderPath, j.captionCustom?.logo && logoPath(j.id, j.captionCustom.logo.ext)]) if (f) await unlink(f).catch(() => {});
+  await recordDeleted(db, j);
   await db.delete(jobs).where(eq(jobs.id, j.id));
   return json({ ok: true });
 }
