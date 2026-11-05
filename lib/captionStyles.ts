@@ -352,7 +352,7 @@ export const LIFT_AT = { base: -0.6, track: -0.035, topTrack: -0.01, dot: [0.042
 export const TALL_STEMS: Record<string, Record<string, [number, number, number]>> = {
   "Inter SemiBold": { t: [0.098, 0.222, 0.655], l: [0.055, 0.178, 0.727], d: [0.409, 0.532, 0.727], b: [0.055, 0.178, 0.727], h: [0.055, 0.178, 0.727], k: [0.055, 0.178, 0.727] },
 };
-export const LIFT_TIME = { word: 380, wordGap: 90, letter: 340, step: 32, lift: 460 };
+export const LIFT_TIME = { word: 380, wordGap: 90, letter: 340, step: 32, lift: 460, stem: 200 };
 export const LIFT_SHADOW = { y: 0.02, blur: 0.09, alpha: 0.4 };
 /**
  * Which words go where and how big: the last word huge (a full stop after it, as the reference), the others on the
@@ -421,13 +421,14 @@ export function liftSchedule(starts: number[], L: ReturnType<typeof liftDot>, pa
   const T = LIFT_TIME, tops: number[] = [];
   L.top.forEach((j, m) => tops.push(Math.max(starts[j], m ? tops[m - 1] + T.wordGap : 0)));
   let big = Math.max(starts[L.big] ?? 0, tops.length ? tops[tops.length - 1] + T.wordGap : 0), step = T.step;
-  let lift = L.iAt >= 0 ? big + L.iAt * step + T.letter + 120 : 0, liftMs = T.lift;
+  // (a tall letter's stem: quick, growing as its letter lands; the dot: once its i is in)
+  let lift = L.iAt >= 0 ? big + L.iAt * step + (L.kind === "stem" ? T.letter * 0.6 : T.letter + 120) : 0, liftMs = L.kind === "stem" ? T.stem : T.lift;
   const room = partMs - 60, first = tops[0] ?? big, n = L.chars.length;
   const doneOf = () => Math.max(tops.length ? tops[tops.length - 1] + T.word : 0, big + (n - 1) * step + T.letter, L.iAt >= 0 ? lift + liftMs : 0);
   for (let pass = 0; pass < 6 && doneOf() > room && doneOf() > first; pass++) {
     const f = Math.max(0.2, (room - first) / (doneOf() - first)), at = (t: number) => first + (t - first) * f;
     for (let m = 0; m < tops.length; m++) tops[m] = Math.max(at(tops[m]), m ? tops[m - 1] + 30 : 0);
-    big = at(big); lift = at(lift); step = Math.max(12, step * f); liftMs = Math.max(200, liftMs * f);
+    big = at(big); lift = at(lift); step = Math.max(12, step * f); liftMs = Math.max(L.kind === "stem" ? 120 : 200, liftMs * f);
   }
   return { tops, big, step, lift, liftMs };
 }
