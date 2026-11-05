@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardLines, cardSchedule, dropCap, dropLines, dropSchedule, DROP_AT, DROP_TIME, textReveal, revealLines, revealSchedule, REVEAL_AT, REVEAL_TIME, REVEAL_SHADOW, REVEAL_LAYER, heroStack, stackPages, stackSchedule, dotStack, dotSchedule, DOT_AT, DOT_SHADOW, DOT_TIME, outlineCut, cutSchedule, CUT_AT, CUT_TIME, STACK_AT, STACK_SHADOW, STACK_TIME, mixHex, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardLines, cardSchedule, dropCap, dropLines, dropSchedule, DROP_AT, DROP_TIME, textReveal, revealLines, revealSchedule, REVEAL_AT, REVEAL_TIME, REVEAL_SHADOW, REVEAL_LAYER, heroStack, stackPages, stackSchedule, dotStack, dotSchedule, DOT_AT, DOT_SHADOW, DOT_TIME, outlineCut, cutSchedule, CUT_AT, CUT_TIME, liftDot, liftSchedule, LIFT_AT, LIFT_SHADOW, LIFT_TIME, STACK_AT, STACK_SHADOW, STACK_TIME, mixHex, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { cssBaseline, lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -270,6 +270,37 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
       return <span key={a} className="typo-row" style={{ fontSize: `min(1em, calc(${roomCqw.toFixed(1)}cqw / ${tw.toFixed(3)}))` }}>
         {words.slice(a, to).map((_, n) => [n ? " " : null, word(a + n)])}</span>;
     });
+  } else if (s.effect === "liftdot" && s.liftDot && words.length) {
+    // a thin italic line over a huge word, the dot of its i lifted into the italic line (as the MP4, placed by the huge
+    // word's baseline; sizes in its em): italic words drop in, the huge word rises letter by letter, the dot flies up
+    const ld = s.liftDot, all = words.map((w) => w.w), pages = stackPages(all, 7, 40), T = LIFT_TIME;
+    const pIdx = Math.max(0, pages.findIndex(([, to], p) => p === pages.length - 1 || time < words[to].s)), [from, to] = pages[pIdx];
+    const q0 = pIdx ? (words[from].s - start) * 1000 : 0, q1 = pIdx + 1 < pages.length ? (words[to].s - start) * 1000 : (end - start) * 1000;
+    const L = liftDot(all.slice(from, to), s, ratio), S = liftSchedule(words.slice(from, to).map((w) => (w.s - start) * 1000 - q0), L, q1 - q0);
+    const now = (time - start) * 1000 - q0, prog = (t: number, ms: number) => Math.min(1, Math.max(0, (now - t) / ms)), ease = (v: number) => 1 - Math.pow(1 - v, 2);
+    const bB = cssBaseline(s.font), b1 = cssBaseline(ld.serif) * L.r1, topE = Math.min(L.top.length ? L.base1 - b1 : 0, -bB, L.iAt >= 0 ? L.dot.toY : 0);
+    const k = (s.shadow ?? 0) / 0.05, sc = s.shadowColor ?? "#000000", sa = Math.round(LIFT_SHADOW.alpha * 255).toString(16).padStart(2, "0");
+    const shadow = k ? `0 ${(LIFT_SHADOW.y * k).toFixed(3)}em ${(LIFT_SHADOW.blur * k * 1.5).toFixed(3)}em ${sc}${sa}` : "none";
+    const tIn = S.big + Math.max(0, L.iAt) * S.step, up = ease(prog(S.lift, S.liftMs)), land = now - S.lift - S.liftMs;
+    const squash = land < 0 || land > 200 ? 0 : land < 80 ? land / 80 : 1 - (land - 80) / 120, dotIn = ease(prog(tIn, T.letter));
+    const dotY = L.dot.fromY + (L.dot.toY - L.dot.fromY) * up + (1 - dotIn) * 0.3;
+    body = <span className="lift-dot" style={{ fontSize: `${L.E.toFixed(3)}em`, width: `${L.W.toFixed(3)}em`, height: `${(1 - bB - topE).toFixed(3)}em`, textShadow: shadow, color: s.color }}>
+      {L.top.map((m) => {
+        const e = ease(prog(S.tops[m], T.word));
+        return <span key={from + m} className="ld-word" style={{ fontFamily: stack(ld.serif, s.fontTa), fontSize: `${L.r1.toFixed(3)}em`, left: `${(L.lefts[m] / L.r1).toFixed(3)}em`,
+          top: `${((L.base1 - topE) / L.r1 - cssBaseline(ld.serif)).toFixed(3)}em`, letterSpacing: `${LIFT_AT.topTrack}em`, opacity: now < S.tops[m] ? 0 : e,
+          transform: `translateY(${(-(1 - e) * 0.3).toFixed(3)}em)`, filter: e < 1 ? `blur(${((1 - e) * 0.08).toFixed(3)}em)` : undefined }}>{word(from + m)}</span>;
+      })}
+      <span className="ld-big" style={{ fontFamily: stack(s.font, s.fontTa), left: `${L.bigLeft.toFixed(3)}em`, top: `${(-bB - topE).toFixed(3)}em`, letterSpacing: `${LIFT_AT.track}em` }}>
+        {L.chars.map((ch, i) => {
+          const e = ease(prog(S.big + i * S.step, T.letter));
+          return <span key={i} style={{ display: "inline-block", whiteSpace: "pre", opacity: now < S.big + i * S.step ? 0 : e, transform: `translateY(${((1 - e) * 0.3).toFixed(3)}em)`, filter: e < 1 ? `blur(${((1 - e) * 0.05).toFixed(3)}em)` : undefined }}>
+            {i === L.iAt ? (ch === "j" ? "ȷ" : "ı") : ch}</span>;
+        })}
+      </span>
+      {L.iAt >= 0 && now >= tIn && <span className="ld-dot" style={{ left: `${L.dot.x.toFixed(3)}em`, top: `${(dotY - topE).toFixed(3)}em`, width: `${L.dot.d.toFixed(3)}em`, height: `${L.dot.dh.toFixed(3)}em`,
+        background: ld.dot, opacity: dotIn, boxShadow: shadow === "none" ? undefined : shadow, transform: `scale(${(1 + 0.24 * squash).toFixed(3)}, ${(1 - 0.24 * squash).toFixed(3)})` }} />}
+    </span>;
   } else if (s.effect === "cutout" && s.cutOut && words.length) {
     // a small top line, a huge italic word, a huge bold word under it cut where the italic one crosses it (an SVG mask:
     // the italic letters, fattened by the gap, taken out of it), a small last line (as the MP4, placed by the italic
@@ -595,8 +626,8 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
 
   return (
     <div className={`cap${s.effect ? ` fx-${s.effect}` : ""}${s.textAlign && s.textAlign !== "center" ? ` ta-${s.textAlign}` : ""}`} style={{ "--p": p, ...wrap, mixBlendMode: s.blend && !part ? BLENDS[s.blend][1] : undefined } as React.CSSProperties}>
-      <span className={`cap-main${grad && !["cardslide", "dropcap", "reveal4", "stack4", "dotstack", "cutout"].includes(s.effect ?? "") ? " grad" : ""}`} style={{ ...(grad && !["cardslide", "dropcap", "reveal4", "stack4", "dotstack", "cutout"].includes(s.effect ?? "") ? { ...gradBase, "--grad": `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` } as React.CSSProperties : base), ...(allPunch ? hide : {}) }} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>
-        {grad && !["cardslide", "dropcap", "reveal4", "stack4", "dotstack", "cutout"].includes(s.effect ?? "") ? <span className="cap-grad">{body}</span> : body /* (Card Slide: only its big line in the gradient) */}
+      <span className={`cap-main${grad && !["cardslide", "dropcap", "reveal4", "stack4", "dotstack", "cutout", "liftdot"].includes(s.effect ?? "") ? " grad" : ""}`} style={{ ...(grad && !["cardslide", "dropcap", "reveal4", "stack4", "dotstack", "cutout", "liftdot"].includes(s.effect ?? "") ? { ...gradBase, "--grad": `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` } as React.CSSProperties : base), ...(allPunch ? hide : {}) }} data-text={s.effect === "vhs" ? breakLines(caseOf(s, text), s.lines) : undefined}>
+        {grad && !["cardslide", "dropcap", "reveal4", "stack4", "dotstack", "cutout", "liftdot"].includes(s.effect ?? "") ? <span className="cap-grad">{body}</span> : body /* (Card Slide: only its big line in the gradient) */}
       </span>
       {sub && !stacked && <span className="cap-sub" style={{ ...(part === "punch" ? hide : {}), fontFamily: stack(s.font, s.fontTa), letterSpacing: s.spacing ? `${s.spacing}em` : undefined, lineHeight: lineScale(s.font), marginTop: `${(g - 1) * 0.5 * lineBox(s, text)}em` }}>{sub}</span>}
     </div>
