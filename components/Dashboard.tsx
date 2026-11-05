@@ -309,9 +309,27 @@ export default function Dashboard() {
         ) : shown.length === 0 ? (
           <p className="muted empty">No project matches “{query}”.</p>
         ) : (
-          <div className="folder-grid">
-            {shown.map((j, i) => <ProjectFolder key={j.id} job={j} index={i} />)}
-          </div>
+          <>
+            <div className="folder-grid">
+              {shown.map((j, i) => <ProjectFolder key={j.id} job={j} index={i} />)}
+            </div>
+            {/* phones: a compact list (a folder each would fill the screen) */}
+            <ul className="project-rows">
+              {shown.map((j) => {
+                const busy = j.status === "queued" || j.status === "processing";
+                const state = busy ? (j.status === "queued" ? "Waiting" : `${j.progress}%`) : j.status === "failed" ? "Failed" : j.renderStatus === "done" ? "Video ready" : "Ready to edit";
+                return (
+                  <li key={j.id}>
+                    <Link href={`/app/jobs/${j.id}`}>
+                      <span className="pr-name">{j.filename}</span>
+                      <span className="pr-meta">{typeLabel({ script: j.script, captionCustom: j.captionCustom }, languageOf(j.language).name)} · {mins(j.durationSec)}</span>
+                      <span className={`pr-state${busy ? " busy" : j.status === "failed" ? " bad" : ""}`}>{state}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
         )}
       </section>
     </>
