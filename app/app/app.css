@@ -662,7 +662,7 @@ a.signout { text-decoration: none; }
    sheet from the bottom with the video still playing above it.
    ===================================================================================================== */
 .ed-ibar, .vrail-phone, .vtools .vt-more, .ed-mdone { display: none; }
-.ed-frame { display: contents; }
+.ed-frame { display: block; width: 100%; min-width: 0; } /* a real box: going full screen from display: contents left Safari's controls unclickable */
 @media (max-width: 720px) {
   .ed { transform: none !important; animation: none !important; padding-bottom: 0; } /* a transform would trap the fixed layers */
   /* the editor is the whole screen: its own layer (so its fixed parts can't be trapped under the page, whatever the
@@ -1082,9 +1082,22 @@ html:has(.pass-reveal[open]) { overflow: hidden; }
 .ed-frame:fullscreen .player { width: min(100vw, calc(100vh * var(--ar, 1.78))) !important; max-width: none; margin: 0; border-radius: 0; }
 .ed-frame:fullscreen :is(.vrail, .play-big) { display: none; } /* their panels are outside; and the frame stays clear to judge */
 .ed-frame[data-resting], .ed-frame[data-resting] video { cursor: none; }
-.fs-bar { position: absolute; z-index: 800; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 14px; padding: 36px 20px 14px; color: #fff; font-size: .9rem; background: linear-gradient(transparent, rgb(0 0 0 / .7)); transition: opacity .25s; }
-.ed-frame[data-resting] .fs-bar { opacity: 0; pointer-events: none; }
-.fs-bar button { display: grid; place-items: center; flex: none; width: 38px; height: 38px; padding: 0; border: 0; border-radius: 50%; color: inherit; background: none; cursor: pointer; }
-.fs-bar button:hover { background: rgb(255 255 255 / .16); }
+/* the controls: a floating glass bar, the position above, the buttons below */
+.fs-bar { position: absolute; z-index: 800; left: 50%; bottom: 12px; display: grid; gap: 6px; width: min(576px, calc(100% - 24px)); padding: 12px 14px 8px; border-radius: 16px; color: #fff; font-size: .85rem; background: rgb(17 17 17 / .6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 0 20px rgb(0 0 0 / .2); translate: -50% 0; transition: opacity .3s, translate .3s, filter .3s; }
+.ed-frame[data-resting] .fs-bar { opacity: 0; translate: -50% 20px; filter: blur(10px); pointer-events: none; }
+.fs-row { display: flex; align-items: center; gap: 8px; }
+.fs-bar button { display: grid; place-items: center; flex: none; min-width: 38px; height: 38px; padding: 0 6px; border: 0; border-radius: 8px; color: inherit; font: inherit; font-weight: 500; background: none; cursor: pointer; transition: background .15s, scale .15s; }
+.fs-bar button:hover { background: rgb(17 17 17 / .82); scale: 1.1; }
+.fs-bar button:active { scale: .9; }
+.fs-bar button[aria-pressed="true"] { background: rgb(17 17 17 / .82); }
 .fs-bar svg { width: 20px; height: 20px; }
-.fs-bar input { flex: 1; min-width: 0; padding: 0; accent-color: var(--lime); }
+.fs-speeds { display: flex; gap: 2px; margin-left: auto; }
+/* thin white lines that fill as they go (--fill); a dot only under the mouse */
+.fs-bar input { flex: 1; min-width: 0; height: 16px; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; appearance: none; -webkit-appearance: none; cursor: pointer; }
+.fs-bar input.fs-volume { flex: 0 1 96px; }
+.fs-bar input::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, #fff var(--fill, 0%), rgb(255 255 255 / .2) var(--fill, 0%)); }
+.fs-bar input::-moz-range-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, #fff var(--fill, 0%), rgb(255 255 255 / .2) var(--fill, 0%)); }
+.fs-bar input::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -4px; border: 0; border-radius: 50%; background: #fff; appearance: none; -webkit-appearance: none; opacity: 0; transition: opacity .15s; }
+.fs-bar input::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%; background: #fff; opacity: 0; }
+.fs-bar input:is(:hover, :focus-visible)::-webkit-slider-thumb { opacity: 1; }
+.fs-bar input:is(:hover, :focus-visible)::-moz-range-thumb { opacity: 1; }

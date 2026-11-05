@@ -60,6 +60,9 @@ const ICON: Record<string, string> = {
   lang: "M4 5h8M8 3v2M6 5c0 4 2 7 5 8M10 5c-1 4-3 7-6 8M13 20l4-9 4 9M14.5 17h5",
   play: "M7 4v16l13-8z",
   pause: "M8 5v14M16 5v14",
+  volume: "M11 5 6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13",
+  volumeLow: "M11 5 6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7",
+  muted: "M11 5 6 9H3v6h3l5 4zM16 9.5l5 5M21 9.5l-5 5",
   expand: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
   shrink: "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",
   back: "M15 5l-7 7 7 7",
@@ -849,7 +852,14 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [full, setFull] = useState(false);
   const [resting, setResting] = useState(false);
   const restTimer = useRef(0);
-  const stir = () => { setResting(false); clearTimeout(restTimer.current); restTimer.current = window.setTimeout(() => setResting(true), 2500); };
+  const stir = (e: React.PointerEvent) => { // (not while the mouse is on the controls: they stay until it leaves)
+    setResting(false);
+    clearTimeout(restTimer.current);
+    if (!(e.target as Element).closest(".fs-bar")) restTimer.current = window.setTimeout(() => setResting(true), 2500);
+  };
+  const [volume, setVolume] = useState(1);
+  const [muted, setMuted] = useState(false);
+  useEffect(() => { if (video.current) { video.current.volume = volume; video.current.muted = muted; } }, [volume, muted, src]);
   const toggleFull = () => { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else fullBox.current?.requestFullscreen().catch(() => {}); };
   useEffect(() => {
     const change = () => {
@@ -1347,12 +1357,27 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           )}
           {full && (
             <div className="fs-bar" role="toolbar" aria-label="Video controls">
-              <button onClick={togglePlay} aria-label={playing ? "Pause" : "Play"} title="Play / pause (Space)"><Icon name={playing ? "pause" : "play"} /></button>
-              <span className="tnum">{mmss(now)} / {mmss(duration)}</span>
-              {/* let go of it afterwards, or Space and the arrows would stay with the slider */}
-              <input type="range" aria-label="Position in the video" min={0} max={duration} step={0.01} value={Math.min(now, duration)}
-                onChange={(e) => seek(Number(e.target.value))} onPointerUp={(e) => e.currentTarget.blur()} />
-              <button onClick={toggleFull} aria-label="Exit full screen" title="Exit full screen (Esc)"><Icon name="shrink" /></button>
+              <div className="fs-row">
+                <span className="tnum">{mmss(now)}</span>
+                {/* let go of a slider afterwards, or Space and the arrows would stay with it */}
+                <input type="range" aria-label="Position in the video" min={0} max={duration} step={0.01} value={Math.min(now, duration)}
+                  style={{ "--fill": `${(Math.min(now, duration) / duration) * 100}%` } as React.CSSProperties}
+                  onChange={(e) => seek(Number(e.target.value))} onPointerUp={(e) => e.currentTarget.blur()} />
+                <span className="tnum">{mmss(duration)}</span>
+              </div>
+              <div className="fs-row">
+                <button onClick={togglePlay} aria-label={playing ? "Pause" : "Play"} title="Play / pause (Space)"><Icon name={playing ? "pause" : "play"} /></button>
+                <button onClick={() => { if (muted && !volume) setVolume(1); setMuted(!muted); }} aria-label={muted ? "Sound on" : "Mute"} title={muted ? "Sound on" : "Mute"}>
+                  <Icon name={muted ? "muted" : volume > 0.5 ? "volume" : "volumeLow"} />
+                </button>
+                <input className="fs-volume" type="range" aria-label="Volume" min={0} max={1} step={0.01} value={muted ? 0 : volume}
+                  style={{ "--fill": `${(muted ? 0 : volume) * 100}%` } as React.CSSProperties}
+                  onChange={(e) => { const v = Number(e.target.value); setVolume(v); setMuted(v === 0); }} onPointerUp={(e) => e.currentTarget.blur()} />
+                <div className="fs-speeds" role="group" aria-label="Playback speed">
+                  {[...SPEEDS].sort((a, b) => a - b).map((x) => <button key={x} aria-pressed={speed === x} onClick={() => setSpeed(x)}>{x}x</button>)}
+                </div>
+                <button onClick={toggleFull} aria-label="Exit full screen" title="Exit full screen (Esc)"><Icon name="shrink" /></button>
+              </div>
             </div>
           )}
           </div>
