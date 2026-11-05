@@ -1,3 +1,5 @@
+import { eq } from "drizzle-orm";
+import { db, users } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { PLANS } from "@/lib/plans";
 import { applyOrderPayment, hmacOk } from "@/lib/razorpay";
@@ -19,7 +21,8 @@ export async function POST(req: Request) {
   try {
     const plan = await applyOrderPayment(order, payment);
     if (!plan) return json({ error: "This payment doesn't match the order. If money was taken, contact us and we'll sort it out." }, 400);
-    return json({ ok: true, plan, planName: PLANS[plan].name });
+    const [paid] = await db.select({ until: users.periodEnd }).from(users).where(eq(users.id, u.id));
+    return json({ ok: true, plan, planName: PLANS[plan].name, until: paid?.until });
   } catch (e) {
     console.error("razorpay verify", (e as Error).message);
     return json({ error: "Payment received, but we couldn't confirm it just now. It will show within a few minutes." }, 502);
