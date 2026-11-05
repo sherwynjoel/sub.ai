@@ -82,3 +82,22 @@
 @media (max-width: 900px) { .traffic-tables { grid-template-columns: 1fr; } }
 .reset-link { display: grid; gap: 4px; flex-basis: 100%; }
 .reset-link code { overflow-wrap: anywhere; }
+
+/* which caption styles are used */
+.use-period { display: flex; gap: 8px; }
+.use-top { font-size: 1.35rem !important; overflow-wrap: anywhere; }
+.use-table .style-sample, .use-unused .style-sample { display: grid; height: 64px; }
+.use-look { width: 128px; min-width: 128px; }
+.use-table td { vertical-align: middle; }
+.use-table td > .muted { display: block; }
+.use-tag { display: inline-block; margin: 4px 4px 0 0; padding: .1em .6em; border-radius: 999px; font-size: .76rem; font-weight: 600; white-space: nowrap; background: var(--line-2); color: var(--ink-2); }
+.use-bar { display: block; width: 90px; height: 4px; margin: 5px 0 0 auto; border-radius: 2px; background: var(--line-2); overflow: hidden; }
+.use-bar i { display: block; height: 100%; border-radius: 2px; background: var(--black); }
+.use-unused { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.use-unused li { display: grid; gap: 2px; min-width: 0; }
+.use-unused strong { margin-top: 4px; font-size: .9rem; }
+@media (max-width: 720px) {
+  .use-look { display: none; } /* phones: the numbers matter more; the previews are still under Never used */
+  .use-table th, .use-table td { padding-left: 6px; padding-right: 6px; }
+  .use-bar { width: 44px; }
+}
