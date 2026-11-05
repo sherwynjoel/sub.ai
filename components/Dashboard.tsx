@@ -10,6 +10,7 @@ import GlassFolder, { type FolderFile } from "@/components/GlassFolder";
 import { DEFAULT_STYLE, SAFE_ZONES, styleOf } from "@/lib/captionStyles";
 import { stem } from "@/lib/projectName";
 import RenameProject from "@/components/RenameProject";
+import DeleteProject from "@/components/DeleteProject";
 import FlowSteps from "@/components/FlowSteps";
 import StylePicker from "@/components/StylePicker";
 import StyledCaption from "@/components/StyledCaption";
@@ -40,7 +41,7 @@ function lengthOf(file: File) {
 }
 
 /** A folder as wide as its grid cell (it draws at a fixed width, so it's measured), at most 340 px. */
-function ProjectFolder({ job, index, onRename }: { job: Job; index: number; onRename: () => void }) {
+function ProjectFolder({ job, index, onRename, onDelete }: { job: Job; index: number; onRename: () => void; onDelete: () => void }) {
   const box = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   useEffect(() => {
@@ -82,7 +83,7 @@ function ProjectFolder({ job, index, onRename }: { job: Job; index: number; onRe
           label={stem(job.filename)} meta={meta} width={width}
           video={local?.url ?? (job.hasMedia ? `/api/jobs/${job.id}/media${job.hasPreview ? "?preview=1" : ""}` : undefined)}
           art={arts[(job.id.charCodeAt(0) + job.id.charCodeAt(1)) % arts.length]} seed={job.id.charCodeAt(2)}
-          files={files} action="more" menu={[{ label: "Rename", onSelect: onRename }]} appearDelay={Math.min(index, 8) * 70}
+          files={files} action="more" menu={[{ label: "Rename", onSelect: onRename }, ...(job.status === "processing" ? [] : [{ label: "Delete", danger: true, onSelect: onDelete }])]} appearDelay={Math.min(index, 8) * 70}
         />
       )}
     </div>
@@ -129,6 +130,7 @@ export default function Dashboard() {
   const cancel = () => { setCheck(null); setStep(0); if (preview) URL.revokeObjectURL(preview); setPreview(undefined); };
   const [query, setQuery] = useState("");
   const [renaming, setRenaming] = useState<Job | null>(null);
+  const [deleting, setDeleting] = useState<Job | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
   const load = useCallback(() => {
@@ -314,7 +316,7 @@ export default function Dashboard() {
         ) : (
           <>
             <div className="folder-grid">
-              {shown.map((j, i) => <ProjectFolder key={j.id} job={j} index={i} onRename={() => setRenaming(j)} />)}
+              {shown.map((j, i) => <ProjectFolder key={j.id} job={j} index={i} onRename={() => setRenaming(j)} onDelete={() => setDeleting(j)} />)}
             </div>
             {/* phones: a compact list (a folder each would fill the screen) */}
             <ul className="project-rows">
@@ -328,7 +330,10 @@ export default function Dashboard() {
                       <span className="pr-meta">{typeLabel({ script: j.script, captionCustom: j.captionCustom }, languageOf(j.language).name)} · {mins(j.durationSec)}</span>
                       <span className={`pr-state${busy ? " busy" : j.status === "failed" ? " bad" : ""}`}>{state}</span>
                     </Link>
-                    <button className="pr-rename" aria-label={`Rename ${stem(j.filename)}`} onClick={() => setRenaming(j)}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM13 7l4 4" /></svg></button>
+                    <span className="pr-tools">
+                      <button className="pr-rename" aria-label={`Rename ${stem(j.filename)}`} onClick={() => setRenaming(j)}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM13 7l4 4" /></svg></button>
+                      {j.status !== "processing" && <button className="pr-rename pr-delete" aria-label={`Delete ${stem(j.filename)}`} onClick={() => setDeleting(j)}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5" /></svg></button>}
+                    </span>
                   </li>
                 );
               })}
@@ -336,6 +341,8 @@ export default function Dashboard() {
           </>
         )}
       </section>
+      {deleting && <DeleteProject id={deleting.id} filename={deleting.filename} onClose={() => setDeleting(null)}
+        onDeleted={() => setJobs((all) => all?.filter((j) => j.id !== deleting.id) ?? all)} />}
       {renaming && <RenameProject id={renaming.id} filename={renaming.filename} onClose={() => setRenaming(null)}
         onRenamed={(filename) => setJobs((all) => all?.map((j) => (j.id === renaming.id ? { ...j, filename } : j)) ?? all)} />}
     </>
