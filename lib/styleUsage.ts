@@ -54,6 +54,15 @@ export async function styleCounts(database: Pick<typeof db, "select">, { recent 
   return mergeCounts([...live, ...deleted], exported);
 }
 
+/** Projects a style needs before it can take a place on the home page from the hand-picked ones. */
+const PROVEN = 3;
+
+/** The home page's most popular styles: what people use most, then the hand-picked ones until there's enough to go on. */
+export function topStyles(counts: StyleCount[], n = 8) {
+  const proven = styleTable(counts).used.filter((u) => u.projects >= PROVEN && !u.tags.includes("No longer offered")).map((u) => u.style);
+  return [...new Set([...proven, ...POPULAR])].slice(0, n);
+}
+
 /** The counts, most used first, and the styles on offer that nobody has used. */
 export function styleTable(counts: StyleCount[]) {
   const total = counts.reduce((n, c) => n + c.projects, 0);

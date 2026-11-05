@@ -176,7 +176,7 @@ main { overflow-x: clip; }
 .style-card { border-radius: var(--r-lg); padding: 10px 10px 18px; transition: transform .4s var(--ease); }
 .style-card:hover { transform: translateY(-4px); }
 .style-stage { container-type: size; height: 150px; border-radius: 16px; display: grid; place-items: center; padding: 0 6%; overflow: hidden; background: radial-gradient(120% 120% at 25% 15%, #3b3366, #14121f 70%); }
-.style-stage .cap-main { font-size: calc(var(--s, 1) * 20cqh) !important; }
+.style-stage .cap-main { font-size: calc(var(--s, 1) * 9.5cqmin) !important; } /* sized by width, as on a real video */
 .style-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 14px 8px 0; }
 .style-meta h3 { margin: 0; }
 .style-group-tag { font-size: .72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
@@ -300,3 +300,14 @@ main { overflow-x: clip; }
 .hero-fruit .cta { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .hero-fruit .note { margin: 0; }
 @media (max-width: 600px) { .hero-fruit { min-height: auto !important; } }
+
+/* the doorway in front of the styles (components/StylesGate.tsx): its root sets a white text colour for the page behind */
+.styles-door .dwz-content { color: var(--ink); }
+.js .door-wait { padding-bottom: 160svh; }
+.styles-door .dwz-gate[data-open="true"] { pointer-events: none; } /* an open door, however faint, mustn't take the taps meant for the styles */
+.styles-door .dwz-cue-in > span:first-child { padding: .7em 1.2em; border-radius: 999px; font-size: 11px; background: rgb(40 8 24 / .6); }
+.style-popular { margin: 0 0 14px; font-weight: 600; color: var(--muted); }
+/* cards shaped like a reel: the big stacked styles are made for vertical video, and a wide card cuts them off */
+.style-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.style-stage { height: auto; aspect-ratio: 4 / 5; }
+@media (max-width: 1000px) { .style-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
