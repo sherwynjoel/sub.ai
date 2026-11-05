@@ -295,10 +295,12 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
         {L.chars.map((ch, i) => {
           const e = ease(prog(S.big + i * S.step, T.letter));
           return <span key={i} style={{ display: "inline-block", whiteSpace: "pre", opacity: now < S.big + i * S.step ? 0 : e, transform: `translateY(${((1 - e) * 0.3).toFixed(3)}em)`, filter: e < 1 ? `blur(${((1 - e) * 0.05).toFixed(3)}em)` : undefined }}>
-            {i === L.iAt ? (ch === "j" ? "ȷ" : "ı") : ch}</span>;
+            {i === L.iAt && L.kind === "dot" ? (ch === "j" ? "ȷ" : "ı") : ch}</span>;
         })}
       </span>
-      {L.iAt >= 0 && now >= tIn && <span className="ld-dot" style={{ left: `${L.dot.x.toFixed(3)}em`, top: `${(dotY - topE).toFixed(3)}em`, width: `${L.dot.d.toFixed(3)}em`, height: `${L.dot.dh.toFixed(3)}em`,
+      {L.iAt >= 0 && L.kind === "stem" && now >= S.lift && <span className="ld-stem" style={{ left: `${L.dot.x.toFixed(3)}em`, top: `${(L.dot.toY - topE).toFixed(3)}em`, width: `${L.dot.d.toFixed(3)}em`,
+        height: `${(L.dot.fromY - L.dot.toY + 0.01).toFixed(3)}em`, background: s.color, clipPath: `inset(${((1 - Math.pow(prog(S.lift, S.liftMs), 0.6)) * 100).toFixed(1)}% 0 0 0)` }} />}
+      {L.iAt >= 0 && L.kind === "dot" && now >= tIn && <span className="ld-dot" style={{ left: `${L.dot.x.toFixed(3)}em`, top: `${(dotY - topE).toFixed(3)}em`, width: `${L.dot.d.toFixed(3)}em`, height: `${L.dot.dh.toFixed(3)}em`,
         background: ld.dot, opacity: dotIn, boxShadow: shadow === "none" ? undefined : shadow, transform: `scale(${(1 + 0.24 * squash).toFixed(3)}, ${(1 - 0.24 * squash).toFixed(3)})` }} />}
     </span>;
   } else if (s.effect === "cutout" && s.cutOut && words.length) {
