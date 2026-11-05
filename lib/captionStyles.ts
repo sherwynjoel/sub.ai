@@ -912,6 +912,8 @@ export const STYLE_CHOICES = CAPTION_STYLES.filter((s) => OFFERED.includes(s.id)
 export const STYLE_GROUPS = (["Typography", "Templates", "Premiere", "Bold", "Soft", "Simple", "Playful"] as const).filter((g) => STYLE_CHOICES.some((s) => s.group === g));
 
 export const DEFAULT_STYLE = "tall-caps";
+/** The styles shown first, the rest behind "See all styles". */
+export const POPULAR = ["cc-light-sweep", "cc-bold-dot", "cc-rise", "cc-text-reveal", "cc-flash-box", "cc-cinematic", "tpl-reels-glow", "tall-caps"];
 
 /** Fonts users can pick (bundled in public/caption-fonts): the Premiere templates' fonts that are free for the web. */
 export const CAPTION_FONTS = [
