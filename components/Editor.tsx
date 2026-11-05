@@ -588,6 +588,11 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [outside, setOutside] = useState<number[]>([]);
   // The account's plan: free exports carry a watermark (shown on the preview too, as the MP4 will have it).
   const [freePlan, setFreePlan] = useState(false);
+  useEffect(() => { // what the phone shows for this video while it plays: the lock screen, Control Center, the Dynamic Island
+    if (!("mediaSession" in navigator)) return;
+    navigator.mediaSession.metadata = new MediaMetadata({ title: job.filename, artist: BRAND.name, artwork: [{ src: "/vasanam-cover.png", sizes: "512x512", type: "image/png" }] });
+    return () => { navigator.mediaSession.metadata = null; };
+  }, [job.filename]);
   useEffect(() => { fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((m) => setFreePlan(m?.plan === "free")).catch(() => {}); }, []);
   const [scan, setScan] = useState(0);
   const scanDone = useCallback((found: number[]) => { setOutside(found); setScan(0); }, []); // the picked word's tools shown over it on the video (it was tapped there)
