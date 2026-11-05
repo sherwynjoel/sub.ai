@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { popupRoot } from "@/lib/popupRoot";
 
 /* ---------- colour maths (HSV: hue 0–360, saturation and value 0–1) ---------- */
 const clamp = (n: number, a = 0, b = 1) => Math.min(b, Math.max(a, n));
@@ -142,7 +143,7 @@ export default function ColorPicker({ value, onChange, label, className }: { val
               <button key={c} type="button" style={{ background: c }} aria-label={c} title={c} aria-pressed={c === cur} onClick={() => pickHex(c)} />
             ))}
           </div>
-        </div>, document.body)}
+        </div>, popupRoot())}
     </>
   );
 }

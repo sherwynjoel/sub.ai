@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { popupRoot } from "@/lib/popupRoot";
 import type { Cue, WordLook } from "@/db/schema";
 import { LANGUAGES, languageOf, shortCode } from "@/lib/languages";
 import { BLENDS, CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCustom, punchBlend, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type CaptionStyle, type Placement, type SafeZoneId, type TextLayer, pushDown, shownLines } from "@/lib/captionStyles";
@@ -58,6 +59,9 @@ const ICON: Record<string, string> = {
   style: "M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.6 0-1.2-1-1.4-1-2.4 0-.8.7-1.5 1.5-1.5H17a4 4 0 0 0 4-4c0-4.7-4-8.5-9-8.5zM7.5 12h.01M10 7.5h.01M15 7.5h.01",
   lang: "M4 5h8M8 3v2M6 5c0 4 2 7 5 8M10 5c-1 4-3 7-6 8M13 20l4-9 4 9M14.5 17h5",
   play: "M7 4v16l13-8z",
+  pause: "M8 5v14M16 5v14",
+  expand: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
+  shrink: "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",
   back: "M15 5l-7 7 7 7",
   guides: "M12 3v18M3 12h18M7 3v2M17 3v2M3 7h2M3 17h2",
   list: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01",
@@ -460,7 +464,7 @@ function FormatBar({ look, all, onAll, onLook, onDone }: {
           <button aria-pressed={all} onClick={() => onAll(true)}>All</button>
         </span>
         <button className="fmt-done" onClick={onDone} title="Save the text (Ctrl/⌘+Enter)">Done</button>
-      </div>, document.body)}
+      </div>, popupRoot())}
   </>);
 }
 const hexOf = (c: string | undefined) => (c && /^#[0-9a-f]{6}/i.test(c) ? c.slice(0, 7) : "#FFFFFF");
@@ -492,7 +496,7 @@ function WordBar({ word, look, color, base, onChange, onClose }: {
       <button aria-pressed={look?.italic ?? !!base.italic} onClick={() => onChange({ look: { italic: !(look?.italic ?? !!base.italic) } })} style={{ fontStyle: "italic" }} title="Italic">I</button>
       <button onClick={() => onChange({ look: null, color: null })} disabled={!look && !color} title="Back to the caption's look">Reset</button>
       <button onClick={onClose} aria-label="Close" title="Close (Esc)">×</button>
-    </div>, document.body)}
+    </div>, popupRoot())}
   </>);
 }
 
@@ -526,6 +530,7 @@ const parseTc = (v: string) => {
   const n = v.trim().replace(",", ".").split(":").reduce((acc, part) => acc * 60 + Number(part), 0);
   return Number.isFinite(n) && n >= 0 ? n : null;
 };
+const subscribeNever = () => () => {};
 const typing = (e: KeyboardEvent) => {
   const el = e.target as HTMLElement | null;
   return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
@@ -836,6 +841,26 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   useEffect(() => { const v = video.current; if (v && v.readyState >= 1) metadata(v); }, []);
   const seek = (t: number) => { const v = video.current; if (v) v.currentTime = Math.max(0, Math.min(t, (v.duration || duration) - 0.01)); setNow(t); };
   const togglePlay = () => { const v = video.current; if (!v) return; if (v.paused) v.play().catch(() => {}); else v.pause(); };
+
+  // Full screen (computers): the player with its captions, at the size they'll really be seen. The video element alone
+  // would leave the captions behind, as they're drawn over it. The controls fade when the mouse rests, to see the whole frame.
+  const fullBox = useRef<HTMLDivElement>(null);
+  const canFull = useSyncExternalStore(subscribeNever, () => !!document.fullscreenEnabled, () => false);
+  const [full, setFull] = useState(false);
+  const [resting, setResting] = useState(false);
+  const restTimer = useRef(0);
+  const stir = () => { setResting(false); clearTimeout(restTimer.current); restTimer.current = window.setTimeout(() => setResting(true), 2500); };
+  const toggleFull = () => { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else fullBox.current?.requestFullscreen().catch(() => {}); };
+  useEffect(() => {
+    const change = () => {
+      setFull(!!document.fullscreenElement);
+      setResting(false);
+      clearTimeout(restTimer.current);
+      if (document.fullscreenElement) restTimer.current = window.setTimeout(() => setResting(true), 2500);
+    };
+    document.addEventListener("fullscreenchange", change);
+    return () => document.removeEventListener("fullscreenchange", change);
+  }, []);
   // Playback speed: the button next to Play cycles it; pressing and holding the video plays at 2× until let go (as
   // on YouTube). A hold on a paused video plays it while held. The click that ends a hold doesn't also pause.
   const [speed, setSpeed] = useState(1);
@@ -1072,6 +1097,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       else if (k === "+" || k === "=") setZoom((z) => Math.min(600, z * 1.25));
       else if (k === "-" || k === "_") setZoom((z) => Math.max(10, z / 1.25));
       else if (k === "g" || k === "G") setGuides((g) => !g);
+      else if ((k === "f" || k === "F") && canFull && src) toggleFull();
       else if (k === "Escape") { setSelected(-1); setSelLayer(-1); setPickedWord(null); setNudging(false); }
       else if (k === "Enter" && target() >= 0) { e.preventDefault(); video.current?.pause(); current(); setInline(true); }
     };
@@ -1247,7 +1273,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             <button className={`ib-save${dirty ? " on" : ""}`} onClick={save} disabled={!dirty || saving}>{saving ? "Saving…" : dirty ? "Save" : "Saved"}</button>
             <button className="ib-export" onClick={() => { openPane("export"); exportNow(); }} disabled={rendering}>{rendering ? `${job.renderProgress}%` : "Export"}</button>
           </div>
-          <div className="ed-frame">
+          <div ref={fullBox} className="ed-frame" data-resting={full && resting ? "" : undefined} onPointerMove={full ? stir : undefined}>
           {!playing && !sheet && (
             <div className="vrail vrail-phone" role="toolbar" aria-label="Add and change">
               <button onClick={() => { addLayer("Your text"); openPane("layers"); }}><Icon name="title" />Add title</button>
@@ -1307,6 +1333,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 onMove={(i, x, y) => { if (onlyThis && i === selected) styleCue(i, { x, y }); else lookAll({ x, y }); }}
                 onResize={(i, size) => { if (onlyThis && i === selected) styleCue(i, { size }); else lookAll({ size }); }} />
               {freePlan && <span className="wm-preview" aria-hidden="true">Made with {BRAND.name}</span>}
+              {canFull && !full && <button className="fs-open" onClick={toggleFull} aria-label="Full screen" title="Full screen (F)"><Icon name="expand" /></button>}
               {scan > 0 && view !== "en" && <OutsideScan key={scan} cues={cues} styleId={styleId} custom={custom} portrait={portrait} ratio={frameRatio} line={line} onDone={scanDone} />}
             </div>
           ) : (
@@ -1317,6 +1344,16 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 {local?.state === "failed" && <p className="error">{local.error}</p>}
               </div>
             ) : <div className="player gone"><p>The video was removed after 7 days. Your subtitles are still here.</p></div>
+          )}
+          {full && (
+            <div className="fs-bar" role="toolbar" aria-label="Video controls">
+              <button onClick={togglePlay} aria-label={playing ? "Pause" : "Play"} title="Play / pause (Space)"><Icon name={playing ? "pause" : "play"} /></button>
+              <span className="tnum">{mmss(now)} / {mmss(duration)}</span>
+              {/* let go of it afterwards, or Space and the arrows would stay with the slider */}
+              <input type="range" aria-label="Position in the video" min={0} max={duration} step={0.01} value={Math.min(now, duration)}
+                onChange={(e) => seek(Number(e.target.value))} onPointerUp={(e) => e.currentTarget.blur()} />
+              <button onClick={toggleFull} aria-label="Exit full screen" title="Exit full screen (Esc)"><Icon name="shrink" /></button>
+            </div>
           )}
           </div>
           {outside.length > 0 && view !== "en" && (
@@ -1714,7 +1751,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 }
 
 function ShortcutHelp() {
-  const keys: [string, string][] = [["Space", "Play / pause"], ["← →", "One frame (with ⇧: one second)"], ["↑ ↓", "Previous / next caption"], ["S", "Split at the playhead"], ["M", "Merge with the next"], ["A", "Add a caption at the playhead"], ["Delete", "Delete the caption"], ["⌘Z / ⇧⌘Z", "Undo / redo"], ["⌘S", "Save"], ["+ / −", "Zoom the timeline"], ["G", "Centring guides on / off"]];
+  const keys: [string, string][] = [["Space", "Play / pause"], ["← →", "One frame (with ⇧: one second)"], ["↑ ↓", "Previous / next caption"], ["S", "Split at the playhead"], ["M", "Merge with the next"], ["A", "Add a caption at the playhead"], ["Delete", "Delete the caption"], ["⌘Z / ⇧⌘Z", "Undo / redo"], ["⌘S", "Save"], ["+ / −", "Zoom the timeline"], ["G", "Centring guides on / off"], ["F", "Full screen"]];
   return (
     <dl className="keys">
       {keys.map(([k, v]) => <div key={k}><dt><kbd>{k}</kbd></dt><dd>{v}</dd></div>)}
