@@ -9,12 +9,24 @@
 import { motion, useAnimationFrame, useMotionValue, useReducedMotion, useSpring, useTransform, type MotionValue } from "motion/react";
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 
-export type Foil = "shards" | "gold" | "cosmos";
+export type Foil = "aurora" | "shards" | "gold" | "cosmos";
 
 const spot = "radial-gradient(farthest-corner circle at var(--mx) var(--my), #000 0%, rgba(0,0,0,.4) 55%, transparent 100%)";
 
 /** `k` scales the foil's strength; `spot` confines it to the pool of light around the pointer. */
 const FOILS: Record<Foil, { k: number; spot: boolean; layer: CSSProperties }> = {
+  aurora: {
+    k: 0.75,
+    spot: false,
+    layer: {
+      // Two soft band sets at different angles drift at different speeds.
+      backgroundImage:
+        "linear-gradient(165deg, transparent 18%, rgba(70,255,180,.75) 32%, transparent 44%, rgba(80,200,255,.6) 56%, transparent 68%, rgba(170,110,255,.75) 80%, transparent 92%)," +
+        "linear-gradient(195deg, transparent 25%, rgba(140,90,255,.5) 40%, transparent 52%, rgba(60,240,200,.55) 66%, transparent 80%)",
+      backgroundSize: "100% 260%, 100% 220%",
+      backgroundPosition: "0 calc(var(--py) * 100%), 0 calc(100% - var(--px) * 100%)",
+    },
+  },
   shards: {
     k: 1,
     spot: true,

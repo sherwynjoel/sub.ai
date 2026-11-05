@@ -1035,6 +1035,7 @@ html:has(.pass-reveal[open]) { overflow: hidden; }
 .pass-hot { color: #d4ff3f; }
 .pass-note { margin: 0; color: rgb(255 255 255 / .68); font-size: .95rem; text-align: center; text-wrap: balance; animation: pass-word .6s ease 3.6s both; }
 .pass-actions { display: flex; align-items: center; gap: 20px; margin-top: 6px; animation: pass-word .6s ease 3.9s both; }
+.pass-link { margin: 0; }
 .pass-actions .link { color: rgb(255 255 255 / .75); }
 .btn.pass-go { border-color: #d4ff3f; background: #d4ff3f; color: #0a0a0a; }
 @media (prefers-reduced-motion: reduce) { .pass-reveal[open], .pass-caption, .pass-word, .pass-note, .pass-actions { animation: none; } }

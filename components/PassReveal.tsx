@@ -24,7 +24,8 @@ export default function PassReveal({ plan, holder, passNo, until, fresh, onClose
   const { name, minutes } = PLANS[plan];
   const mins = minutes.toLocaleString("en-IN");
   const valid = until ? new Date(until).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
-  const foil = plan === "studio" ? "cosmos" : plan === "pro" ? "gold" : "shards";
+  const foil = plan === "studio" ? "cosmos" : plan === "pro" ? "gold" : plan === "creator" ? "shards" : "aurora";
+  const reels = Math.round(minutes / REEL_MINUTES).toLocaleString("en-IN"), films = Math.round(minutes / FILM_MINUTES);
 
   const lead = (fresh ? "You have activated a" : "This is your").split(" ");
   const hot = [`${mins}-minute`, "Vasanam", "pass"];
@@ -44,7 +45,8 @@ export default function PassReveal({ plan, holder, passNo, until, fresh, onClose
             <span className="pass-mins">{mins}<small>minutes</small></span>
             <span className="pass-row pass-foot">
               <span className="pass-field"><small>Holder</small>{holder}</span>
-              {valid && <span className="pass-field end"><small>Valid until</small>{valid}</span>}
+              {valid ? <span className="pass-field end"><small>Valid until</small>{valid}</span>
+                : plan === "free" && <span className="pass-field end"><small>Expires</small>Never</span>}
             </span>
           </span>
         }
@@ -55,7 +57,7 @@ export default function PassReveal({ plan, holder, passNo, until, fresh, onClose
               <small>This pass opens</small>
               <b>{mins} minutes of subtitles</b>
               <b>Tamil, Tanglish and English</b>
-              <b>Every caption style</b>
+              <b>{plan === "free" ? "Every style, with a small Vasanam mark" : "Every caption style"}</b>
             </span>
             <span className="pass-row pass-foot">
               <span className="pass-field"><small>Pass no.</small>VSN-{passNo}</span>
@@ -70,10 +72,10 @@ export default function PassReveal({ plan, holder, passNo, until, fresh, onClose
         {rest.map((w, i) => word(w, lead.length + hot.length + i))}
       </p>
       <p className="pass-note">
-        That&apos;s about {Math.round(minutes / REEL_MINUTES).toLocaleString("en-IN")} five-minute reels, or {Math.round(minutes / FILM_MINUTES)} full-length films.
+        That&apos;s about {reels} five-minute reels{films > 0 && `, or ${films} full-length films`}.
       </p>
       <div className="pass-actions">
-        <Link href="/app" className="btn pass-go">Start subtitling</Link>
+        <Link href="/app" className="btn pass-go" onClick={() => ref.current?.close()}>Start subtitling</Link>
         <button className="link" onClick={() => ref.current?.close()}>Close</button>
       </div>
     </dialog>

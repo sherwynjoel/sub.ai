@@ -3,6 +3,7 @@ import BillingActions from "@/components/BillingActions";
 import { requireUser } from "@/lib/auth";
 import { effectivePlan, PLANS, secondsLeft } from "@/lib/plans";
 import { subscriptionsReady } from "@/lib/razorpay";
+import { mustConfirm } from "@/lib/verify";
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
   const u = await requireUser();
@@ -35,7 +36,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
         </div>
       </div>
       <BillingActions current={plan} live={live} subscriptions={await subscriptionsReady()} preselect={(await searchParams).plan}
-        holder={u.name} passNo={u.id.slice(0, 8).toUpperCase()} until={plan !== "free" ? u.periodEnd?.toISOString() : undefined}
+        holder={u.name} passNo={u.id.slice(0, 8).toUpperCase()} until={plan !== "free" ? u.periodEnd?.toISOString() : undefined} hasPass={!(await mustConfirm(u))}
         prepaidUntil={u.subscriptionStatus === "prepaid" && plan !== "free" ? date : undefined} />
       <p className="muted small">Pay for 30 days at a time by card, UPI or netbanking; nothing renews unless you choose a monthly subscription. See the <Link href="/refunds">refund and cancellation policy</Link> and <Link href="/terms">terms</Link>.</p>
     </>
