@@ -1,7 +1,14 @@
 import ConfirmEmail from "@/components/ConfirmEmail";
 import Dashboard from "@/components/Dashboard";
+import TrialPass from "@/components/TrialPass";
+import { requireUser } from "@/lib/auth";
+import { secondsLeft } from "@/lib/plans";
+import { mustConfirm } from "@/lib/verify";
 
-export default function Page() {
+export default async function Page() {
+  const u = await requireUser();
+  // Someone on the trial, once its minutes have really started (a lapsed paid plan doesn't count).
+  const trial = u.plan === "free" && secondsLeft(u) > 0 && !(await mustConfirm(u));
   return (
     <>
       <header className="dash-head">
@@ -10,6 +17,7 @@ export default function Page() {
       </header>
       <ConfirmEmail />
       <Dashboard />
+      {trial && <TrialPass holder={u.name} passNo={u.id.slice(0, 8).toUpperCase()} />}
     </>
   );
 }

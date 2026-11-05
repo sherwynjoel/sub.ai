@@ -30,9 +30,10 @@ type Props = {
   holder: string;         // the name on the pass
   passNo: string;
   until?: string;         // when the paid plan ends (ISO)
+  hasPass: boolean;       // false until a new account's free minutes have started
 };
 
-export default function BillingActions({ current, live, prepaidUntil, subscriptions, preselect, holder, passNo, until }: Props) {
+export default function BillingActions({ current, live, prepaidUntil, subscriptions, preselect, holder, passNo, until, hasPass }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState("");
@@ -123,6 +124,7 @@ export default function BillingActions({ current, live, prepaidUntil, subscripti
 
   return (
     <>
+      {hasPass && <p className="pass-link"><button className="link" onClick={() => setPass({ plan: current, until, fresh: false })}>See your {PLANS[current].name} pass</button></p>}
       <div className="plan-grid">
         {PAID.map((id) => {
           const p = PLANS[id];
@@ -133,7 +135,6 @@ export default function BillingActions({ current, live, prepaidUntil, subscripti
               <div className="amt">₹{p.priceInr.toLocaleString("en-IN")}<small> / month</small></div>
               <p className="muted">{p.minutes.toLocaleString("en-IN")} minutes a month. {p.blurb}.</p>
               {mine && <span className="current">{prepaidUntil ? `Your plan, until ${prepaidUntil}` : "Your current plan"}</span>}
-              {mine && <button className="link" onClick={() => setPass({ plan: id, until, fresh: false })}>See your pass</button>}
               {!live && (
                 <button className={`btn${preselect === id || mine ? "" : " ghost"}`} disabled={!!busy} onClick={() => payOnce(id)}>
                   {busy === id ? "Opening checkout…" : mine ? `Add 30 days · ₹${p.priceInr.toLocaleString("en-IN")}` : `Pay ₹${p.priceInr.toLocaleString("en-IN")} for 30 days`}
