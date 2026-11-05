@@ -1,4 +1,6 @@
 "use client";
+import RenameProject from "@/components/RenameProject";
+import { stem } from "@/lib/projectName";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -588,9 +590,10 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [outside, setOutside] = useState<number[]>([]);
   // The account's plan: free exports carry a watermark (shown on the preview too, as the MP4 will have it).
   const [freePlan, setFreePlan] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   useEffect(() => { // what the phone shows for this video while it plays: the lock screen, Control Center, the Dynamic Island
     if (!("mediaSession" in navigator)) return;
-    navigator.mediaSession.metadata = new MediaMetadata({ title: job.filename, artist: BRAND.name, artwork: [{ src: "/vasanam-cover.png", sizes: "512x512", type: "image/png" }] });
+    navigator.mediaSession.metadata = new MediaMetadata({ title: stem(job.filename), artist: BRAND.name, artwork: [{ src: "/vasanam-cover.png", sizes: "512x512", type: "image/png" }] });
     return () => { navigator.mediaSession.metadata = null; };
   }, [job.filename]);
   useEffect(() => { fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((m) => setFreePlan(m?.plan === "free")).catch(() => {}); }, []);
@@ -646,7 +649,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       if (j.status === "done") {
         setCuesRaw(j.cues);
         if (document.hidden) {
-          document.title = `✓ Ready · ${j.filename}`;
+          document.title = `✓ Ready · ${stem(j.filename)}`;
           try { if (notify && Notification.permission === "granted") new Notification("Your subtitles are ready", { body: j.filename }); } catch { /* not supported */ }
         }
       }
@@ -1090,7 +1093,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       <div className="editor-wait panel">
         <Link href="/app" className="muted">Projects</Link>
         <FlowSteps at={3} />
-        <h1>{job.filename}</h1>
+        <h1>{stem(job.filename)}</h1>
         {job.status === "failed" ? (
           <>
             <p className="error">We couldn&apos;t subtitle this video: {job.error}</p>
@@ -1144,7 +1147,11 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       <div className="ed-top">
         <div className="ed-title">
           <Link href="/app" className="muted">Projects</Link>
-          <h1 className="page-title">{job.filename}</h1>
+          <div className="ed-name">
+            <h1 className="page-title">{stem(job.filename)}</h1>
+            <button className="ed-rename" aria-label="Rename project" title="Rename project" onClick={() => setRenaming(true)}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM13 7l4 4" /></svg></button>
+          </div>
+          {renaming && <RenameProject id={job.id} filename={job.filename} onClose={() => setRenaming(false)} onRenamed={(filename) => setJob((j) => ({ ...j, filename }))} />}
           <button className="ctype-chip" onClick={() => setRetype(typeOf(initial))} title="Change what the captions say and how they're written">
             <span className="muted">Captions:</span> <strong>{typeLabel(initial, language.name)}</strong> <span className="ctype-go">Change type</span>
           </button>

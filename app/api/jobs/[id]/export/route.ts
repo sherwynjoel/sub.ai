@@ -1,3 +1,4 @@
+import { attachment, stem } from "@/lib/projectName";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { ownJob } from "@/lib/jobs";
 import { shortCode } from "@/lib/languages";
@@ -21,10 +22,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const own = lang === "en" ? englishCues(j.cues) : j.cues; // English alone reads in whole sentences
   const cues = shift ? shiftCues(own, shift) : own;
   const base = j.filename.replace(/\.[^.]+$/, "").replace(/[^\w\- ]+/g, "_") || "subtitles";
+  const tail = `${lang === "ta" ? shortCode(j.language) : lang}.${fmt}`;
   return new Response("\uFEFF" + fn(cues, lang, j.captionCustom?.lines), {
     headers: {
       "content-type": `${type}; charset=utf-8`,
-      "content-disposition": `attachment; filename="${base}.${lang === "ta" ? shortCode(j.language) : lang}.${fmt}"`,
+      "content-disposition": attachment(`${stem(j.filename)}.${tail}`, `${base}.${tail}`),
     },
   });
 }
