@@ -20,6 +20,7 @@
     "nodemailer": "10.1.7",
     "onnxruntime-node": "1.30.0",
     "postgres": "^3.4.9",
+    "qrcode-generator": "2.0.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",
