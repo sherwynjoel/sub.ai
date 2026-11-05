@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CAPTION_STYLES, DEFAULT_STYLE, POPULAR, STYLE_CHOICES } from "./captionStyles";
-import { mergeCounts, styleTable, type StyleCount } from "./styleUsage";
+import { mergeCounts, styleTable, topStyles, type StyleCount } from "./styleUsage";
 
 const count = (style: string, projects: number, videos = 0): StyleCount => ({ style, projects, people: 1, videos, last: null });
 const [a, b, c] = STYLE_CHOICES.filter((s) => s.id !== DEFAULT_STYLE && !POPULAR.includes(s.id));
@@ -49,4 +49,15 @@ test("exports add up per style, each person once", () => {
   // made in a style the project has since left: the export still counts for it
   assert.deepEqual(out.find((c) => c.style === "b"), { style: "b", projects: 0, people: 1, videos: 2, last: "2026-11-05 10:00:00+00" });
   assert.equal(styleTable(out).videos, 7);
+});
+
+test("the home page: real use first, the hand-picked ones fill the rest", () => {
+  assert.deepEqual(topStyles([]), POPULAR.slice(0, 8));
+  assert.ok(POPULAR.every((id) => STYLE_CHOICES.some((s) => s.id === id)));
+  const t = topStyles([count(a.id, 9), count(b.id, 2), count(c.id, 4), count("gone-style", 50)]);
+  assert.deepEqual(t.slice(0, 2), [a.id, c.id]); // most used first
+  assert.ok(!t.includes(b.id), "one or two projects aren't enough");
+  assert.ok(!t.includes("gone-style"), "only styles still offered");
+  assert.equal(t.length, 8);
+  assert.equal(new Set(topStyles([count(POPULAR[0], 9)])).size, 8); // no doubles
 });

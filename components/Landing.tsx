@@ -8,6 +8,7 @@ import StickerSlapFooter from "@/components/StickerSlapFooter";
 import FruitSticker, { MEDIA } from "@/components/FruitStickerHero";
 import HeroEditor from "@/components/HeroEditor";
 import StyleShowcase from "@/components/StyleShowcase";
+import StylesGate from "@/components/StylesGate";
 import { BRAND, BUSINESS } from "@/lib/brand";
 import { LANGUAGES } from "@/lib/languages";
 import { PLANS, type PlanId } from "@/lib/plans";
@@ -98,7 +99,7 @@ function SquishyShapes({ kind }: { kind: number }) {
 }
 
 /** The landing page: English copy with Tamil dialogue samples and a multilingual greeting strip. */
-export default function Landing() {
+export default function Landing({ popular }: { popular: string[] }) {
   const [hi, setHi] = useState(0);
 
   useEffect(() => {
@@ -208,10 +209,14 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="wrap sec" id="styles">
-          <h2 className="rise">Pick a look. <span className="mark">One tap.</span></h2>
-          <p className="sec-lede rise">Pick a style in the editor, watch it on your clip, then download a finished MP4 with the captions burned in. Every style works in every language.</p>
-          <StyleShowcase />
+        <section className="styles-door" id="styles">
+          <StylesGate>
+            <div className="wrap sec">
+              <h2>Pick a look. <span className="mark">One tap.</span></h2>
+              <p className="sec-lede">Pick a style in the editor, watch it on your clip, then download a finished MP4 with the captions burned in. Every style works in every language.</p>
+              <StyleShowcase popular={popular} />
+            </div>
+          </StylesGate>
         </section>
 
         <section className="wrap sec split" id="plugin">
