@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { popupRoot } from "@/lib/popupRoot";
 import { FONT_LIKE } from "@/lib/captionStyles";
 
 /**
@@ -77,7 +78,7 @@ export default function FontPicker({ value, onChange, fonts, none, label, sample
             ))}
             {!items.length && <p className="fp-empty">No font called &ldquo;{q}&rdquo;</p>}
           </div>
-        </div>, document.body)}
+        </div>, popupRoot())}
     </>
   );
 }
