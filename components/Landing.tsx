@@ -7,7 +7,6 @@ import LegalLinks, { Credit } from "@/components/LegalLinks";
 import StickerSlapFooter from "@/components/StickerSlapFooter";
 import FruitSticker, { MEDIA } from "@/components/FruitStickerHero";
 import HeroEditor from "@/components/HeroEditor";
-import HomeSpider from "@/components/HomeSpider";
 import StyleShowcase from "@/components/StyleShowcase";
 import { BRAND, BUSINESS } from "@/lib/brand";
 import { LANGUAGES } from "@/lib/languages";
@@ -113,7 +112,6 @@ export default function Landing() {
   return (
     <>
       <Effects />
-      <HomeSpider />
       <header className="wrap top">
         <div className="site-bar">
           <div className="site-head">
@@ -320,9 +318,7 @@ export default function Landing() {
         paper="#f3f1f8" panel="#0c0c14" ink="#0c0c14" cream="#f5f2ea" accent="#d4ff3f"
         fontSans="var(--font-sans), system-ui, sans-serif"
         // The policies stay one click away on every page (Razorpay checks for them).
-        bottom={<><LegalLinks />
-          <span>3D spider by <a href="https://sketchfab.com/rt699448" target="_blank" rel="noopener">iRahulRajput</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>, simplified</span>
-          <Credit className="" /></>}
+        bottom={<><LegalLinks /><Credit className="" /></>}
       />
     </>
   );

@@ -13,7 +13,6 @@
     "make-admin": "tsx --env-file=.env.local scripts/make-admin.ts"
   },
   "dependencies": {
-    "@types/three": "0.187.0",
     "drizzle-orm": "^0.45.3",
     "motion": "14.9.1",
     "next": "16.4.2",
@@ -24,7 +23,6 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",
-    "three": "0.187.0",
     "tsx": "^4.23.15"
   },
   "devDependencies": {
