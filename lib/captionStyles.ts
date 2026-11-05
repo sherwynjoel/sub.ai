@@ -25,7 +25,7 @@ export const BLENDS = {
   dodge: ["Colour dodge", "color-dodge", "dodge"],
 } as const;
 export type Blend = keyof typeof BLENDS;
-export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar" | "cardslide" | "dropcap" | "reveal4" | "stack4" | "dotstack" | "cutout" | "liftdot";
+export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar" | "cardslide" | "dropcap" | "reveal4" | "stack4" | "dotstack" | "cutout" | "liftdot" | "flashbox";
 /** How a caption comes in (the last few from the Premiere template pack's presets). */
 export const ANIMS = {
   none: "None", fade: "Fade in", pop: "Pop", slide: "Slide up", bounce: "Bounce", zoom: "Zoom in",
@@ -99,6 +99,9 @@ export type CaptionStyle = {
   cutOut?: { serif: string; small: string; bold: string; big: number; smallRel: number; cut: number };
   // "liftdot": a thin italic line over a huge word, the dot of the huge word's i lifted up into the italic line (liftDot)
   liftDot?: { serif: string; dot: string; big: number; top: number };
+  // "flashbox": right-aligned stacked lines, the first and last in an italic serif, each word revealed as it's said by a
+  // white box flashing onto it and pulling off it (flashStack)
+  flashBox?: { serif: string; flash: string; big: number };
   reveal4?: { accent: string; big: number; smallFont: string; small: number; lastFont: string; last: number; silver: [string, string] }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
@@ -338,6 +341,56 @@ export function heroStack(words: string[], s: CaptionStyle & Placement, ratio = 
     (r as typeof r & { left: number }).left = fromEnd <= 1 ? W - r.w : fromEnd === 2 ? 0 : (W - r.w) * 0.45;
   });
   return { rows: rows as (typeof rows[number] & { left: number })[], W };
+}
+/**
+ * "flashbox", as the reference ("For / anyone / of our / partners"): lines a little apart (× the line spacing), the box
+ * over a word (from its baseline: its top and bottom, how far past the word's ends, em), the tracking; timing in ms
+ * (the box snapping on, held, pulled off from the right).
+ */
+// (padL: the box further past the word's left: an italic's descenders lean left)
+export const FLASH_AT = { step: 0.8, top: -0.74, bottom: 0.24, pad: 0.05, padL: 0.14, track: -0.035, serifTrack: -0.02 };
+export const FLASH_TIME = { on: 50, hold: 90, wipe: 230, gap: 70 };
+export const FLASH_SHADOW = { y: 0.02, blur: 0.08, alpha: 0.35 };
+/**
+ * The lines (up to four, a word or two each, balanced), right-aligned; the first and last in the italic serif (one or
+ * two lines: the first), the others in the style's font. Sizes in em of the style's size, fitting the room; x of each
+ * word from the block's left, each line's baseline from the first's.
+ */
+export function flashStack(words: string[], s: CaptionStyle & Placement, ratio = 9 / 16) {
+  const fb = s.flashBox!, n = words.length, room = roomInEm(s, ratio);
+  const count = Math.min(4, n), ids = words.map((_, i) => i);
+  const serifOf = (r: number, N: number) => r === 0 || (N >= 3 && r === N - 1);
+  const fontAt = (r: number, N: number) => (serifOf(r, N) ? fb.serif : s.font), trAt = (r: number, N: number) => (serifOf(r, N) ? FLASH_AT.serifTrack : FLASH_AT.track);
+  const wAt = (w: string, r: number, N: number) => textWidth(w, fontAt(r, N), s.fontTa) + trAt(r, N) * [...w].length;
+  // the split into lines keeping the widest narrowest (measured), as the reference ("For / anyone / of our / partners")
+  let rows: number[][] = [ids], best = Infinity;
+  const tryCuts = (cuts: number[]) => {
+    const b = [0, ...cuts, n], rs = b.slice(1).map((e, r) => ids.slice(b[r], e)), N = rs.length;
+    const widest = Math.max(...rs.map((idx, r) => idx.reduce((a, i, k) => a + wAt(words[i], r, N) + (k ? textWidth(" ", fontAt(r, N), s.fontTa) : 0), 0)));
+    if (widest < best - 1e-9) { best = widest; rows = rs; }
+  };
+  const pick = (from: number, left: number, acc: number[]) => {
+    if (!left) { tryCuts(acc); return; }
+    for (let c2 = from; c2 <= n - left; c2++) pick(c2 + 1, left - 1, [...acc, c2]);
+  };
+  pick(1, count - 1, []);
+  const N = rows.length, fontOf = (r: number) => fontAt(r, N), trOf = (r: number) => trAt(r, N);
+  const ww = (w: string, r: number) => wAt(w, r, N), sp = (r: number) => textWidth(" ", fontOf(r), s.fontTa);
+  const rowW = rows.map((idx, r) => idx.reduce((a, i, k) => a + ww(words[i], r) + (k ? sp(r) : 0), 0));
+  const E = Math.min(fb.big, (room * 0.95) / Math.max(0.3, ...rowW)), W = Math.max(...rowW);
+  const gap = FLASH_AT.step + ((s.lineHeight ?? 1) - 1) * 0.9;
+  const at: { r: number; x: number; w: number }[] = [];
+  rows.forEach((idx, r) => { let x = W - rowW[r]; idx.forEach((i) => { at[i] = { r, x, w: ww(words[i], r) }; x += ww(words[i], r) + sp(r); }); });
+  return { rows, at, fontOf, trOf, E, W, base: rows.map((_, r) => r * gap) };
+}
+/** When each word's box flashes on (ms from the part's start): as it's said, a moment after the one before; closer
+    together to finish before the part ends. */
+export function flashSchedule(starts: number[], partMs: number) {
+  const T = FLASH_TIME, len = T.on + T.hold + T.wipe, out: number[] = [];
+  starts.forEach((t, j) => out.push(Math.max(t, j ? out[j - 1] + T.gap : 0)));
+  const room = partMs - 60, first = out[0] ?? 0, last = (out[out.length - 1] ?? 0) + len;
+  if (last > room && last > first) { const f = Math.max(0.2, (room - len - first) / Math.max(1, last - len - first)); for (let j = 0; j < out.length; j++) out[j] = Math.max(first + (out[j] - first) * f, j ? out[j - 1] + 25 : 0); }
+  return out;
 }
 /**
  * "liftdot" layout, as the reference ("directly. inside / Premiere."), in em of the huge word, from its baseline (y down):
@@ -758,6 +811,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-bold-dot", name: "Bold Dot", group: "Typography", blurb: "A huge heavy word with a yellow dot, smaller lines tucked under it with soft shadows; each word pops in as it's said, the dot drops in (change the colours, font and size in the Style tab).", font: "Inter Black", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, shadow: 0.05, shadowColor: "#000000", effect: "dotstack", dotStack: { dot: "#EBCF4A", big: 3.2, mid: 0.52, small: 0.355 } },
   { id: "cc-outline-cut", name: "Outline Cut", group: "Typography", blurb: "A small line, a huge italic word cutting into a huge bold one under it, a small last line; words slide in, letters swing up, the bold word zooms in (change the colours and fonts in the Style tab).", font: "Inter SemiBold", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, effect: "cutout", cutOut: { serif: "Instrument Serif Italic", small: "Inter Medium", bold: W, big: 3.4, smallRel: 0.24, cut: 0.03 } },
   { id: "cc-lifted-dot", name: "Lifted Dot", group: "Typography", blurb: "A thin italic line over a huge word; the dot of its i flies up into the italic line. Words fade in, the huge word rises letter by letter (change the colours and fonts in the Style tab).", font: "Inter SemiBold", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, shadow: 0.05, shadowColor: "#000000", effect: "liftdot", liftDot: { serif: "Instrument Serif Italic", dot: W, big: 3.4, top: 0.59 } },
+  { id: "cc-flash-box", name: "Flash Box", group: "Typography", blurb: "Right-aligned stacked lines, italic serif and clean sans; a white box flashes onto each word as it's said and pulls away to reveal it (change the colours and fonts in the Style tab).", font: "Inter Medium", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: W, shadow: 0.05, shadowColor: "#000000", effect: "flashbox", flashBox: { serif: "Playfair Display Bold Italic", flash: W, big: 2.1 } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
@@ -830,7 +884,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
-  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-text-reveal", "cc-light-sweep", "cc-bold-dot", "cc-outline-cut", "cc-lifted-dot", "cc-letter-rise", "cc-typo-block",
+  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-text-reveal", "cc-light-sweep", "cc-bold-dot", "cc-outline-cut", "cc-lifted-dot", "cc-flash-box", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-simple", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
   "setup-punch", "setup-punch-pro", "comic-pop", "butter-serif", "handwritten", "trending-1", "trending-2", "trending-3", "neon-aura",
@@ -1027,6 +1081,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
     else if (s.dotStack) s.dotStack = { ...s.dotStack, dot: c.accent };
     else if (s.cutOut) s.cutOut = { ...s.cutOut, bold: c.accent };
     else if (s.liftDot) s.liftDot = { ...s.liftDot, dot: c.accent };
+    else if (s.flashBox) s.flashBox = { ...s.flashBox, flash: c.accent };
     else if (s.boldBar) s.boldBar = { ...s.boldBar, colors: [c.accent, mixHex(c.accent, "#000000", 0.55)] };
     else if (s.mark) s.mark = c.accent;
     else if (s.keyword) s.keyword.color = c.accent;
@@ -1667,6 +1722,37 @@ export function buildAss(cues: Cue[], o: Opts) {
         }
       });
       subAt(c.start, c.end, "", p.subY);
+      continue;
+    }
+    if (s.effect === "flashbox" && s.flashBox && words.length) {
+      // Right-aligned stacked lines (flashStack), placed by the first line's baseline as the editor: each word revealed
+      // as it's said by a box snapping on over it and pulling off it from the right; a part at a time.
+      const fb = s.flashBox, all = words.map((w) => w.w), pages = stackPages(all, 7, 36), durMs = (c.end - c.start) * 1000, T = FLASH_TIME;
+      const hex2 = (v: number) => Math.round(Math.min(255, Math.max(0, v))).toString(16).toUpperCase().padStart(2, "0");
+      const k = (s.shadow ?? 0) / 0.05, sa = hex2(255 * (1 - FLASH_SHADOW.alpha)), sc = colorOnly(s.shadowColor ?? "#000000");
+      const shadow = (em: number) => (k ? `\\bord${Math.round(0.01 * em * 10) / 10}\\3a&HFF&\\xshad0\\yshad${Math.round(FLASH_SHADOW.y * em * k)}\\4c${sc}\\4a&H${sa}&\\blur${Math.round(FLASH_SHADOW.blur * em * k * 10) / 10}` : "\\bord0\\shad0");
+      let subY = 0;
+      pages.forEach(([from, to], p) => {
+        const F = flashStack(all.slice(from, to), s, ratio), E = F.E * fs, x0 = Math.round(ax - ((hz + 1) * F.W * E) / 2);
+        const q0 = p ? (words[from].s - c.start) * 1000 : 0, q1 = p + 1 < pages.length ? (words[to].s - c.start) * 1000 : durMs;
+        const top = -assAscent(F.fontOf(0)) * E, bottom = F.base[F.base.length - 1] * E + (lineScale(F.fontOf(F.rows.length - 1)) - assAscent(F.fontOf(F.rows.length - 1))) * E;
+        const subH = sub ? subNatOf() : 0;
+        const yb = Math.round(s.x !== undefined || align === 5 ? ay - (top + bottom + subH) / 2 : align === 8 ? ay - top : ay - bottom - subH);
+        if (!p) subY = yb + bottom + subH / 2;
+        const S = flashSchedule(words.slice(from, to).map((w) => (w.s - c.start) * 1000 - q0), q1 - q0);
+        const at = (ms: number) => Math.min(c.start + (q1 - 50) / 1000, Math.max(c.start + q0 / 1000, c.start + (q0 + ms) / 1000)), endAt = c.start + q1 / 1000;
+        F.at.forEach((w, m) => {
+          const f = F.fontOf(w.r), base = Math.round(yb + F.base[w.r] * E), by = base + Math.round((lineScale(f) - assAscent(f)) * E), x = Math.round(x0 + w.x * E);
+          const t0 = S[m], tWord = t0 + T.on; // (the word under the box once the box covers it)
+          const tags = `\\fn${f}\\fsz${Math.round(F.E * 1000) / 1000}\\fsp${Math.round(F.trOf(w.r) * E)}\\1c${colorOnly(s.color)}${shadow(E)}`;
+          strips(at(tWord), endAt, `{\\an1\\pos(${x},${by})}`, base - (assAscent(f) * E) / 2, lineScale(f) * E, "{\\q2}" + word(from + m, words.length).replace(/^\{\\r/, `{\\r${tags}`), 1);
+          // the box: snapping on (a flash), held, then pulled off from the right, uncovering the word
+          const bx = Math.round(x - FLASH_AT.padL * E), bw = Math.round((w.w + FLASH_AT.padL + FLASH_AT.pad) * E), btop = Math.round(base + FLASH_AT.top * E), bh = Math.round((FLASH_AT.bottom - FLASH_AT.top) * E);
+          const clip = (r: number) => `\\clip(${bx},${btop - 2},${r},${btop + bh + 2})`, h0 = T.on + T.hold, h1 = h0 + T.wipe;
+          add(at(t0), at(t0 + h1), `{\\an7\\pos(${bx},${btop})${clip(bx + bw)}\\alpha&HFF&\\t(0,${T.on},\\alpha&H00&)\\t(${h0},${h1},0.7,${clip(bx)})\\bord0\\shad0\\1c${colorOnly(fb.flash)}\\p1}m 0 0 l ${bw} 0 ${bw} ${bh} 0 ${bh}{\\p0}`, 2);
+        });
+      });
+      subAt(c.start, c.end, "", subY);
       continue;
     }
     if (s.effect === "liftdot" && s.liftDot && words.length) {
@@ -2522,7 +2608,7 @@ ${events.join("\n")}
 export const spacesLines = (s: CaptionStyle) => !((s.effect && s.effect !== "wobble") || s.reveal || s.wordLines || s.keyword?.line);
 /** Styles the line spacing reaches: the plain layout's, and Cinematic's three lines. */
 export const takesLineSpacing = (s: CaptionStyle) =>
-  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark", "cardslide", "dropcap", "reveal4", "stack4", "dotstack", "cutout", "liftdot"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
+  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark", "cardslide", "dropcap", "reveal4", "stack4", "dotstack", "cutout", "liftdot", "flashbox"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
 
 /** How tall a line of this text is, × the em: its fonts' own line height (what libass draws, so the editor matches). */
 export const lineBox = (s: CaptionStyle, text: string) =>

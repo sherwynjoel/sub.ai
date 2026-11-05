@@ -144,3 +144,7 @@
 .lift-dot .ld-word, .lift-dot .ld-big { position: absolute; display: inline-block; line-height: 1; }
 .lift-dot .ld-dot { position: absolute; transform-origin: 50% 100%; }
 .lift-dot .ld-stem { position: absolute; }
+/* Flash Box: placed by the first line's baseline (lines 1em tall); the box over the word, pulled off from the right */
+.flash-box { position: relative; display: inline-block; line-height: 1; white-space: nowrap; text-align: left; }
+.flash-box .fb-word { position: absolute; display: inline-block; line-height: 1; }
+.flash-box .fb-flash { position: absolute; z-index: 1; }

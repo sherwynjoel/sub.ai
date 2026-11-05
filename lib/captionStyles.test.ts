@@ -147,9 +147,9 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
 });
 
 test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 5 + Pro, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 43);
+  assert.equal(STYLE_CHOICES.length, 44);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 5);
-  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 17);
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 18);
   assert.ok(!STYLE_CHOICES.some((s) => s.id === "cc-bold-flicker" || s.id === "cc-corners"), "Bold Flicker and Corner Block no longer offered");
   for (const id of ["tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker", "tpl-reels-rgb", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon"])
     assert.ok(!STYLE_CHOICES.some((s) => s.id === id) && styleOf(id).id === id, `${id}: no longer offered (projects on it keep it)`);
@@ -822,4 +822,20 @@ test("Lifted Dot: with no i, a tall letter's stem grows up into the italic line 
   assert.equal(liftDot("directly inside Premiere".split(" "), s).kind, "dot", "an i still lifts its dot");
   assert.equal(liftDot("so so so".split(" "), s).iAt, -1, "no i or tall letter: nothing lifted");
   assert.equal(liftDot("make your content better".split(" "), resolveStyle("cc-lifted-dot", { font: "Anton" })).iAt, -1, "a font not measured: no stem");
+});
+
+test("Flash Box: lines as the reference, a box flashing onto each word as it's said and pulling off it, within the caption", async () => {
+  const { flashStack, flashSchedule, FLASH_TIME } = await import("./captionStyles");
+  const s = resolveStyle("cc-flash-box");
+  const W = "For anyone of our partners".split(" "), F = flashStack(W, s);
+  assert.deepEqual(F.rows.map((r) => r.map((i) => W[i]).join(" ")), ["For", "anyone", "of our", "partners"]);
+  assert.equal(F.fontOf(0), s.flashBox!.serif); assert.equal(F.fontOf(3), s.flashBox!.serif); assert.equal(F.fontOf(1), s.font);
+  const ends = F.rows.map((idx) => F.at[idx.at(-1)!].x + F.at[idx.at(-1)!].w);
+  assert.ok(ends.every((e) => Math.abs(e - ends[0]) < 0.01), "right-aligned");
+  assert.equal(resolveStyle("cc-flash-box", { accent: "#FFE000" }).flashBox?.flash, "#FFE000", "the box colour is editable");
+  assert.ok(flashStack(W, resolveStyle("cc-flash-box", { lineHeight: 1.5 })).base[3] > F.base[3] && takesLineSpacing(s), "line spacing");
+  const w = wordTimes(W.join(" "), 0, 1), S = flashSchedule(w.map((x) => x.s * 1000), 1000);
+  assert.ok(S.every((t, j) => !j || t > S[j - 1]) && S.at(-1)! + FLASH_TIME.on + FLASH_TIME.hold + FLASH_TIME.wipe <= 1000, "each word in turn, done by the caption's end");
+  const ass = buildAss([{ start: 0, end: 3, ta: W.join(" "), en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-flash-box", lang: "ta", width: 1080, height: 1920 });
+  assert.equal(ass.split("\n").filter((l) => /\\p1/.test(l)).length, 5, "a box for each word");
 });
