@@ -8,6 +8,8 @@ import CaptionTypePicker from "@/components/CaptionTypePicker";
 import TetrisLoader from "@/components/TetrisLoader";
 import GlassFolder, { type FolderFile } from "@/components/GlassFolder";
 import { DEFAULT_STYLE, SAFE_ZONES, styleOf } from "@/lib/captionStyles";
+import { stem } from "@/lib/projectName";
+import RenameProject from "@/components/RenameProject";
 import FlowSteps from "@/components/FlowSteps";
 import StylePicker from "@/components/StylePicker";
 import StyledCaption from "@/components/StyledCaption";
@@ -38,7 +40,7 @@ function lengthOf(file: File) {
 }
 
 /** A folder as wide as its grid cell (it draws at a fixed width, so it's measured), at most 340 px. */
-function ProjectFolder({ job, index }: { job: Job; index: number }) {
+function ProjectFolder({ job, index, onRename }: { job: Job; index: number; onRename: () => void }) {
   const box = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   useEffect(() => {
@@ -73,14 +75,14 @@ function ProjectFolder({ job, index }: { job: Job; index: number }) {
     : `${type} · ${mins(job.durationSec)}`;
   const arts = ["dusk", "glacier", "verdant", "aurora", "ember"] as const;
   return (
-    <div ref={box} className="folder-cell" title={job.filename}>
+    <div ref={box} className="folder-cell" title={stem(job.filename)}>
       {width > 0 && (
         <GlassFolder
           key={`${job.id}:${job.status}:${job.renderStatus}`} // a new state brings a new set of files
-          label={job.filename} meta={meta} width={width}
+          label={stem(job.filename)} meta={meta} width={width}
           video={local?.url ?? (job.hasMedia ? `/api/jobs/${job.id}/media${job.hasPreview ? "?preview=1" : ""}` : undefined)}
           art={arts[(job.id.charCodeAt(0) + job.id.charCodeAt(1)) % arts.length]} seed={job.id.charCodeAt(2)}
-          files={files} action="none" appearDelay={Math.min(index, 8) * 70}
+          files={files} action="more" menu={[{ label: "Rename", onSelect: onRename }]} appearDelay={Math.min(index, 8) * 70}
         />
       )}
     </div>
@@ -126,6 +128,7 @@ export default function Dashboard() {
   };
   const cancel = () => { setCheck(null); setStep(0); if (preview) URL.revokeObjectURL(preview); setPreview(undefined); };
   const [query, setQuery] = useState("");
+  const [renaming, setRenaming] = useState<Job | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
   const load = useCallback(() => {
@@ -311,7 +314,7 @@ export default function Dashboard() {
         ) : (
           <>
             <div className="folder-grid">
-              {shown.map((j, i) => <ProjectFolder key={j.id} job={j} index={i} />)}
+              {shown.map((j, i) => <ProjectFolder key={j.id} job={j} index={i} onRename={() => setRenaming(j)} />)}
             </div>
             {/* phones: a compact list (a folder each would fill the screen) */}
             <ul className="project-rows">
@@ -321,10 +324,11 @@ export default function Dashboard() {
                 return (
                   <li key={j.id}>
                     <Link href={`/app/jobs/${j.id}`}>
-                      <span className="pr-name">{j.filename}</span>
+                      <span className="pr-name">{stem(j.filename)}</span>
                       <span className="pr-meta">{typeLabel({ script: j.script, captionCustom: j.captionCustom }, languageOf(j.language).name)} · {mins(j.durationSec)}</span>
                       <span className={`pr-state${busy ? " busy" : j.status === "failed" ? " bad" : ""}`}>{state}</span>
                     </Link>
+                    <button className="pr-rename" aria-label={`Rename ${stem(j.filename)}`} onClick={() => setRenaming(j)}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM13 7l4 4" /></svg></button>
                   </li>
                 );
               })}
@@ -332,6 +336,8 @@ export default function Dashboard() {
           </>
         )}
       </section>
+      {renaming && <RenameProject id={renaming.id} filename={renaming.filename} onClose={() => setRenaming(null)}
+        onRenamed={(filename) => setJobs((all) => all?.map((j) => (j.id === renaming.id ? { ...j, filename } : j)) ?? all)} />}
     </>
   );
 }

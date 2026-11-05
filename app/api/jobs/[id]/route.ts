@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, jobs, type Cue, type WordLook } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { ownJob, publicJob } from "@/lib/jobs";
+import { renamed } from "@/lib/projectName";
 import { CAPTION_FONTS, CAPTION_STYLES, ownLook, sanitizeCustom } from "@/lib/captionStyles";
 import { LEVEL_FRAME, loudness, removeUploads } from "@/lib/media";
 import { withWordTimes } from "@/lib/subtitles";
@@ -39,7 +40,13 @@ export async function PATCH(req: Request, { params }: Ctx) {
   if (!u) return unauthorized();
   const j = await ownJob((await params).id, u);
   if (!j) return json({ error: "Not found" }, 404);
-  const { cues, captionStyle, captionCustom } = await req.json().catch(() => ({}));
+  const { cues, captionStyle, captionCustom, name } = await req.json().catch(() => ({}));
+  if (name !== undefined) {
+    const filename = renamed(j.filename, name);
+    if (!filename) return json({ error: "Give the project a name." }, 400);
+    await db.update(jobs).set({ filename }).where(eq(jobs.id, j.id));
+    return json({ ok: true, filename });
+  }
   if (cues === undefined && (captionStyle !== undefined || captionCustom !== undefined)) {
     if (captionStyle !== undefined && !CAPTION_STYLES.some((s) => s.id === captionStyle)) return json({ error: "Unknown style." }, 400);
     const look = captionCustom !== undefined ? sanitizeCustom(captionCustom) : undefined;

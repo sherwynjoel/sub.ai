@@ -264,6 +264,7 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .ed-top { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }
 .ed-title { min-width: 0; }
 .ed-title h1 { margin: 2px 0 0; font-size: 1.4rem; overflow-wrap: anywhere; }
+.ed-name { display: flex; align-items: center; gap: 2px; }
 .ed-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .ed-main { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(300px, 380px); gap: 16px; align-items: start; }
 .ed-list { max-height: calc(56vh + 60px); overflow-y: auto; padding-right: 4px; }
@@ -1053,3 +1054,17 @@ html:has(.pass-reveal[open]) { overflow: hidden; }
 .pass-actions .link { color: rgb(255 255 255 / .75); }
 .btn.pass-go { border-color: #d4ff3f; background: #d4ff3f; color: #0a0a0a; }
 @media (prefers-reduced-motion: reduce) { .pass-reveal[open], .pass-caption, .pass-word, .pass-note, .pass-actions { animation: none; } }
+
+/* renaming a project */
+.rename-box { width: min(420px, calc(100vw - 32px)); padding: 20px; border: 1px solid var(--line); border-radius: var(--r-lg); color: var(--ink); background: #fff; box-shadow: var(--shadow); }
+.rename-box::backdrop { background: rgb(10 10 20 / .4); }
+.rename-box form { display: grid; gap: 10px; }
+.rename-box label { font-weight: 600; }
+.rename-box input { width: 100%; }
+.rename-box .error { margin: 0; }
+.rename-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.ed-rename, .pr-rename { display: inline-grid; place-items: center; flex: none; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--muted); cursor: pointer; }
+.ed-rename:hover, .pr-rename:hover { background: var(--line-2); color: var(--ink); }
+.project-rows li { position: relative; }
+.project-rows li a { padding-right: 48px; }
+.pr-rename { position: absolute; right: 7px; top: 50%; translate: 0 -50%; }

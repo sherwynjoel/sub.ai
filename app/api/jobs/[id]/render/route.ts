@@ -1,3 +1,4 @@
+import { attachment, stem } from "@/lib/projectName";
 import { stat } from "node:fs/promises";
 import { eq } from "drizzle-orm";
 import { db, jobs } from "@/db";
@@ -35,6 +36,6 @@ export async function GET(_: Request, { params }: Ctx) {
   if (size < 0) return json({ error: "The styled video was removed. Render it again." }, 410);
   const base = j.filename.replace(/\.[^.]+$/, "").replace(/[^\w\- ]+/g, "_") || "video";
   return new Response(fileStream(j.renderPath), {
-    headers: { "content-type": "video/mp4", "content-length": String(size), "content-disposition": `attachment; filename="${base}.${j.captionStyle}.mp4"` },
+    headers: { "content-type": "video/mp4", "content-length": String(size), "content-disposition": attachment(`${stem(j.filename)}.${j.captionStyle}.mp4`, `${base}.${j.captionStyle}.mp4`) },
   });
 }
