@@ -84,7 +84,8 @@
 .reset-link code { overflow-wrap: anywhere; }
 
 /* which caption styles are used */
-.use-period { display: flex; gap: 8px; }
+.use-period { display: flex; flex-wrap: wrap; gap: 8px; }
+.use-gap { width: 12px; }
 .use-top { font-size: 1.35rem !important; overflow-wrap: anywhere; }
 .use-table .style-sample, .use-unused .style-sample { display: grid; height: 64px; }
 .use-look { width: 128px; min-width: 128px; }

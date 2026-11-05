@@ -14,6 +14,7 @@ import { speechRegions } from "./lib/timing";
 import { alignCues } from "./lib/align";
 import { translateLines } from "./lib/ai/translate";
 import { renderStyled } from "./lib/render";
+import { recordExport } from "./lib/styleUsage";
 import { dropAnchor, englishCues, mergeChunks, mergeShort, retimeWindows, snapToPauses, withWordTimes } from "./lib/subtitles";
 
 const PARALLEL_CHUNKS = 3;
@@ -112,6 +113,7 @@ async function processRender(job: typeof jobs.$inferSelect) {
     });
     const kept = await db.update(jobs).set({ renderStatus: "done", renderProgress: 100, renderPath: out }).where(eq(jobs.id, job.id)).returning({ id: jobs.id });
     if (!kept.length) { await unlink(out).catch(() => {}); return; } // the project was deleted while it rendered
+    await recordExport(db, job);
     console.log(`render ${job.id} done (${job.captionStyle})`);
   } catch (e) {
     console.error(`render ${job.id} failed`, e);

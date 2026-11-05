@@ -10,28 +10,36 @@ const num = (n: number) => n.toLocaleString("en-IN");
 const day = (d: string | null) => (d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—");
 
 /** Which caption styles people use, and which nobody does. */
-export default function StyleUsage({ table: { total, used, unused }, recent, base = "/admin/styles" }: {
-  table: ReturnType<typeof styleTable>; recent: boolean; base?: string;
+export default function StyleUsage({ table: { total, videos, used, unused }, recent, customers, base = "/admin/styles" }: {
+  table: ReturnType<typeof styleTable>; recent: boolean; customers: boolean; base?: string;
 }) {
+  const link = (period: boolean, who: boolean) => {
+    const q = [period && "period=30", who && "who=customers"].filter(Boolean).join("&");
+    return q ? `${base}?${q}` : base;
+  };
+  const tab = (href: string, on: boolean, label: string) => <Link href={href} className={`btn small${on ? "" : " ghost"}`} aria-current={on ? "page" : undefined}>{label}</Link>;
   const offered = used.filter((u) => !u.tags.includes("No longer offered")).length + unused.length;
   return (
     <>
       <h1>Styles</h1>
       <div className="use-period">
-        <Link href={base} className={`btn small${recent ? " ghost" : ""}`} aria-current={recent ? undefined : "page"}>All time</Link>
-        <Link href={`${base}?period=30`} className={`btn small${recent ? "" : " ghost"}`} aria-current={recent ? "page" : undefined}>Last 30 days</Link>
+        {tab(link(false, customers), !recent, "All time")}
+        {tab(link(true, customers), recent, "Last 30 days")}
+        <span className="use-gap" />
+        {tab(link(recent, false), !customers, "Everyone")}
+        {tab(link(recent, true), customers, "Without admin accounts")}
       </div>
 
       <dl className="stats">
-        <div className="stat"><dt>Projects counted</dt><dd>{num(total)}</dd></div>
+        <div className="stat"><dt>Projects</dt><dd>{num(total)}</dd></div>
+        <div className="stat"><dt>Videos exported</dt><dd>{num(videos)}</dd></div>
         <div className="stat"><dt>Most used</dt><dd className="use-top">{used[0]?.name ?? "—"}</dd>{used[0] && <span className="sub">{Math.round(used[0].share * 100)}% of projects</span>}</div>
-        <div className="stat"><dt>Styles used</dt><dd>{num(used.length)}</dd><span className="sub">of {num(offered)} on offer</span></div>
-        <div className="stat"><dt>Never used</dt><dd>{num(unused.length)}</dd></div>
+        <div className="stat"><dt>Styles used</dt><dd>{num(used.length)}</dd><span className="sub">of {num(offered)} on offer, {num(unused.length)} never used</span></div>
       </dl>
 
       <section className="panel">
         <h2>Most used</h2>
-        {used.length === 0 ? <p className="muted">No finished projects from users {recent ? "in the last 30 days" : "yet"}.</p> : (
+        {used.length === 0 ? <p className="muted">No finished projects {recent ? "in the last 30 days" : "yet"}.</p> : (
           <div className="table-wrap">
             <table className="use-table">
               <thead><tr><th className="use-look" aria-label="Preview"></th><th>Style</th><th className="num">Projects</th><th className="num">People</th><th className="num">Videos exported</th><th>Last used</th></tr></thead>
@@ -55,7 +63,8 @@ export default function StyleUsage({ table: { total, used, unused }, recent, bas
           </div>
         )}
         <p className="muted small">
-          Each finished project counts once, under the style it uses now, so a project that changed style counts only for its latest. Deleted projects and admin accounts aren&apos;t counted.
+          <strong>Projects:</strong> every finished project, under the style it uses now, including deleted ones.
+          {" "}<strong>Videos exported:</strong> every finished export, under the style it was made in, so exporting twice counts twice. Older repeat exports weren&apos;t recorded, so each older project shows one at most.
           {" "}<strong>Default</strong> and <strong>Shown first</strong> styles are the easiest to pick, so their counts run high.
         </p>
       </section>
