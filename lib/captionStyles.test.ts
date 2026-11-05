@@ -147,9 +147,9 @@ test("canvas, text layers and emoji reach the MP4; project-only settings stay ou
 });
 
 test("styles on offer: the chosen 20, the template pack's 16 and the CINECUT project's 5 + Pro, with the default among them", () => {
-  assert.equal(STYLE_CHOICES.length, 42);
+  assert.equal(STYLE_CHOICES.length, 43);
   assert.equal(STYLE_CHOICES.filter((s) => s.group === "Templates").length, 5);
-  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 16);
+  assert.equal(STYLE_CHOICES.filter((s) => s.group === "Typography").length, 17);
   assert.ok(!STYLE_CHOICES.some((s) => s.id === "cc-bold-flicker" || s.id === "cc-corners"), "Bold Flicker and Corner Block no longer offered");
   for (const id of ["tpl-bounce", "tpl-bouncy-fadeout", "tpl-fade-up", "tpl-flicker", "tpl-ramp-up", "tpl-snapping", "tpl-strong-flicker", "tpl-reels-rgb", "tpl-hook-yellow", "tpl-hook-cyan", "tpl-hook-neon"])
     assert.ok(!STYLE_CHOICES.some((s) => s.id === id) && styleOf(id).id === id, `${id}: no longer offered (projects on it keep it)`);
@@ -792,4 +792,21 @@ test("Outline Cut: four lines as the reference, the bold word cut by the italic 
   assert.ok(ev("cutBold").length === 1 && /effect/.test(ev("cutBold")[0]), "the bold word apart");
   assert.ok(ev("cutKnock").length === "outline".length && ev("cutKnock").every((l) => /\\bord[\d.]+/.test(l)), "the italic word fattened: the cut");
   assert.ok(!ev("cutBase").some((l) => /effect/.test(l)), "the rest without it");
+});
+
+test("Lifted Dot: the huge word's i dot lifted into the italic line between its words, all within the caption", async () => {
+  const { liftDot, liftSchedule, LIFT_TIME } = await import("./captionStyles");
+  const s = resolveStyle("cc-lifted-dot");
+  const L = liftDot("directly inside Premiere".split(" "), s);
+  assert.equal(L.bigText, "Premiere.", "a full stop after the huge word");
+  assert.equal(L.chars[L.iAt], "i");
+  const right0 = L.lefts[0] + 0.1, left1 = L.lefts[1];
+  assert.ok(L.lefts[0] < L.dot.x && left1 > L.dot.x + L.dot.d && right0 < left1, "directly · inside: the dot between the words");
+  assert.ok(L.dot.toY < L.dot.fromY, "the dot goes up");
+  assert.equal(liftDot(["Welcome"], s).iAt, -1, "no italic line: the dot stays");
+  assert.equal(resolveStyle("cc-lifted-dot", { accent: "#FFCC00" }).liftDot?.dot, "#FFCC00", "the dot colour is editable");
+  assert.ok(liftDot("directly inside Premiere".split(" "), resolveStyle("cc-lifted-dot", { lineHeight: 1.5 })).base1 < L.base1 && takesLineSpacing(s), "line spacing");
+  const w = wordTimes("directly inside Premiere", 0, 1.3), S = liftSchedule(w.map((x) => x.s * 1000), L, 1300);
+  assert.ok(Math.max(S.tops.at(-1)! + LIFT_TIME.word, S.big + (L.chars.length - 1) * S.step + LIFT_TIME.letter, S.lift + S.liftMs) <= 1300, "done by the caption's end, even fast");
+  assert.ok(S.big >= S.tops.at(-1)! && S.lift > S.big, "in order");
 });

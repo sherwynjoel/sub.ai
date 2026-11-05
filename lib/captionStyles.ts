@@ -25,7 +25,7 @@ export const BLENDS = {
   dodge: ["Colour dodge", "color-dodge", "dodge"],
 } as const;
 export type Blend = keyof typeof BLENDS;
-export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar" | "cardslide" | "dropcap" | "reveal4" | "stack4" | "dotstack" | "cutout";
+export type Effect = "punch" | "solo" | "vhs" | "typewriter" | "crawl" | "wobble" | "stack" | "hook" | "corners" | "oneword" | "typo" | "cine" | "spark" | "boxpunch" | "boldbar" | "cardslide" | "dropcap" | "reveal4" | "stack4" | "dotstack" | "cutout" | "liftdot";
 /** How a caption comes in (the last few from the Premiere template pack's presets). */
 export const ANIMS = {
   none: "None", fade: "Fade in", pop: "Pop", slide: "Slide up", bounce: "Bounce", zoom: "Zoom in",
@@ -97,6 +97,8 @@ export type CaptionStyle = {
   // video shows through), a small last line (outlineCut); serif: the italic word's font, small: the small lines' font,
   // bold: the bold word's colour
   cutOut?: { serif: string; small: string; bold: string; big: number; smallRel: number; cut: number };
+  // "liftdot": a thin italic line over a huge word, the dot of the huge word's i lifted up into the italic line (liftDot)
+  liftDot?: { serif: string; dot: string; big: number; top: number };
   reveal4?: { accent: string; big: number; smallFont: string; small: number; lastFont: string; last: number; silver: [string, string] }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
@@ -336,6 +338,85 @@ export function heroStack(words: string[], s: CaptionStyle & Placement, ratio = 
     (r as typeof r & { left: number }).left = fromEnd <= 1 ? W - r.w : fromEnd === 2 ? 0 : (W - r.w) * 0.45;
   });
   return { rows: rows as (typeof rows[number] & { left: number })[], W };
+}
+/**
+ * "liftdot" layout, as the reference ("directly. inside / Premiere."), in em of the huge word, from its baseline (y down):
+ * the italic line's baseline (line spacing spreads them), the tracking, the i's dot (its box in the glyph, as Inter's:
+ * left, right, bottom, top), the gap either side of the lifted dot. Timing in ms.
+ */
+export const LIFT_AT = { base: -0.6, track: -0.035, topTrack: -0.01, dot: [0.042, 0.189, 0.592, 0.732], gap: 0.05 };
+export const LIFT_TIME = { word: 380, wordGap: 90, letter: 340, step: 32, lift: 460 };
+export const LIFT_SHADOW = { y: 0.02, blur: 0.09, alpha: 0.4 };
+/**
+ * Which words go where and how big: the last word huge (a full stop after it, as the reference), the others on the
+ * italic line. When the huge word has an i (or j), its dot goes up into the italic line, between the words before it
+ * and after it (split so they sit around it, inside the room); else the italic line is centred over it. In em of the
+ * huge word; x from the block's left.
+ */
+export function liftDot(words: string[], s: CaptionStyle & Placement, ratio = 9 / 16) {
+  const ld = s.liftDot!, n = words.length, room = roomInEm(s, ratio);
+  const raw = words[n - 1] ?? "", bigText = /[.!?…]$/.test(raw) ? raw : raw + ".";
+  const chars = [...new Intl.Segmenter().segment(bigText)].map((g) => g.segment);
+  const cw = (ch: string) => textWidth(ch, s.font, s.fontTa) + LIFT_AT.track;
+  const xs: number[] = [];
+  let x = 0;
+  chars.forEach((ch) => { xs.push(x); x += cw(ch); });
+  const bigW = Math.max(0.3, x), E = Math.min(ld.big, (room * 0.97) / bigW), roomEm = room / E;
+  const top = words.slice(0, Math.max(0, n - 1));
+  const iAt = top.length ? chars.findIndex((ch) => ch === "i" || ch === "j") : -1;
+  const [dl, dr, db, dt] = LIFT_AT.dot, d = dr - dl, dh = dt - db;
+  const d2 = (s.lineHeight ?? 1) - 1, base1 = LIFT_AT.base - d2 * 0.8;
+  const ww = (w: string, r: number) => (textWidth(w, ld.serif, s.fontTa) + LIFT_AT.topTrack * [...w].length) * r;
+  const sp = (r: number) => textWidth(" ", ld.serif, s.fontTa) * r;
+  const run = (ws: string[], r: number) => ws.reduce((a, w, k) => a + ww(w, r) + (k ? sp(r) : 0), 0);
+  let r1 = ld.top, split = 0, dotX = 0, lefts: number[] = [];
+  const minL = Math.min(0, (bigW - roomEm) / 2), maxR = Math.max(bigW, (bigW + roomEm) / 2); // (the room, centred on the huge word)
+  for (let pass = 0; pass < 8; pass++) {
+    lefts = [];
+    if (iAt >= 0) {
+      dotX = xs[iAt] + dl; // the dot's left
+      // the split keeping both sides inside the room, the most even
+      let best = Infinity;
+      for (let k = 0; k <= top.length; k++) {
+        const wl = run(top.slice(0, k), r1), wr = run(top.slice(k), r1);
+        const l0 = dotX - LIFT_AT.gap - wl, r0 = dotX + d + LIFT_AT.gap + wr;
+        const over = Math.max(0, minL - l0) + Math.max(0, r0 - maxR), score = over * 10 + Math.abs(wl - wr) * 0.1 + (k === 0 || k === top.length ? 0.3 : 0);
+        if (score < best) { best = score; split = k; }
+      }
+      let lx = dotX - LIFT_AT.gap - run(top.slice(0, split), r1);
+      top.slice(0, split).forEach((w) => { lefts.push(lx); lx += ww(w, r1) + sp(r1); });
+      lx = dotX + d + LIFT_AT.gap;
+      top.slice(split).forEach((w) => { lefts.push(lx); lx += ww(w, r1) + sp(r1); });
+    } else {
+      let lx = (bigW - run(top, r1)) / 2;
+      top.forEach((w) => { lefts.push(lx); lx += ww(w, r1) + sp(r1); });
+    }
+    const l0 = Math.min(0, ...lefts), r0 = Math.max(bigW, ...lefts.map((l, k) => l + ww(top[k], r1)));
+    if (l0 >= minL - 1e-6 && r0 <= maxR + 1e-6) break;
+    r1 *= Math.min(0.95, (maxR - minL) / (r0 - l0)); // (too wide: smaller)
+  }
+  const minX = Math.min(0, ...lefts), maxX = Math.max(bigW, ...lefts.map((l, k) => l + ww(top[k], r1)));
+  return { top: top.map((_, k) => k), big: n - 1, bigText, chars, xs: xs.map((v) => v - minX), bigLeft: -minX, iAt, r1, lefts: lefts.map((v) => v - minX),
+    dot: { x: dotX - minX, d, dh, fromY: -dt, toY: base1 - dh }, base1, E, W: maxX - minX };
+}
+/**
+ * When each part comes in (ms from the part's start), following the speech, in order: the italic words as said, the
+ * huge word's letters as it's said (once they're in), the dot lifting once its i has landed; drawn closer together to
+ * finish before the part ends.
+ */
+export function liftSchedule(starts: number[], L: ReturnType<typeof liftDot>, partMs: number) {
+  const T = LIFT_TIME, tops: number[] = [];
+  L.top.forEach((j, m) => tops.push(Math.max(starts[j], m ? tops[m - 1] + T.wordGap : 0)));
+  let big = Math.max(starts[L.big] ?? 0, tops.length ? tops[tops.length - 1] + T.wordGap : 0), step = T.step;
+  let lift = L.iAt >= 0 ? big + L.iAt * step + T.letter + 120 : 0, liftMs = T.lift;
+  const room = partMs - 60, first = tops[0] ?? big, n = L.chars.length;
+  const doneOf = () => Math.max(tops.length ? tops[tops.length - 1] + T.word : 0, big + (n - 1) * step + T.letter, L.iAt >= 0 ? lift + liftMs : 0);
+  for (let pass = 0; pass < 6 && doneOf() > room && doneOf() > first; pass++) {
+    const f = Math.max(0.2, (room - first) / (doneOf() - first)), at = (t: number) => first + (t - first) * f;
+    for (let m = 0; m < tops.length; m++) tops[m] = Math.max(at(tops[m]), m ? tops[m - 1] + 30 : 0);
+    big = at(big); lift = at(lift); step = Math.max(12, step * f); liftMs = Math.max(200, liftMs * f);
+  }
+  return { tops, big, step, lift, liftMs };
 }
 /**
  * "cutout" layout, as the reference ("How to create this / outline / effect / in <30 seconds"), in em of the huge italic
@@ -662,6 +743,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-light-sweep", name: "Light Sweep", group: "Typography", blurb: "Big bold words stacked tight with a soft shadow, rising in word by word; the last one in blue italic with a light sweeping across it (change the colours in Colour).", font: "Inter Bold", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: W, shadow: 0.05, shadowColor: "#000000", effect: "stack4", stack4: { accent: "#2C64F2", big: 2.9, lastFont: "Inter Bold Italic", last: 0.95, shine: "#FFFFFF" } },
   { id: "cc-bold-dot", name: "Bold Dot", group: "Typography", blurb: "A huge heavy word with a yellow dot, smaller lines tucked under it with soft shadows; each word pops in as it's said, the dot drops in (change the colours, font and size in the Style tab).", font: "Inter Black", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, shadow: 0.05, shadowColor: "#000000", effect: "dotstack", dotStack: { dot: "#EBCF4A", big: 3.2, mid: 0.52, small: 0.355 } },
   { id: "cc-outline-cut", name: "Outline Cut", group: "Typography", blurb: "A small line, a huge italic word cutting into a huge bold one under it, a small last line; words slide in, letters swing up, the bold word zooms in (change the colours and fonts in the Style tab).", font: "Inter SemiBold", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, effect: "cutout", cutOut: { serif: "Instrument Serif Italic", small: "Inter Medium", bold: W, big: 3.4, smallRel: 0.24, cut: 0.03 } },
+  { id: "cc-lifted-dot", name: "Lifted Dot", group: "Typography", blurb: "A thin italic line over a huge word; the dot of its i flies up into the italic line. Words fade in, the huge word rises letter by letter (change the colours and fonts in the Style tab).", font: "Inter SemiBold", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, shadow: 0.05, shadowColor: "#000000", effect: "liftdot", liftDot: { serif: "Instrument Serif Italic", dot: W, big: 3.4, top: 0.59 } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
@@ -734,7 +816,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
-  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-text-reveal", "cc-light-sweep", "cc-bold-dot", "cc-outline-cut", "cc-letter-rise", "cc-typo-block",
+  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-text-reveal", "cc-light-sweep", "cc-bold-dot", "cc-outline-cut", "cc-lifted-dot", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-simple", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
   "setup-punch", "setup-punch-pro", "comic-pop", "butter-serif", "handwritten", "trending-1", "trending-2", "trending-3", "neon-aura",
@@ -930,6 +1012,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
     else if (s.stack4) s.stack4 = { ...s.stack4, accent: c.accent };
     else if (s.dotStack) s.dotStack = { ...s.dotStack, dot: c.accent };
     else if (s.cutOut) s.cutOut = { ...s.cutOut, bold: c.accent };
+    else if (s.liftDot) s.liftDot = { ...s.liftDot, dot: c.accent };
     else if (s.boldBar) s.boldBar = { ...s.boldBar, colors: [c.accent, mixHex(c.accent, "#000000", 0.55)] };
     else if (s.mark) s.mark = c.accent;
     else if (s.keyword) s.keyword.color = c.accent;
@@ -1570,6 +1653,55 @@ export function buildAss(cues: Cue[], o: Opts) {
         }
       });
       subAt(c.start, c.end, "", p.subY);
+      continue;
+    }
+    if (s.effect === "liftdot" && s.liftDot && words.length) {
+      // A thin italic line over a huge word (liftDot), placed by the huge word's baseline as the editor, a soft shadow on
+      // both: the italic words fade down into place out of a blur as they're said, the huge word's letters rise in one by
+      // one, then the dot of its i flies up into the italic line and lands (squashing); a part at a time.
+      const ld = s.liftDot, all = words.map((w) => w.w), pages = stackPages(all, 7, 40), durMs = (c.end - c.start) * 1000;
+      const hex2 = (v: number) => Math.round(Math.min(255, Math.max(0, v))).toString(16).toUpperCase().padStart(2, "0");
+      const k = (s.shadow ?? 0) / 0.05, sa = hex2(255 * (1 - LIFT_SHADOW.alpha)), sc = colorOnly(s.shadowColor ?? "#000000");
+      const shadow = (em: number) => (k ? `\\bord${Math.round(0.01 * em * 10) / 10}\\3a&HFF&\\xshad0\\yshad${Math.round(LIFT_SHADOW.y * em * k)}\\4c${sc}\\4a&H${sa}&\\blur${Math.round(LIFT_SHADOW.blur * em * k * 10) / 10}` : "\\bord0\\shad0");
+      const desc = (f: string) => lineScale(f) - assAscent(f), T = LIFT_TIME;
+      let subY = 0;
+      pages.forEach(([from, to], p) => {
+        const L = liftDot(all.slice(from, to), s, ratio), E = L.E * fs, x0 = Math.round(ax - ((hz + 1) * L.W * E) / 2);
+        const q0 = p ? (words[from].s - c.start) * 1000 : 0, q1 = p + 1 < pages.length ? (words[to].s - c.start) * 1000 : durMs;
+        const top = Math.min(L.top.length ? L.base1 * E - assAscent(ld.serif) * L.r1 * E : 0, -assAscent(s.font) * E), bottom = desc(s.font) * E;
+        const subH = sub ? subNatOf() : 0;
+        const yb = Math.round(s.x !== undefined || align === 5 ? ay - (top + bottom + subH) / 2 : align === 8 ? ay - top : ay - bottom - subH);
+        if (!p) subY = yb + bottom + subH / 2;
+        const S = liftSchedule(words.slice(from, to).map((w) => (w.s - c.start) * 1000 - q0), L, q1 - q0);
+        const at = (ms: number) => Math.min(c.start + (q1 - 50) / 1000, Math.max(c.start + q0 / 1000, c.start + (q0 + ms) / 1000)), endAt = c.start + q1 / 1000;
+        // the italic words: each on its own, dropping into place out of a blur, fading in
+        const em1 = L.r1 * E, by1 = Math.round(yb + L.base1 * E + desc(ld.serif) * em1), nat1 = lineScale(ld.serif) * em1, d1 = Math.round(0.3 * em1);
+        L.top.forEach((m) => {
+          const x = Math.round(x0 + L.lefts[m] * E);
+          const tags = `\\fn${ld.serif}\\fsz${Math.round((em1 / fs) * 1000) / 1000}\\fsp${Math.round(LIFT_AT.topTrack * em1)}\\1c${colorOnly(s.color)}${shadow(em1)}\\1a&HFF&\\4a&HFF&\\t(0,${T.word},0.5,\\1a&H00&\\4a&H${sa}&)`;
+          strips(at(S.tops[m]), endAt, `{\\an1\\move(${x},${by1 - d1},${x},${by1},0,${T.word})}`, by1 - nat1 / 2, nat1, "{\\q2}" + word(from + m, words.length).replace(/^\{\\r/, `{\\r${tags}`), 2, 0, 0, [[by1 - nat1 / 2 - d1, nat1], [by1 - nat1 / 2, nat1]], T.word);
+        });
+        // the huge word, letter by letter (the others hidden, every letter keeping its place); its i dotless when lifted
+        const by = Math.round(yb + desc(s.font) * E), nat = lineScale(s.font) * E, d = Math.round(0.3 * E), xb = Math.round(x0 + L.bigLeft * E);
+        const shown = L.chars.map((ch, i) => (i === L.iAt ? (ch === "j" ? "ȷ" : "ı") : ch));
+        const tags = `\\fn${s.font}\\fsz${Math.round(L.E * 1000) / 1000}\\fsp${Math.round(LIFT_AT.track * E)}\\1c${colorOnly(s.color)}${shadow(E)}`;
+        shown.forEach((_, i) => {
+          if (/\s/.test(shown[i])) return;
+          const body = shown.map((x2, m) => `{\\r${tags}${m === i ? `\\1a&HFF&\\4a&HFF&\\blur${Math.round(0.05 * E)}\\t(0,${T.letter},0.5,\\1a&H00&\\4a&H${sa}&\\blur${Math.round(LIFT_SHADOW.blur * E * k * 10) / 10})` : "\\alpha&HFF&"}}${esc(x2)}`).join("");
+          strips(at(S.big + i * S.step), endAt, `{\\an1\\move(${xb},${by + d},${xb},${by},0,${T.letter})}`, by - nat / 2, nat, "{\\q2}" + body, 1, 0, 0, [[by - nat / 2 + d, nat], [by - nat / 2, nat]], T.letter);
+        });
+        // the lifted dot: on its i as the i lands, then flying up into the italic line, landing with a squash
+        if (L.iAt >= 0) {
+          const dw = Math.round(L.dot.d * E), dh = Math.round(L.dot.dh * E), dx = Math.round(x0 + L.dot.x * E), y0 = Math.round(yb + L.dot.fromY * E), y1 = Math.round(yb + L.dot.toY * E); // (its top: on the i, then on the italic baseline)
+          const tIn = S.big + L.iAt * S.step, box = `m 0 0 l ${dw} 0 ${dw} ${dh} 0 ${dh}`, look = `${shadow(E)}\\1c${colorOnly(ld.dot)}\\1a&H${alphaOf(ld.dot)}&`;
+          // (on the i, rising with it)
+          add(at(tIn), at(S.lift), `{\\an7\\move(${dx},${y0 + d},${dx},${y0},0,${T.letter})${look}\\alpha&HFF&\\t(0,${T.letter},\\alpha&H00&)\\p1}${box}{\\p0}`, 3);
+          // (flying up, easing out, then squashing as it lands and settling)
+          const M = Math.round(S.liftMs), sq = M + 80, back = M + 200;
+          add(at(S.lift), endAt, `{\\an7\\org(${dx + dw / 2},${y1 + dh})\\move(${dx},${y0},${dx},${y1},0,${M})${look}\\t(${M},${sq},\\fscx124\\fscy76)\\t(${sq},${back},\\fscx100\\fscy100)\\p1}${box}{\\p0}`, 3);
+        }
+      });
+      subAt(c.start, c.end, "", subY);
       continue;
     }
     if (s.effect === "cutout" && s.cutOut && words.length) {
@@ -2371,7 +2503,7 @@ ${events.join("\n")}
 export const spacesLines = (s: CaptionStyle) => !((s.effect && s.effect !== "wobble") || s.reveal || s.wordLines || s.keyword?.line);
 /** Styles the line spacing reaches: the plain layout's, and Cinematic's three lines. */
 export const takesLineSpacing = (s: CaptionStyle) =>
-  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark", "cardslide", "dropcap", "reveal4", "stack4", "dotstack", "cutout"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
+  spacesLines(s) || ["cine", "stack", "hook", "typo", "spark", "cardslide", "dropcap", "reveal4", "stack4", "dotstack", "cutout", "liftdot"].includes(s.effect ?? "") || !!s.reveal || !!s.stagger || !!s.wordLines;
 
 /** How tall a line of this text is, × the em: its fonts' own line height (what libass draws, so the editor matches). */
 export const lineBox = (s: CaptionStyle, text: string) =>

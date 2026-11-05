@@ -139,3 +139,7 @@
 .outline-cut { position: relative; display: inline-block; line-height: 1; white-space: nowrap; text-align: left; }
 .outline-cut .co-small { position: absolute; display: inline-block; line-height: 1; z-index: 2; }
 .outline-cut .co-svg { position: absolute; left: 0; top: 0; z-index: 1; }
+/* Lifted Dot: placed by the huge word's baseline (sizes in its em; lines 1em tall) */
+.lift-dot { position: relative; display: inline-block; line-height: 1; white-space: nowrap; text-align: left; }
+.lift-dot .ld-word, .lift-dot .ld-big { position: absolute; display: inline-block; line-height: 1; }
+.lift-dot .ld-dot { position: absolute; transform-origin: 50% 100%; }
