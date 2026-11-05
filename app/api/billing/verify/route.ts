@@ -18,5 +18,5 @@ export async function POST(req: Request) {
     .onConflictDoNothing()
     .returning();
   await applySubscription({ ...sub, notes: { userId: u.id } }, sub.status === "active" && first.length > 0);
-  return json({ ok: true, status: sub.status });
+  return json({ ok: true, status: sub.status, until: sub.current_end ? new Date(sub.current_end * 1000) : undefined });
 }

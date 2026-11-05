@@ -1,7 +1,11 @@
 "use client";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PAID, PLANS, type PlanId } from "@/lib/plans";
+
+const loadPass = () => import("@/components/PassReveal");
+const PassReveal = dynamic(loadPass, { ssr: false });
 
 type RazorpayCtor = new (o: Record<string, unknown>) => { open(): void; on(event: "payment.failed", cb: (r: { error?: { description?: string } }) => void): void };
 
@@ -23,12 +27,16 @@ type Props = {
   prepaidUntil?: string;  // a one-time payment's plan runs until this date
   subscriptions: boolean; // monthly auto-renewing subscriptions are switched on
   preselect?: string;
+  holder: string;         // the name on the pass
+  passNo: string;
+  until?: string;         // when the paid plan ends (ISO)
 };
 
-export default function BillingActions({ current, live, prepaidUntil, subscriptions, preselect }: Props) {
+export default function BillingActions({ current, live, prepaidUntil, subscriptions, preselect, holder, passNo, until }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState("");
+  const [pass, setPass] = useState<{ plan: PlanId; until?: string; fresh: boolean } | null>(null);
 
   /** One-time payment (Standard Checkout): an order for the plan's price, then the payment is verified on the server. */
   async function payOnce(plan: PlanId) {
@@ -39,6 +47,7 @@ export default function BillingActions({ current, live, prepaidUntil, subscripti
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       const Razorpay = await loadCheckout();
+      void loadPass(); // ready for the moment the payment goes through
       const rzp = new Razorpay({
         key: data.keyId,
         order_id: data.orderId,
@@ -53,6 +62,7 @@ export default function BillingActions({ current, live, prepaidUntil, subscripti
           const v = await fetch("/api/billing/order/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(r) });
           const out = await v.json().catch(() => ({}));
           setMsg(v.ok ? `You're on ${PLANS[plan].name}. Your minutes are ready.` : out.error || "Payment received; it may take a minute to show here.");
+          if (v.ok) setPass({ plan, until: out.until, fresh: true });
           setBusy("");
           router.refresh();
         },
@@ -75,6 +85,7 @@ export default function BillingActions({ current, live, prepaidUntil, subscripti
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       const Razorpay = await loadCheckout();
+      void loadPass(); // ready for the moment the payment goes through
       new Razorpay({
         key: data.keyId,
         subscription_id: data.subscriptionId,
@@ -84,7 +95,11 @@ export default function BillingActions({ current, live, prepaidUntil, subscripti
         theme: { color: "#0a0a0a" },
         handler: async (r: Record<string, string>) => {
           const v = await fetch("/api/billing/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(r) });
-          setMsg(v.ok ? `You're on ${PLANS[plan].name}. Your minutes are ready.` : "Payment received; it may take a minute to show here.");
+          const out = await v.json().catch(() => ({}));
+          // A subscription can be authorised before its first charge: the minutes, and the pass, come with the charge.
+          const charged = v.ok && out.status === "active";
+          setMsg(charged ? `You're on ${PLANS[plan].name}. Your minutes are ready.` : "Payment received; it may take a minute to show here.");
+          if (charged) setPass({ plan, until: out.until, fresh: true });
           setBusy("");
           router.refresh();
         },
@@ -118,6 +133,7 @@ export default function BillingActions({ current, live, prepaidUntil, subscripti
               <div className="amt">₹{p.priceInr.toLocaleString("en-IN")}<small> / month</small></div>
               <p className="muted">{p.minutes.toLocaleString("en-IN")} minutes a month. {p.blurb}.</p>
               {mine && <span className="current">{prepaidUntil ? `Your plan, until ${prepaidUntil}` : "Your current plan"}</span>}
+              {mine && <button className="link" onClick={() => setPass({ plan: id, until, fresh: false })}>See your pass</button>}
               {!live && (
                 <button className={`btn${preselect === id || mine ? "" : " ghost"}`} disabled={!!busy} onClick={() => payOnce(id)}>
                   {busy === id ? "Opening checkout…" : mine ? `Add 30 days · ₹${p.priceInr.toLocaleString("en-IN")}` : `Pay ₹${p.priceInr.toLocaleString("en-IN")} for 30 days`}
@@ -137,6 +153,7 @@ export default function BillingActions({ current, live, prepaidUntil, subscripti
         </p>
       )}
       {msg && <p role="status" className="notice">{msg}</p>}
+      {pass && <PassReveal {...pass} holder={holder} passNo={passNo} onClose={() => setPass(null)} />}
     </>
   );
 }

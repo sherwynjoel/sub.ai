@@ -996,3 +996,45 @@ a.signout { text-decoration: none; }
   .pr-state.busy { background: var(--line-2); color: var(--ink); }
   .pr-state.bad { background: #ffd9d9; color: #8a1010; }
 }
+
+/* the Vasanam pass, shown when a payment goes through: a dark room, a holographic card, the news as a subtitle.
+   Everything on the card is in card millimetres (--mm), so it scales with the card. */
+html:has(.pass-reveal[open]) { overflow: hidden; }
+.pass-reveal { position: fixed; inset: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 20px 16px; border: 0; border-radius: 0; overflow: auto; color: #fff; background: radial-gradient(70% 55% at 50% 38%, #24243a, #08080e 75%); }
+.pass-reveal:focus { outline: none; }
+.pass-reveal[open] { display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: 14px; animation: pass-dim .5s ease both; }
+@keyframes pass-dim { from { opacity: 0; } }
+.holo { --w: min(480px, calc(100vw - 32px), calc(58dvh * 1.65)); --mm: calc(var(--w) / 91); flex: none; width: var(--w); aspect-ratio: 91 / 55; margin-bottom: 18px; perspective: 1200px; }
+.holo-card { position: relative; display: block; width: 100%; height: 100%; padding: 0; border: 0; border-radius: calc(3.5 * var(--mm)); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; transform-style: preserve-3d; -webkit-tap-highlight-color: transparent; }
+.holo-card:focus-visible { outline: 2px solid #fff; outline-offset: 6px; }
+.holo-spin { position: absolute; inset: 0; display: block; transform-style: preserve-3d; }
+.holo-face { position: absolute; inset: 0; display: block; overflow: hidden; border-radius: calc(3.5 * var(--mm)); background: linear-gradient(150deg, #1b1b2c, #0b0b13 60%, #15151f); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .14), 0 30px 70px -20px rgb(0 0 0 / .8); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.holo-foil, .holo-foil > span, .holo-glare { position: absolute; inset: 0; display: block; pointer-events: none; }
+.holo-glare { background: radial-gradient(farthest-corner circle at var(--mx) var(--my), rgb(255 255 255 / .24), rgb(255 255 255 / .05) 30%, transparent 60%); opacity: var(--holo); }
+.pass-side { position: absolute; inset: 0; display: flex; flex-direction: column; padding: calc(5 * var(--mm)) calc(6 * var(--mm)); text-shadow: 0 1px 8px rgb(0 0 0 / .55); }
+.pass-row { display: flex; align-items: center; justify-content: space-between; gap: calc(3 * var(--mm)); }
+.pass-brand { display: inline-flex; align-items: center; gap: .5em; font: 700 calc(3.8 * var(--mm)) var(--font-display); letter-spacing: -.02em; }
+.pass-brand i { width: 1.1em; height: 1.1em; border-radius: .3em; background: linear-gradient(transparent 56%, #d4ff3f 56% 72%, transparent 72%), #000; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .3); }
+.pass-tier { padding: .35em .8em; border-radius: 99px; background: rgb(0 0 0 / .4); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .3); font: 600 calc(2.3 * var(--mm)) var(--font-sans); letter-spacing: .02em; text-shadow: none; }
+.pass-ta { position: absolute; right: calc(5 * var(--mm)); top: calc(17 * var(--mm)); font: 700 calc(9.5 * var(--mm)) var(--font-tamil); color: rgb(255 255 255 / .22); text-shadow: none; }
+.pass-mins { margin-top: auto; margin-bottom: calc(2.5 * var(--mm)); font: 700 calc(16 * var(--mm)) / .95 var(--font-display); letter-spacing: -.05em; }
+.pass-mins small { margin-left: .35em; font: 600 calc(3.2 * var(--mm)) var(--font-sans); letter-spacing: 0; }
+.pass-foot { align-items: flex-end; }
+.pass-field { min-width: 0; overflow: hidden; font: 600 calc(2.8 * var(--mm)) / 1.3 var(--font-sans); white-space: nowrap; text-overflow: ellipsis; }
+.pass-field.end { flex: none; text-align: right; }
+.pass-field small, .pass-opens small { display: block; font: 500 calc(1.9 * var(--mm)) / 1.4 var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: rgb(255 255 255 / .62); }
+.pass-strip { position: absolute; inset: calc(5 * var(--mm)) 0 auto; height: calc(7 * var(--mm)); background: repeating-linear-gradient(90deg, transparent 0 calc(1.6 * var(--mm)), rgb(255 255 255 / .75) calc(1.6 * var(--mm)) calc(3 * var(--mm)), transparent calc(3 * var(--mm)) calc(4.4 * var(--mm))) 0 calc(.9 * var(--mm)) / 100% calc(1.1 * var(--mm)) no-repeat, repeating-linear-gradient(90deg, transparent 0 calc(1.6 * var(--mm)), rgb(255 255 255 / .75) calc(1.6 * var(--mm)) calc(3 * var(--mm)), transparent calc(3 * var(--mm)) calc(4.4 * var(--mm))) 0 calc(5 * var(--mm)) / 100% calc(1.1 * var(--mm)) no-repeat, #000; }
+.pass-opens { display: grid; gap: calc(.7 * var(--mm)); margin-top: calc(10 * var(--mm)); font: 600 calc(3.3 * var(--mm)) / 1.25 var(--font-sans); }
+.pass-opens b { font-weight: 600; }
+.pass-opens small { margin-bottom: calc(.6 * var(--mm)); }
+.pass-side > .pass-foot:last-child { margin-top: auto; }
+.pass-mins + .pass-foot { margin-top: 0 !important; }
+.pass-caption { max-width: 34em; margin: 0; padding: .3em .7em; border-radius: 8px; background: rgb(0 0 0 / .6); font: 600 clamp(1.05rem, 3.4vw, 1.35rem) / 1.4 var(--font-sans); text-align: center; text-wrap: balance; animation: pass-word .3s ease 1.6s both; }
+.pass-word { animation: pass-word .3s ease both; animation-delay: calc(1.7s + var(--i) * .16s); }
+@keyframes pass-word { from { opacity: 0; } }
+.pass-hot { color: #d4ff3f; }
+.pass-note { margin: 0; color: rgb(255 255 255 / .68); font-size: .95rem; text-align: center; text-wrap: balance; animation: pass-word .6s ease 3.6s both; }
+.pass-actions { display: flex; align-items: center; gap: 20px; margin-top: 6px; animation: pass-word .6s ease 3.9s both; }
+.pass-actions .link { color: rgb(255 255 255 / .75); }
+.btn.pass-go { border-color: #d4ff3f; background: #d4ff3f; color: #0a0a0a; }
+@media (prefers-reduced-motion: reduce) { .pass-reveal[open], .pass-caption, .pass-word, .pass-note, .pass-actions { animation: none; } }
