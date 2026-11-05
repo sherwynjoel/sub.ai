@@ -1,5 +1,5 @@
 "use client";
-import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardLines, cardSchedule, dropCap, dropLines, dropSchedule, DROP_AT, DROP_TIME, textReveal, revealLines, revealSchedule, REVEAL_AT, REVEAL_TIME, REVEAL_SHADOW, REVEAL_LAYER, heroStack, stackPages, stackSchedule, dotStack, dotSchedule, DOT_AT, DOT_SHADOW, DOT_TIME, outlineCut, cutSchedule, CUT_AT, CUT_TIME, liftDot, liftSchedule, LIFT_AT, LIFT_SHADOW, LIFT_TIME, flashStack, flashSchedule, FLASH_AT, FLASH_SHADOW, FLASH_TIME, STACK_AT, STACK_SHADOW, STACK_TIME, mixHex, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardLines, cardSchedule, dropCap, dropLines, dropSchedule, DROP_AT, DROP_TIME, textReveal, revealLines, revealSchedule, REVEAL_AT, REVEAL_TIME, REVEAL_SHADOW, REVEAL_LAYER, heroStack, stackPages, stackSchedule, dotStack, dotSchedule, DOT_AT, DOT_SHADOW, DOT_TIME, outlineCut, cutSchedule, CUT_AT, CUT_TIME, liftDot, liftSchedule, LIFT_AT, LIFT_SHADOW, LIFT_TIME, flashStack, flashSchedule, FLASH_AT, FLASH_SHADOW, FLASH_TIME, FLASH_STRIKE, FLASH_BURST, strikeAt, STACK_AT, STACK_SHADOW, STACK_TIME, mixHex, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { cssBaseline, lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -280,15 +280,16 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
     const now = (time - start) * 1000 - q0, b0 = cssBaseline(F.fontOf(0)), last = F.rows.length - 1;
     const k = (s.shadow ?? 0) / 0.05, sc = s.shadowColor ?? "#000000", sa = Math.round(FLASH_SHADOW.alpha * 255).toString(16).padStart(2, "0");
     const shadow = k ? `0 ${(FLASH_SHADOW.y * k).toFixed(3)}em ${(FLASH_SHADOW.blur * k * 1.5).toFixed(3)}em ${sc}${sa}` : "none";
-    const h0 = T.on + T.hold, h1 = h0 + T.wipe;
+    const len = FLASH_STRIKE[FLASH_STRIKE.length - 1][0], fade0 = FLASH_STRIKE[FLASH_STRIKE.length - 2][0];
     body = <span className="flash-box" style={{ fontSize: `${F.E.toFixed(3)}em`, width: `${F.W.toFixed(3)}em`, height: `${(b0 + F.base[last] + 1 - cssBaseline(F.fontOf(last))).toFixed(3)}em`, color: s.color }}>
       {F.at.map((w, m) => {
         const t = now - S[m], f = F.fontOf(w.r);
-        const wipe = t < h0 ? 1 : Math.max(0, 1 - Math.pow(Math.min(1, (t - h0) / T.wipe), 0.7));
+        const burst = 1 + (FLASH_BURST - 1) * Math.pow(Math.min(1, Math.max(0, (t - fade0) / (len - fade0))), 0.6);
         return <span key={from + m}>
           {t >= T.on && <span className="fb-word" style={{ fontFamily: stack(f, s.fontTa), left: `${w.x.toFixed(3)}em`, top: `${(b0 + F.base[w.r] - cssBaseline(f)).toFixed(3)}em`, letterSpacing: `${F.trOf(w.r)}em`, textShadow: shadow }}>{word(from + m)}</span>}
-          {t >= 0 && t < h1 && <span className="fb-flash" style={{ left: `${(w.x - FLASH_AT.padL).toFixed(3)}em`, top: `${(b0 + F.base[w.r] + FLASH_AT.top).toFixed(3)}em`,
-            width: `${((w.w + FLASH_AT.padL + FLASH_AT.pad) * wipe).toFixed(3)}em`, height: `${(FLASH_AT.bottom - FLASH_AT.top).toFixed(3)}em`, background: fb.flash, opacity: Math.min(1, t / T.on) }} />}
+          {t >= 0 && t < len && <span className="fb-flash" style={{ left: `${(w.x - FLASH_AT.padL).toFixed(3)}em`, top: `${(b0 + F.base[w.r] + FLASH_AT.top).toFixed(3)}em`,
+            width: `${(w.w + FLASH_AT.padL + FLASH_AT.pad).toFixed(3)}em`, height: `${(FLASH_AT.bottom - FLASH_AT.top).toFixed(3)}em`, background: fb.flash, opacity: strikeAt(t),
+            transform: `scale(${burst.toFixed(3)})`, boxShadow: `0 0 0.08em 0.04em ${fb.flash}` }} />}
         </span>;
       })}
     </span>;

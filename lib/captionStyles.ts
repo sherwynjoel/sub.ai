@@ -349,7 +349,21 @@ export function heroStack(words: string[], s: CaptionStyle & Placement, ratio = 
  */
 // (padL: the box further past the word's left: an italic's descenders lean left)
 export const FLASH_AT = { step: 0.8, top: -0.74, bottom: 0.24, pad: 0.05, padL: 0.14, track: -0.035, serifTrack: -0.02 };
-export const FLASH_TIME = { on: 50, hold: 90, wipe: 230, gap: 70 };
+export const FLASH_TIME = { on: 30, hold: 90, wipe: 230, gap: 70 };
+/**
+ * The box's strike, like lightning (ms from its start: [time, opacity]): full at once, out, a second hit, out, a third,
+ * then fading away as it bursts a little bigger; the word shows from the first hit.
+ */
+export const FLASH_STRIKE: [number, number][] = [[0, 1], [45, 1], [70, 0.15], [100, 1], [140, 0.25], [165, 1], [350, 0]];
+export const FLASH_BURST = 1.12; // (how much bigger the box is as it fades)
+export const flashLen = () => FLASH_STRIKE[FLASH_STRIKE.length - 1][0];
+/** The strike's opacity at ms (straight between its points). */
+export function strikeAt(ms: number) {
+  const P = FLASH_STRIKE;
+  if (ms < 0 || ms >= P[P.length - 1][0]) return 0;
+  const k = P.findIndex(([t]) => t > ms), [t0, a0] = P[k - 1], [t1, a1] = P[k];
+  return a0 + ((a1 - a0) * (ms - t0)) / (t1 - t0);
+}
 export const FLASH_SHADOW = { y: 0.02, blur: 0.08, alpha: 0.35 };
 /**
  * The lines (up to four, a word or two each, balanced), right-aligned; the first and last in the italic serif (one or
@@ -386,7 +400,7 @@ export function flashStack(words: string[], s: CaptionStyle & Placement, ratio =
 /** When each word's box flashes on (ms from the part's start): as it's said, a moment after the one before; closer
     together to finish before the part ends. */
 export function flashSchedule(starts: number[], partMs: number) {
-  const T = FLASH_TIME, len = T.on + T.hold + T.wipe, out: number[] = [];
+  const T = FLASH_TIME, len = flashLen(), out: number[] = [];
   starts.forEach((t, j) => out.push(Math.max(t, j ? out[j - 1] + T.gap : 0)));
   const room = partMs - 60, first = out[0] ?? 0, last = (out[out.length - 1] ?? 0) + len;
   if (last > room && last > first) { const f = Math.max(0.2, (room - len - first) / Math.max(1, last - len - first)); for (let j = 0; j < out.length; j++) out[j] = Math.max(first + (out[j] - first) * f, j ? out[j - 1] + 25 : 0); }
@@ -1743,13 +1757,15 @@ export function buildAss(cues: Cue[], o: Opts) {
         const at = (ms: number) => Math.min(c.start + (q1 - 50) / 1000, Math.max(c.start + q0 / 1000, c.start + (q0 + ms) / 1000)), endAt = c.start + q1 / 1000;
         F.at.forEach((w, m) => {
           const f = F.fontOf(w.r), base = Math.round(yb + F.base[w.r] * E), by = base + Math.round((lineScale(f) - assAscent(f)) * E), x = Math.round(x0 + w.x * E);
-          const t0 = S[m], tWord = t0 + T.on; // (the word under the box once the box covers it)
+          const t0 = S[m], tWord = t0 + T.on; // (the word under the box, from just after its first hit)
           const tags = `\\fn${f}\\fsz${Math.round(F.E * 1000) / 1000}\\fsp${Math.round(F.trOf(w.r) * E)}\\1c${colorOnly(s.color)}${shadow(E)}`;
           strips(at(tWord), endAt, `{\\an1\\pos(${x},${by})}`, base - (assAscent(f) * E) / 2, lineScale(f) * E, "{\\q2}" + word(from + m, words.length).replace(/^\{\\r/, `{\\r${tags}`), 1);
-          // the box: snapping on (a flash), held, then pulled off from the right, uncovering the word
+          // the box: striking like lightning (full at once, flickering, then bursting a little bigger as it fades), a glow
+          // around it; the word under it from the first hit
           const bx = Math.round(x - FLASH_AT.padL * E), bw = Math.round((w.w + FLASH_AT.padL + FLASH_AT.pad) * E), btop = Math.round(base + FLASH_AT.top * E), bh = Math.round((FLASH_AT.bottom - FLASH_AT.top) * E);
-          const clip = (r: number) => `\\clip(${bx},${btop - 2},${r},${btop + bh + 2})`, h0 = T.on + T.hold, h1 = h0 + T.wipe;
-          add(at(t0), at(t0 + h1), `{\\an7\\pos(${bx},${btop})${clip(bx + bw)}\\alpha&HFF&\\t(0,${T.on},\\alpha&H00&)\\t(${h0},${h1},0.7,${clip(bx)})\\bord0\\shad0\\1c${colorOnly(fb.flash)}\\p1}m 0 0 l ${bw} 0 ${bw} ${bh} 0 ${bh}{\\p0}`, 2);
+          const P = FLASH_STRIKE, al = (o: number) => `\\alpha&H${hex2(255 * (1 - o))}&`, last = P[P.length - 1][0], z = Math.round(FLASH_BURST * 100);
+          const strike = P.slice(1).map(([t1, o], i) => `\\t(${P[i][0]},${t1},${al(o)})`).join("") + `\\t(${P[P.length - 2][0]},${last},0.6,\\fscx${z}\\fscy${z})`;
+          add(at(t0), at(t0 + last), `{\\an5\\pos(${bx + Math.round(bw / 2)},${btop + Math.round(bh / 2)})${al(P[0][1])}${strike}\\bord${Math.round(0.06 * E)}\\3c${colorOnly(fb.flash)}\\blur${Math.round(0.05 * E)}\\shad0\\1c${colorOnly(fb.flash)}\\p1}m 0 0 l ${bw} 0 ${bw} ${bh} 0 ${bh}{\\p0}`, 2);
         });
       });
       subAt(c.start, c.end, "", subY);

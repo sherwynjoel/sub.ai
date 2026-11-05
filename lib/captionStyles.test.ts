@@ -825,7 +825,8 @@ test("Lifted Dot: with no i, a tall letter's stem grows up into the italic line 
 });
 
 test("Flash Box: lines as the reference, a box flashing onto each word as it's said and pulling off it, within the caption", async () => {
-  const { flashStack, flashSchedule, FLASH_TIME } = await import("./captionStyles");
+  const { flashStack, flashSchedule, flashLen, strikeAt } = await import("./captionStyles");
+  assert.ok(strikeAt(10) === 1 && strikeAt(70) < 0.3 && strikeAt(100) === 1 && strikeAt(400) === 0, "strikes like lightning: on, out, on, then gone");
   const s = resolveStyle("cc-flash-box");
   const W = "For anyone of our partners".split(" "), F = flashStack(W, s);
   assert.deepEqual(F.rows.map((r) => r.map((i) => W[i]).join(" ")), ["For", "anyone", "of our", "partners"]);
@@ -835,7 +836,7 @@ test("Flash Box: lines as the reference, a box flashing onto each word as it's s
   assert.equal(resolveStyle("cc-flash-box", { accent: "#FFE000" }).flashBox?.flash, "#FFE000", "the box colour is editable");
   assert.ok(flashStack(W, resolveStyle("cc-flash-box", { lineHeight: 1.5 })).base[3] > F.base[3] && takesLineSpacing(s), "line spacing");
   const w = wordTimes(W.join(" "), 0, 1), S = flashSchedule(w.map((x) => x.s * 1000), 1000);
-  assert.ok(S.every((t, j) => !j || t > S[j - 1]) && S.at(-1)! + FLASH_TIME.on + FLASH_TIME.hold + FLASH_TIME.wipe <= 1000, "each word in turn, done by the caption's end");
+  assert.ok(S.every((t, j) => !j || t > S[j - 1]) && S.at(-1)! + flashLen() <= 1000, "each word in turn, done by the caption's end");
   const ass = buildAss([{ start: 0, end: 3, ta: W.join(" "), en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-flash-box", lang: "ta", width: 1080, height: 1920 });
   assert.equal(ass.split("\n").filter((l) => /\\p1/.test(l)).length, 5, "a box for each word");
 });
