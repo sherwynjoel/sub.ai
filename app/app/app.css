@@ -1066,5 +1066,9 @@ html:has(.pass-reveal[open]) { overflow: hidden; }
 .ed-rename, .pr-rename { display: inline-grid; place-items: center; flex: none; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--muted); cursor: pointer; }
 .ed-rename:hover, .pr-rename:hover { background: var(--line-2); color: var(--ink); }
 .project-rows li { position: relative; }
-.project-rows li a { padding-right: 48px; }
-.pr-rename { position: absolute; right: 7px; top: 50%; translate: 0 -50%; }
+.project-rows li a { padding-right: 84px; }
+.pr-tools { position: absolute; right: 7px; top: 50%; translate: 0 -50%; display: flex; }
+.pr-delete:hover { color: var(--bad); }
+.rename-box h2 { margin: 0 0 6px; font-size: 1.15rem; overflow-wrap: anywhere; }
+.rename-box p { margin: 0 0 12px; color: var(--muted); }
+.rename-box p.error { color: var(--bad); }
