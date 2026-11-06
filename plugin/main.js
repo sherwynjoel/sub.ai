@@ -17,6 +17,8 @@
 
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k) || ""; localStorage.setItem(k, v); } catch (e) { return ""; } }
   function server() { return (store("vs_server") || DEFAULT_SERVER).replace(/\/+$/, ""); }
+  // The first server is gone. A panel that connected to it saved its address, which would send every new key there.
+  if (/13[-.]201[-.]93[-.]154/.test(store("vs_server"))) store("vs_server", "");
   var hostEval = function (script) { return new Promise(function (r) { cep.evalScript(script, r); }); };
   // Premiere loads host.jsx once, when the panel first opens in a session; after an update it keeps the old copy
   // until it restarts (an old copy put new templates' captions off screen). Load this version's copy before any call.
@@ -99,8 +101,12 @@
     // only once it works: a typo must not replace the key that was working.
     var oldKey = store("vs_key"), oldServer = store("vs_server");
     var undo = function () { store("vs_key", oldKey); store("vs_server", oldServer); };
+    // The website keeps showing a short form of the key (vsn_abcd…wxyz) after the page is left; the full key is shown once.
+    if (/[…•*]|\.\.\./.test($("key").value)) { $("connectMsg").textContent = "That's only the short form of the key. On the website's Plugin page, click Create a new key, copy it and paste it here."; return; }
     if ($("key").value.trim()) store("vs_key", $("key").value.trim());
-    if ($("server").value.trim()) store("vs_server", $("server").value.trim());
+    // Saved only when it isn't the panel's own address, so an update can move every panel to a new one.
+    var address = $("server").value.trim().replace(/\/+$/, "");
+    if (address) store("vs_server", address === DEFAULT_SERVER ? "" : address);
     var tried = server();
     $("connectMsg").textContent = "Connecting to " + tried + "…";
     refreshAccount().then(function (ok) {
