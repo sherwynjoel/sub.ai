@@ -70,6 +70,11 @@ export const jobs = pgTable("jobs", {
   renderProgress: integer("render_progress").notNull().default(0),
   renderPath: text("render_path"),
   renderError: text("render_error"),
+  overlayStatus: text("overlay_status"), // null | queued | rendering | done | failed (the styled captions alone, for the Adobe panel)
+  overlayKey: text("overlay_key"), // what it was made from (lib/overlay.ts): the same again needs no new render
+  overlayLang: text("overlay_lang").notNull().default("both"),
+  overlayProgress: integer("overlay_progress").notNull().default(0),
+  overlayPath: text("overlay_path"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

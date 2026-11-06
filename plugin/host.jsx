@@ -59,6 +59,80 @@ function vs_pproFindClip(mediaPath) {
   }
 }
 
+// The website's styled captions (a transparent video made by the server) above the clip, lined up with it and trimmed
+// to it; file is the .mov, mediaPath the clip's own file, offset where the clip's first frame would be on the timeline.
+// It's named like our other graphics, so placing again replaces it.
+function vs_pproPlaceOverlay(file, mediaPath, offset, inS, outS) {
+  try {
+    var seq = app.project.activeSequence;
+    if (!seq) return "ERR|Open a sequence first.";
+    vs_clearOurGraphics(seq);
+    // The clip, for its track and framing: the selected one if the same file is on the timeline more than once.
+    var src = null, srcTrack = -1, t, k;
+    for (t = 0; t < seq.videoTracks.numTracks; t++) {
+      var cs = seq.videoTracks[t].clips;
+      for (k = 0; k < cs.numItems; k++) {
+        var c = cs[k];
+        if (!c.projectItem || c.projectItem.getMediaPath() !== mediaPath) continue;
+        if (!src || c.isSelected()) { src = c; srcTrack = t; }
+      }
+    }
+    var item = vs_overlayItem(file);
+    if (!item) return "ERR|Premiere couldn't import the styled captions.";
+    item.setInPoint(inS + 0.001, 4); // 4: video and audio; a hair on, or a rounded time lands a frame early
+    item.setOutPoint(outS + 0.001, 4);
+    var start = offset + inS, end = offset + outS, target = -1;
+    for (t = srcTrack + 1; t < seq.videoTracks.numTracks && target < 0; t++) {
+      var busy = false, tc = seq.videoTracks[t].clips;
+      for (k = 0; k < tc.numItems; k++) if (tc[k].start.seconds < end && tc[k].end.seconds > start) busy = true;
+      if (!busy) target = t;
+    }
+    if (target < 0) {
+      var have = seq.videoTracks.numTracks;
+      try { app.enableQE(); qe.project.getActiveSequence().addTracks(1, have, 0, 0, 0, 0); } catch (e) {}
+      if (seq.videoTracks.numTracks <= have) return "ERR|Add an empty video track above the clip, then place again.";
+      target = have;
+    }
+    seq.videoTracks[target].overwriteClip(item, start);
+    var placed = null, pc = seq.videoTracks[target].clips;
+    for (k = 0; k < pc.numItems; k++) if (Math.abs(pc[k].start.seconds - start) < 0.05) placed = pc[k];
+    if (!placed) return "ERR|Premiere didn't place the styled captions.";
+    placed.name = "Vasanam 1";
+    if (src) vs_copyMotion(src, placed);
+    return "OK|Added the styled captions on V" + (target + 1) + ".";
+  } catch (e) {
+    return "ERR|" + e.toString();
+  }
+}
+
+// The .mov as a project item, imported into a Vasanam bin the first time.
+function vs_overlayItem(file) {
+  var root = app.project.rootItem, bin = null, i;
+  for (i = 0; i < root.children.numItems; i++) if (root.children[i].name === "Vasanam" && root.children[i].type === ProjectItemType.BIN) bin = root.children[i];
+  if (!bin) bin = root.createBin("Vasanam");
+  var find = function () {
+    for (var n = 0; n < bin.children.numItems; n++) if (bin.children[n].type === ProjectItemType.CLIP && bin.children[n].getMediaPath() === file) return bin.children[n];
+    return null;
+  };
+  var got = find();
+  if (got) return got;
+  app.project.importFiles([file], true, bin, false);
+  return find();
+}
+
+// The overlay sits on the picture as the clip does (a clip scaled to fit a differently sized sequence).
+function vs_copyMotion(from, to) {
+  var motion = function (clip) {
+    for (var i = 0; i < clip.components.numItems; i++) if (clip.components[i].matchName === "AE.ADBE Motion") return clip.components[i];
+    return null;
+  };
+  var a = motion(from), b = motion(to);
+  if (!a || !b) return;
+  for (var p = 0; p < 6 && p < a.properties.numItems && p < b.properties.numItems; p++) { // position to anchor point, not the crop
+    try { b.properties[p].setValue(a.properties[p].getValue(), true); } catch (e) {}
+  }
+}
+
 // Imports an SRT and places it as a caption track on the active sequence.
 // Premiere's scripting API can't style captions; the user styles the track in Essential Graphics.
 // Remove the styled captions an earlier placement put on the sequence ("Vasanam <n>" clips) and their template
@@ -512,6 +586,46 @@ function vs_aeIsPortrait() {
     var comp = app.project.activeItem;
     return "OK|" + (comp instanceof CompItem && comp.height > comp.width ? "1" : "0");
   } catch (e) {
+    return "ERR|" + e.toString();
+  }
+}
+
+// The website's styled captions above the clip in the active comp, lined up with its layer and trimmed to it.
+function vs_aePlaceOverlay(file, mediaPath, offset, inS, outS) {
+  try {
+    var comp = app.project.activeItem;
+    if (!(comp instanceof CompItem)) return "ERR|Open a composition first.";
+    app.beginUndoGroup("Vasanam subtitles");
+    var r, src = null, picked = new File(mediaPath).fsName;
+    for (r = comp.numLayers; r >= 1; r--) {
+      var l = comp.layer(r);
+      if (/^Vasanam \d+$/.test(l.name)) l.remove();
+    }
+    for (r = comp.numLayers; r >= 1; r--) {
+      var c = comp.layer(r);
+      if (c.source && c.source.file && c.source.file.fsName === picked && (!src || c.selected)) src = c;
+    }
+    var want = new File(file), item = null;
+    for (r = 1; r <= app.project.numItems; r++) {
+      var it = app.project.item(r);
+      if (it instanceof FootageItem && it.file && it.file.fsName === want.fsName) item = it;
+    }
+    if (!item) item = app.project.importFile(new ImportOptions(want));
+    item.mainSource.alphaMode = AlphaMode.STRAIGHT;
+    var layer = comp.layers.add(item);
+    layer.name = "Vasanam 1";
+    layer.startTime = offset;
+    layer.inPoint = offset + inS;
+    layer.outPoint = offset + outS;
+    if (src) {
+      layer.moveBefore(src);
+      var props = ["Anchor Point", "Position", "Scale", "Rotation"];
+      for (r = 0; r < props.length; r++) layer.property("Transform").property(props[r]).setValue(src.property("Transform").property(props[r]).value);
+    }
+    app.endUndoGroup();
+    return "OK|Added the styled captions above the clip.";
+  } catch (e) {
+    app.endUndoGroup();
     return "ERR|" + e.toString();
   }
 }

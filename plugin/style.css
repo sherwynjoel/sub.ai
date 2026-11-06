@@ -91,6 +91,8 @@ details label { margin-top: 8px; }
 .tile[disabled]:hover { border-color: var(--line); }
 .tile .pic { display: block; aspect-ratio: 16 / 6; border-radius: 5px; overflow: hidden; background: #000; }
 .tile .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tile .pic.reel { aspect-ratio: 4 / 5; }
+.ghead { grid-column: 1 / -1; margin: 8px 0 2px; font-size: 11px; font-weight: 600; color: var(--muted); }
 .tile .pic.plain { display: grid; place-items: center; font-size: 11px; font-weight: 600; color: #fff; }
 .tile .name { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px 1px; }
 .tile.on .name, .current .tile .name { color: var(--text); font-weight: 600; }

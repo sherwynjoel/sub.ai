@@ -37,11 +37,11 @@ export async function POST(req: Request, { params }: Ctx) {
   }
   if (!j.filePath && !j.audioPath) return json({ error: "The video was removed after 7 days, so the captions can't be made again. Upload it again to change the caption type." }, 409);
   if (j.redos >= MAX_REDOS) return json({ error: `You've changed this project's caption type ${MAX_REDOS} times. Upload the video again for another type.` }, 429);
-  if (j.renderPath) await unlink(j.renderPath).catch(() => {});
+  for (const f of [j.renderPath, j.overlayPath]) if (f) await unlink(f).catch(() => {});
   await db.update(jobs).set({
     script: want.script, withEnglish: want.english, captionCustom: { ...j.captionCustom, show: want.show },
     status: "queued", progress: 0, error: null, cues: null, speech: null,
-    renderStatus: null, renderPath: null, renderError: null, redos: j.redos + 1, updatedAt: new Date(),
+    renderStatus: null, renderPath: null, renderError: null, overlayStatus: null, overlayPath: null, overlayKey: null, redos: j.redos + 1, updatedAt: new Date(),
   }).where(eq(jobs.id, j.id));
   return json({ ok: true, redone: true });
 }

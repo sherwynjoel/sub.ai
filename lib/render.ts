@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import type { Cue } from "@/db";
 import { BLENDS, buildAss, canvasSize, cutsOut, maskAss, punchBlend, resolveStyle, type CaptionCustom } from "@/lib/captionStyles";
-import { audioCodec, bin, STORAGE, videoSize } from "@/lib/media";
+import { audioCodec, bin, STORAGE, videoRate, videoSize } from "@/lib/media";
 import { englishCues } from "@/lib/subtitles";
 import { BRAND } from "@/lib/brand";
 import { zoomExpr, zoomMoments, zoomOf } from "@/lib/zoom";
@@ -22,23 +22,13 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
   const src = size ?? { width: 1920, height: 1080 };
   const canvas = job.captionCustom?.canvas;
   const { width, height } = canvasSize(canvas, src.width, src.height); // the exported frame
-  const lang = (["ta", "en", "both"].includes(job.renderLang) ? job.renderLang : "both") as "ta" | "en" | "both";
+  const lang = langOf(job);
   const dir = await mkdtemp(join(tmpdir(), "vasanam-render-"));
   const outDir = join(STORAGE, "renders");
   await mkdir(outDir, { recursive: true });
   const out = join(outDir, `${job.id}.mp4`);
   try {
-    // A blended look: the text is a window onto the video blended with the text colour (Negative: inverted). With
-    // only the punch blended (Setup & Punch Pro), the rest is drawn as plain text first and the punch is the mask.
-    const look = resolveStyle(job.captionStyle, job.captionCustom), blend = look.blend, partial = punchBlend(look);
-    const cut = cutsOut(look); // Outline Cut: the bold word drawn apart, the italic word (fattened) taken out of it
-    const assOf = (part?: "plain" | "punch" | "cutBase" | "cutBold" | "cutKnock") => buildAss(lang === "en" ? englishCues(job.cues) : job.cues, { styleId: job.captionStyle, custom: job.captionCustom, lang, width, height, part });
-    await writeFile(join(dir, "subs.ass"), cut ? assOf("cutBase") : partial ? assOf("plain") : blend ? maskAss(assOf()) : assOf(), "utf8");
-    if (cut) {
-      await writeFile(join(dir, "bold.ass"), maskAss(assOf("cutBold")), "utf8");
-      await writeFile(join(dir, "knock.ass"), assOf("cutKnock"), "utf8");
-    }
-    if (partial) await writeFile(join(dir, "mask.ass"), maskAss(assOf("punch")), "utf8");
+    const { look, blend, partial, cut } = await writeSubs(job, dir, lang, width, height);
     // Relative paths keep Windows drive colons out of the filter string, which ffmpeg would misparse.
     await cp(FONTS, join(dir, "fonts"), { recursive: true });
     const input = size
@@ -87,21 +77,144 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
       "-c:v", "libx264", "-preset", "superfast", "-crf", "22", "-pix_fmt", "yuv420p",
       ...(copyAudio ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", "160k"]), "-movflags", "+faststart", out,
     ];
-    await new Promise<void>((ok, fail) => {
-      const p = spawn(bin("ffmpeg"), args, { cwd: dir });
-      let err = "";
-      p.stderr.on("data", (d) => { err = (err + d).slice(-2000); });
-      p.stdout.on("data", (d) => {
-        const m = String(d).match(/out_time_us=(\d+)/g)?.pop();
-        if (m) onProgress(Math.min(99, Math.round((+m.split("=")[1] / 1e6 / Math.max(1, job.durationSec)) * 100)));
-      });
-      p.on("error", fail);
-      p.on("close", (code) => (code === 0 ? ok() : fail(new Error(`ffmpeg exited ${code}: ${err.trim()}`))));
-    });
+    await ffmpeg(args, dir, job.durationSec, onProgress);
     return out;
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+}
+
+/**
+ * The same captions with nothing under them, for the Adobe panel: a transparent QuickTime Animation .mov (lossless, and
+ * tiny for frames that are mostly empty) at the clip's size and frame rate, to lie above the clip on the timeline. The
+ * files and filters are the MP4 export's, so the two match frame for frame. The layers are built premultiplied and
+ * straightened at the end, which is what the editors read. Blended looks carry the blended picture of the clip inside
+ * the letters. The MP4's reframing and auto zoom change the video, so they aren't here.
+ */
+export async function renderOverlay(job: Job, onProgress: (pct: number) => void) {
+  const size = await videoSize(job.filePath);
+  const { width, height } = size ?? { width: 1920, height: 1080 };
+  const rate = (await videoRate(job.filePath)) ?? "30";
+  const lang = langOf(job);
+  const dir = await mkdtemp(join(tmpdir(), "vasanam-overlay-"));
+  const outDir = join(STORAGE, "overlays");
+  await mkdir(outDir, { recursive: true });
+  const out = join(outDir, `${job.id}.mov`);
+  try {
+    const { look, blend, partial, cut } = await writeSubs(job, dir, lang, width, height);
+    await cp(FONTS, join(dir, "fonts"), { recursive: true });
+    const canvas = (color: string) => `color=c=${color}:s=${width}x${height}:r=${rate},format=gbrp`;
+    const graph: string[] = [];
+    const input: string[] = [];
+    // What's painted, with its true transparency: the same paint on black and on white. On black it's the colour (already
+    // premultiplied); how much of the white still shows is what's see-through. (libass's own alpha option squares the
+    // alpha of anything translucent: glows, soft boxes and fades came out too faint.)
+    const paint = (filter: string, name: string) => graph.push(
+      `${canvas("black")},${filter}[${name}b];${canvas("white")},${filter}[${name}w];[${name}b]split[${name}c][${name}d];` +
+      `[${name}w][${name}d]blend=all_mode=subtract,extractplanes=g,negate[${name}a];[${name}c][${name}a]alphamerge,format=rgba[${name}]`);
+    const over = (under: string, top: string, out: string) => graph.push(`[${under}][${top}]overlay=alpha=premultiplied:format=rgb:shortest=1[${out}]`);
+    const subs = "ass=subs.ass:fontsdir=fonts:shaping=complex";
+    let video = "";
+    if (blend) {
+      input.push(...(size ? ["-i", job.filePath] : ["-f", "lavfi", "-i", `color=c=0x0c0c14:s=${width}x${height}:r=${rate}`]));
+      graph.push(`[0:v]fps=${rate},setsar=1[clip]`);
+      video = "clip";
+    }
+    const logo = await logoFile(job);
+    let logoLayer = "";
+    if (logo) {
+      const l = job.captionCustom.logo!, at = `x=${Math.round(l.x * width)}-w/2:y=${Math.round(l.y * height)}-h/2`;
+      input.push("-i", logo);
+      graph.push(`[${video ? 1 : 0}:v]scale=${Math.max(8, Math.round((width * l.size) / 2) * 2)}:-2,format=rgba,colorchannelmixer=aa=${l.opacity}${video ? ",split[logo1][logo2]" : "[logo1]"}`);
+      graph.push(`color=c=black@0:s=${width}x${height}:r=${rate},format=rgba[empty]`, `[logo1]${PREMULTIPLY}[logop]`, `[empty][logop]overlay=${at}:alpha=premultiplied:format=rgb[logol]`);
+      logoLayer = "logol";
+      if (video) { graph.push(`[clip][logo2]overlay=${at}[logoed]`); video = "logoed"; }
+    }
+    let last = "";
+    const add = (layer: string) => { if (last) { over(last, layer, `${layer}on`); last = `${layer}on`; } else last = layer; };
+    if (logoLayer) add(logoLayer);
+    if (cut) {
+      graph.push(`${canvas("black")}[cutfrom]`, cutLayer("cutfrom", look.cutOut!.bold));
+      add("cutl");
+      paint(subs, "plain");
+      add("plain");
+    } else if (partial && blend) {
+      paint(subs, "plain");
+      add("plain");
+      graph.push(blendLayer(video, BLENDS[blend][2], look.color, "mask.ass"));
+      add("blendl");
+    } else if (blend) {
+      graph.push(blendLayer(video, BLENDS[blend][2], look.color));
+      add("blendl");
+    } else {
+      paint(subs, "plain");
+      add("plain");
+    }
+    if (job.watermark) {
+      paint(watermarkText(width, height), "mark");
+      add("mark");
+    }
+    graph.push(`[${last}]format=gbrap,unpremultiply=inplace=1,format=argb[out]`);
+    await ffmpeg(["-y", "-v", "error", "-nostats", "-progress", "pipe:1", ...input, "-filter_complex", graph.join(";"), "-map", "[out]",
+      "-t", String(job.durationSec), "-c:v", "qtrle", out], dir, job.durationSec, onProgress);
+    return out;
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+const langOf = (job: Job) => (["ta", "en", "both"].includes(job.renderLang) ? job.renderLang : "both") as "ta" | "en" | "both";
+
+/** The job's captions as the .ass files its look needs, in dir. */
+async function writeSubs(job: Job, dir: string, lang: "ta" | "en" | "both", width: number, height: number) {
+  // A blended look: the text is a window onto the video blended with the text colour (Negative: inverted). With
+  // only the punch blended (Setup & Punch Pro), the rest is drawn as plain text first and the punch is the mask.
+  const look = resolveStyle(job.captionStyle, job.captionCustom), blend = look.blend, partial = punchBlend(look);
+  const cut = cutsOut(look); // Outline Cut: the bold word drawn apart, the italic word (fattened) taken out of it
+  const assOf = (part?: "plain" | "punch" | "cutBase" | "cutBold" | "cutKnock") => buildAss(lang === "en" ? englishCues(job.cues) : job.cues, { styleId: job.captionStyle, custom: job.captionCustom, lang, width, height, part });
+  await writeFile(join(dir, "subs.ass"), cut ? assOf("cutBase") : partial ? assOf("plain") : blend ? maskAss(assOf()) : assOf(), "utf8");
+  if (cut) {
+    await writeFile(join(dir, "bold.ass"), maskAss(assOf("cutBold")), "utf8");
+    await writeFile(join(dir, "knock.ass"), assOf("cutKnock"), "utf8");
+  }
+  if (partial) await writeFile(join(dir, "mask.ass"), maskAss(assOf("punch")), "utf8");
+  return { look, blend, partial, cut };
+}
+
+/** Runs ffmpeg in dir, reporting how far through the job's length it is. */
+function ffmpeg(args: string[], dir: string, seconds: number, onProgress: (pct: number) => void) {
+  return new Promise<void>((ok, fail) => {
+    const p = spawn(bin("ffmpeg"), args, { cwd: dir });
+    let err = "";
+    p.stderr.on("data", (d) => { err = (err + d).slice(-2000); });
+    p.stdout.on("data", (d) => {
+      const m = String(d).match(/out_time_us=(\d+)/g)?.pop();
+      if (m) onProgress(Math.min(99, Math.round((+m.split("=")[1] / 1e6 / Math.max(1, seconds)) * 100)));
+    });
+    p.on("error", fail);
+    p.on("close", (code) => (code === 0 ? ok() : fail(new Error(`ffmpeg exited ${code}: ${err.trim()}`))));
+  });
+}
+
+const PREMULTIPLY = "format=gbrap,premultiply=inplace=1,format=rgba";
+
+/** blendGraph's letters alone, premultiplied. Output [blendl]. */
+function blendLayer(from: string, mode: string, color: string, mask = "subs.ass") {
+  const c = `0x${color.slice(1, 7)}`;
+  return `[${from}]split=3[bv][bc][bm];` +
+    `[bc]format=gbrp,drawbox=x=0:y=0:w=iw:h=ih:color=${c}:t=fill[bcol];[bv]format=gbrp[bvid];` +
+    `[bvid][bcol]blend=all_mode=${mode}[bl];` +
+    `[bm]format=rgb24,drawbox=x=0:y=0:w=iw:h=ih:color=black:t=fill,ass=${mask}:fontsdir=fonts:shaping=complex,format=gray[mask];` +
+    `[bl][mask]alphamerge,${PREMULTIPLY}[blendl]`;
+}
+
+/** cutGraph's word alone, premultiplied. Output [cutl]. */
+function cutLayer(from: string, color: string) {
+  const c = `0x${color.slice(1, 7)}`, mask = (file: string, out: string) =>
+    `[${out}in]format=rgb24,drawbox=x=0:y=0:w=iw:h=ih:color=black:t=fill,ass=${file}:fontsdir=fonts:shaping=complex,format=gray[${out}]`;
+  return `[${from}]split=3[cc][cbin][ckin];` + mask("bold.ass", "cb") + ";" + mask("knock.ass", "ck") + ";" +
+    `[cb][ck]blend=all_mode=subtract[cm];[cc]format=gbrp,drawbox=x=0:y=0:w=iw:h=ih:color=${c}:t=fill[ccol];` +
+    `[ccol][cm]alphamerge,${PREMULTIPLY}[cutl]`;
 }
 
 /**
@@ -131,9 +244,13 @@ export function cutGraph(from: string, color: string) {
 
 /** The free plan's mark: "Made with Vasanam", small and soft in the bottom-right corner, over everything. Output [out]. */
 export function watermarkGraph(from: string, width: number, height: number) {
+  return `[${from}]${watermarkText(width, height)}[out]`;
+}
+
+function watermarkText(width: number, height: number) {
   const size = Math.max(14, Math.round(Math.min(width, height) * 0.028)), m = Math.round(Math.min(width, height) * 0.03);
-  return `[${from}]drawtext=fontfile=fonts/Poppins-Bold.ttf:text='Made with ${BRAND.name}':fontsize=${size}:fontcolor=white@0.75:` +
-    `shadowcolor=black@0.5:shadowx=1:shadowy=1:x=w-tw-${m}:y=h-th-${m}[out]`;
+  return `drawtext=fontfile=fonts/Poppins-Bold.ttf:text='Made with ${BRAND.name}':fontsize=${size}:fontcolor=white@0.75:` +
+    `shadowcolor=black@0.5:shadowx=1:shadowy=1:x=w-tw-${m}:y=h-th-${m}`;
 }
 
 /** The uploaded logo of a job, when it has one. */

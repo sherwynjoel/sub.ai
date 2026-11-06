@@ -88,6 +88,7 @@
       $("account").className = "chip" + (minutesLeft === 0 ? " warn" : "");
       show("main");
       updateGo();
+      if (!STYLES.length) loadStyles(); // a new server address, or none reachable at the start
       if (minutesLeft === 0 && !$("msg").textContent) say("No minutes left on your " + r.data.planName + " plan. Upgrade on the website to generate more.", "error");
       return true;
     });
@@ -176,6 +177,73 @@
   try { TEMPLATES = JSON.parse(fs.readFileSync(path.join(EXT, "templates.json"), "utf8")); } catch (e) {}
   function template() { var id = $("styleMain").value; for (var i = 0; i < TEMPLATES.length; i++) if (TEMPLATES[i].id === id) return TEMPLATES[i]; return null; }
 
+  // The website's caption styles (GET /api/styles). They're animated by the server's renderer, which no editor's own text
+  // can match, so the server renders the chosen one as a transparent video and that goes above the clip: exactly the
+  // website's look. In Premiere they sit beside the templates; in After Effects they're the list.
+  var STYLES = [], loadStyles = function () {};
+  function isStyle(id) { return STYLES.some(function (s) { return s.id === id; }); }
+  function exactStyle() {
+    var id = $("styleMain").value;
+    if (!isStyle(id)) return "";
+    return editing && isStyle(editing.styleId) ? editing.styleId : id;
+  }
+  function note(text) { if ($("progress").hidden) say(text, ""); else progress(97, text); }
+
+  function download(p, file, onProgress) {
+    return new Promise(function (resolve, reject) {
+      var url = new NodeURL(server() + p), part = file + ".part";
+      var r = (url.protocol === "https:" ? https : http).request(url, { headers: { authorization: "Bearer " + store("vs_key") } }, function (res) {
+        if (res.statusCode !== 200) { res.resume(); return reject(new Error("Couldn't download the styled captions (" + res.statusCode + ").")); }
+        var total = +res.headers["content-length"] || 0, got = 0, out = fs.createWriteStream(part);
+        res.on("data", function (c) { got += c.length; if (total) onProgress(got / total); });
+        res.on("error", reject);
+        out.on("error", reject);
+        out.on("finish", function () {
+          if (total && got !== total) return reject(new Error("The download of the styled captions was cut off. Try again."));
+          fs.renameSync(part, file);
+          resolve(file);
+        });
+        res.pipe(out);
+      });
+      r.on("error", function (e) { reject(new Error("Can't reach " + url.host + ": " + e.message)); });
+      r.setTimeout(120e3, function () { r.destroy(new Error("no answer in time")); });
+      r.end();
+    });
+  }
+
+  // Asks the server for the styled captions, waits and downloads them (the same look again comes straight from disk).
+  // They're kept in Documents, not a temp folder: the project goes on using the file.
+  function overlayFile(job, lang, id) {
+    var url = "/api/jobs/" + job.id + "/overlay";
+    return api("POST", url, { json: { style: id, lang: lang } }).then(function (r) {
+      if (r.status >= 400) throw new Error(r.data.error || "Couldn't make the styled captions.");
+      return new Promise(function (resolve, reject) {
+        (function poll() {
+          api("GET", url).then(function (s) {
+            if (s.status !== 200) return reject(new Error(s.data.error || "Lost track of the styled captions."));
+            if (s.data.status === "done") return resolve(s.data.key);
+            if (s.data.status === "failed" || !s.data.status) return reject(new Error("Couldn't make the styled captions. Try again, or pick another style."));
+            note(s.data.status === "queued" ? "Waiting in line for the style…" : "Rendering the style… " + s.data.progress + "%");
+            setTimeout(poll, 2000);
+          }, reject);
+        })();
+      });
+    }).then(function (key) {
+      var dir = path.join(os.homedir(), "Documents", "Vasanam", "Styled captions");
+      fs.mkdirSync(dir, { recursive: true });
+      var file = path.join(dir, picked.name.replace(/\.[^.]+$/, "").replace(/[^\w\- ]+/g, "_") + "." + id + "." + key.slice(0, 8) + ".mov");
+      if (fs.existsSync(file)) return file;
+      return download(url + "?file=1", file, function (f) { note("Downloading the style… " + Math.round(f * 100) + "%"); });
+    });
+  }
+
+  function placeOverlay(job, lang, id) {
+    return overlayFile(job, lang, id).then(function (file) {
+      var a = [file, picked.file, picked.offset, picked.inS, picked.outS].map(function (x) { return JSON.stringify(x); }).join(", ");
+      return evalHost((HOST === "PPRO" ? "vs_pproPlaceOverlay(" : "vs_aePlaceOverlay(") + a + ")");
+    });
+  }
+
   // Premiere: use where the clip is on the timeline now, not where it was when picked (it may have been moved or trimmed since).
   function refreshPlace() {
     if (HOST !== "PPRO") return Promise.resolve();
@@ -200,6 +268,8 @@
     var source = lang === "en" && job.cues.some(function (c) { return c.ta; }) ? window.Subs.englishCues(job.cues) : job.cues;
     var cues = window.Subs.placeCues(source, picked.offset, picked.inS, picked.outS);
     if (!cues.length) return Promise.resolve("OK|No speech was found in this clip.");
+    var exact = exactStyle();
+    if (exact) return placeOverlay(job, lang, exact);
     var tpl = HOST === "PPRO" ? template() : null;
     if (tpl) {
       return loadLook(job.id).then(function (d) {
@@ -252,7 +322,7 @@
         // the server reads it when it writes the subtitles). Three-box templates have no line count.
         var n = $("linesMain").parentNode.hidden ? 0 : +$("linesMain").value, safe = $("safeMain").value;
         var custom = Object.assign(safe !== "none" ? { safe: safe } : {}, englishOnly() ? { show: "en" } : {}, { lines: n });
-        var saved = n ? api("PATCH", "/api/jobs/" + r.data.id, { json: { captionCustom: custom } }) : Promise.resolve();
+        var saved = n || (exactStyle() && safe !== "none") ? api("PATCH", "/api/jobs/" + r.data.id, { json: { captionCustom: custom } }) : Promise.resolve();
         return saved.then(function () { return wait(r.data.id); });
       })
       .then(function (job) { jobData = job; progress(97, "Placing subtitles…"); return placeOnTimeline(job, lang); })
@@ -303,13 +373,14 @@
   // Only the controls that change what lands on the timeline: all of them for After Effects text layers; size,
   // colour, position, lines and safe zone for Premiere templates; lines for the plain caption track.
   function lookControls() {
-    var ae = HOST !== "PPRO", t = ae ? null : template(), tpl = !!t;
+    var exact = !!exactStyle(), ae = HOST !== "PPRO" || exact, t = ae ? null : template(), tpl = !!t;
     // A template without a colour control keeps its own colours; three-box templates split the words themselves.
     var on = ae ? ["lkStyle", "lkFont", "lkSize", "lkColors", "lkColor", "lkAccent", "lkPosition", "lkLines", "lkSafe"]
       : tpl ? ["lkSize", "lkPosition", "lkSafe"].concat(t.color ? ["lkColors", "lkColor"] : [], t.parts ? [] : ["lkLines"]) : ["lkLines"];
     ["lkStyle", "lkFont", "lkSize", "lkColors", "lkColor", "lkAccent", "lkPosition", "lkLines", "lkSafe"].forEach(function (id) { $(id).hidden = on.indexOf(id) < 0; });
-    $("lookNote").textContent = ae
-      ? "Text layers get this font, size, colours and position. Install the caption fonts (website → Plugin) to see the exact font."
+    $("lookNote").textContent = exact
+      ? "Exactly the website's style, animation included. Change anything here, then Update timeline to render it again."
+      : ae ? "Text layers get this font, size, colours and position. Install the caption fonts (website → Plugin) to see the exact font."
       : tpl ? "Changes apply when you place on the timeline again. The rest of the look comes from the template."
         : "Font, colour and position of the caption track are set in Premiere's Essential Graphics panel.";
   }
@@ -371,6 +442,7 @@
   // A new style starts clean (same as the website); it is saved at once so the look below reflects it.
   $("style").onchange = function () {
     editing.styleId = $("style").value;
+    if (exactStyle()) $("styleMain").value = editing.styleId; // the main screen shows the same style
     // The look starts clean; project settings stay (same list as the web editor).
     var keep = {};
     ["safe", "safeCustom", "canvas", "layers", "logo", "show", "lines"].forEach(function (k) { if (editing.custom[k] !== undefined) keep[k] = editing.custom[k]; });
@@ -404,7 +476,7 @@
         var r = reply(res);
         if (r.ok) pending = false;
         // Template graphics replace the earlier ones; a caption track is added alongside the old one.
-        say(r.text + (r.ok && HOST === "PPRO" && !template() ? " Delete the older caption track if you placed one before." : ""), r.ok ? "ok" : "error", r.details);
+        say(r.text + (r.ok && HOST === "PPRO" && !template() && !exactStyle() ? " Delete the older caption track if you placed one before." : ""), r.ok ? "ok" : "error", r.details);
       })
       .catch(function (e) { say(e.message, "error"); })
       .then(function () { $("placeBtn").disabled = false; });
@@ -466,13 +538,14 @@
     tile.type = "button";
     tile.className = "tile" + (i === sel.selectedIndex ? " on" : "");
     tile.title = o.textContent;
-    var pic = document.createElement("span"), src = t ? preview(t) : null;
-    pic.className = "pic" + (src ? "" : " plain");
-    if (src) { var img = document.createElement("img"); img.src = fileUrl(src); img.alt = ""; pic.appendChild(img); }
+    var w = STYLES.filter(function (x) { return x.id === o.value; })[0];
+    var pic = document.createElement("span"), src = w ? server() + w.preview : t && preview(t) ? fileUrl(preview(t)) : null;
+    pic.className = "pic" + (src ? "" : " plain") + (w ? " reel" : "");
+    if (src) { var img = document.createElement("img"); img.src = src; img.alt = ""; pic.appendChild(img); }
     else pic.textContent = t ? t.name : "Caption track";
     var label = document.createElement("span");
     label.className = "name";
-    label.textContent = t ? t.name : "Plain captions";
+    label.textContent = w ? w.name : t ? t.name : "Plain captions";
     tile.appendChild(pic);
     tile.appendChild(label);
     return tile;
@@ -499,7 +572,10 @@
   function renderGallery() {
     var g = $("styleGallery"), sel = $("styleMain");
     g.innerHTML = "";
+    var heading = function (text) { var h = document.createElement("p"); h.className = "ghead"; h.textContent = text; g.appendChild(h); };
     Array.prototype.forEach.call(sel.options, function (o, i) {
+      if (STYLES.length && i && isStyle(o.value) && !isStyle(sel.options[i - 1].value)) heading("Vasanam styles · exactly as on the website");
+      if (STYLES.length && i && !isStyle(o.value) && isStyle(sel.options[i - 1].value)) heading("Premiere templates · text stays editable in Premiere");
       var tile = styleTile(o, i, sel), t = TEMPLATES.filter(function (x) { return x.id === o.value; })[0];
       tile.disabled = o.disabled;
       tile.setAttribute("role", "option");
@@ -520,10 +596,22 @@
     var major = parseInt(JSON.parse(cep.getHostEnvironment()).appVersion, 10) || 0;
     var fits = TEMPLATES.filter(function (t) { return !(t.minPremiere > major); }), newer = TEMPLATES.filter(function (t) { return t.minPremiere > major; });
     var remembered = newer.some(function (t) { return t.id === store("vs_style"); }) ? "" : store("vs_style");
-    fill($("styleMain"), [["", "Plain captions (Premiere caption track)"]].concat(fits.concat(newer).map(function (t) {
-      return [t.id, t.name + (t.minPremiere > major ? " · needs Premiere " + (2000 + t.minPremiere) : "")];
-    })), remembered); // plain captions until the user picks a template
-    Array.prototype.forEach.call($("styleMain").options, function (o) { o.disabled = newer.some(function (t) { return t.id === o.value; }); });
+    var listStyles = function () {
+      fill($("styleMain"), [["", "Plain captions (Premiere caption track)"]].concat(STYLES.map(function (s) { return [s.id, s.name + " · " + s.group]; }), fits.concat(newer).map(function (t) {
+        return [t.id, t.name + (t.minPremiere > major ? " · needs Premiere " + (2000 + t.minPremiere) : "")];
+      })), remembered); // plain captions until the user picks a style
+      Array.prototype.forEach.call($("styleMain").options, function (o) { o.disabled = newer.some(function (t) { return t.id === o.value; }); });
+    };
+    listStyles();
+    loadStyles = function () {
+      api("GET", "/api/styles").then(function (r) {
+        if (r.status !== 200) return;
+        STYLES = r.data.styles;
+        listStyles();
+        if (typeof document.addEventListener === "function") { renderCurrent(); if (!$("styleGallery").hidden) renderGallery(); }
+      }).catch(function () {});
+    };
+    loadStyles();
     if (typeof document.addEventListener === "function") { // not in the Node test's fake DOM
       $("styleSelectRow").hidden = true;
       $("styleCurrent").hidden = false;
@@ -534,9 +622,14 @@
       linesFor();
     }
   } else {
-    api("GET", "/api/styles").then(function (r) {
-      if (r.status === 200) fill($("styleMain"), r.data.styles.map(function (x) { return [x.id, x.name + " · " + x.group]; }), store("vs_style") || r.data.defaultStyle);
-    }).catch(function () {});
+    loadStyles = function () {
+      api("GET", "/api/styles").then(function (r) {
+        if (r.status !== 200) return;
+        STYLES = r.data.styles;
+        fill($("styleMain"), STYLES.map(function (x) { return [x.id, x.name + " · " + x.group]; }), store("vs_style") || r.data.defaultStyle);
+      }).catch(function () {});
+    };
+    loadStyles();
   }
 
   // Premiere swallows Cmd/Ctrl+V/C/X/A inside panels unless the panel claims them (Mac virtual key codes, then Windows ones).
@@ -623,6 +716,7 @@
       var c; try { c = JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return; }
       fs.unlinkSync(f);
       log("cmd " + JSON.stringify(c));
+      if (c.eval) evalHost(c.eval).then(function (r) { log("eval -> " + r); });
       if (c.server) store("vs_server", c.server);
       if (c.key) store("vs_key", c.key);
       if (c.connect) refreshAccount().then(function (ok) { log("connected " + ok + " " + $("account").textContent); });
