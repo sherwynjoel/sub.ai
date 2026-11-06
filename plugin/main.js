@@ -217,29 +217,35 @@
     });
   }
 
-  // Asks the server for the styled captions, waits and downloads them (the same look again comes straight from disk).
+  // Fonts come from the website once and are kept here, so a new one needs no panel update.
+  function fontsDir() { return path.join(os.homedir(), "Documents", "Vasanam", "Fonts"); }
+  function getFonts(names) {
+    fs.mkdirSync(fontsDir(), { recursive: true });
+    return names.filter(function (f) { return !fs.existsSync(path.join(fontsDir(), f)); }).reduce(function (p, f) {
+      return p.then(function () { return download("/caption-fonts/" + encodeURIComponent(f), path.join(fontsDir(), f), function () {}); });
+    }, Promise.resolve());
+  }
+
+  // The styled captions, made on this computer from the server's plan (the same look again comes straight from disk).
   // They're kept in Documents, not a temp folder: the project goes on using the file.
+  var made = null; // the file overlayFile found already made
   function overlayFile(job, lang, id) {
     var url = "/api/jobs/" + job.id + "/overlay";
-    return api("POST", url, { json: { style: id, lang: lang } }).then(function (r) {
-      if (r.status >= 400) throw new Error(r.data.error || "Couldn't make the styled captions.");
-      return new Promise(function (resolve, reject) {
-        (function poll() {
-          api("GET", url).then(function (s) {
-            if (s.status !== 200) return reject(new Error(s.data.error || "Lost track of the styled captions."));
-            if (s.data.status === "done") return resolve(s.data.key);
-            if (s.data.status === "failed" || !s.data.status) return reject(new Error("Couldn't make the styled captions. Try again, or pick another style."));
-            note(s.data.status === "queued" ? "Waiting in line for the style…" : "Rendering the style… " + s.data.progress + "%");
-            setTimeout(poll, 2000);
-          }, reject);
-        })();
+    note("Getting the style ready…");
+    return window.Device.overlay(picked.file, function (said) {
+      return api("POST", url, { json: { style: id, lang: lang, probe: said } }).then(function (r) {
+        if (r.status >= 400) throw new Error(r.data.error || "Couldn't make the styled captions.");
+        var dir = path.join(os.homedir(), "Documents", "Vasanam", "Styled captions");
+        fs.mkdirSync(dir, { recursive: true });
+        var d = r.data, out = path.join(dir, picked.name.replace(/\.[^.]+$/, "").replace(/[^\w\- ]+/g, "_") + "." + id + "." + d.key.slice(0, 8) + ".mov");
+        if (fs.existsSync(out)) { made = out; return null; }
+        var logo = d.logo ? path.join(os.tmpdir(), "vasanam-logo-" + job.id) : null;
+        return getFonts(d.fonts).then(function () { return logo ? download("/api/jobs/" + job.id + "/logo", logo, function () {}) : null; })
+          .then(function () { d.out = out; d.logo = logo; return d; });
       });
-    }).then(function (key) {
-      var dir = path.join(os.homedir(), "Documents", "Vasanam", "Styled captions");
-      fs.mkdirSync(dir, { recursive: true });
-      var file = path.join(dir, picked.name.replace(/\.[^.]+$/, "").replace(/[^\w\- ]+/g, "_") + "." + id + "." + key.slice(0, 8) + ".mov");
-      if (fs.existsSync(file)) return file;
-      return download(url + "?file=1", file, function (f) { note("Downloading the style… " + Math.round(f * 100) + "%"); });
+    }, { dir: fontsDir, onPct: function (pct) { note("Making the style on this computer… " + pct + "%"); } }).then(function (file) {
+      if (file) api("PUT", url).catch(function () {});
+      return file || made;
     });
   }
 
@@ -319,7 +325,13 @@
     store("vs_style", $("styleMain").value);
     store("vs_safe", $("safeMain").value);
     store("vs_lines", $("linesMain").value);
-    api("POST", "/api/upload?name=" + encodeURIComponent(picked.name) + "&lang=" + $("language").value + "&script=" + (englishOnly() ? "mixed" : $("script").value) + "&english=" + ($("english").checked || englishOnly() || $("lang").value !== "ta" ? 1 : 0) + (englishOnly() ? "&show=en" : "") + (HOST === "PPRO" ? "" : "&style=" + $("styleMain").value) + "&safe=" + $("safeMain").value, { file: picked.file }, function (f) { progress(f * 40, "Uploading… " + Math.round(f * 100) + "%"); })
+    var query = "/api/upload?name=" + encodeURIComponent(picked.name) + "&lang=" + $("language").value + "&script=" + (englishOnly() ? "mixed" : $("script").value) + "&english=" + ($("english").checked || englishOnly() || $("lang").value !== "ta" ? 1 : 0) + (englishOnly() ? "&show=en" : "") + (HOST === "PPRO" ? "" : "&style=" + $("styleMain").value) + "&safe=" + $("safeMain").value;
+    // Only the sound is sent: the clip stays on this computer. If it can't be read here, the whole clip goes, as before.
+    var soundFile = path.join(os.tmpdir(), "vasanam-sound-" + Date.now() + ".aac");
+    window.Device.sound(picked.file, soundFile).catch(function (e) { console.error(e); return false; }).then(function (hasSound) {
+      if (hasSound) query += "&audio=1&videoBytes=" + fs.statSync(picked.file).size + "&videoType=video/mp4";
+      return api("POST", query, { file: hasSound ? soundFile : picked.file }, function (f) { progress(f * 40, "Uploading… " + Math.round(f * 100) + "%"); });
+    })
       .then(function (r) {
         if (r.status !== 201) throw new Error(r.data.error || "Upload failed (" + r.status + ").");
         lastJob = r.data.id;

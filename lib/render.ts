@@ -2,8 +2,8 @@ import { spawn } from "node:child_process";
 import { access, cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { audioCodec, bin, STORAGE, videoRate, videoSize } from "@/lib/media";
-import { exportPlan, LOGO, OUT, overlayPlan, VIDEO, type Plan, type RenderJob } from "@/lib/renderPlan";
+import { audioCodec, bin, STORAGE, videoSize } from "@/lib/media";
+import { exportPlan, LOGO, OUT, VIDEO, type Plan, type RenderJob } from "@/lib/renderPlan";
 
 export const FONTS = resolve(/*turbopackIgnore: true*/ process.cwd(), "public", "caption-fonts");
 type Job = RenderJob & { id: string; filePath: string; durationSec: number };
@@ -29,15 +29,6 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
   await mkdir(dir, { recursive: true });
   const plan = exportPlan(job, { size, aac: !!size && (await audioCodec(job.filePath)) === "aac", logo: !!logo, deep: false, colour: null });
   return run(plan, job, logo, join(dir, `${job.id}.mp4`), onProgress);
-}
-
-/** The Adobe panel's transparent captions. */
-export async function renderOverlay(job: Job, onProgress: (pct: number) => void) {
-  const size = await videoSize(job.filePath), logo = await logoFile(job);
-  const dir = join(STORAGE, "overlays");
-  await mkdir(dir, { recursive: true });
-  const plan = overlayPlan(job, { size, rate: (await videoRate(job.filePath)) ?? "30", logo: !!logo, seconds: job.durationSec });
-  return run(plan, job, logo, join(dir, `${job.id}.mov`), onProgress);
 }
 
 /** Runs ffmpeg in dir, reporting how far through the job's length it is. */

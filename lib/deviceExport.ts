@@ -51,12 +51,14 @@ export async function soundOnDevice(file: Blob): Promise<AudioTrack | null> {
     await start(ff);
     await ff.createDir("/in");
     await ff.mount("WORKERFS" as never, { blobs: [{ name: "video", data: file }] }, "/in");
-    let seconds = 0;
-    ff.on("log", ({ message }) => {
-      const m = message.match(/Duration: (\d+):(\d+):(\d+\.\d+)/);
-      if (m) seconds = +m[1] * 3600 + +m[2] * 60 + +m[3];
-    });
-    if (await ff.exec(["-y", ...threads(), "-i", "/in/video", "-map", "0:a:0", "-c:a", "aac", "-b:a", "192k", "-f", "adts", "sound.aac"])) return null;
+    let said = "";
+    ff.on("log", ({ message }) => { said += `${message}\n`; });
+    await ff.exec(["-hide_banner", "-i", "/in/video"]);
+    if (!/Stream .*Audio:/.test(said)) return null;
+    const m = said.match(/Duration: (\d+):(\d+):(\d+\.\d+)/), seconds = m ? +m[1] * 3600 + +m[2] * 60 + +m[3] : 0;
+    // AAC is copied, which takes moments; anything else is encoded, about 35x faster than real time on a laptop.
+    const codec = /Audio: aac/.test(said) ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", "128k"];
+    if (await ff.exec(["-y", ...threads(), "-i", "/in/video", "-map", "0:a:0", ...codec, "-f", "adts", "sound.aac"])) return null;
     return { adts: new Blob([(await ff.readFile("sound.aac")) as Uint8Array<ArrayBuffer>]), frames: 0, seconds, shift: 0 };
   } finally {
     ff.terminate();

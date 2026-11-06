@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { eq } from "drizzle-orm";
 import { db, jobs } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
@@ -6,42 +6,39 @@ import { STYLE_CHOICES } from "@/lib/captionStyles";
 import { ownJob } from "@/lib/jobs";
 import { overlayKey } from "@/lib/overlay";
 import { effectivePlan } from "@/lib/plans";
-import { fileStream } from "@/lib/stream";
+import { FONTS, logoFile } from "@/lib/render";
+import { overlayPlan, readRate, readVideo } from "@/lib/renderPlan";
+import { recordExport } from "@/lib/styleUsage";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 /**
- * The Adobe panel's styled captions, a transparent video for the timeline: `{ style, lang }` asks for them (the worker
- * renders them with the MP4's code; the same look again is ready at once). GET says how it's going, and with `?file=1`
- * sends the file.
+ * The Adobe panel's styled captions, a transparent video for the timeline, are made on the user's computer
+ * (plugin/device.js): `{ style, lang, probe }` (probe: what ffmpeg prints about the clip) returns the plan for them.
+ * `key` names the look, so the panel can use a file it made before.
  */
 export async function POST(req: Request, { params }: Ctx) {
   const u = await currentUser();
   if (!u) return unauthorized();
   const j = await ownJob((await params).id, u);
   if (!j) return json({ error: "Not found" }, 404);
-  if (!j.filePath && j.videoTotal) return json({ error: "This project was made on the website, so its video is on that device. Generate this clip from the panel to use a style here." }, 409);
-  if (!j.filePath) return json({ error: "The video was removed after 7 days, so this style can't be made. Generate the clip again." }, 410);
   if (j.status !== "done" || !j.cues?.length) return json({ error: "Subtitles aren't ready yet." }, 409);
-  const { style, lang } = await req.json().catch(() => ({}));
+  const { style, lang, probe } = await req.json().catch(() => ({}));
+  if (typeof probe !== "string" || probe.length > 50_000) return json({ error: "Update the Vasanam panel: download the new version from the website's Plugin page." }, 426);
   if (!STYLE_CHOICES.some((s) => s.id === style)) return json({ error: "Unknown style." }, 400);
   if (!["ta", "en", "both"].includes(lang)) return json({ error: "Pick which subtitles to use." }, 400);
-  const key = overlayKey({ ...j, captionStyle: style }, lang, effectivePlan(u) === "free");
-  if (j.overlayKey === key) {
-    if (j.overlayStatus === "queued" || j.overlayStatus === "rendering") return json({ status: j.overlayStatus });
-    if (j.overlayStatus === "done" && j.overlayPath && (await stat(j.overlayPath).catch(() => null))) return json({ status: "done" });
-  }
-  await db.update(jobs).set({ captionStyle: style, overlayLang: lang, overlayKey: key, overlayStatus: "queued", overlayProgress: 0, updatedAt: new Date() }).where(eq(jobs.id, j.id));
-  return json({ status: "queued" }, 202);
+  const watermark = effectivePlan(u) === "free", logo = !!(await logoFile(j));
+  await db.update(jobs).set({ captionStyle: style, updatedAt: new Date() }).where(eq(jobs.id, j.id));
+  const plan = overlayPlan({ cues: j.cues, captionStyle: style, captionCustom: j.captionCustom, renderLang: lang, watermark }, { size: readVideo(probe).size, rate: readRate(probe), logo, seconds: j.durationSec });
+  return json({ plan, logo, seconds: j.durationSec, key: overlayKey({ ...j, captionStyle: style }, lang, watermark), fonts: (await readdir(FONTS)).filter((f) => /\.(ttf|otf)$/i.test(f)) });
 }
 
-export async function GET(req: Request, { params }: Ctx) {
+/** The panel has made a style: counted towards its use. */
+export async function PUT(_: Request, { params }: Ctx) {
   const u = await currentUser();
   if (!u) return unauthorized();
   const j = await ownJob((await params).id, u);
   if (!j) return json({ error: "Not found" }, 404);
-  if (!new URL(req.url).searchParams.has("file")) return json({ status: j.overlayStatus, progress: j.overlayProgress, key: j.overlayKey });
-  const size = j.overlayPath && j.overlayStatus === "done" ? (await stat(j.overlayPath).catch(() => null))?.size : null;
-  if (!j.overlayPath || size == null) return json({ error: "The styled captions aren't ready." }, 404);
-  return new Response(fileStream(j.overlayPath), { headers: { "content-type": "video/quicktime", "content-length": String(size) } });
+  await recordExport(db, j);
+  return json({ ok: true });
 }
