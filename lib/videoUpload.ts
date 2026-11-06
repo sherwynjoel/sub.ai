@@ -16,6 +16,7 @@ export const subscribeUploads = (f: () => void) => { subs.add(f); return () => {
 export const uploadsVersion = () => version;
 /** This tab's upload of a project's video (and its local copy to play), if any. */
 export const localVideo = (jobId: string): VideoUpload | undefined => ups.get(jobId);
+export const localFile = (jobId: string): File | undefined => ups.get(jobId)?.file;
 export const sendingVideos = () => [...ups.values()].filter((u) => u.state === "sending");
 export const progressOf = (u: VideoUpload) => Math.min(100, Math.floor((100 * u.sent) / Math.max(1, u.total)));
 

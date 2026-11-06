@@ -1,6 +1,7 @@
 "use client";
 import RenameProject from "@/components/RenameProject";
 import { stem } from "@/lib/projectName";
+import type { Step } from "@/lib/deviceExport";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -14,7 +15,7 @@ import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
 import { MAX_REDOS, typeLabel, typeOf, type CaptionType } from "@/lib/captionTypes";
 import CaptionTypePicker from "@/components/CaptionTypePicker";
-import { localVideo, progressOf, sendVideo, subscribeUploads, uploadsVersion } from "@/lib/videoUpload";
+import { localFile, localVideo, progressOf, sendVideo, subscribeUploads, uploadsVersion } from "@/lib/videoUpload";
 import SubtitleReveal from "@/components/SubtitleReveal";
 import LookControls from "@/components/LookControls";
 import StyledCaption from "@/components/StyledCaption";
@@ -665,16 +666,18 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     return () => clearInterval(t);
   }, [job.id, job.status, notify]);
 
-  // Poll while a styled MP4 renders.
-  const rendering = job.renderStatus === "queued" || job.renderStatus === "rendering";
+  // The MP4 is made on this device (lib/deviceExport.ts), so it lasts as long as this page.
+  const [exporting, setExporting] = useState<Step | null>(null);
+  const [made, setMade] = useState<{ url: string; name: string } | null>(null);
+  const [exportError, setExportError] = useState("");
+  const stopExport = useRef<AbortController | null>(null);
+  const rendering = !!exporting;
   useEffect(() => {
     if (!rendering) return;
-    const t = setInterval(async () => {
-      const res = await fetch(`/api/jobs/${job.id}`);
-      if (res.ok) { const j: Job = await res.json(); setJob((old) => ({ ...old, renderStatus: j.renderStatus, renderProgress: j.renderProgress, renderError: j.renderError })); }
-    }, 2000);
-    return () => clearInterval(t);
-  }, [job.id, rendering]);
+    const stay = (e: BeforeUnloadEvent) => e.preventDefault();
+    addEventListener("beforeunload", stay);
+    return () => removeEventListener("beforeunload", stay);
+  }, [rendering]);
 
   const saveLook = (body: object) =>
     fetch(`/api/jobs/${job.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => {});
@@ -804,17 +807,57 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   /** One tap: the Export tab, and the video made unless the last one is current. */
   function exportNow() {
     setTab("export");
-    if (rendering || (job.renderStatus === "done" && !dirty && !lookChanged) || !videoHere) return;
+    if (rendering || (made && !dirty && !lookChanged) || !videoHere) return;
     void render();
   }
   async function render() {
     if (outside.length && !confirm(`${outside.length} subtitle${outside.length === 1 ? " goes" : "s go"} outside the video and will be cut off in the MP4. Export anyway?`)) return;
     if (dirty && !(await save())) return;
     await saveLook({ captionStyle: styleId, captionCustom: custom });
-    const res = await fetch(`/api/jobs/${job.id}/render`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ style: styleId, lang: view }) });
-    if (res.ok) { setJob((j) => ({ ...j, renderStatus: "queued", renderProgress: 0, renderError: null, renderLang: view, captionStyle: styleId })); setRenderedLook(JSON.stringify([styleId, custom])); }
-    else setMsg((await res.json().catch(() => ({}))).error || "Couldn't start the render.");
+    // The editor reached without a page load isn't isolated yet, and would export on one thread: load it and carry on.
+    if (!self.crossOriginIsolated && !localFile(job.id)) { location.assign(`${location.pathname}?export=${view}`); return; }
+    await makeVideo(view);
   }
+  async function makeVideo(lang: string) {
+    setExportError("");
+    setExporting({ step: "Getting ready", pct: 0 });
+    const stop = (stopExport.current = new AbortController());
+    try {
+      const res = await fetch(`/api/jobs/${job.id}/render`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ style: styleId, lang }) });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) return setExportError(body.error || "Couldn't start the export.");
+      const { renderOnDevice } = await import("@/lib/deviceExport");
+      const blob = await renderOnDevice({
+        ...body, video: localFile(job.id) ?? `/api/jobs/${job.id}/media`, logo: custom.logo ? `/api/jobs/${job.id}/logo` : undefined,
+        signal: stop.signal, onStep: setExporting,
+      });
+      if (made) URL.revokeObjectURL(made.url);
+      const file = { url: URL.createObjectURL(blob), name: `${stem(job.filename)}.${styleId}.mp4` };
+      setMade(file);
+      setRenderedLook(JSON.stringify([styleId, custom]));
+      const a = document.createElement("a");
+      a.href = file.url;
+      a.download = file.name;
+      a.click();
+      void fetch(`/api/jobs/${job.id}/render`, { method: "PUT" }).catch(() => {});
+    } catch (e) {
+      console.error(e);
+      if (!stop.signal.aborted) setExportError("This device couldn't finish the video. It may be too long for this device's memory: close other apps and try again, or export on a computer.");
+    } finally {
+      setExporting(null);
+    }
+  }
+  // Back from the page load render() asked for.
+  const resumed = useRef(false);
+  useEffect(() => {
+    const lang = new URLSearchParams(location.search).get("export");
+    if (!lang || resumed.current) return;
+    resumed.current = true;
+    history.replaceState(null, "", location.pathname);
+    setTab("export");
+    void makeVideo(lang);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ---------- playback ----------
   /** The video's shape and length (the preview and timeline match it). */
@@ -1245,7 +1288,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             <button aria-pressed={advanced} onClick={() => setAdvanced(true)}>Advanced</button>
           </div>
           <button className="btn ghost" onClick={save} disabled={!dirty || saving} title="Save (⌘S)">{saving ? "Saving…" : "Save"}</button>
-          <button className="btn" onClick={exportNow} disabled={rendering} title="Make the video with captions (it downloads from Export when ready)">{rendering ? `Exporting · ${job.renderProgress}%` : "Export video"}</button>
+          <button className="btn" onClick={exportNow} disabled={rendering} title="Make the video with captions on this device (it downloads when ready)">{rendering ? `Exporting · ${exporting.pct}%` : "Export video"}</button>
         </div>
       </div>
 
@@ -1281,7 +1324,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             <span className="ib-gap" />
             {local?.state === "sending" && <span className="ib-up" title="The video is uploading; you can edit meanwhile">Video {progressOf(local)}%</span>}
             <button className={`ib-save${dirty ? " on" : ""}`} onClick={save} disabled={!dirty || saving}>{saving ? "Saving…" : dirty ? "Save" : "Saved"}</button>
-            <button className="ib-export" onClick={() => { openPane("export"); exportNow(); }} disabled={rendering}>{rendering ? `${job.renderProgress}%` : "Export"}</button>
+            <button className="ib-export" onClick={() => { openPane("export"); exportNow(); }} disabled={rendering}>{rendering ? `${exporting.pct}%` : "Export"}</button>
           </div>
           <div ref={fullBox} className="ed-frame" data-resting={full && resting ? "" : undefined} onPointerMove={full ? stir : undefined}>
           {!playing && !sheet && (
@@ -1680,21 +1723,23 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               <h3>Video with captions (MP4)</h3>
               {rendering ? (
                 <div className="render-progress">
-                  <span className="bar"><i style={{ width: `${Math.max(3, job.renderProgress)}%` }} /></span>
-                  <span className="muted small">{job.renderStatus === "queued" ? "Waiting to render…" : `Rendering · ${job.renderProgress}%`}</span>
+                  <span className="bar"><i style={{ width: `${Math.max(3, exporting.pct)}%` }} /></span>
+                  <span className="muted small">{exporting.step}{exporting.pct ? ` · ${exporting.pct}%` : "…"}. Keep this tab open: the video is being made on this device.</span>
+                  <button className="link" onClick={() => stopExport.current?.abort()}>Cancel</button>
                 </div>
               ) : (
                 <div className="insp-actions">
                   <button className="btn" onClick={render} disabled={!videoHere}>{coming ? `Video uploading · ${local ? progressOf(local) : 0}%` : dirty ? "Save and export MP4" : "Export MP4"}</button>
-                  {job.renderStatus === "done" && !dirty && !lookChanged && <a className="btn ghost" href={`/api/jobs/${job.id}/render`} download>Download MP4</a>}
-                  {(job.renderStatus === "stale" || (job.renderStatus === "done" && (dirty || lookChanged))) && <>
+                  {made && !dirty && !lookChanged && <a className="btn ghost" href={made.url} download={made.name}>Download MP4</a>}
+                  {made && (dirty || lookChanged) && <>
                     <p className="muted small render-stale">Your last MP4 was made before your latest changes. Export again to get them in the video.</p>
-                    <a className="btn ghost" href={`/api/jobs/${job.id}/render`} download>Download the older MP4</a>
+                    <a className="btn ghost" href={made.url} download={made.name}>Download the older MP4</a>
                   </>}
+                  {!made && (job.renderStatus === "done" || job.renderStatus === "stale") && <a className="btn ghost" href={`/api/jobs/${job.id}/render`} download>Download the older MP4</a>}
                   {freePlan && <p className="muted small wm-note">Free plan videos carry a small &ldquo;Made with {BRAND.name}&rdquo; mark. <a href="/pricing">Upgrade</a> to export without it.</p>}
                 </div>
               )}
-              {job.renderStatus === "failed" && <p className="error">{job.renderError}</p>}
+              {exportError && <p className="error">{exportError}</p>}
               <p className="muted small">Burns in {view === "both" ? `${language.name} + English` : view === "en" ? "English" : language.name} (the language shown under the video), with every caption&apos;s own look. {coming ? "The MP4 can be made once the video has finished uploading (keep this tab open)." : !videoHere && "The video was removed after 7 days, so it can't be exported."}</p>
 
               <h3>Subtitle files</h3>

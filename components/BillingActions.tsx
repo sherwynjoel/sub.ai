@@ -1,7 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PAID, PLANS, type PlanId } from "@/lib/plans";
 
 const loadPass = () => import("@/components/PassReveal");
@@ -34,6 +34,8 @@ type Props = {
 };
 
 export default function BillingActions({ current, live, prepaidUntil, subscriptions, preselect, holder, passNo, until, hasPass }: Props) {
+  // Arrived from the editor without a page load: its isolation would block Razorpay's script.
+  useEffect(() => { if (self.crossOriginIsolated) location.reload(); }, []);
   const router = useRouter();
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState("");
