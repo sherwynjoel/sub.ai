@@ -13,7 +13,8 @@ import { extractChunks, LEVEL_FRAME, loudness, makePreview, probe, removeUploads
 import { speechRegions } from "./lib/timing";
 import { alignCues } from "./lib/align";
 import { translateLines } from "./lib/ai/translate";
-import { renderStyled } from "./lib/render";
+import { overlayKey } from "./lib/overlay";
+import { renderOverlay, renderStyled } from "./lib/render";
 import { recordExport } from "./lib/styleUsage";
 import { dropAnchor, englishCues, mergeChunks, mergeShort, retimeWindows, snapToPauses, withWordTimes } from "./lib/subtitles";
 
@@ -121,6 +122,42 @@ async function processRender(job: typeof jobs.$inferSelect) {
   }
 }
 
+/** The styled captions alone for the Adobe panel, after any styled MP4s. */
+async function claimOverlay() {
+  const rows = await db.execute(sql`
+    UPDATE jobs SET overlay_status = 'rendering', overlay_progress = 0
+    WHERE id = (SELECT id FROM jobs WHERE overlay_status = 'queued' ORDER BY updated_at FOR UPDATE SKIP LOCKED LIMIT 1)
+    RETURNING id`);
+  const id = (rows as unknown as { id: string }[])[0]?.id;
+  return id ? (await db.select().from(jobs).where(eq(jobs.id, id)))[0] : null;
+}
+
+async function processOverlay(job: typeof jobs.$inferSelect) {
+  const mine = and(eq(jobs.id, job.id), eq(jobs.overlayKey, job.overlayKey ?? "")); // not if the panel has since asked for another look
+  try {
+    if (!job.filePath || !job.cues?.length) throw new Error("The video or its subtitles are no longer available.");
+    let last = 0;
+    const [owner] = await db.select().from(users).where(eq(users.id, job.userId));
+    const watermark = !owner || effectivePlan(owner) === "free"; // as on the MP4
+    const out = await renderOverlay({ ...job, filePath: job.filePath, cues: job.cues, renderLang: job.overlayLang, watermark }, (pct) => {
+      if (pct < last + 5) return;
+      last = pct;
+      db.update(jobs).set({ overlayProgress: pct }).where(mine).catch(console.error);
+    });
+    const kept = await db.update(jobs).set({ overlayStatus: "done", overlayProgress: 100, overlayPath: out, overlayKey: overlayKey(job, job.overlayLang, watermark) }).where(mine).returning({ id: jobs.id });
+    if (!kept.length) {
+      const [still] = await db.select({ id: jobs.id }).from(jobs).where(eq(jobs.id, job.id));
+      if (!still) await unlink(out).catch(() => {}); // the project was deleted while it rendered
+      return;
+    }
+    await recordExport(db, job);
+    console.log(`overlay ${job.id} done (${job.captionStyle})`);
+  } catch (e) {
+    console.error(`overlay ${job.id} failed`, e);
+    await db.update(jobs).set({ overlayStatus: "failed" }).where(mine);
+  }
+}
+
 /**
  * The sound as prepared for the AI is the true length (a file can state less, and timestamps can be wrong when its
  * sample rate changes midway). More than was charged at upload: charge the rest now, or stop before the AI hears it
@@ -170,13 +207,15 @@ async function purgeOld() {
   const old = await db.select().from(jobs).where(and(or(isNotNull(jobs.filePath), isNotNull(jobs.audioPath), isNotNull(jobs.videoTotal)), lt(jobs.createdAt, new Date(Date.now() - KEEP_DAYS * 864e5))));
   for (const j of old) {
     await removeUploads(j);
-    if (j.renderPath) await unlink(j.renderPath).catch(() => {});
-    await db.update(jobs).set({ filePath: null, audioPath: null, videoTotal: null, previewPath: null, renderPath: null, renderStatus: null }).where(eq(jobs.id, j.id));
+    for (const f of [j.renderPath, j.overlayPath]) if (f) await unlink(f).catch(() => {});
+    await db.update(jobs).set({ filePath: null, audioPath: null, videoTotal: null, previewPath: null, renderPath: null, renderStatus: null, overlayPath: null, overlayStatus: null }).where(eq(jobs.id, j.id));
   }
   // Styled MP4s whose project no longer exists (deleted before deletes removed them too). Safe only because
   // this runs between renders in the same loop: a render in progress has no renderPath yet.
   const dir = join(STORAGE, "renders"), live = new Set((await db.select({ p: jobs.renderPath }).from(jobs).where(isNotNull(jobs.renderPath))).map((r) => r.p));
   for (const f of await readdir(dir).catch(() => [] as string[])) if (!live.has(join(dir, f))) await unlink(join(dir, f)).catch(() => {});
+  const dir2 = join(STORAGE, "overlays"), live2 = new Set((await db.select({ p: jobs.overlayPath }).from(jobs).where(isNotNull(jobs.overlayPath))).map((r) => r.p));
+  for (const f of await readdir(dir2).catch(() => [] as string[])) if (!live2.has(join(dir2, f))) await unlink(join(dir2, f)).catch(() => {});
 }
 
 /** Lets /admin show whether the worker is alive. */
@@ -190,6 +229,7 @@ async function main() {
   setInterval(() => heartbeat().catch(console.error), 20e3);
   // ponytail: assumes a single worker process; with several, only requeue jobs whose updated_at is stale.
   await db.update(jobs).set({ status: "queued", progress: 0 }).where(eq(jobs.status, "processing"));
+  await db.update(jobs).set({ overlayStatus: "queued", overlayProgress: 0 }).where(eq(jobs.overlayStatus, "rendering"));
   await db.update(jobs).set({ renderStatus: "queued", renderProgress: 0 }).where(eq(jobs.renderStatus, "rendering"));
   console.log("worker ready");
   let lastPurge = 0;
@@ -202,6 +242,8 @@ async function main() {
     if (job) { await processJob(job).catch((e) => fail(job, e)); continue; }
     const render = await claimRender().catch((e) => (console.error(e), null));
     if (render) { await processRender(render); continue; }
+    const overlay = await claimOverlay().catch((e) => (console.error(e), null));
+    if (overlay) { await processOverlay(overlay); continue; }
     const preview = await claimPreview().catch((e) => (console.error(e), null));
     if (preview) { await processPreview(preview); continue; }
     await new Promise((r) => setTimeout(r, 2000));

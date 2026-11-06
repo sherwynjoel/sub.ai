@@ -95,6 +95,19 @@ export async function videoSize(file: string) {
   }
 }
 
+/** A video's frame rate as ffprobe writes it ("30000/1001"), or null: the nominal rate, or the average when a variable-rate phone clip states a silly one. */
+export async function videoRate(file: string) {
+  try {
+    const { stdout } = await run(bin("ffprobe"), ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=r_frame_rate,avg_frame_rate", "-of", "csv=p=0", file]);
+    const [nominal, average] = stdout.trim().split(",");
+    const fps = (r = "") => { const [a, b = 1] = r.split("/").map(Number); return a / b; };
+    const r = fps(nominal) > 0 && fps(nominal) <= 120 ? nominal : average;
+    return fps(r) > 0 ? r : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The codec of a file's first audio stream ("aac", "opus", …), or null. */
 export async function audioCodec(file: string) {
   try {
