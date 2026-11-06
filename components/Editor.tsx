@@ -566,6 +566,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const shown = initial.captionCustom?.show;
   const [view, setViewState] = useState<View>(!hasEnglish ? "ta" : !hasSpoken ? "en" : shown ?? "both");
   const [now, setNow] = useState(0);
+  // One frame of this video: 30 fps until it has played a little and shown what it really is.
+  const [frame, setFrame] = useState(FRAME);
   const [playing, setPlaying] = useState(false);
   const [duration, setDuration] = useState(Math.max(1, ...initial.cues.map((c) => c.end)));
   const [selected, setSelected] = useState(-1);
@@ -893,6 +895,20 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   }, [blurBg]);
   // The video can be ready before this page's scripts are: then loadedmetadata already fired.
   useEffect(() => { const v = video.current; if (v && v.readyState >= 1) metadata(v); }, []);
+  useEffect(() => {
+    const v = video.current;
+    if (!playing || !v?.requestVideoFrameCallback) return;
+    let id = 0, last = -1;
+    const gaps: number[] = [];
+    const seen: VideoFrameRequestCallback = (_, m) => {
+      if (last >= 0 && m.mediaTime > last) gaps.push(m.mediaTime - last);
+      last = m.mediaTime;
+      if (gaps.length >= 20) { setFrame(gaps.sort((a, b) => a - b)[10]); return; } // the middle one: dropped frames don't count
+      id = v.requestVideoFrameCallback(seen);
+    };
+    id = v.requestVideoFrameCallback(seen);
+    return () => v.cancelVideoFrameCallback(id);
+  }, [playing, src]);
   const seek = (t: number) => { const v = video.current; if (v) v.currentTime = Math.max(0, Math.min(t, (v.duration || duration) - 0.01)); setNow(t); };
   const togglePlay = () => { const v = video.current; if (!v) return; if (v.paused) v.play().catch(() => {}); else v.pause(); };
 
@@ -1148,8 +1164,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       else if (k === "m" || k === "M") merge();
       else if (k === "a" || k === "A") add();
       else if (k === "Delete" || k === "Backspace") { e.preventDefault(); if (tab === "layers" && layers[selLayer]) removeLayer(selLayer); else remove(); } // the text picked, else the caption
-      else if (k === "ArrowLeft") { e.preventDefault(); seek(now - (e.shiftKey ? 1 : FRAME)); }
-      else if (k === "ArrowRight") { e.preventDefault(); seek(now + (e.shiftKey ? 1 : FRAME)); }
+      else if (k === "ArrowLeft") { e.preventDefault(); seek(now - (e.shiftKey ? 1 : frame)); }
+      else if (k === "ArrowRight") { e.preventDefault(); seek(now + (e.shiftKey ? 1 : frame)); }
       else if (k === "ArrowUp" || k === "ArrowDown") {
         e.preventDefault();
         const i = Math.max(0, Math.min(cues.length - 1, (selected < 0 ? activeIdx : selected) + (k === "ArrowUp" ? -1 : 1)));
@@ -1787,9 +1803,9 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
       <div className="ed-timeline">
         <div className="ed-tl-bar">
-          <span className="muted small">Timeline: double-click an empty spot to add a caption (top row) or text over the video (bottom row), double-click one to edit its words. Drag the empty track or scroll to move along; pinch or Ctrl + scroll to zoom.</span>
+          <span className="muted small">Timeline: click or drag the video strip to move the playhead. Double-click an empty spot to add a caption or text over the video, double-click one to edit its words. Drags land on frames and on the playhead. Pinch or Ctrl + scroll to zoom.</span>
         </div>
-        <Timeline cues={cues} duration={duration} now={now} selected={selected} zoom={zoom} line={line} playing={playing}
+        <Timeline cues={cues} duration={duration} now={now} selected={selected} zoom={zoom} line={line} playing={playing} video={video} src={src} frame={frame}
           onSeek={seek} onSelect={select} onZoom={setZoom}
           onAddCaption={(t) => { // a caption where the timeline was double-clicked (or the playhead), typed into there
             const r = insertAt(cues, t, duration);
