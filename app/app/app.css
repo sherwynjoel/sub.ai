@@ -316,7 +316,7 @@ kbd { font: 600 .75rem/1 var(--font-body); padding: 3px 6px; border: 1px solid v
 .tl-inner { position: relative; height: 128px; overflow: hidden; }
 .tl-ruler { position: absolute; left: 0; right: 0; top: 0; height: 22px; border-bottom: 1px solid #2c2c3a; cursor: ew-resize; }
 .tl-tick { position: absolute; top: 0; height: 22px; border-left: 1px solid #3a3a4c; padding-left: 4px; font: 500 10px/22px var(--font-body); color: #a5a5b8; white-space: nowrap; }
-.tl-track { position: absolute; left: 0; right: 0; top: 26px; height: 52px; cursor: ew-resize; }
+.tl-track { position: absolute; left: 0; right: 0; top: 76px; height: 52px; cursor: ew-resize; }
 .tl-block { position: absolute; top: 0; height: 52px; border-radius: 6px; background: #3a3a8c; border: 1px solid #5a5ad0; color: #fff; overflow: hidden; cursor: grab; box-sizing: border-box; }
 .tl-block:hover { background: #46469e; }
 .tl-block.on { background: #d4ff3f; border-color: #fff; color: #0c0c14; }
@@ -326,11 +326,14 @@ kbd { font: 600 .75rem/1 var(--font-body); padding: 3px 6px; border: 1px solid v
 .tl-edge.l { left: 0; }
 .tl-edge.r { right: 0; }
 .tl-edge:hover { background: rgba(255, 255, 255, .35); }
-.tl-words { position: absolute; left: 0; right: 0; top: 84px; height: 40px; cursor: ew-resize; }
+.tl-words { position: absolute; left: 0; right: 0; top: 134px; height: 40px; cursor: ew-resize; }
 .tl-word { position: absolute; top: 4px; height: 32px; border-left: 2px solid #d4ff3f; background: rgba(212, 255, 63, .12); cursor: ew-resize; box-sizing: border-box; overflow: hidden; }
 .tl-word b { display: block; padding: 0 5px; font: 600 11px/32px var(--font-body); color: #eaffb0; white-space: nowrap; pointer-events: none; }
 .tl-word:hover { background: rgba(212, 255, 63, .28); }
 .tl-head { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #ff4d4d; pointer-events: none; }
+.tl-head b { position: absolute; top: 3px; left: 8px; padding: 1px 5px; border-radius: 4px; background: #ff4d4d; color: #fff; font: 600 10px/14px var(--font-body); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tl-film { position: absolute; left: 0; right: 0; top: 24px; height: 46px; overflow: hidden; background: #0c0c14; cursor: ew-resize; touch-action: none; }
+.tl-film canvas { position: absolute; top: 0; height: 46px; display: block; }
 .tl-head::before { content: ""; position: absolute; top: 0; left: -5px; border: 6px solid transparent; border-top-color: #ff4d4d; }
 
 @media (max-width: 1180px) {
@@ -354,7 +357,7 @@ kbd { font: 600 .75rem/1 var(--font-body); padding: 3px 6px; border: 1px solid v
 .look input[type="range"] { padding: 0; accent-color: var(--black); }
 .look input[type="color"] { width: 36px; height: 30px; padding: 2px; }
 
-.tl-layers { position: absolute; left: 0; right: 0; top: 128px; height: 36px; border-top: 1px dashed #2c2c3a; cursor: ew-resize; }
+.tl-layers { position: absolute; left: 0; right: 0; top: 178px; height: 36px; border-top: 1px dashed #2c2c3a; cursor: ew-resize; }
 .tl-layer { top: 4px; height: 28px; background: #6b3a8c; border-color: #a25ad0; }
 .tl-layer .tl-text { padding: 4px 8px; }
 .player .bg-blur { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(18px) brightness(.85); transform: scale(1.12); pointer-events: none; }
@@ -873,7 +876,7 @@ a.signout { text-decoration: none; }
 .style-sample .cap-main { font-size: calc(var(--fs-sample, 1) * 13cqh) !important; }
 .style-sample .cap-sub { font-size: 8cqh !important; }
 /* + between captions on the timeline (components/Timeline.tsx) */
-.tl-pluses { position: absolute; left: 0; right: 0; top: 26px; height: 52px; pointer-events: none; z-index: 5; }
+.tl-pluses { position: absolute; left: 0; right: 0; top: 76px; height: 52px; pointer-events: none; z-index: 5; }
 .tl-plus { position: absolute; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; padding: 0; border: 2px solid #15151f; border-radius: 50%; background: #d4ff3f; color: #0c0c14; font: 800 15px/1 var(--font-body); cursor: pointer; pointer-events: auto; opacity: 0; transform: scale(.7); transition: opacity .15s, transform .15s; box-shadow: 0 2px 8px rgb(0 0 0 / .5); }
 .tl-inner:hover .tl-plus, .tl-plus.near, .tl-plus:focus-visible { opacity: 1; transform: none; }
 .tl-plus:hover { transform: scale(1.15); }
