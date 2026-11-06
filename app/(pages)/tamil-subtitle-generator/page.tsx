@@ -31,7 +31,7 @@ export default function Page() {
         ["Can it write Tamil in English letters (Tanglish)?", "Yes. Choose “Roman letters (Tanglish)” when you upload, and the Tamil is written in English letters."],
         ["Does it work for other Indian languages?", "Yes: Hindi, Telugu, Malayalam, Kannada, Bengali, Marathi and 15 more, each with English."],
         ["How accurate is it?", "Clear speech comes out well, but it is made by AI, so read the subtitles before you publish. Everything can be corrected in the editor."],
-        ["What happens to my video?", "MP4 and MOV videos stay on your device: only the sound is sent to us, to make your subtitles, and it is deleted automatically after 7 days. Other file types are sent whole and deleted the same way. Your subtitles stay in your account until you delete them."],
+        ["What happens to my video?", "Your video stays on your device: only the sound is sent to us, to make your subtitles, and it is deleted automatically after 7 days. Sound files and videos your browser can't play are sent whole and deleted the same way. Your subtitles stay in your account until you delete them."],
       ]}
     />
   );

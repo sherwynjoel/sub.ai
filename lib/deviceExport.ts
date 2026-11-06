@@ -1,4 +1,5 @@
 import type { FFmpeg as Engine } from "@ffmpeg/ffmpeg";
+import type { AudioTrack } from "@/lib/audioTrack";
 import { LOGO, OUT, readVideo, VIDEO, type Plan, type VideoInfo } from "@/lib/renderPlan";
 
 /**
@@ -35,20 +36,44 @@ async function fetchVideo(url: string, signal: AbortSignal, onPct: (pct: number)
   return new Blob(parts);
 }
 
+// Loaded from public/ffmpeg, as it is: the bundler can't follow how it starts its worker.
+const newEngine = async () => new ((await import(/* turbopackIgnore: true */ /* webpackIgnore: true */ ENGINE)) as { FFmpeg: typeof Engine }).FFmpeg();
+const threads = () => (self.crossOriginIsolated ? THREADS : []);
+function start(ff: Engine, signal?: AbortSignal) {
+  const core = `/ffmpeg/${self.crossOriginIsolated ? "mt" : "st"}/ffmpeg-core`;
+  return ff.load({ classWorkerURL: "/ffmpeg/worker.js", coreURL: `${core}.js`, wasmURL: `${core}.wasm`, ...(self.crossOriginIsolated ? { workerURL: `${core}.worker.js` } : {}) }, { signal });
+}
+
+/** The sound of a file lib/audioTrack.ts can't read (WebM, MKV), as AAC for api/upload?audio=1; null without any sound. */
+export async function soundOnDevice(file: Blob): Promise<AudioTrack | null> {
+  const ff = await newEngine();
+  try {
+    await start(ff);
+    await ff.createDir("/in");
+    await ff.mount("WORKERFS" as never, { blobs: [{ name: "video", data: file }] }, "/in");
+    let seconds = 0;
+    ff.on("log", ({ message }) => {
+      const m = message.match(/Duration: (\d+):(\d+):(\d+\.\d+)/);
+      if (m) seconds = +m[1] * 3600 + +m[2] * 60 + +m[3];
+    });
+    if (await ff.exec(["-y", ...threads(), "-i", "/in/video", "-map", "0:a:0", "-c:a", "aac", "-b:a", "192k", "-f", "adts", "sound.aac"])) return null;
+    return { adts: new Blob([(await ff.readFile("sound.aac")) as Uint8Array<ArrayBuffer>]), frames: 0, seconds, shift: 0 };
+  } finally {
+    ff.terminate();
+  }
+}
+
 export async function renderOnDevice(o: {
   video: Blob | string; logo?: string; signal: AbortSignal; onStep: (s: Step) => void;
   plan: (video: VideoInfo) => Promise<{ plan: Plan; fonts: string[]; seconds: number }>;
 }) {
   const { signal, onStep } = o;
-  // Loaded from public/ffmpeg, as it is: the bundler can't follow how it starts its worker.
-  const { FFmpeg } = (await import(/* turbopackIgnore: true */ /* webpackIgnore: true */ ENGINE)) as { FFmpeg: typeof Engine };
-  const ff = new FFmpeg();
+  const ff = await newEngine();
   const stop = () => ff.terminate();
   signal.addEventListener("abort", stop);
   try {
     onStep({ step: "Getting the video engine", pct: 0 });
-    const threads = self.crossOriginIsolated, core = `/ffmpeg/${threads ? "mt" : "st"}/ffmpeg-core`;
-    await ff.load({ classWorkerURL: "/ffmpeg/worker.js", coreURL: `${core}.js`, wasmURL: `${core}.wasm`, ...(threads ? { workerURL: `${core}.worker.js` } : {}) }, { signal });
+    await start(ff, signal);
 
     const video = typeof o.video === "string"
       ? await fetchVideo(o.video, signal, (pct) => onStep({ step: "Getting your video", pct }))
@@ -75,7 +100,7 @@ export async function renderOnDevice(o: {
     });
     onStep({ step: "Making your video", pct: 0 });
     const args = plan.args.map((a) => (a === VIDEO ? "/in/video" : a === LOGO ? "logo" : a === OUT ? out : a));
-    const code = await ff.exec(["-y", ...(threads ? THREADS : []), ...args]);
+    const code = await ff.exec(["-y", ...threads(), ...args]);
     if (code !== 0) throw new Error(`ffmpeg exited ${code}`);
     const data = await ff.readFile(out);
     return new Blob([data as Uint8Array<ArrayBuffer>], { type: "video/mp4" });

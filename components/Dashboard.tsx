@@ -15,6 +15,7 @@ import FlowSteps from "@/components/FlowSteps";
 import StylePicker from "@/components/StylePicker";
 import StyledCaption from "@/components/StyledCaption";
 import { extractAudio, type AudioTrack } from "@/lib/audioTrack";
+import { soundOnDevice } from "@/lib/deviceExport";
 import { keepVideo, localVideo, subscribeVideos, videosVersion } from "@/lib/localVideo";
 
 type Job = {
@@ -28,12 +29,13 @@ const mins = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).
 const minsUsed = (s: number) => (Math.ceil(s) / 60).toFixed(1);
 
 /** A video's length from the browser itself (formats the phone can play), or null. */
-function lengthOf(file: File) {
+function lengthOf(file: File, onPicture?: (shows: boolean) => void) {
   return new Promise<number | null>((resolve) => {
     const v = document.createElement("video"), url = URL.createObjectURL(file);
-    const done = (d: number | null) => { URL.revokeObjectURL(url); resolve(d); };
+    let shows = false;
+    const done = (d: number | null) => { URL.revokeObjectURL(url); onPicture?.(shows); resolve(d); };
     v.preload = "metadata";
-    v.onloadedmetadata = () => done(Number.isFinite(v.duration) && v.duration > 0 ? v.duration : null);
+    v.onloadedmetadata = () => { shows = v.videoWidth > 0; done(Number.isFinite(v.duration) && v.duration > 0 ? v.duration : null); };
     v.onerror = () => done(null);
     setTimeout(() => done(null), 6000);
     v.src = url;
@@ -151,17 +153,22 @@ export default function Dashboard() {
   const shown = (jobs ?? []).filter((j) => !q || j.filename.toLowerCase().includes(q));
 
   /**
-   * MP4 / MOV: only the sound is sent (about 1 MB a minute, pulled out without re-encoding); the video stays on the
-   * device in its original quality (lib/localVideo.ts). Anything else is sent whole, as before.
+   * Only the sound is sent (about 1 MB a minute); the video stays on the device in its original quality
+   * (lib/localVideo.ts). Sound files, and videos this browser can't show, are sent whole.
    */
   /** A file picked: read its length and the minutes left, and show what it will use before sending anything. */
   async function pick(file: File) {
     setError("");
     setCheck(null);
     setUpload({ name: file.name, pct: 0, note: "Checking the video…" });
-    const audio = /\.(mp4|m4v|mov)$/i.test(file.name) || /^video\/(mp4|quicktime|x-m4v)$/.test(file.type) ? await extractAudio(file) : null;
+    let audio = /\.(mp4|m4v|mov)$/i.test(file.name) || /^video\/(mp4|quicktime|x-m4v)$/.test(file.type) ? await extractAudio(file) : null;
+    // WebM, MKV and the rest: the sound is pulled out here too, if this browser can show the video (nothing else would
+    // play it in the editor). If not, the whole file is sent and the server makes a copy that plays.
+    let shows = false;
+    const length = await lengthOf(file, (s) => { shows = s; });
+    if (!audio && shows) audio = await soundOnDevice(file).catch(() => null);
     const [seconds, me] = await Promise.all([
-      audio?.seconds || lengthOf(file),
+      audio?.seconds || length,
       fetch("/api/me").then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
     setUpload(null);
