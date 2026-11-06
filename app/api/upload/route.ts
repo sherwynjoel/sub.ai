@@ -19,8 +19,8 @@ const MAX_BYTES = 4 * 1024 ** 3; // 4 GB
 
 /**
  * Raw-body upload: `POST /api/upload?name=clip.mp4&lang=ta-IN` with the file as the body (streamed to disk).
- * Phones send the sound first: `&audio=1&videoBytes=N&videoType=video/quicktime` with the AAC track as the body
- * (lib/audioTrack.ts); captioning starts from it and the video follows in pieces (api/jobs/[id]/video).
+ * The website sends only the sound: `&audio=1&videoBytes=N&videoType=video/quicktime` with the AAC track as the body
+ * (lib/audioTrack.ts); the video stays on the user's device (lib/localVideo.ts).
  */
 export async function POST(req: Request) {
   const u = await currentUser();

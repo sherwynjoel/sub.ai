@@ -19,7 +19,7 @@ export default function Page() {
       <h2>What we collect</h2>
       <ul>
         <li><strong>Account details:</strong> your name, email address and password. The password is stored only as a salted scrypt hash; we can&apos;t read it.</li>
-        <li><strong>Your videos and audio:</strong> on the website, MP4 and MOV videos stay on your device and only their sound is sent to us. Other file types, and the files the panel uploads from your timeline, are sent whole. We use them to make subtitles.</li>
+        <li><strong>Your videos and audio:</strong> on the website, videos stay on your device and only their sound is sent to us. Sound files, videos your browser can&apos;t play, and the files the panel uploads from your timeline are sent whole. We use them to make subtitles.</li>
         <li><strong>Your projects:</strong> the subtitles we make, your edits, caption styles, text layers and any logo you upload.</li>
         <li><strong>Usage:</strong> how many minutes you have used, and when each project was made.</li>
         <li><strong>Plugin keys:</strong> the keys that connect the panel to your account. We keep only a fingerprint of each key, not the key itself.</li>
