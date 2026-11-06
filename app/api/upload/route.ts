@@ -1,5 +1,5 @@
 import { createWriteStream } from "node:fs";
-import { mkdir, open, unlink } from "node:fs/promises";
+import { mkdir, unlink } from "node:fs/promises";
 import { join, extname } from "node:path";
 import { randomUUID } from "node:crypto";
 import { Readable, Transform } from "node:stream";
@@ -7,7 +7,7 @@ import { pipeline } from "node:stream/promises";
 import { and, eq, sql } from "drizzle-orm";
 import { db, jobs, stylePresets, users } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
-import { probe, remuxAudio, soundLength, STORAGE, videoPart } from "@/lib/media";
+import { probe, remuxAudio, soundLength, STORAGE } from "@/lib/media";
 import { DEFAULT_LANGUAGE, isLanguage } from "@/lib/languages";
 import { JOB_SCRIPTS, type JobScript } from "@/lib/captionTypes";
 import { DEFAULT_STYLE, SAFE_ZONES, STYLE_CHOICES } from "@/lib/captionStyles";
@@ -97,11 +97,5 @@ export async function POST(req: Request) {
     userId: u.id, filename: name, durationSec: duration, mime, language: lang, script, withEnglish, captionStyle, captionCustom,
     ...(audioFirst ? { audioPath: source, videoTotal: videoBytes } : { filePath: path }),
   }).returning();
-  if (audioFirst) { // the file the pieces are written into, at full size up front (sparse) so they can land in any order
-    const { file } = videoPart(dir, job.id);
-    const h = await open(file, "w");
-    await h.truncate(videoBytes);
-    await h.close();
-  }
   return json({ id: job.id, durationSec: duration }, 201);
 }

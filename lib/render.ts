@@ -27,7 +27,7 @@ export async function renderStyled(job: Job, onProgress: (pct: number) => void) 
   const size = await videoSize(job.filePath), logo = await logoFile(job);
   const dir = join(STORAGE, "renders");
   await mkdir(dir, { recursive: true });
-  const plan = exportPlan(job, { size, aac: !!size && (await audioCodec(job.filePath)) === "aac", logo: !!logo });
+  const plan = exportPlan(job, { size, aac: !!size && (await audioCodec(job.filePath)) === "aac", logo: !!logo, deep: false, colour: null });
   return run(plan, job, logo, join(dir, `${job.id}.mp4`), onProgress);
 }
 

@@ -30,7 +30,6 @@ export async function remuxAudio(src: string, dst: string, shift = 0) {
 }
 
 /** A video arriving in pieces: the file being filled, and a folder with one marker per piece received. */
-export const VIDEO_PIECE = 4 * 1024 * 1024; // small enough that a dropped connection loses little
 export const videoPart = (dir: string, jobId: string) => ({ file: join(dir, `${jobId}.part`), got: join(dir, `${jobId}.got`) });
 
 /** Remove a job's uploaded files: the video, the sound sent first, and a video still arriving in pieces. */

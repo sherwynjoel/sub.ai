@@ -15,7 +15,7 @@ import FlowSteps from "@/components/FlowSteps";
 import StylePicker from "@/components/StylePicker";
 import StyledCaption from "@/components/StyledCaption";
 import { extractAudio, type AudioTrack } from "@/lib/audioTrack";
-import { localVideo, progressOf, sendingVideos, sendVideo, subscribeUploads, uploadsVersion } from "@/lib/videoUpload";
+import { keepVideo, localVideo, subscribeVideos, videosVersion } from "@/lib/localVideo";
 
 type Job = {
   id: string; filename: string; durationSec: number; status: string; progress: number;
@@ -67,12 +67,10 @@ function ProjectFolder({ job, index, onRename, onDelete }: { job: Job; index: nu
           { name: "Edit captions", meta: `${job.cueCount} subtitles`, href: open, art: "aurora" as const },
         ];
   const type = typeLabel({ script: job.script, captionCustom: job.captionCustom }, languageOf(job.language).name);
-  useSyncExternalStore(subscribeUploads, uploadsVersion, () => 0);
+  useSyncExternalStore(subscribeVideos, videosVersion, () => 0);
   const local = width > 0 ? localVideo(job.id) : undefined; // width > 0: only in the browser
-  const coming = !!job.videoTotal && local?.state !== "done";
   const meta = busy ? (job.status === "queued" ? "Waiting in line" : `Making subtitles ${job.progress}%`)
     : job.status === "failed" ? "Failed"
-    : coming ? (local?.state === "sending" ? `Video uploading ${progressOf(local)}%` : "Video upload paused")
     : `${type} · ${mins(job.durationSec)}`;
   const arts = ["dusk", "glacier", "verdant", "aurora", "ember"] as const;
   return (
@@ -96,9 +94,13 @@ export default function Dashboard() {
   const [upload, setUpload] = useState<{ name: string; pct: number; note?: string } | null>(null);
   // A picked video, its length and the minutes left: shown before anything is sent.
   const [check, setCheck] = useState<{ file: File; audio: AudioTrack | null; seconds: number; left: number } | null>(null);
-  useSyncExternalStore(subscribeUploads, uploadsVersion, () => 0);
-  const inBrowser = useSyncExternalStore(subscribeUploads, () => true, () => false);
-  const sending = inBrowser ? sendingVideos() : [];
+  useSyncExternalStore(subscribeVideos, videosVersion, () => 0);
+  // The video picked here is exported from this same page, so it must be isolated already for the export's threads:
+  // arriving without a page load (from sign-in or Billing), load it once.
+  useEffect(() => {
+    if (self.crossOriginIsolated) sessionStorage.removeItem("vs-isolate");
+    else if (!sessionStorage.getItem("vs-isolate")) { sessionStorage.setItem("vs-isolate", "1"); location.reload(); }
+  }, []);
   const [error, setError] = useState("");
   const [drag, setDrag] = useState(false);
   const [language, setLanguage] = useState<string>(DEFAULT_LANGUAGE);
@@ -138,12 +140,6 @@ export default function Dashboard() {
   }, []);
 
   useEffect(load, [load]);
-  // When a video finishes arriving, the project list learns it has its video.
-  const doneCount = useRef(0);
-  useEffect(() => subscribeUploads(() => {
-    const n = [...(jobs ?? [])].filter((j) => localVideo(j.id)?.state === "done").length;
-    if (n > doneCount.current) { doneCount.current = n; load(); }
-  }));
   const busy = jobs?.some((j) => j.status === "queued" || j.status === "processing");
   useEffect(() => {
     if (!busy) return;
@@ -155,9 +151,8 @@ export default function Dashboard() {
   const shown = (jobs ?? []).filter((j) => !q || j.filename.toLowerCase().includes(q));
 
   /**
-   * Phones' MP4 / MOV: the sound goes first (about 1 MB a minute, pulled out without re-encoding) so the captions
-   * start right away; the video, untouched, follows in pieces in the background (lib/videoUpload.ts) while the
-   * editor plays the phone's own copy. Anything else is sent whole, as before.
+   * MP4 / MOV: only the sound is sent (about 1 MB a minute, pulled out without re-encoding); the video stays on the
+   * device in its original quality (lib/localVideo.ts). Anything else is sent whole, as before.
    */
   /** A file picked: read its length and the minutes left, and show what it will use before sending anything. */
   async function pick(file: File) {
@@ -191,7 +186,7 @@ export default function Dashboard() {
     const base = `/api/upload?name=${encodeURIComponent(file.name)}&lang=${language}&script=${script}&english=${english ? 1 : 0}&show=${show}&safe=${safe}&style=${encodeURIComponent(style)}`;
     const body: Blob = audio ? audio.adts : file;
     const url = audio ? `${base}&audio=1&videoBytes=${file.size}&videoType=${encodeURIComponent(file.type || "video/mp4")}&shift=${audio.shift.toFixed(4)}` : base;
-    setUpload({ name: file.name, pct: 0, note: audio ? "Sending the sound first…" : undefined });
+    setUpload({ name: file.name, pct: 0, note: audio ? "Sending the sound…" : undefined });
     try { localStorage.setItem("vs-last-project", JSON.stringify({ language, type: ctype.type, withEnglish: ctype.withEnglish, safe, style })); } catch { /* private mode */ }
     const xhr = new XMLHttpRequest();
     xhr.open("POST", url);
@@ -201,7 +196,7 @@ export default function Dashboard() {
       setUpload(null);
       const data = JSON.parse(xhr.responseText || "{}");
       if (xhr.status >= 300) return setError(data.error || "Upload failed.");
-      if (audio) sendVideo(data.id, file); // the video follows; captions are already being made
+      if (audio) keepVideo(data.id, file);
       setStep(0);
       router.push(`/app/jobs/${data.id}`); // on to the project: its subtitles being made, then the editor
     };
@@ -295,12 +290,6 @@ export default function Dashboard() {
         <input ref={input} type="file" accept="video/*,audio/*,.mkv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) pick(f); e.target.value = ""; }} />
       </section>
       {error && <p className="error" role="alert">{error} {error.includes("Upgrade") && <Link href="/app/billing">See plans</Link>}</p>}
-      {sending.map((u) => (
-        <div key={u.jobId} className="video-sending" role="status">
-          <span className="bar"><i style={{ width: `${progressOf(u)}%` }} /></span>
-          <span><strong>Sending the video · {progressOf(u)}%</strong> <span className="muted">Captions are already being made. You can open <Link href={`/app/jobs/${u.jobId}`}>{u.name}</Link> and edit now; keep this tab open until the video is sent.</span></span>
-        </div>
-      ))}
 
       <section className="projects" aria-live="polite">
         <div className="projects-head">

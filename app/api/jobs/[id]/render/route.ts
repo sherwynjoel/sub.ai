@@ -5,14 +5,22 @@ import { db, jobs } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { CAPTION_STYLES } from "@/lib/captionStyles";
 import { ownJob } from "@/lib/jobs";
-import { audioCodec, videoSize } from "@/lib/media";
 import { effectivePlan } from "@/lib/plans";
 import { FONTS, logoFile } from "@/lib/render";
-import { exportPlan } from "@/lib/renderPlan";
+import { exportPlan, type VideoInfo } from "@/lib/renderPlan";
 import { fileStream } from "@/lib/stream";
 import { recordExport } from "@/lib/styleUsage";
 
 type Ctx = { params: Promise<{ id: string }> };
+
+/** What the device says about the video, kept to what can only be that: it goes into ffmpeg's instructions. */
+function videoInfo(v: Partial<VideoInfo> | undefined): VideoInfo | null {
+  const side = (n: unknown) => Number.isInteger(n) && (n as number) > 0 && (n as number) <= 16384;
+  const word = (w: unknown) => typeof w === "string" && /^[a-z0-9-]{2,24}$/.test(w);
+  if (!v || (v.size && !(side(v.size.width) && side(v.size.height)))) return null;
+  if (v.colour && !(word(v.colour.space) && word(v.colour.primaries) && word(v.colour.trc))) return null;
+  return { size: v.size ?? null, aac: !!v.aac, deep: !!v.deep, colour: v.colour ?? null };
+}
 
 /**
  * What a styled MP4 needs, for the user's device to make it (lib/deviceExport.ts): `{ style, lang: "ta" | "en" | "both" }`.
@@ -23,17 +31,15 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!u) return unauthorized();
   const j = await ownJob((await params).id, u);
   if (!j) return json({ error: "Not found" }, 404);
-  if (!j.filePath && j.videoTotal) return json({ error: "The video is still uploading. Export once it's finished." }, 409);
-  if (!j.filePath) return json({ error: "The video was removed after 7 days, so it can't be rendered." }, 410);
+  if (!j.filePath && !j.videoTotal) return json({ error: "The video was removed after 7 days, so it can't be rendered." }, 410);
   if (j.status !== "done" || !j.cues?.length) return json({ error: "Subtitles aren't ready yet." }, 409);
-  const { style, lang } = await req.json().catch(() => ({}));
+  const { style, lang, video } = await req.json().catch(() => ({}));
   if (!CAPTION_STYLES.some((s) => s.id === style)) return json({ error: "Unknown style." }, 400);
   if (!["ta", "en", "both"].includes(lang)) return json({ error: "Pick which subtitles to burn in." }, 400);
+  const info = videoInfo(video);
+  if (!info) return json({ error: "Couldn't read the video." }, 400);
   await db.update(jobs).set({ captionStyle: style, renderLang: lang }).where(eq(jobs.id, j.id));
-  const size = await videoSize(j.filePath);
-  const plan = exportPlan({ cues: j.cues, captionStyle: style, captionCustom: j.captionCustom, renderLang: lang, watermark: effectivePlan(u) === "free" }, {
-    size, aac: !!size && (await audioCodec(j.filePath)) === "aac", logo: !!(await logoFile(j)),
-  });
+  const plan = exportPlan({ cues: j.cues, captionStyle: style, captionCustom: j.captionCustom, renderLang: lang, watermark: effectivePlan(u) === "free" }, { ...info, logo: !!(await logoFile(j)) });
   return json({ plan, seconds: j.durationSec, fonts: (await readdir(FONTS)).filter((f) => /\.(ttf|otf)$/i.test(f)) });
 }
 

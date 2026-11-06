@@ -20,7 +20,7 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!u) return unauthorized();
   const j = await ownJob((await params).id, u);
   if (!j) return json({ error: "Not found" }, 404);
-  if (!j.filePath && j.videoTotal) return json({ error: "The video is still uploading." }, 409);
+  if (!j.filePath && j.videoTotal) return json({ error: "This project was made on the website, so its video is on that device. Generate this clip from the panel to use a style here." }, 409);
   if (!j.filePath) return json({ error: "The video was removed after 7 days, so this style can't be made. Generate the clip again." }, 410);
   if (j.status !== "done" || !j.cues?.length) return json({ error: "Subtitles aren't ready yet." }, 409);
   const { style, lang } = await req.json().catch(() => ({}));
