@@ -1,6 +1,6 @@
 # Installs the panel straight from plugin/ into this PC's Premiere (developer mode, unsigned) and turns on the test channel.
-# Usage: powershell -File plugin/dev/install.ps1 -Server https://13-201-93-154.sslip.io
-param([string]$Server = "https://13-201-93-154.sslip.io")
+# Usage: powershell -File plugin/dev/install.ps1 -Server https://3-105-130-231.sslip.io
+param([string]$Server = "https://3-105-130-231.sslip.io")
 $ErrorActionPreference = "Stop"
 $src = Split-Path $PSScriptRoot -Parent
 $dst = Join-Path $env:APPDATA "Adobe\CEP\extensions\com.vasanam.panel"
