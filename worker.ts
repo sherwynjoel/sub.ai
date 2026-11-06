@@ -5,7 +5,7 @@
 import { mkdtemp, readdir, readFile, rm, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
-import { and, desc, eq, isNotNull, isNull, lt, ne, notLike, or, sql } from "drizzle-orm";
+import { inArray, and, desc, eq, isNotNull, isNull, lt, ne, notLike, or, sql } from "drizzle-orm";
 import { db, jobs, settings, users, type Cue } from "./db";
 import { getAiConfig, transcribe, type Script } from "./lib/ai";
 import { effectivePlan, PLANS } from "./lib/plans";
@@ -14,7 +14,7 @@ import { speechRegions } from "./lib/timing";
 import { alignCues } from "./lib/align";
 import { translateLines } from "./lib/ai/translate";
 import { overlayKey } from "./lib/overlay";
-import { renderOverlay, renderStyled } from "./lib/render";
+import { renderOverlay } from "./lib/render";
 import { recordExport } from "./lib/styleUsage";
 import { dropAnchor, englishCues, mergeChunks, mergeShort, retimeWindows, snapToPauses, withWordTimes } from "./lib/subtitles";
 
@@ -90,39 +90,6 @@ async function processJob(job: typeof jobs.$inferSelect) {
   }
 }
 
-/** Styled-MP4 renders are queued from the editor and run here, after any waiting transcriptions. */
-async function claimRender() {
-  const rows = await db.execute(sql`
-    UPDATE jobs SET render_status = 'rendering', render_progress = 0, render_error = null
-    WHERE id = (SELECT id FROM jobs WHERE render_status = 'queued' ORDER BY updated_at FOR UPDATE SKIP LOCKED LIMIT 1)
-    RETURNING id`);
-  const id = (rows as unknown as { id: string }[])[0]?.id;
-  return id ? (await db.select().from(jobs).where(eq(jobs.id, id)))[0] : null;
-}
-
-async function processRender(job: typeof jobs.$inferSelect) {
-  try {
-    if (!job.filePath || !job.cues?.length) throw new Error("The video or its subtitles are no longer available.");
-    let last = 0;
-    // The free plan's exports carry a small watermark; a paid plan running now takes it off.
-    const [owner] = await db.select().from(users).where(eq(users.id, job.userId));
-    const watermark = !owner || effectivePlan(owner) === "free";
-    const out = await renderStyled({ ...job, filePath: job.filePath, cues: job.cues, watermark }, (pct) => {
-      if (pct < last + 5) return;
-      last = pct;
-      db.update(jobs).set({ renderProgress: pct }).where(eq(jobs.id, job.id)).catch(console.error);
-    });
-    const kept = await db.update(jobs).set({ renderStatus: "done", renderProgress: 100, renderPath: out }).where(eq(jobs.id, job.id)).returning({ id: jobs.id });
-    if (!kept.length) { await unlink(out).catch(() => {}); return; } // the project was deleted while it rendered
-    await recordExport(db, job);
-    console.log(`render ${job.id} done (${job.captionStyle})`);
-  } catch (e) {
-    console.error(`render ${job.id} failed`, e);
-    await db.update(jobs).set({ renderStatus: "failed", renderError: "Couldn't render the styled video. Try again, or pick another style." }).where(eq(jobs.id, job.id));
-  }
-}
-
-/** The styled captions alone for the Adobe panel, after any styled MP4s. */
 async function claimOverlay() {
   const rows = await db.execute(sql`
     UPDATE jobs SET overlay_status = 'rendering', overlay_progress = 0
@@ -230,7 +197,8 @@ async function main() {
   // ponytail: assumes a single worker process; with several, only requeue jobs whose updated_at is stale.
   await db.update(jobs).set({ status: "queued", progress: 0 }).where(eq(jobs.status, "processing"));
   await db.update(jobs).set({ overlayStatus: "queued", overlayProgress: 0 }).where(eq(jobs.overlayStatus, "rendering"));
-  await db.update(jobs).set({ renderStatus: "queued", renderProgress: 0 }).where(eq(jobs.renderStatus, "rendering"));
+  // MP4s are made on users' devices now: nothing here will take up one that was waiting.
+  await db.update(jobs).set({ renderStatus: null }).where(inArray(jobs.renderStatus, ["queued", "rendering"]));
   console.log("worker ready");
   let lastPurge = 0;
   for (;;) {
@@ -240,8 +208,6 @@ async function main() {
     }
     const job = await claim().catch((e) => (console.error(e), null));
     if (job) { await processJob(job).catch((e) => fail(job, e)); continue; }
-    const render = await claimRender().catch((e) => (console.error(e), null));
-    if (render) { await processRender(render); continue; }
     const overlay = await claimOverlay().catch((e) => (console.error(e), null));
     if (overlay) { await processOverlay(overlay); continue; }
     const preview = await claimPreview().catch((e) => (console.error(e), null));

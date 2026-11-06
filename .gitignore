@@ -65,3 +65,6 @@ next-env.d.ts
 
 # word-timing model (scripts/timing/export_onnx.py), copied to the server separately
 /models/
+
+# the device video engine, copied from node_modules on install (scripts/ffmpeg-public.mjs)
+/public/ffmpeg/

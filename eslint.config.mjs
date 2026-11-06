@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The device video engine, copied from node_modules.
+    "public/ffmpeg/**",
     // Adobe panel: ExtendScript/CEP code, not part of the Next app.
     "plugin/**",
   ]),

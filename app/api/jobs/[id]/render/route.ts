@@ -1,15 +1,23 @@
 import { attachment, stem } from "@/lib/projectName";
-import { stat } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import { eq } from "drizzle-orm";
 import { db, jobs } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { CAPTION_STYLES } from "@/lib/captionStyles";
 import { ownJob } from "@/lib/jobs";
+import { audioCodec, videoSize } from "@/lib/media";
+import { effectivePlan } from "@/lib/plans";
+import { FONTS, logoFile } from "@/lib/render";
+import { exportPlan } from "@/lib/renderPlan";
 import { fileStream } from "@/lib/stream";
+import { recordExport } from "@/lib/styleUsage";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** Queue a styled MP4: `{ style, lang: "ta" | "en" | "both" }`. The worker renders it. */
+/**
+ * What a styled MP4 needs, for the user's device to make it (lib/deviceExport.ts): `{ style, lang: "ta" | "en" | "both" }`.
+ * The plan is written here so the free plan's mark comes with it.
+ */
 export async function POST(req: Request, { params }: Ctx) {
   const u = await currentUser();
   if (!u) return unauthorized();
@@ -18,12 +26,25 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!j.filePath && j.videoTotal) return json({ error: "The video is still uploading. Export once it's finished." }, 409);
   if (!j.filePath) return json({ error: "The video was removed after 7 days, so it can't be rendered." }, 410);
   if (j.status !== "done" || !j.cues?.length) return json({ error: "Subtitles aren't ready yet." }, 409);
-  if (j.renderStatus === "queued" || j.renderStatus === "rendering") return json({ error: "A render is already running." }, 409);
   const { style, lang } = await req.json().catch(() => ({}));
   if (!CAPTION_STYLES.some((s) => s.id === style)) return json({ error: "Unknown style." }, 400);
   if (!["ta", "en", "both"].includes(lang)) return json({ error: "Pick which subtitles to burn in." }, 400);
-  await db.update(jobs).set({ captionStyle: style, renderLang: lang, renderStatus: "queued", renderProgress: 0, renderError: null }).where(eq(jobs.id, j.id));
-  return json({ ok: true }, 202);
+  await db.update(jobs).set({ captionStyle: style, renderLang: lang }).where(eq(jobs.id, j.id));
+  const size = await videoSize(j.filePath);
+  const plan = exportPlan({ cues: j.cues, captionStyle: style, captionCustom: j.captionCustom, renderLang: lang, watermark: effectivePlan(u) === "free" }, {
+    size, aac: !!size && (await audioCodec(j.filePath)) === "aac", logo: !!(await logoFile(j)),
+  });
+  return json({ plan, seconds: j.durationSec, fonts: (await readdir(FONTS)).filter((f) => /\.(ttf|otf)$/i.test(f)) });
+}
+
+/** The device has finished an export: counted towards the style's use. */
+export async function PUT(_: Request, { params }: Ctx) {
+  const u = await currentUser();
+  if (!u) return unauthorized();
+  const j = await ownJob((await params).id, u);
+  if (!j) return json({ error: "Not found" }, 404);
+  await recordExport(db, j);
+  return json({ ok: true });
 }
 
 /** Download the finished styled MP4. */
