@@ -1,5 +1,5 @@
 import type { FFmpeg as Engine } from "@ffmpeg/ffmpeg";
-import { LOGO, OUT, VIDEO, type Plan } from "@/lib/renderPlan";
+import { LOGO, OUT, readVideo, VIDEO, type Plan, type VideoInfo } from "@/lib/renderPlan";
 
 /**
  * Makes a project's video on the user's own device: ffmpeg in WebAssembly carries out the plan the server wrote
@@ -36,9 +36,10 @@ async function fetchVideo(url: string, signal: AbortSignal, onPct: (pct: number)
 }
 
 export async function renderOnDevice(o: {
-  plan: Plan; fonts: string[]; seconds: number; video: Blob | string; logo?: string; signal: AbortSignal; onStep: (s: Step) => void;
+  video: Blob | string; logo?: string; signal: AbortSignal; onStep: (s: Step) => void;
+  plan: (video: VideoInfo) => Promise<{ plan: Plan; fonts: string[]; seconds: number }>;
 }) {
-  const { plan, seconds, signal, onStep } = o;
+  const { signal, onStep } = o;
   // Loaded from public/ffmpeg, as it is: the bundler can't follow how it starts its worker.
   const { FFmpeg } = (await import(/* turbopackIgnore: true */ /* webpackIgnore: true */ ENGINE)) as { FFmpeg: typeof Engine };
   const ff = new FFmpeg();
@@ -52,11 +53,18 @@ export async function renderOnDevice(o: {
     const video = typeof o.video === "string"
       ? await fetchVideo(o.video, signal, (pct) => onStep({ step: "Getting your video", pct }))
       : o.video;
-    onStep({ step: "Getting the fonts", pct: 0 });
     await ff.createDir("/in");
     await ff.mount("WORKERFS" as never, { blobs: [{ name: "video", data: video }] }, "/in");
+    // What's in the file (ffmpeg prints it, then stops for want of an output).
+    const said: string[] = [], listen = ({ message }: { message: string }) => { said.push(message); };
+    ff.on("log", listen);
+    await ff.exec(["-hide_banner", "-i", "/in/video"]);
+    ff.off("log", listen);
+    const { plan, fonts, seconds } = await o.plan(readVideo(said.join("\n")));
+
+    onStep({ step: "Getting the fonts", pct: 0 });
     await ff.createDir("fonts");
-    await Promise.all(o.fonts.map(async (f) => ff.writeFile(`fonts/${f}`, await bytes(`/caption-fonts/${encodeURIComponent(f)}`))));
+    await Promise.all(fonts.map(async (f) => ff.writeFile(`fonts/${f}`, await bytes(`/caption-fonts/${encodeURIComponent(f)}`))));
     for (const [name, text] of Object.entries(plan.files)) await ff.writeFile(name, text);
     if (o.logo) await ff.writeFile("logo", await bytes(o.logo));
 

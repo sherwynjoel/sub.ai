@@ -14,6 +14,24 @@ export type RenderJob = { cues: Cue[]; captionStyle: string; captionCustom: Capt
 export type Plan = { files: Record<string, string>; args: string[] };
 export const VIDEO = "<video>", LOGO = "<logo>", OUT = "<out>";
 
+/** What the export must match in the user's video. `deep`: more than 8 bits (HDR phone clips); `colour`: how it's coloured. */
+export type VideoInfo = { size: { width: number; height: number } | null; aac: boolean; deep: boolean; colour: { space: string; primaries: string; trc: string } | null };
+
+/** Reads VideoInfo from what `ffmpeg -i` prints. Turned phone clips are stored sideways: the size is the upright one. */
+export function readVideo(log: string): VideoInfo {
+  const line = log.match(/Stream #.*Video: .*/)?.[0] ?? "";
+  const dims = line.match(/, (\d{2,5})x(\d{2,5})/);
+  const turned = /rotat\w*( of|\s*:)\s*-?(90|270)\b/.test(log);
+  const named = line.match(/yuvj?\w*\(([^)]*)\)/)?.[1].split(", ").find((p) => /^(bt|smpte|arib)/.test(p));
+  const [space, primaries = space, trc = space] = named?.split("/") ?? [];
+  return {
+    size: dims ? { width: +dims[turned ? 2 : 1], height: +dims[turned ? 1 : 2] } : null,
+    aac: !!dims && /Audio: aac/.test(log),
+    deep: /yuv\w*(10|12)(le|be)/.test(line),
+    colour: space ? { space, primaries, trc } : null,
+  };
+}
+
 const langOf = (job: RenderJob) => (["ta", "en", "both"].includes(job.renderLang) ? job.renderLang : "both") as "ta" | "en" | "both";
 
 /** The job's captions as the .ass files its look needs. */
@@ -33,7 +51,7 @@ function subs(job: RenderJob, lang: "ta" | "en" | "both", width: number, height:
  * The finished MP4: captions burned into the video. `size`: the video's, null for an audio-only project (a plain dark
  * canvas). `aac`: its sound is AAC already, so it's copied (no quality lost, less work). `logo`: an uploaded logo is to hand.
  */
-export function exportPlan(job: RenderJob, o: { size: { width: number; height: number } | null; aac: boolean; logo: boolean }): Plan {
+export function exportPlan(job: RenderJob, o: VideoInfo & { logo: boolean }): Plan {
   const src = o.size ?? { width: 1920, height: 1080 };
   const canvas = job.captionCustom?.canvas;
   const { width, height } = canvasSize(canvas, src.width, src.height); // the exported frame
@@ -74,9 +92,13 @@ export function exportPlan(job: RenderJob, o: { size: { width: number; height: n
   if (job.watermark) { graph[graph.length - 1] = graph[graph.length - 1].replace(/\[out\]$/, "[subbed]"); graph.push(watermarkGraph("subbed", width, height)); }
   return { files, args: [
     ...input, "-filter_complex", graph.join(";"), "-map", "[out]", "-map", audio,
-    // superfast at CRF 22: 35% faster than veryfast/CRF 20 at the same picture quality, files ~30% larger.
-    "-c:v", "libx264", "-preset", "superfast", "-crf", "22", "-pix_fmt", "yuv420p",
-    ...(o.aac ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", "160k"]), "-movflags", "+faststart", OUT,
+    // The picture has to be encoded again to carry the captions, so it's encoded to look the same as what came in: the
+    // same size and frame rate, a high quality setting, and ten-bit HDR kept as ten-bit HDR (H.265, as phones write it).
+    // Not x264's veryfast or slower: they crash its WebAssembly build ("function signature mismatch").
+    ...(o.deep ? ["-c:v", "libx265", "-preset", "superfast", "-crf", "18", "-pix_fmt", "yuv420p10le", "-tag:v", "hvc1", "-x265-params", "log-level=error"]
+      : ["-c:v", "libx264", "-preset", "superfast", "-crf", "16", "-pix_fmt", "yuv420p"]),
+    ...(o.colour ? ["-colorspace", o.colour.space, "-color_primaries", o.colour.primaries, "-color_trc", o.colour.trc] : []),
+    ...(o.aac ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", "320k"]), "-movflags", "+faststart", OUT,
   ] };
 }
 

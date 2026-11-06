@@ -171,11 +171,11 @@ async function fail(job: typeof jobs.$inferSelect, err: unknown) {
 }
 
 async function purgeOld() {
-  const old = await db.select().from(jobs).where(and(or(isNotNull(jobs.filePath), isNotNull(jobs.audioPath), isNotNull(jobs.videoTotal)), lt(jobs.createdAt, new Date(Date.now() - KEEP_DAYS * 864e5))));
+  const old = await db.select().from(jobs).where(and(or(isNotNull(jobs.filePath), isNotNull(jobs.audioPath)), lt(jobs.createdAt, new Date(Date.now() - KEEP_DAYS * 864e5))));
   for (const j of old) {
     await removeUploads(j);
     for (const f of [j.renderPath, j.overlayPath]) if (f) await unlink(f).catch(() => {});
-    await db.update(jobs).set({ filePath: null, audioPath: null, videoTotal: null, previewPath: null, renderPath: null, renderStatus: null, overlayPath: null, overlayStatus: null }).where(eq(jobs.id, j.id));
+    await db.update(jobs).set({ filePath: null, audioPath: null, previewPath: null, renderPath: null, renderStatus: null, overlayPath: null, overlayStatus: null }).where(eq(jobs.id, j.id));
   }
   // Styled MP4s whose project no longer exists (deleted before deletes removed them too). Safe only because
   // this runs between renders in the same loop: a render in progress has no renderPath yet.
