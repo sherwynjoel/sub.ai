@@ -17,6 +17,12 @@ export const VIDEO = "<video>", LOGO = "<logo>", OUT = "<out>";
 /** What the export must match in the user's video. `deep`: more than 8 bits (HDR phone clips); `colour`: how it's coloured. */
 export type VideoInfo = { size: { width: number; height: number } | null; aac: boolean; deep: boolean; colour: { space: string; primaries: string; trc: string } | null };
 
+/** The frame rate from what `ffmpeg -i` prints, as a fraction where it's an NTSC rate; 30 when it can't tell. */
+export function readRate(log: string) {
+  const rate = log.match(/Stream #.*Video: .*?([\d.]+) tbr/)?.[1];
+  return ({ "23.98": "24000/1001", "29.97": "30000/1001", "59.94": "60000/1001" } as Record<string, string>)[rate ?? ""] ?? (rate && +rate > 0 ? rate : "30");
+}
+
 /** Reads VideoInfo from what `ffmpeg -i` prints. Turned phone clips are stored sideways: the size is the upright one. */
 export function readVideo(log: string): VideoInfo {
   const line = log.match(/Stream #.*Video: .*/)?.[0] ?? "";
