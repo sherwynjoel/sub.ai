@@ -2,6 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Cue } from "@/db/schema";
 import FilmStrip from "@/components/FilmStrip";
+import Waveform from "@/components/Waveform";
 import TimeInput from "@/components/TimeInput";
 import { wordTimes } from "@/lib/captionStyles";
 import { MIN_CAPTION as MIN, retime, shiftFrom, stretchEnd } from "@/lib/cueEdit";
@@ -13,6 +14,8 @@ type Props = {
   video: React.RefObject<HTMLVideoElement | null>;
   /** The video's address, for the pictures along the timeline. */
   src?: string;
+  /** The sound's shape (lib/waveform.ts), when known. */
+  levels?: Uint8Array | null;
   /** One frame of the video, seconds: drags land on frames. */
   frame: number;
   onSeek: (t: number) => void;
@@ -73,7 +76,7 @@ const stamp = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padSta
  * retime its words. The bar above types exact times and holds the actions for what's selected. On touch a swipe scrolls:
  * a caption is tapped first, then dragged.
  */
-export default function Timeline({ cues, duration, now, selected, zoom, line, playing, video, src, frame, onSeek, onSelect, onDrag, onDragEnd, layers = [], selectedLayer = -1, onSelectLayer, onDragLayer, onZoom, onAddCaption, onAddText, onCaptionText, onLayerText, onInsertBetween, onDelete, onDeleteLayer, onDeselect, ripple, onRipple, onSpan, onNudge, onSplit, onMerge }: Props) {
+export default function Timeline({ cues, duration, now, selected, zoom, line, playing, video, src, levels, frame, onSeek, onSelect, onDrag, onDragEnd, layers = [], selectedLayer = -1, onSelectLayer, onDragLayer, onZoom, onAddCaption, onAddText, onCaptionText, onLayerText, onInsertBetween, onDelete, onDeleteLayer, onDeselect, ripple, onRipple, onSpan, onNudge, onSplit, onMerge }: Props) {
   // A caption or text layer being typed into, right on the timeline.
   const [typing, setTyping] = useState<{ kind: "cue" | "layer"; i: number } | null>(null);
   const [dragging, setDragging] = useState(false); // a drag under way: its times show over the timeline
@@ -323,11 +326,12 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
       </div>
     </div>
     <div className="tl" ref={scroller}>
-      <div className="tl-inner" style={{ width, height: 184 + laneCount * 32 }}>
+      <div className="tl-inner" style={{ width, height: 184 + laneCount * 32 + (levels ? 34 : 0), "--wave": levels ? "34px" : "0px" } as React.CSSProperties}>
         <div className="tl-ruler" onPointerDown={scrub}>
           {ticks.map((t) => <span key={t} className="tl-tick" style={{ left: t * zoom }}>{label(t)}</span>)}
         </div>
         <FilmStrip src={src} scroller={scroller} zoom={zoom} duration={duration} onPointerDown={scrub} />
+        {levels && <Waveform levels={levels} scroller={scroller} zoom={zoom} onPointerDown={scrub} />}
         <div className="tl-track" onPointerDown={pan} onDoubleClick={(e) => { if (e.target === e.currentTarget) addAt("cue", timeAt(e.clientX)); }}
           title="Double-click an empty spot to add a caption there">
           {cues.map((c, i) => (

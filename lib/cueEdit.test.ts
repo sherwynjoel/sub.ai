@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { insertAt, mergeCues, MIN_CAPTION, retime, setText, setWord, shiftFrom, splitCue, stretchEnd } from "./cueEdit";
+import { findText, insertAt, mergeCues, MIN_CAPTION, replaceText, retime, setText, setWord, shiftFrom, splitCue, stretchEnd } from "./cueEdit";
 
 test("splitCue cuts at the first word said after the playhead, word times and colours follow their words", () => {
   const c = { start: 0, end: 4, ta: "a b c d", en: "one two", w: [0, 1, 2, 3], wc: [null, "#ff0000", null, null], style: { size: 1.2 } };
@@ -127,4 +127,24 @@ test("stretchEnd keeps the gaps after it, both ways", () => {
   const c = row([0, 2], [3, 4], [5, 6]);
   assert.deepEqual(spans(stretchEnd(c, 0, 3, 10)), [[0, 3], [4, 5], [6, 7]]);
   assert.deepEqual(spans(stretchEnd(c, 0, 1, 10)), [[0, 1], [2, 3], [4, 5]]);
+});
+
+test("findText counts both lines in any case, and special characters are just text", () => {
+  const c = [{ start: 0, end: 1, ta: "Ravi ரவி ravi", en: "ravi" }, { start: 1, end: 2, ta: "a.b", en: "" }, { start: 2, end: 3, ta: "axb", en: "" }];
+  assert.deepEqual(findText(c, "RAVI"), { count: 3, where: [0] });
+  assert.deepEqual(findText(c, "ரவி"), { count: 1, where: [0] });
+  assert.deepEqual(findText(c, "a.b"), { count: 1, where: [1] });
+  assert.deepEqual(findText(c, "  "), { count: 0, where: [] });
+});
+
+test("replaceText keeps word times when the word count holds, and $ is just a character", () => {
+  const c = [{ start: 0, end: 2, ta: "ravi sir", en: "Ravi", w: [0, 1], wc: [null, "#ff0000"] }, { start: 2, end: 3, ta: "other", en: "" }];
+  const out = replaceText(c, "ravi", "Raj$1");
+  assert.deepEqual([out[0].ta, out[0].en, out[0].w, out[0].wc], ["Raj$1 sir", "Raj$1", [0, 1], [null, "#ff0000"]]);
+  assert.equal(out[1], c[1], "captions without it are left alone");
+  assert.equal(replaceText(c, " ", "x"), c);
+});
+
+test("replaceText with nothing takes the word out, leaving no double space", () => {
+  assert.equal(replaceText([{ start: 0, end: 2, ta: "one um two", en: "" }], "um", "")[0].ta, "one two");
 });

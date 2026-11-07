@@ -315,7 +315,7 @@ kbd { font: 600 .75rem/1 var(--font-body); padding: 3px 6px; border: 1px solid v
 .tl-inner { position: relative; height: 128px; overflow: hidden; }
 .tl-ruler { position: absolute; left: 0; right: 0; top: 0; height: 22px; border-bottom: 1px solid #2c2c3a; cursor: ew-resize; }
 .tl-tick { position: absolute; top: 0; height: 22px; border-left: 1px solid #3a3a4c; padding-left: 4px; font: 500 10px/22px var(--font-body); color: #a5a5b8; white-space: nowrap; }
-.tl-track { position: absolute; left: 0; right: 0; top: 76px; height: 52px; cursor: ew-resize; }
+.tl-track { position: absolute; left: 0; right: 0; top: calc(76px + var(--wave, 0px)); height: 52px; cursor: ew-resize; }
 .tl-block { position: absolute; top: 0; height: 52px; border-radius: 6px; background: #3a3a8c; border: 1px solid #5a5ad0; color: #fff; overflow: hidden; cursor: grab; box-sizing: border-box; }
 .tl-block:hover { background: #46469e; }
 .tl-block.on { background: #d4ff3f; border-color: #fff; color: #0c0c14; }
@@ -325,7 +325,7 @@ kbd { font: 600 .75rem/1 var(--font-body); padding: 3px 6px; border: 1px solid v
 .tl-edge.l { left: 0; }
 .tl-edge.r { right: 0; }
 .tl-edge:hover { background: rgba(255, 255, 255, .35); }
-.tl-words { position: absolute; left: 0; right: 0; top: 134px; height: 40px; cursor: ew-resize; }
+.tl-words { position: absolute; left: 0; right: 0; top: calc(134px + var(--wave, 0px)); height: 40px; cursor: ew-resize; }
 .tl-word { position: absolute; top: 4px; height: 32px; border-left: 2px solid #d4ff3f; background: rgba(212, 255, 63, .12); cursor: ew-resize; box-sizing: border-box; overflow: hidden; }
 .tl-word b { display: block; padding: 0 5px; font: 600 11px/32px var(--font-body); color: #eaffb0; white-space: nowrap; pointer-events: none; }
 .tl-word:hover { background: rgba(212, 255, 63, .28); }
@@ -356,7 +356,7 @@ kbd { font: 600 .75rem/1 var(--font-body); padding: 3px 6px; border: 1px solid v
 .look input[type="range"] { padding: 0; accent-color: var(--black); }
 .look input[type="color"] { width: 36px; height: 30px; padding: 2px; }
 
-.tl-layers { position: absolute; left: 0; right: 0; top: 178px; height: 36px; border-top: 1px dashed #2c2c3a; cursor: ew-resize; }
+.tl-layers { position: absolute; left: 0; right: 0; top: calc(178px + var(--wave, 0px)); height: 36px; border-top: 1px dashed #2c2c3a; cursor: ew-resize; }
 .tl-layer { top: 4px; height: 28px; background: #6b3a8c; border-color: #a25ad0; }
 .tl-layer .tl-text { padding: 4px 8px; }
 .player .bg-blur { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(18px) brightness(.85); transform: scale(1.12); pointer-events: none; }
@@ -875,7 +875,7 @@ a.signout { text-decoration: none; }
 .style-sample .cap-main { font-size: calc(var(--fs-sample, 1) * 13cqh) !important; }
 .style-sample .cap-sub { font-size: 8cqh !important; }
 /* + between captions on the timeline (components/Timeline.tsx) */
-.tl-pluses { position: absolute; left: 0; right: 0; top: 76px; height: 52px; pointer-events: none; z-index: 5; }
+.tl-pluses { position: absolute; left: 0; right: 0; top: calc(76px + var(--wave, 0px)); height: 52px; pointer-events: none; z-index: 5; }
 .tl-plus { position: absolute; top: 100%; width: 20px; height: 20px; margin: -5px 0 0 -10px; padding: 0; border: 2px solid #15151f; border-radius: 50%; background: #d4ff3f; color: #0c0c14; font: 800 15px/1 var(--font-body); cursor: pointer; pointer-events: auto; opacity: 0; transform: scale(.7); transition: opacity .15s, transform .15s; box-shadow: 0 2px 8px rgb(0 0 0 / .5); }
 .tl-inner:hover .tl-plus, .tl-plus.near, .tl-plus:focus-visible { opacity: 1; transform: none; }
 .tl-plus:hover { transform: scale(1.15); }
@@ -1120,4 +1120,22 @@ html:has(.pass-reveal[open]) { overflow: hidden; }
   .tl-edit .seg { display: flex; width: 100%; box-sizing: border-box; padding: 2px; }
   .tl-edit .seg button { flex: 1; min-width: 0; }
   .tl-zoom { margin-left: 0; }
+}
+
+.tl-wave { position: absolute; left: 0; right: 0; top: 72px; height: 32px; overflow: hidden; cursor: ew-resize; touch-action: none; }
+.tl-wave canvas { position: absolute; top: 0; height: 32px; display: block; }
+
+/* Find and replace: floats over the editor, so the video and captions stay in view. */
+.find-panel { position: fixed; z-index: 60; top: 92px; right: 20px; display: grid; gap: 8px; width: 320px; padding: 14px 16px; border-radius: 16px; background: #fff; color: #0c0c14; box-shadow: 0 12px 40px rgb(0 0 0 / .22); }
+.find-panel label { display: grid; gap: 3px; margin: 0; font-size: .8rem; color: var(--muted); }
+.find-panel input { width: 100%; box-sizing: border-box; }
+.find-panel p { margin: 0; }
+.find-head { display: flex; justify-content: space-between; align-items: center; }
+.find-actions { display: flex; gap: 6px; }
+.find-actions .btn:last-child { margin-left: auto; }
+@media (max-width: 720px) { .find-panel { top: calc(10px + env(safe-area-inset-top)); left: 10px; right: 10px; width: auto; } .find-panel input { font-size: 16px; } }
+@media (max-width: 720px) and (max-height: 640px) { /* small phones: the side buttons clear the top bar */
+  .vrail-phone { gap: 0; padding: 3px 6px; }
+  .ed-frame > .vrail-phone button { padding: 4px 2px; gap: 2px; }
+  .ed-frame > .vrail-phone svg { width: 20px; height: 20px; }
 }
