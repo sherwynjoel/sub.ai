@@ -41,7 +41,7 @@ export default function Page() {
       <p>We share data only with the companies that help us run {BRAND.name}, and only what each one needs:</p>
       <ul>
         <li><strong>Speech recognition and translation:</strong> the audio of your video is sent to our AI provider (currently Sarvam AI, India) to turn speech into text and translate it.</li>
-        <li><strong>Hosting:</strong> our servers and database run on Amazon Web Services in Mumbai, India.</li>
+        <li><strong>Hosting:</strong> our servers and database run on Amazon Web Services in Sydney, Australia, so your data is stored outside India.</li>
         <li><strong>Payments:</strong> Razorpay processes subscriptions and payments.</li>
         <li><strong>Email:</strong> Google (Gmail) delivers the emails we send you, such as password reset links.</li>
       </ul>
