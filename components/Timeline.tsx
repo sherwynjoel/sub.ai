@@ -2,7 +2,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Cue } from "@/db/schema";
 import FilmStrip from "@/components/FilmStrip";
+import TimeInput from "@/components/TimeInput";
 import { wordTimes } from "@/lib/captionStyles";
+import { MIN_CAPTION as MIN, retime, shiftFrom, stretchEnd } from "@/lib/cueEdit";
 
 type Props = {
   cues: Cue[]; duration: number; now: number; selected: number; zoom: number; line: "ta" | "en";
@@ -15,8 +17,8 @@ type Props = {
   frame: number;
   onSeek: (t: number) => void;
   onSelect: (i: number) => void;
-  /** Live change while dragging (not yet an undo step). */
-  onDrag: (i: number, patch: Partial<Cue>) => void;
+  /** All the captions, live while dragging (not yet an undo step): those around the one dragged make room. */
+  onDrag: (next: Cue[]) => void;
   /** The drag finished: record one undo step. */
   onDragEnd: () => void;
   /** Text layers, on their own row. */
@@ -40,11 +42,19 @@ type Props = {
   /** Text typed into a caption / a text layer on the timeline. */
   onCaptionText?: (i: number, text: string) => void;
   onLayerText?: (i: number, text: string) => void;
+  /** Moving a caption takes the later ones with it. */
+  ripple?: boolean;
+  onRipple?: (on: boolean) => void;
+  /** The picked caption or text given a new span (typed, or set from the playhead); one undo step. */
+  onSpan?: (start: number, end: number) => void;
+  /** The picked one moved a little, seconds. */
+  onNudge?: (d: number) => void;
+  onSplit?: () => void;
+  onMerge?: () => void;
 };
 
 export const ZOOM_MIN = 10, ZOOM_MAX = 600;
 
-const MIN = 0.2; // shortest caption, seconds
 const GAP = 0.05; // smallest gap kept between words
 
 /** Ruler step that keeps labels about 80 px apart at this zoom (px per second). */
@@ -57,17 +67,16 @@ const label = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60))
 /** The playhead's time, to the hundredth. */
 const stamp = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, "0")}`;
 
-/** Times of a line's words scaled from one span of the caption to another (when its start or end is dragged). */
-const rescale = (t: number[] | undefined, s0: number, e0: number, s1: number, e1: number) =>
-  t && t.map((x) => s1 + ((x - s0) * (e1 - s1)) / Math.max(0.001, e0 - s0));
-
 /**
  * Caption blocks on a timeline: click to select and move the playhead, drag a block to move it, drag its edges to
- * change when it starts or ends, drag the word marks of the selected caption to retime its words.
+ * change when it starts or ends (the captions around it make room), drag the word marks of the selected caption to
+ * retime its words. The bar above types exact times and holds the actions for what's selected. On touch a swipe scrolls:
+ * a caption is tapped first, then dragged.
  */
-export default function Timeline({ cues, duration, now, selected, zoom, line, playing, video, src, frame, onSeek, onSelect, onDrag, onDragEnd, layers = [], selectedLayer = -1, onSelectLayer, onDragLayer, onZoom, onAddCaption, onAddText, onCaptionText, onLayerText, onInsertBetween, onDelete, onDeleteLayer, onDeselect }: Props) {
+export default function Timeline({ cues, duration, now, selected, zoom, line, playing, video, src, frame, onSeek, onSelect, onDrag, onDragEnd, layers = [], selectedLayer = -1, onSelectLayer, onDragLayer, onZoom, onAddCaption, onAddText, onCaptionText, onLayerText, onInsertBetween, onDelete, onDeleteLayer, onDeselect, ripple, onRipple, onSpan, onNudge, onSplit, onMerge }: Props) {
   // A caption or text layer being typed into, right on the timeline.
   const [typing, setTyping] = useState<{ kind: "cue" | "layer"; i: number } | null>(null);
+  const [dragging, setDragging] = useState(false); // a drag under way: its times show over the timeline
   /** Add one at t (an empty spot double-clicked, or the playhead) and start typing into it. */
   const addAt = (kind: "cue" | "layer", t: number) => {
     const i = (kind === "cue" ? onAddCaption : onAddText)?.(t) ?? -1;
@@ -139,8 +148,8 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
   }, [playing, zoom, video]);
   useLayoutEffect(() => { if (!playing) place(now); }); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** Where a drag lands: on the playhead when close to it, otherwise on a frame of the video. */
-  const snap = (t: number) => (Math.abs(t - now) * zoom < 6 ? now : Math.round(t / frame) * frame);
+  /** Where a drag lands: on the playhead or a neighbour's edge when close to it, otherwise on a frame of the video. */
+  const snap = (t: number, edges: number[] = []) => [now, ...edges].find((p) => Math.abs(t - p) * zoom < 6) ?? Math.round(t / frame) * frame;
 
   const timeAt = (clientX: number) => {
     const el = scroller.current!;
@@ -148,72 +157,79 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
     return Math.max(0, Math.min(duration, (clientX - r.left + el.scrollLeft) / zoom));
   };
 
-  /** Start a drag: move the whole caption, one edge, or word j. A press without movement selects and seeks. */
-  function grab(e: React.PointerEvent, i: number, mode: "move" | "start" | "end" | number) {
+  /**
+   * Follow a press: apply() gets the seconds dragged, the timeline scrolling along at its ends, and done() whether it
+   * moved at all. tapOnly: never a drag (a swipe there scrolls instead).
+   */
+  function follow(e: React.PointerEvent, apply: (dt: number) => void, done: (moved: boolean, ev: PointerEvent) => void, tapOnly = false) {
     e.stopPropagation();
-    e.preventDefault();
-    const c0 = cues[i], prevEnd = i > 0 ? cues[i - 1].end : 0, nextStart = i + 1 < cues.length ? cues[i + 1].start : Math.max(duration, c0.end);
-    const x0 = e.clientX;
-    const words = wordTimes(line === "en" ? c0.en : c0.ta, c0.start, c0.end, line === "en" ? c0.we : c0.w).map((w) => w.s);
-    let moved = false;
+    if (tapOnly) (document.activeElement as HTMLElement | null)?.blur?.();
+    else { e.preventDefault(); if (document.activeElement instanceof HTMLInputElement) document.activeElement.blur(); } // a time being typed is kept
+    const el = scroller.current!, x0 = e.clientX, s0 = el.scrollLeft;
+    let x = x0, moved = false, raf = 0;
+    const seconds = () => (x - x0 + el.scrollLeft - s0) / zoom;
+    const roll = () => {
+      const r = el.getBoundingClientRect(), v = x < r.left + 40 ? (x - r.left - 40) / 4 : x > r.right - 40 ? (x - r.right + 40) / 4 : 0;
+      if (v) { el.scrollLeft += v; apply(seconds()); }
+      raf = requestAnimationFrame(roll);
+    };
     const move = (ev: PointerEvent) => {
-      const dt = (ev.clientX - x0) / zoom;
-      if (!moved && Math.abs(ev.clientX - x0) < 3) return;
-      moved = true;
-      if (mode === "move") {
-        const len = c0.end - c0.start;
-        const s = Math.min(Math.max(prevEnd, snap(c0.start + dt)), nextStart - len), d = s - c0.start;
-        onDrag(i, { start: s, end: s + len, w: c0.w?.map((x) => x + d), we: c0.we?.map((x) => x + d) });
-      } else if (mode === "start") {
-        const s = Math.min(Math.max(prevEnd, snap(c0.start + dt)), c0.end - MIN);
-        onDrag(i, { start: s, w: rescale(c0.w, c0.start, c0.end, s, c0.end), we: rescale(c0.we, c0.start, c0.end, s, c0.end) });
-      } else if (mode === "end") {
-        const en = Math.max(Math.min(nextStart, snap(c0.end + dt)), c0.start + MIN);
-        onDrag(i, { end: en, w: rescale(c0.w, c0.start, c0.end, c0.start, en), we: rescale(c0.we, c0.start, c0.end, c0.start, en) });
-      } else {
-        const j = mode, lo = j ? words[j - 1] + GAP : c0.start, hi = j + 1 < words.length ? words[j + 1] - GAP : c0.end - GAP;
-        const t = Math.min(hi, Math.max(lo, snap(words[j] + dt)));
-        const next = words.slice();
-        next[j] = Math.round(t * 1000) / 1000;
-        onDrag(i, line === "en" ? { we: next } : { w: next });
-      }
+      x = ev.clientX;
+      if (tapOnly || (!moved && Math.abs(x - x0) < 3)) return;
+      if (!moved) { moved = true; setDragging(true); raf = requestAnimationFrame(roll); }
+      apply(seconds());
     };
     const up = (ev: PointerEvent) => {
+      cancelAnimationFrame(raf);
       removeEventListener("pointermove", move);
       removeEventListener("pointerup", up);
       removeEventListener("pointercancel", up);
-      if (moved) onDragEnd();
-      else if (ev.type === "pointerup") { onSelect(i); onSeek(typeof mode === "number" ? words[mode] : timeAt(ev.clientX)); }
+      setDragging(false);
+      done(moved, ev);
     };
     addEventListener("pointermove", move);
     addEventListener("pointerup", up);
     addEventListener("pointercancel", up); // a touch taken over by scrolling
   }
 
+  /** Start a drag: move the whole caption, one edge, or word j. A press without movement selects and seeks. */
+  function grab(e: React.PointerEvent, i: number, mode: "move" | "start" | "end" | number) {
+    const base = cues, c0 = base[i], len = c0.end - c0.start;
+    const edges = [base[i - 1]?.end, base[i + 1]?.start].filter((t) => t !== undefined);
+    const words = wordTimes(line === "en" ? c0.en : c0.ta, c0.start, c0.end, line === "en" ? c0.we : c0.w).map((w) => w.s);
+    let picked = i === selected;
+    follow(e, (dt) => {
+      if (!picked) { picked = true; onSelect(i); }
+      if (mode === "move") {
+        const s = snap(c0.start + dt, edges.concat(edges.map((t) => t - len)));
+        onDrag(ripple ? shiftFrom(base, i, s - c0.start, duration) : retime(base, i, s, s + len, duration));
+      } else if (mode === "start") onDrag(retime(base, i, snap(c0.start + dt, edges), c0.end, duration));
+      else if (mode === "end") { const en = snap(c0.end + dt, edges); onDrag(ripple ? stretchEnd(base, i, en, duration) : retime(base, i, c0.start, en, duration)); }
+      else {
+        const j = mode, lo = j ? words[j - 1] + GAP : c0.start, hi = j + 1 < words.length ? words[j + 1] - GAP : c0.end - GAP;
+        const next = words.slice();
+        next[j] = Math.round(Math.min(hi, Math.max(lo, snap(words[j] + dt))) * 1000) / 1000;
+        onDrag(base.map((c, k) => (k === i ? { ...c, ...(line === "en" ? { we: next } : { w: next }) } : c)));
+      }
+    }, (moved, ev) => {
+      if (moved) onDragEnd();
+      else if (ev.type === "pointerup") { onSelect(i); onSeek(typeof mode === "number" ? words[mode] : timeAt(ev.clientX)); }
+    }, e.pointerType === "touch" && i !== selected);
+  }
+
   /** Drag a text layer (move, or one edge); a press without movement selects it. */
   function grabLayer(e: React.PointerEvent, i: number, mode: "move" | "start" | "end") {
-    e.stopPropagation();
-    e.preventDefault();
-    const l0 = layers[i], x0 = e.clientX, len = l0.end - l0.start;
-    let moved = false;
-    const move = (ev: PointerEvent) => {
-      const dt = (ev.clientX - x0) / zoom;
-      if (!moved && Math.abs(ev.clientX - x0) < 3) return;
-      moved = true;
+    const l0 = layers[i], len = l0.end - l0.start;
+    let picked = i === selectedLayer;
+    follow(e, (dt) => {
+      if (!picked) { picked = true; onSelectLayer?.(i); }
       if (mode === "move") { const st = Math.min(Math.max(0, snap(l0.start + dt)), Math.max(0, duration - len)); onDragLayer?.(i, { start: st, end: st + len }); }
       else if (mode === "start") onDragLayer?.(i, { start: Math.min(Math.max(0, snap(l0.start + dt)), l0.end - MIN), end: l0.end });
       else onDragLayer?.(i, { start: l0.start, end: Math.max(Math.min(duration, snap(l0.end + dt)), l0.start + MIN) });
-    };
-    const up = (ev: PointerEvent) => {
-      removeEventListener("pointermove", move);
-      removeEventListener("pointerup", up);
-      removeEventListener("pointercancel", up);
+    }, (moved, ev) => {
       if (moved) onDragEnd();
       else if (ev.type === "pointerup") { onSelectLayer?.(i); onSeek(timeAt(ev.clientX)); }
-    };
-    addEventListener("pointermove", move);
-    addEventListener("pointerup", up);
-    addEventListener("pointercancel", up); // a touch taken over by scrolling
+    }, e.pointerType === "touch" && i !== selectedLayer);
   }
 
   /** Grab the empty track and drag to slide the timeline; a click without moving puts the playhead there. */
@@ -262,16 +278,49 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
   for (let t = 0; t <= duration; t += st) ticks.push(t); // up to the end (a label past it would widen the strip)
   const sel = cues[selected];
   const selWords = sel ? wordTimes(line === "en" ? sel.en : sel.ta, sel.start, sel.end, line === "en" ? sel.we : sel.w) : [];
+  const layer = layers[selectedLayer], span = layer ?? sel;
+
+  // A caption picked elsewhere (the list, the ↑ ↓ keys) comes into view here.
+  useEffect(() => {
+    const el = scroller.current, c = cues[selected];
+    if (!el || !c || playing) return;
+    if (c.end * zoom < el.scrollLeft || c.start * zoom > el.scrollLeft + el.clientWidth) el.scrollLeft = Math.max(0, c.start * zoom - 120);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
 
   return (
     <div className="tl-wrap">
-    <div className="tl-zoom" role="group" aria-label="Add text and zoom">
-      <button className="tl-addb" onClick={() => addAt("cue", now)} title="Add a caption at the playhead (or double-click an empty spot in the caption row)">+ Caption</button>
-      <button className="tl-addb" onClick={() => addAt("layer", now)} title="Add text over the video at the playhead (or double-click the text row)">+ Text</button>
-      <i className="tl-sep" />
-      <button onClick={() => zoomBy(1 / 1.4)} disabled={zoom <= ZOOM_MIN} aria-label="Zoom out (−)" title="Zoom out (−, or pinch / Ctrl + scroll)">−</button>
-      <button onClick={fit} className="tl-fit" title="Show the whole video">Fit</button>
-      <button onClick={() => zoomBy(1.4)} disabled={zoom >= ZOOM_MAX} aria-label="Zoom in (+)" title="Zoom in (+, or pinch / Ctrl + scroll)">+</button>
+    <div className="tl-bar">
+      {span ? (
+        <div className="tl-edit" role="group" aria-label={layer ? "Time of this text" : "Time of this caption"}>
+          <b>{layer ? "Text" : `Caption ${selected + 1}`}</b>
+          <label>Start<TimeInput short key={`s${selected}-${selectedLayer}-${span.start}`} value={span.start} label="Start" onChange={(v) => onSpan?.(v, span.end)} /></label>
+          <button className="btn ghost small" onClick={() => onSpan?.(now, span.end)} title="Start at the playhead ([)">Start here</button>
+          <label>End<TimeInput short key={`e${selected}-${selectedLayer}-${span.end}`} value={span.end} label="End" onChange={(v) => onSpan?.(span.start, v)} /></label>
+          <button className="btn ghost small" onClick={() => onSpan?.(span.start, now)} title="End at the playhead (])">End here</button>
+          <label>Length<TimeInput short key={`l${selected}-${selectedLayer}-${span.end - span.start}`} value={span.end - span.start} label="Length" onChange={(v) => onSpan?.(span.start, span.start + v)} /></label>
+          <span className="seg" role="group" aria-label="Move one frame">
+            <button onClick={() => onNudge?.(-frame)} aria-label="One frame earlier" title="One frame earlier (,)">◀</button>
+            <button onClick={() => onNudge?.(frame)} aria-label="One frame later" title="One frame later (.)">▶</button>
+          </span>
+          {!layer && <>
+            <button className="btn ghost small" onClick={onSplit} title="Split at the playhead (S)">Split</button>
+            <button className="btn ghost small" onClick={onMerge} disabled={selected + 1 >= cues.length} title="Join with the next caption (M)">Merge</button>
+          </>}
+          <button className="btn ghost small tl-delb" onClick={() => (layer ? onDeleteLayer?.(selectedLayer) : onDelete?.(selected))} title="Delete (Delete key)">Delete</button>
+        </div>
+      ) : <span className="tl-hint">Pick a caption to change its time. Drag it, or drag its edges: the captions next to it make room.</span>}
+      <label className="tl-ripple" title="Moving a caption moves every caption after it by the same amount, to put them back in sync">
+        <input type="checkbox" checked={!!ripple} onChange={(e) => onRipple?.(e.target.checked)} />Move later captions too
+      </label>
+      <div className="tl-zoom" role="group" aria-label="Add text and zoom">
+        <button className="tl-addb" onClick={() => addAt("cue", now)} title="Add a caption at the playhead (or double-click an empty spot in the caption row)">+ Caption</button>
+        <button className="tl-addb" onClick={() => addAt("layer", now)} title="Add text over the video at the playhead (or double-click the text row)">+ Text</button>
+        <i className="tl-sep" />
+        <button onClick={() => zoomBy(1 / 1.4)} disabled={zoom <= ZOOM_MIN} aria-label="Zoom out (−)" title="Zoom out (−, or pinch / Ctrl + scroll)">−</button>
+        <button onClick={fit} className="tl-fit" title="Show the whole video">Fit</button>
+        <button onClick={() => zoomBy(1.4)} disabled={zoom >= ZOOM_MAX} aria-label="Zoom in (+)" title="Zoom in (+, or pinch / Ctrl + scroll)">+</button>
+      </div>
     </div>
     <div className="tl" ref={scroller}>
       <div className="tl-inner" style={{ width, height: 184 + laneCount * 32 }}>
@@ -284,17 +333,12 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
           {cues.map((c, i) => (
             <div key={i} className={`tl-block${i === selected ? " on" : ""}${typing?.kind === "cue" && typing.i === i ? " typing" : ""}`} style={{ left: c.start * zoom, width: Math.max(4, (c.end - c.start) * zoom) }}
               onPointerDown={(e) => grab(e, i, "move")} onDoubleClick={() => setTyping({ kind: "cue", i })}
-              title={`${(line === "en" ? c.en : c.ta) || "(empty)"}\nDrag to move · drag the edges to retime · double-click to edit the text`}>
+              title={`${(line === "en" ? c.en : c.ta) || "(empty)"}\nDrag to move · drag the edges to change the time · double-click to edit the text`}>
               {typing?.kind === "cue" && typing.i === i
                 ? <TypeIn value={line === "en" ? c.en : c.ta} onDone={(v) => { setTyping(null); if (v !== null) onCaptionText?.(i, v); }} />
                 : <span className="tl-text">{(line === "en" ? c.en : c.ta) || "…"}</span>}
               <i className="tl-edge l" onPointerDown={(e) => grab(e, i, "start")} />
               <i className="tl-edge r" onPointerDown={(e) => grab(e, i, "end")} />
-              {onDelete && i === selected && !(typing?.kind === "cue" && typing.i === i) && (
-                <button type="button" className="tl-del" aria-label="Delete this caption" title="Delete this caption (Delete key)"
-                  onPointerDown={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}
-                  onClick={(e) => { e.stopPropagation(); onDelete(i); }}>×</button>
-              )}
             </div>
           ))}
         </div>
@@ -327,7 +371,7 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
         )}
         <div className="tl-layers" style={{ height: laneCount * 32 + 4 }} onPointerDown={pan} onDoubleClick={(e) => { if (e.target === e.currentTarget) addAt("layer", timeAt(e.clientX)); }}
           title="Text over the video: double-click an empty spot to add some there">
-          {!layers.length && <span className="tl-row-hint">Text over the video — double-click here (or + Text) to add</span>}
+          {!layers.length && <span className="tl-row-hint">Text over the video: + Text adds some</span>}
           {layers.map((l, i) => (
             <div key={i} className={`tl-block tl-layer${i === selectedLayer ? " on" : ""}${typing?.kind === "layer" && typing.i === i ? " typing" : ""}`} style={{ left: l.start * zoom, width: Math.max(4, (l.end - l.start) * zoom), top: 4 + lanes[i] * 32 }}
               onPointerDown={(e) => grabLayer(e, i, "move")} onDoubleClick={() => setTyping({ kind: "layer", i })}
@@ -337,14 +381,12 @@ export default function Timeline({ cues, duration, now, selected, zoom, line, pl
                 : <span className="tl-text">{l.label}</span>}
               <i className="tl-edge l" onPointerDown={(e) => grabLayer(e, i, "start")} />
               <i className="tl-edge r" onPointerDown={(e) => grabLayer(e, i, "end")} />
-              {onDeleteLayer && i === selectedLayer && !(typing?.kind === "layer" && typing.i === i) && (
-                <button type="button" className="tl-del" aria-label="Delete this text" title="Delete this text (Delete key)"
-                  onPointerDown={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}
-                  onClick={(e) => { e.stopPropagation(); onDeleteLayer(i); }}>×</button>
-              )}
             </div>
           ))}
         </div>
+        {dragging && span && (
+          <span className="tl-read tnum" style={{ left: Math.max(4, span.start * zoom) }}>{stamp(span.start)} → {stamp(span.end)} · {(span.end - span.start).toFixed(2)} s</span>
+        )}
         <i className="tl-head" ref={head}><b ref={headTime} /></i>
       </div>
     </div>

@@ -1,5 +1,6 @@
 "use client";
 import RenameProject from "@/components/RenameProject";
+import TimeInput, { tc } from "@/components/TimeInput";
 import { stem } from "@/lib/projectName";
 import type { Step } from "@/lib/deviceExport";
 import Link from "next/link";
@@ -10,7 +11,7 @@ import { popupRoot } from "@/lib/popupRoot";
 import type { Cue, WordLook } from "@/db/schema";
 import { LANGUAGES, languageOf, shortCode } from "@/lib/languages";
 import { BLENDS, CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCustom, punchBlend, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type CaptionStyle, type Placement, type SafeZoneId, type TextLayer, pushDown, shownLines } from "@/lib/captionStyles";
-import { insertAt, insertBetween, mergeCues, removeCue, setText, setWord, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
+import { insertAt, insertBetween, mergeCues, MIN_CAPTION, removeCue, retime, setText, setWord, shiftFrom, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
 import { MAX_REDOS, typeLabel, typeOf, type CaptionType } from "@/lib/captionTypes";
@@ -525,16 +526,6 @@ function follow(e: React.PointerEvent, frame: DOMRect, onMove: (x: number, y: nu
   addEventListener("pointerup", stop);
 }
 
-const tc = (s: number) => {
-  const ms = Math.round(s * 1000);
-  const p = (n: number, w = 2) => String(n).padStart(w, "0");
-  return `${p(Math.floor(ms / 3600000))}:${p(Math.floor(ms / 60000) % 60)}:${p(Math.floor(ms / 1000) % 60)}.${p(ms % 1000, 3)}`;
-};
-/** Accepts "hh:mm:ss.mmm", "mm:ss.mmm" or plain seconds. */
-const parseTc = (v: string) => {
-  const n = v.trim().replace(",", ".").split(":").reduce((acc, part) => acc * 60 + Number(part), 0);
-  return Number.isFinite(n) && n >= 0 ? n : null;
-};
 const subscribeNever = () => () => {};
 const typing = (e: KeyboardEvent) => {
   const el = e.target as HTMLElement | null;
@@ -586,6 +577,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   // Phones show one section at a time under the video (desktop shows them all).
   const [pane, setPane] = useState<Pane>("list");
   const [zoom, setZoom] = useState(80); // timeline px per second
+  const [ripple, setRipple] = useState(false); // moving a caption on the timeline takes the later ones with it
   const [lang, setLang] = useState<View>(!hasEnglish ? "ta" : !hasSpoken ? "en" : shown ?? "both");
   const [fmt, setFmt] = useState("srt");
   const [styleId, setStyleId] = useState(initial.captionStyle || "minimal");
@@ -1025,7 +1017,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   }
   function select(i: number) {
     setSelected(i);
-    if (i >= 0) { setTab("caption"); list.current?.children[i]?.scrollIntoView({ block: "nearest" }); }
+    if (i >= 0) { setSelLayer(-1); setTab("caption"); list.current?.children[i]?.scrollIntoView({ block: "nearest" }); }
   }
 
   // ---------- caption operations ----------
@@ -1050,7 +1042,24 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     select(r.index);
     setTimeout(() => (document.getElementById("cap-text") as HTMLTextAreaElement | null)?.focus(), 0);
   }
-  /** A text layer deleted (from the timeline's ×, the Delete key, or the Layers list). */
+  /** What's picked on the timeline given a new span: the text layer, else the caption (the others make room). */
+  function setSpan(start: number, end: number) {
+    if (layers[selLayer]) {
+      const s = Math.max(0, Math.min(start, end - MIN_CAPTION));
+      editLayer(selLayer, { start: s, end: Math.min(duration, Math.max(end, s + MIN_CAPTION)) });
+      return;
+    }
+    const i = target();
+    if (i >= 0) commit(retime(cues, i, start, end, duration));
+  }
+  /** Moved a little, seconds; with "move later captions too", those go with it. */
+  function moveBy(d: number) {
+    const l = layers[selLayer], i = target();
+    if (l) { const s = Math.max(0, Math.min(l.start + d, duration - (l.end - l.start))); editLayer(selLayer, { start: s, end: s + l.end - l.start }); }
+    else if (i >= 0) commit(ripple ? shiftFrom(cues, i, d, duration) : retime(cues, i, cues[i].start + d, cues[i].end + d, duration));
+  }
+  const picked = () => layers[selLayer] ?? cues[target()];
+  /** A text layer deleted (from the timeline's bar, the Delete key, or the Layers list). */
   function removeLayer(i: number) {
     if (!layers[i]) return;
     setLayers(layers.filter((_, j) => j !== i));
@@ -1133,12 +1142,11 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     const has = !!(line === "en" ? c.wce : c.wc)?.[j];
     editCue(i, setWord(c, line, j, { color: has ? null : custom.accent ?? "#FFD60A" }));
   }
-  /** Move the selected caption's start or end by d seconds (not over its neighbours, at least 0.2 s long). */
+  /** Move the selected caption's start or end by d seconds (the captions next to it make room). */
   function nudge(edge: "start" | "end", d: number) {
     const i = target(), c = cues[i];
     if (!c) return;
-    if (edge === "start") editCue(i, { ...c, start: Math.max(cues[i - 1]?.end ?? 0, Math.min(c.start + d, c.end - 0.2)) });
-    else editCue(i, { ...c, end: Math.min(cues[i + 1]?.start ?? duration, Math.max(c.end + d, c.start + 0.2)) });
+    commit(edge === "start" ? retime(cues, i, Math.min(c.start + d, c.end - MIN_CAPTION), c.end, duration) : retime(cues, i, c.start, Math.max(c.end + d, c.start + MIN_CAPTION), duration));
   }
   function inlineDone(text: string | null) {
     setInline(false);
@@ -1169,6 +1177,10 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       }
       else if (k === "+" || k === "=") setZoom((z) => Math.min(600, z * 1.25));
       else if (k === "-" || k === "_") setZoom((z) => Math.max(10, z / 1.25));
+      else if (k === "[" && picked()) setSpan(now, picked().end);
+      else if (k === "]" && picked()) setSpan(picked().start, now);
+      else if (k === "," || k === "<") moveBy(-(e.shiftKey ? 10 : 1) * frame);
+      else if (k === "." || k === ">") moveBy((e.shiftKey ? 10 : 1) * frame);
       else if (k === "g" || k === "G") setGuides((g) => !g);
       else if ((k === "f" || k === "F") && canFull && src) toggleFull();
       else if (k === "Escape") { setSelected(-1); setSelLayer(-1); setPickedWord(null); setNudging(false); }
@@ -1521,8 +1533,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           {tab === "caption" && (sel ? (
             <div className="insp">
               <div className="insp-row">
-                <TimeInput key={`s${selected}-${sel.start}`} value={sel.start} label="Start" onChange={(v) => { const prev = cues[selected - 1]; const s = Math.max(prev ? prev.end : 0, Math.min(v, sel.end - 0.2)); editCue(selected, { ...sel, start: s }); }} />
-                <TimeInput key={`e${selected}-${sel.end}`} value={sel.end} label="End" onChange={(v) => { const next = cues[selected + 1]; const en = Math.min(next ? next.start : duration, Math.max(v, sel.start + 0.2)); editCue(selected, { ...sel, end: en }); }} />
+                <TimeInput key={`s${selected}-${sel.start}`} value={sel.start} label="Start" onChange={(v) => commit(retime(cues, selected, v, sel.end, duration))} />
+                <TimeInput key={`e${selected}-${sel.end}`} value={sel.end} label="End" onChange={(v) => commit(retime(cues, selected, sel.start, v, duration))} />
                 <span className="muted small">{(sel.end - sel.start).toFixed(2)} s</span>
               </div>
               {hasSpoken && <label className="insp-field">{language.name}
@@ -1792,10 +1804,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       </div>
 
       <div className="ed-timeline">
-        <div className="ed-tl-bar">
-          <span className="muted small">Timeline: click or drag the video strip to move the playhead. Double-click an empty spot to add a caption or text over the video, double-click one to edit its words. Drags land on frames and on the playhead. Pinch or Ctrl + scroll to zoom.</span>
-        </div>
-        <Timeline cues={cues} duration={duration} now={now} selected={selected} zoom={zoom} line={line} playing={playing} video={video} src={src} frame={frame}
+        <Timeline cues={cues} duration={duration} now={now} selected={layers[selLayer] ? -1 : selected} zoom={zoom} line={line} playing={playing} video={video} src={src} frame={frame}
           onSeek={seek} onSelect={select} onZoom={setZoom}
           onAddCaption={(t) => { // a caption where the timeline was double-clicked (or the playhead), typed into there
             const r = insertAt(cues, t, duration);
@@ -1817,7 +1826,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           onLayerText={(i, text) => editLayer(i, { text: text.trim() || "Your text" })}
           layers={layers.map((l) => ({ start: l.start, end: l.end, label: l.text }))} selectedLayer={selLayer}
           onSelectLayer={(i) => { setSelLayer(i); setTab("layers"); }} onDragLayer={(i, span) => editLayer(i, span)}
-          onDrag={(i, patch) => { if (!dragFrom.current) dragFrom.current = cues; setCuesRaw((cs) => cs.map((c, j) => (j === i ? { ...c, ...patch } : c))); }}
+          onDrag={(next) => { if (!dragFrom.current) dragFrom.current = cues; setCuesRaw(next); }}
+          ripple={ripple} onRipple={setRipple} onSpan={setSpan} onNudge={moveBy} onSplit={split} onMerge={merge}
           onDragEnd={() => { const from = dragFrom.current; dragFrom.current = null; if (from) { setPast((p) => [...p.slice(-199), from]); setFuture([]); setDirty(true); } }} />
       </div>
 
@@ -1840,25 +1850,10 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 }
 
 function ShortcutHelp() {
-  const keys: [string, string][] = [["Space", "Play / pause"], ["← →", "One frame (with ⇧: one second)"], ["↑ ↓", "Previous / next caption"], ["S", "Split at the playhead"], ["M", "Merge with the next"], ["A", "Add a caption at the playhead"], ["Delete", "Delete the caption"], ["⌘Z / ⇧⌘Z", "Undo / redo"], ["⌘S", "Save"], ["+ / −", "Zoom the timeline"], ["G", "Centring guides on / off"], ["F", "Full screen"]];
+  const keys: [string, string][] = [["Space", "Play / pause"], ["← →", "One frame (with ⇧: one second)"], ["↑ ↓", "Previous / next caption"], ["S", "Split at the playhead"], ["M", "Merge with the next"], ["[ ]", "Start / end the caption at the playhead"], [", .", "Move the caption one frame (with ⇧: ten)"], ["A", "Add a caption at the playhead"], ["Delete", "Delete the caption"], ["⌘Z / ⇧⌘Z", "Undo / redo"], ["⌘S", "Save"], ["+ / −", "Zoom the timeline"], ["G", "Centring guides on / off"], ["F", "Full screen"]];
   return (
     <dl className="keys">
       {keys.map(([k, v]) => <div key={k}><dt><kbd>{k}</kbd></dt><dd>{v}</dd></div>)}
     </dl>
-  );
-}
-
-function TimeInput({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
-  const [text, setText] = useState(tc(value)); // parent remounts via key when value changes
-  return (
-    <input
-      className="time"
-      value={text}
-      aria-label={label}
-      title={label}
-      onChange={(e) => setText(e.target.value)}
-      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-      onBlur={() => { const v = parseTc(text); if (v === null) setText(tc(value)); else if (Math.abs(v - value) > 0.0005) onChange(v); }}
-    />
   );
 }

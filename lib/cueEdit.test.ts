@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { insertAt, mergeCues, setText, setWord, splitCue } from "./cueEdit";
+import { insertAt, mergeCues, MIN_CAPTION, retime, setText, setWord, shiftFrom, splitCue, stretchEnd } from "./cueEdit";
 
 test("splitCue cuts at the first word said after the playhead, word times and colours follow their words", () => {
   const c = { start: 0, end: 4, ta: "a b c d", en: "one two", w: [0, 1, 2, 3], wc: [null, "#ff0000", null, null], style: { size: 1.2 } };
@@ -69,4 +69,62 @@ test("removeCue: a caption between touching ones gives its time back to them; on
   const gap = [{ start: 0, end: 1, ta: "a", en: "" }, { start: 1, end: 2, ta: "b", en: "" }, { start: 3, end: 4, ta: "c", en: "" }];
   assert.deepEqual(removeCue(gap, 1).map((c) => [c.start, c.end]), [[0, 1], [3, 4]], "a gap beside it: nothing stretched");
   assert.deepEqual(removeCue(gap, 0).map((c) => [c.start, c.end]), [[1, 2], [3, 4]], "the first: nothing stretched");
+});
+
+const row = (...spans: [number, number][]) => spans.map(([start, end], i) => ({ start, end, ta: `c${i}`, en: "" }));
+const spans = (cues: { start: number; end: number }[]) => cues.map((c) => [c.start, c.end]);
+
+test("retime: a caption between touching neighbours can grow, and they give up the time", () => {
+  const c = row([0, 2], [2, 4], [4, 6]);
+  assert.deepEqual(spans(retime(c, 1, 2, 5, 10)), [[0, 2], [2, 5], [5, 6]]);
+  assert.deepEqual(spans(retime(c, 1, 1, 4, 10)), [[0, 1], [1, 4], [4, 6]]);
+  assert.deepEqual(spans(c), [[0, 2], [2, 4], [4, 6]], "the original is left alone");
+});
+
+test("retime: moving a touching caption keeps its length, and opens a gap behind it", () => {
+  assert.deepEqual(spans(retime(row([0, 2], [2, 4], [4, 6]), 1, 2.5, 4.5, 10)), [[0, 2], [2.5, 4.5], [4.5, 6]]);
+  assert.deepEqual(spans(retime(row([0, 2], [2, 4], [4, 6]), 1, 1.5, 3.5, 10)), [[0, 1.5], [1.5, 3.5], [4, 6]]);
+});
+
+test("retime: a neighbour at its shortest is pushed along, and nothing leaves the video or overlaps", () => {
+  const c = retime(row([0, 1], [1, 2], [2, 3]), 0, 0, 2.5, 3);
+  assert.deepEqual(spans(c), [[0, 2.5], [2.5, 2.7], [2.7, 3]]);
+  const far = retime(row([0, 1], [1, 2], [2, 3]), 0, 0, 99, 3);
+  assert.equal(far[2].end, 3);
+  assert.equal(far[0].end, 2.6);
+  const back = retime(row([0, 1], [1, 2], [2, 3]), 2, -5, 3, 3);
+  assert.deepEqual(spans(back), [[0, 0.2], [0.2, 0.4], [0.4, 3]]);
+  for (const cs of [c, far, back]) cs.forEach((x, i) => {
+    assert.ok(x.end - x.start >= MIN_CAPTION - 1e-9);
+    if (i) assert.ok(cs[i - 1].end <= x.start + 1e-9);
+  });
+});
+
+test("retime: a start typed past the end stops short of it, an end before the start too", () => {
+  assert.deepEqual(spans(retime(row([1, 3]), 0, 9, 3, 10)), [[2.8, 3]]);
+  assert.deepEqual(spans(retime(row([1, 3]), 0, 1, 0, 10)), [[1, 1.2]]);
+});
+
+test("retime: word times follow, the neighbours' too", () => {
+  const c = [{ start: 0, end: 2, ta: "a b", en: "", w: [0, 1] }, { start: 2, end: 4, ta: "c d", en: "", w: [2, 3] }];
+  const out = retime(c, 0, 0, 3, 10);
+  assert.deepEqual(out[0].w, [0, 1.5]);
+  assert.deepEqual(out[1].w, [3, 3.5]);
+  assert.deepEqual(retime(c, 1, 3, 5, 10)[1].w, [3, 4]);
+});
+
+test("shiftFrom moves a caption and everything after it, gaps kept", () => {
+  const c = row([0, 1], [2, 3], [4, 5]);
+  assert.deepEqual(spans(shiftFrom(c, 1, 0.5, 10)), [[0, 1], [2.5, 3.5], [4.5, 5.5]]);
+  assert.deepEqual(spans(shiftFrom(c, 1, -1.5, 10)), [[0, 0.5], [0.5, 1.5], [2.5, 3.5]], "earlier ones make room");
+  const end = shiftFrom(c, 0, 9, 5.5);
+  assert.equal(end[2].start, 5.3, "stops with the last one still on the video");
+  assert.equal(end[2].end, 5.5);
+  assert.equal(shiftFrom(c, 3, 1, 10), c);
+});
+
+test("stretchEnd keeps the gaps after it, both ways", () => {
+  const c = row([0, 2], [3, 4], [5, 6]);
+  assert.deepEqual(spans(stretchEnd(c, 0, 3, 10)), [[0, 3], [4, 5], [6, 7]]);
+  assert.deepEqual(spans(stretchEnd(c, 0, 1, 10)), [[0, 1], [2, 3], [4, 5]]);
 });

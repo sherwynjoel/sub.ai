@@ -205,3 +205,76 @@ export function setWord(c: Cue, line: "ta" | "en", j: number, patch: { text?: st
   }
   return out;
 }
+
+/** The shortest a caption can be made on the timeline, seconds. */
+export const MIN_CAPTION = 0.2;
+const msOf = (t: number) => Math.round(t * 1000) / 1000;
+const within = (x: number, lo: number, hi: number) => Math.min(Math.max(x, lo), hi);
+/** What a caption keeps when others squeeze it (one already shorter stays as it is). */
+const keepOf = (c: Cue) => Math.min(MIN_CAPTION, Math.max(0, c.end - c.start));
+const keepSum = (cues: Cue[]) => cues.reduce((n, c) => n + keepOf(c), 0);
+const endOf = (cues: Cue[], limit: number) => Math.max(limit, cues[cues.length - 1]?.end ?? 0);
+
+/** Captions before `from` that reach past `edge` give it back, and are pushed along once at their shortest. */
+function makeRoomBefore(out: Cue[], from: number, edge: number) {
+  for (let j = from; j >= 0; j--) {
+    const c = out[j];
+    if (c.end <= edge) return;
+    const start = Math.max(0, msOf(Math.min(c.start, edge - keepOf(c))));
+    out[j] = respan(c, start, edge);
+    edge = start;
+  }
+}
+/** The same for captions after it. */
+function makeRoomAfter(out: Cue[], from: number, edge: number) {
+  for (let j = from; j < out.length; j++) {
+    const c = out[j];
+    if (c.start >= edge) return;
+    const end = msOf(Math.max(c.end, edge + keepOf(c)));
+    out[j] = respan(c, edge, end);
+    edge = end;
+  }
+}
+
+/**
+ * Caption i given a new span. Captions usually touch, so those in the way make room: they give up time, and once at
+ * their shortest they're pushed along. Same length: it's moved. Word times follow. `limit`: the end of the video.
+ */
+export function retime(cues: Cue[], i: number, start: number, end: number, limit: number): Cue[] {
+  const c = cues[i];
+  if (!c) return cues;
+  const lo = keepSum(cues.slice(0, i)), hi = endOf(cues, limit) - keepSum(cues.slice(i + 1)), len = c.end - c.start;
+  let s: number, e: number;
+  if (Math.abs(end - start - len) < 0.0005) { // moved: it stays the same length
+    s = within(start, lo, hi - len);
+    e = s + len;
+  } else {
+    s = within(start, lo, (end === c.end ? c.end : hi) - MIN_CAPTION);
+    e = within(end, s + MIN_CAPTION, hi);
+  }
+  s = msOf(s); e = msOf(e);
+  const out = cues.slice();
+  out[i] = respan(c, s, e);
+  if (e !== c.end) makeRoomAfter(out, i + 1, e);
+  if (s !== c.start) makeRoomBefore(out, i - 1, s);
+  return out;
+}
+
+/** Caption i and all those after it moved by d seconds, for putting them back in sync. The last is cut at the video's end. */
+export function shiftFrom(cues: Cue[], i: number, d: number, limit: number): Cue[] {
+  if (i >= cues.length || !d) return cues;
+  const top = endOf(cues, limit), last = cues[cues.length - 1];
+  const by = within(d, keepSum(cues.slice(0, i)) - cues[i].start, top - keepOf(last) - last.start);
+  const out = cues.map((c, j) => (j < i ? c : respan(c, msOf(c.start + by), msOf(Math.min(c.end + by, top)))));
+  if (by < 0) makeRoomBefore(out, i - 1, out[i].start);
+  return out;
+}
+
+/** Caption i's end changed with all those after it moving by as much, so the gaps between them stay. */
+export function stretchEnd(cues: Cue[], i: number, end: number, limit: number): Cue[] {
+  const c = cues[i];
+  if (!c) return cues;
+  if (end > c.end) return retime(shiftFrom(cues, i + 1, end - c.end, limit), i, c.start, end, limit);
+  const out = retime(cues, i, c.start, end, limit);
+  return shiftFrom(out, i + 1, out[i].end - c.end, limit);
+}
