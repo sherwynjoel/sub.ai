@@ -140,6 +140,7 @@
   };
   $("backBtn").onclick = function () { show("main"); };
   $("helpBtn").onclick = function () { window.cep.util.openURLInDefaultBrowser(server() + "/contact"); };
+  $("licencesBtn").onclick = function () { window.cep.util.openURLInDefaultBrowser(server() + "/licences"); };
 
   // ---------- pick media ----------
   $("pickBtn").onclick = function () {

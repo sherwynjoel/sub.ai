@@ -8,6 +8,7 @@ export const LEGAL = [
   ["/privacy", "Privacy"],
   ["/refunds", "Refunds & cancellation"],
   ["/shipping", "Delivery"],
+  ["/licences", "Licences"],
 ] as const;
 
 export default function LegalLinks({ className = "" }: { className?: string }) {
