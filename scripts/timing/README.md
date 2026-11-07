@@ -1,6 +1,6 @@
 # Timing check
 
-Measures how close Vasanam's captions are to when the words are really said.
+Measures how close Vasanamm's captions are to when the words are really said.
 
 ## The answer key
 

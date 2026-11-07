@@ -10,7 +10,7 @@ export default function Page() {
   const job = JSON.parse(readFileSync(process.env.DEV_JOB_FILE, "utf8"));
   return (
     <>
-      <AppHeader brand="Vasanam" isAdmin={false} minutes={15} meter={60} plan="Free" help="#" />
+      <AppHeader brand="Vasanamm" isAdmin={false} minutes={15} meter={60} plan="Free" help="#" />
       <main className="wrap app-main"><Editor initial={job} mediaUrl="/dev-media.mp4" /></main>
       <footer className="wrap app-foot"><span className="muted small">Need help?</span></footer>
     </>

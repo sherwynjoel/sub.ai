@@ -9,7 +9,7 @@ const CUES = [
 ];
 const CLIPS = [18, 24, 14, 20, 16];
 
-/** Hero: the Vasanam editor, tipped back in 3D; it straightens as you scroll (--p from <Effects>) and plays through Tamil + English cues. */
+/** Hero: the Vasanamm editor, tipped back in 3D; it straightens as you scroll (--p from <Effects>) and plays through Tamil + English cues. */
 export default function HeroEditor() {
   const [i, setI] = useState(1);
 

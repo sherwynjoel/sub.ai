@@ -56,7 +56,7 @@ export default function BillingActions({ current, live, prepaidUntil, subscripti
         order_id: data.orderId,
         amount: data.amount,
         currency: data.currency,
-        name: "Vasanam",
+        name: "Vasanamm",
         description: `${PLANS[plan].name} plan, 30 days`,
         prefill: { name: data.name, email: data.email },
         theme: { color: "#0a0a0a" },
@@ -92,7 +92,7 @@ export default function BillingActions({ current, live, prepaidUntil, subscripti
       new Razorpay({
         key: data.keyId,
         subscription_id: data.subscriptionId,
-        name: "Vasanam",
+        name: "Vasanamm",
         description: `${PLANS[plan].name} plan, monthly`,
         prefill: { name: data.name, email: data.email },
         theme: { color: "#0a0a0a" },

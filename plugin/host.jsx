@@ -1,4 +1,4 @@
-// ExtendScript (ES3) side of the Vasanam panel. Runs inside Premiere Pro or After Effects.
+// ExtendScript (ES3) side of the Vasanamm panel. Runs inside Premiere Pro or After Effects.
 // Functions return strings: "OK|..." on success, "ERR|message" on failure.
 
 // ---------- Premiere Pro ----------
@@ -97,7 +97,7 @@ function vs_pproPlaceOverlay(file, mediaPath, offset, inS, outS) {
     var placed = null, pc = seq.videoTracks[target].clips;
     for (k = 0; k < pc.numItems; k++) if (Math.abs(pc[k].start.seconds - start) < 0.05) placed = pc[k];
     if (!placed) return "ERR|Premiere didn't place the styled captions.";
-    placed.name = "Vasanam 1";
+    placed.name = "Vasanamm 1";
     if (src) vs_copyMotion(src, placed);
     return "OK|Added the styled captions on V" + (target + 1) + ".";
   } catch (e) {
@@ -105,11 +105,11 @@ function vs_pproPlaceOverlay(file, mediaPath, offset, inS, outS) {
   }
 }
 
-// The .mov as a project item, imported into a Vasanam bin the first time.
+// The .mov as a project item, imported into a Vasanamm bin the first time.
 function vs_overlayItem(file) {
   var root = app.project.rootItem, bin = null, i;
-  for (i = 0; i < root.children.numItems; i++) if (root.children[i].name === "Vasanam" && root.children[i].type === ProjectItemType.BIN) bin = root.children[i];
-  if (!bin) bin = root.createBin("Vasanam");
+  for (i = 0; i < root.children.numItems; i++) if (/^Vasanamm?$/.test(root.children[i].name) && root.children[i].type === ProjectItemType.BIN) bin = root.children[i];
+  if (!bin) bin = root.createBin("Vasanamm");
   var find = function () {
     for (var n = 0; n < bin.children.numItems; n++) if (bin.children[n].type === ProjectItemType.CLIP && bin.children[n].getMediaPath() === file) return bin.children[n];
     return null;
@@ -135,7 +135,7 @@ function vs_copyMotion(from, to) {
 
 // Imports an SRT and places it as a caption track on the active sequence.
 // Premiere's scripting API can't style captions; the user styles the track in Essential Graphics.
-// Remove the styled captions an earlier placement put on the sequence ("Vasanam <n>" clips) and their template
+// Remove the styled captions an earlier placement put on the sequence ("Vasanamm <n>" clips) and their template
 // sound; returns where they started.
 function vs_clearOurGraphics(seq) {
   var ours = {};
@@ -143,7 +143,7 @@ function vs_clearOurGraphics(seq) {
     var tr = seq.videoTracks[t];
     for (var k = tr.clips.numItems - 1; k >= 0; k--) {
       var cl = tr.clips[k];
-      if (/^Vasanam \d+$/.test(cl.name)) { ours[Math.round(cl.start.seconds * 100)] = 1; try { cl.remove(false, false); } catch (e) {} }
+      if (/^Vasanamm? \d+$/.test(cl.name)) { ours[Math.round(cl.start.seconds * 100)] = 1; try { cl.remove(false, false); } catch (e) {} }
     }
   }
   vs_dropTemplateAudio(seq, ours);
@@ -211,7 +211,7 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
       var tr = seq.videoTracks[t];
       for (k = tr.clips.numItems - 1; k >= 0; k--) {
         var cl = tr.clips[k];
-        if (/^Vasanam \d+$/.test(cl.name)) { ours[Math.round(cl.start.seconds * 100)] = 1; try { cl.remove(false, false); } catch (e) {} }
+        if (/^Vasanamm? \d+$/.test(cl.name)) { ours[Math.round(cl.start.seconds * 100)] = 1; try { cl.remove(false, false); } catch (e) {} }
         else if (mediaPath && cl.projectItem && cl.projectItem.getMediaPath && cl.projectItem.getMediaPath() === mediaPath) clipTrack = t;
       }
     }
@@ -261,7 +261,7 @@ function vs_pproAddGraphics(cues, look, tpl, mediaPath) {
         try { item = seq.importMGT(tpl.path, boxAt.ticks, targets[ly], aTarget); }
         catch (e) { return "ERR|This Premiere Pro (" + app.version + ") can't load the caption template. It may need a newer Premiere Pro; pick another style."; }
         if (!item) return "ERR|Premiere could not import the caption template.";
-        item.name = "Vasanam " + (i + 1);
+        item.name = "Vasanamm " + (i + 1);
         var fit = parts ? { place: vs_partsPlace(parts, tpl, W, H, z, look.size, xf, yf) } : vs_templateFit(String(c.text), tpl, W, H, z, look.size, xf, yf, look.lines > 0), place = fit.place;
         if (fit.fewer) most = most ? Math.min(most, fit.fewer) : fit.fewer;
         if (place.capped) capThis = true;
@@ -595,11 +595,11 @@ function vs_aePlaceOverlay(file, mediaPath, offset, inS, outS) {
   try {
     var comp = app.project.activeItem;
     if (!(comp instanceof CompItem)) return "ERR|Open a composition first.";
-    app.beginUndoGroup("Vasanam subtitles");
+    app.beginUndoGroup("Vasanamm subtitles");
     var r, src = null, picked = new File(mediaPath).fsName;
     for (r = comp.numLayers; r >= 1; r--) {
       var l = comp.layer(r);
-      if (/^Vasanam \d+$/.test(l.name)) l.remove();
+      if (/^Vasanamm? \d+$/.test(l.name)) l.remove();
     }
     for (r = comp.numLayers; r >= 1; r--) {
       var c = comp.layer(r);
@@ -613,7 +613,7 @@ function vs_aePlaceOverlay(file, mediaPath, offset, inS, outS) {
     if (!item) item = app.project.importFile(new ImportOptions(want));
     item.mainSource.alphaMode = AlphaMode.STRAIGHT;
     var layer = comp.layers.add(item);
-    layer.name = "Vasanam 1";
+    layer.name = "Vasanamm 1";
     layer.startTime = offset;
     layer.inPoint = offset + inS;
     layer.outPoint = offset + outS;
@@ -637,9 +637,9 @@ function vs_aeAddTextLayers(cues, look) {
     var comp = app.project.activeItem;
     if (!(comp instanceof CompItem)) return "ERR|Open a composition first.";
     look = look || {};
-    app.beginUndoGroup("Vasanam subtitles");
+    app.beginUndoGroup("Vasanamm subtitles");
     for (var r = comp.numLayers; r >= 1; r--) {
-      if (/^Vasanam \d+$/.test(comp.layer(r).name)) comp.layer(r).remove();
+      if (/^Vasanamm? \d+$/.test(comp.layer(r).name)) comp.layer(r).remove();
     }
     var fontSize = Math.round(Math.min(comp.width, comp.height) * 0.075 * (look.size || 1));
     var offset = look.offset || 0.09;
@@ -656,7 +656,7 @@ function vs_aeAddTextLayers(cues, look) {
       if (c.end <= 0 || c.start >= comp.duration) continue;
       var lay = vs_layout(c.text, budget, 3);
       var layer = comp.layers.addText(lay.text);
-      layer.name = "Vasanam " + (i + 1);
+      layer.name = "Vasanamm " + (i + 1);
       var prop = layer.property("Source Text");
       var doc = prop.value;
       if (look.font) { try { doc.font = look.font; } catch (e) {} } // keeps the default when the font isn't installed

@@ -1,11 +1,11 @@
 export const BRAND = {
-  name: "Vasanam",
+  name: "Vasanamm",
   tagline: "Tamil & English subtitles for editors",
 };
 
 /** Who runs the service: shown on the Contact, Privacy, Terms and Refund pages (Razorpay checks these). */
 export const BUSINESS = {
-  name: "Vasanam",
+  name: "Vasanamm",
   email: "vasanam2026@gmail.com",
   phone: "",
   address: "",

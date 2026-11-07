@@ -13,7 +13,7 @@ export default function Page() {
     <GuidePage
       path={path}
       h1="Tanglish captions for Reels, Shorts and YouTube"
-      lead="Many viewers read Tamil faster in English letters. Vasanam writes what is said in Tanglish, keeps the English words as English, and times every line to the speech."
+      lead="Many viewers read Tamil faster in English letters. Vasanamm writes what is said in Tanglish, keeps the English words as English, and times every line to the speech."
       points={[
         ["Written the way it's said", "“Machi, indha edit semma!” stays exactly that: Tamil in English letters, English words untouched."],
         ["Made for short videos", "Styles built for Reels and Shorts, word-by-word highlights, and safe zones that keep captions clear of the app's buttons."],

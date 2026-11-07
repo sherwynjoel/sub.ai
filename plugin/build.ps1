@@ -18,7 +18,7 @@ if (-not (Test-Path $sign)) {
   Invoke-WebRequest "https://github.com/Adobe-CEP/CEP-Resources/raw/master/ZXPSignCMD/4.1.103/win64/ZXPSignCmd.exe" -OutFile $sign
 }
 if (-not (Test-Path $cert)) {
-  & $sign -selfSignedCert IN TN Vasanam Vasanam $CertPassword $cert | Out-Host
+  & $sign -selfSignedCert IN TN Vasanamm Vasanamm $CertPassword $cert | Out-Host
 }
 
 # Stage only what the panel needs, with the server address baked in.

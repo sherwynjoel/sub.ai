@@ -28,7 +28,7 @@ Editors work on desktop in Premiere Pro or After Effects, often late, against cl
 - Stack: Next.js 16 App Router, plain CSS, Postgres; no heavy front-end dependencies.
 
 ## Brand Commitments
-- Name "Vasanam" (Tamil for dialogue) is a working name, not final; keep it in `lib/brand.ts` so it can change.
+- Name "Vasanamm" (Tamil for dialogue) is a working name, not final; keep it in `lib/brand.ts` so it can change.
 - Standing preference (2026-10-10, latest): Gen Z, attractive, cool and clean, with liquid-glass (glassmorphism) panels over soft drifting pastel colour; black pill buttons, lime highlighter accent; site copy in English only, with Tamil in dialogue samples (no language toggle, 2026-10-10); a multilingual greeting strip (all 22 Indian languages live, each with English). Calm 3D: hero editor straightens on scroll, Premiere window tilts, glass cube.
 - Rejected so far: (1) dark violet glass; (2) "release-night banner street"; (3) white/near-black/blue long page; (4) "Sunset"; (5) "Ocean" navy/aqua/coral (AI-looking); (6) "Mono" white/black only (not attractive enough).
 

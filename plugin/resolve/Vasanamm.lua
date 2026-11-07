@@ -1,8 +1,8 @@
 --[[
-  Vasanam for DaVinci Resolve (free and Studio, 18+).
+  Vasanamm for DaVinci Resolve (free and Studio, 18+).
   Install: put this file in the Scripts/Utility folder (see the Plugin page), restart Resolve,
-  then open Workspace > Scripts > Vasanam.
-  It sends the clip under the playhead to Vasanam, waits for the subtitles and puts them on a
+  then open Workspace > Scripts > Vasanamm.
+  It sends the clip under the playhead to Vasanamm, waits for the subtitles and puts them on a
   subtitle track lined up with the clip. Minutes come out of the account the API key belongs to.
   Needs curl (built into Windows 10+ and macOS).
 ]]
@@ -20,7 +20,7 @@ local isWin = package.config:sub(1, 1) == "\\"
 local SEP = isWin and "\\" or "/"
 local TMP = os.getenv(isWin and "TEMP" or "TMPDIR") or "/tmp"
 local HOME = os.getenv(isWin and "USERPROFILE" or "HOME") or TMP
-local OUTDIR = HOME .. SEP .. "Documents" .. SEP .. "Vasanam"
+local OUTDIR = HOME .. SEP .. "Documents" .. SEP .. "Vasanamm"
 
 -- ---------- helpers ----------
 local function setting(k, v)
@@ -67,9 +67,9 @@ local function num(body, name) return tonumber(body:match('"' .. name .. '":([%d
 
 -- ---------- window ----------
 local win = disp:AddWindow({
-  ID = "VasanamWin", WindowTitle = "Vasanam subtitles", Geometry = { 200, 200, 440, 330 },
+  ID = "VasanamWin", WindowTitle = "Vasanamm subtitles", Geometry = { 200, 200, 440, 330 },
   ui:VGroup({
-    ui:Label({ ID = "Account", Text = "Paste your API key from the Vasanam Plugin page.", WordWrap = true }),
+    ui:Label({ ID = "Account", Text = "Paste your API key from the Vasanamm Plugin page.", WordWrap = true }),
     ui:HGroup({ ui:Label({ Text = "Server", Weight = 0.35 }), ui:LineEdit({ ID = "Server", Weight = 0.65 }) }),
     ui:HGroup({ ui:Label({ Text = "API key", Weight = 0.35 }), ui:LineEdit({ ID = "Key", EchoMode = "Password", Weight = 0.65 }) }),
     ui:Button({ ID = "Connect", Text = "Connect" }),
@@ -124,8 +124,8 @@ local function place()
   local mp = project:GetMediaPool()
   local root = mp:GetRootFolder()
   local bin
-  for _, f in ipairs(root:GetSubFolderList() or {}) do if f:GetName() == "Vasanam" then bin = f end end
-  bin = bin or mp:AddSubFolder(root, "Vasanam")
+  for _, f in ipairs(root:GetSubFolderList() or {}) do if f:GetName() == "Vasanamm" or f:GetName() == "Vasanam" then bin = f end end
+  bin = bin or mp:AddSubFolder(root, "Vasanamm")
   mp:SetCurrentFolder(bin)
   local items = mp:ImportMedia({ srt })
   if not items or #items == 0 then return say("Saved " .. srt .. ". Import it with File > Import > Subtitle.") end
@@ -134,7 +134,7 @@ local function place()
   if placed and #placed > 0 then
     say("Done. Subtitles are on the subtitle track, lined up with your clip.")
   else
-    say("Done. The subtitles are in the Vasanam bin; drag them to the very start of the timeline.")
+    say("Done. The subtitles are in the Vasanamm bin; drag them to the very start of the timeline.")
   end
   refreshAccount()
 end

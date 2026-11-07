@@ -13,7 +13,7 @@ export default function Page() {
     <GuidePage
       path={path}
       h1="Premiere Pro subtitle plugin for Tamil and Indian languages"
-      lead="Select a clip, choose the language and click Generate: the Vasanam panel puts timed subtitles on your Premiere Pro timeline, lined up with the clip wherever it sits."
+      lead="Select a clip, choose the language and click Generate: the Vasanamm panel puts timed subtitles on your Premiere Pro timeline, lined up with the clip wherever it sits."
       points={[
         ["Caption track or animated text", "Use Premiere's own caption track, or 24 animated caption templates (typewriter, glow, three-word stacks and more) placed caption by caption."],
         ["Edit inside Premiere", "Change the wording, size, colour, position and lines in the panel, then update the timeline in one click."],
@@ -22,7 +22,7 @@ export default function Page() {
       ]}
       steps={[
         "Create a free account and download the panel from the Plugin page.",
-        "Install it with the ZXP Installer, open Window → Extensions → Vasanam, and paste your key.",
+        "Install it with the ZXP Installer, open Window → Extensions → Vasanamm, and paste your key.",
         "Select a clip on the timeline, pick the language and style, and click Generate subtitles.",
       ]}
       faq={[

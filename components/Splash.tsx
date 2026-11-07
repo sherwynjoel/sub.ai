@@ -7,7 +7,7 @@ const MIN_MS = 1900, MAX_MS = 4500
 const SEEN = "vs-splash"
 
 /**
- * The first screen of a visit: Vasanam's mark in glass while the page loads, then it fades away. Once per visit
+ * The first screen of a visit: Vasanamm's mark in glass while the page loads, then it fades away. Once per visit
  * (a tab's session): a script in <head> hides it before anything is drawn when the visit already saw it. The
  * server sends it with the page, so it covers the page from the first paint; CSS lifts it after 7 s if scripts
  * never run.
@@ -35,7 +35,7 @@ export default function Splash() {
 
   if (state === "gone") return null
   return (
-    <div className={`splash${state === "leaving" ? " leaving" : ""}`} aria-hidden={state === "leaving"} role="status" aria-label="Loading Vasanam">
+    <div className={`splash${state === "leaving" ? " leaving" : ""}`} aria-hidden={state === "leaving"} role="status" aria-label="Loading Vasanamm">
       <VasanamReveal className="splash-glass" loop={false} speed={1.25} />
       <i className="splash-mark" aria-hidden="true" />
     </div>

@@ -6,7 +6,7 @@
  * fruit, double-click the empty stage to tidy them). React is the only import; the script and every fruit are
  * drawn in code.
  *
- * Changes for Vasanam: `as` and `headingTag` (a <section> with an <h1> for the hero), `children` under the lines
+ * Changes for Vasanamm: `as` and `headingTag` (a <section> with an <h1> for the hero), `children` under the lines
  * (the sign-up buttons), the contact row and the © bar hide when empty, state set from effects only in callbacks
  * (lint), and the sticker motion records are created outside render.
  */
@@ -181,11 +181,11 @@ export const spring = (x: number, v: number, target: number, k: number, damp: nu
 // ---- fruit -------------------------------------------------------------------
 
 export type Fruit = "strawberry" | "banana" | "chili" | "orange" | "cherry" | "lemon" | "watermelon" | "pear"
-  // Vasanam's own: video and subtitles
+  // Vasanamm's own: video and subtitles
   | "clapper" | "mic" | "cc" | "bubble" | "play" | "reel" | "headphones" | "wave"
 
 export const FRUITS: Fruit[] = ["strawberry", "banana", "chili", "orange", "cherry", "lemon", "watermelon", "pear"]
-/** Video and subtitle stickers (the Vasanam hero swaps among these). */
+/** Video and subtitle stickers (the Vasanamm hero swaps among these). */
 export const MEDIA: Fruit[] = ["clapper", "mic", "cc", "bubble", "play", "reel", "headphones", "wave"]
 
 // The sticker each fruit is printed on when it's swapped in.

@@ -8,7 +8,7 @@ import * as React from "react"
  * From 21st.dev's liquid-glass-logo-reveal; shader and spring timeline ported from zanwei/glass-icon-reveal (MIT):
  * https://github.com/zanwei/glass-icon-reveal
  * Adapted for this project (no Tailwind/shadcn here): classes are plain CSS in app/globals.css (.glass-reveal),
- * and the 21st.dev mark is replaced by Vasanam's (VasanamReveal at the end).
+ * and the 21st.dev mark is replaced by Vasanamm's (VasanamReveal at the end).
  */
 
 const cn = (...parts: (string | undefined | false)[]) => parts.filter(Boolean).join(" ")
@@ -1084,17 +1084,17 @@ function startEngine(
 /* ------------------------------------------------------------------ *
  * VasanamReveal
  * ------------------------------------------------------------------ */
-/** Vasanam's mark (the .logo square in app/globals.css): ink tile, a white line over a lime bar. */
+/** Vasanamm's mark (the .logo square in app/globals.css): ink tile, a white line over a lime bar. */
 const MARK_VASANAM = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28"><rect width="28" height="28" rx="9" fill="#0c0c14"/><rect x="6" y="13" width="16" height="3" rx="1.5" fill="#ffffff" fill-opacity="0.7"/><rect x="6" y="18" width="16" height="3" rx="1.5" fill="#d4ff3f"/></svg>`
 
 export type VasanamRevealProps = Omit<GlassIconRevealProps, "logo">
 
-/** The Vasanam mark in its own colours, over the site's background. Every prop overrides; `tuning` merges in */
+/** The Vasanamm mark in its own colours, over the site's background. Every prop overrides; `tuning` merges in */
 export function VasanamReveal({ tuning, ...props }: VasanamRevealProps) {
   return (
     <GlassIconReveal
       logo={MARK_VASANAM}
-      label="Vasanam"
+      label="Vasanamm"
       look="light"
       originalColors
       background="#f4f3fb"

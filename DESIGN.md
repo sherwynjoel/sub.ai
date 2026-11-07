@@ -1,4 +1,4 @@
-# Vasanam — Liquid Glass design system
+# Vasanamm — Liquid Glass design system
 
 Frosted, glossy panels float over soft pastel colour that drifts behind the page. Gen Z, bright, clean.
 Source of truth for tokens: `app/globals.css`. Landing: `components/Landing.tsx` + `app/landing.css`.

@@ -1,4 +1,4 @@
-# Vasanam — Tamil & English subtitles for editors
+# Vasanamm — Tamil & English subtitles for editors
 
 Upload a video → get timed subtitles in **Tamil (Tamil script)** and **English** → edit them in the browser →
 download SRT/VTT/TXT or import straight into **Premiere Pro / After Effects** with the panel. Monthly plans via Razorpay.
@@ -62,7 +62,7 @@ Usage resets on every `subscription.charged`. Cancelling keeps the plan until th
 - Source: `plugin/`. Build the signed installer (downloads Adobe's ZXPSignCmd on first run):
   `powershell -File plugin/build.ps1 -Server https://<your-domain>` → `public/downloads/vasanam-panel.zxp`. The Plugin page downloads it through `/api/plugin/panel`, which names the file `vasanam-panel-v<version>.zxp` from the version in `plugin/CSXS/manifest.xml` (raise it for each release).
 - Users install it with the free ZXP Installer; steps are on `/app/plugin`.
-- Styles in the panel: every website style is rendered by the server with the MP4 export's code as a transparent QuickTime Animation `.mov` (`renderOverlay` in `lib/render.ts`, `POST /api/jobs/:id/overlay`), downloaded to `Documents/Vasanam/Styled captions` and placed above the clip, so Premiere and After Effects show exactly the website's look. The text isn't editable in the editor; change it in the panel and Update timeline. Premiere's templates stay beside them. After adding a style, run `npx tsx scripts/style-previews.mts <id>` for its picture.
+- Styles in the panel: every website style is rendered by the server with the MP4 export's code as a transparent QuickTime Animation `.mov` (`renderOverlay` in `lib/render.ts`, `POST /api/jobs/:id/overlay`), downloaded to `Documents/Vasanamm/Styled captions` and placed above the clip, so Premiere and After Effects show exactly the website's look. The text isn't editable in the editor; change it in the panel and Update timeline. Premiere's templates stay beside them. After adding a style, run `npx tsx scripts/style-previews.mts <id>` for its picture.
 - Dev without packaging: copy `plugin/` to `%APPDATA%\Adobe\CEP\extensions\vasanam` (mac: `~/Library/Application Support/Adobe/CEP/extensions/vasanam`) and enable unsigned panels:
   `reg add HKCU\Software\Adobe\CSXS.11 /v PlayerDebugMode /t REG_SZ /d 1` (repeat for CSXS.12).
 - Premiere: select a clip on the timeline (captions land at its position, trimmed to its in/out) or in the Project panel (captions start at the playhead). After Effects: select a footage layer; one text layer per cue.
