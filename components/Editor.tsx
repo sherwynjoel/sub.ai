@@ -68,6 +68,7 @@ const ICON: Record<string, string> = {
   shrink: "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",
   back: "M15 5l-7 7 7 7",
   guides: "M12 3v18M3 12h18M7 3v2M17 3v2M3 7h2M3 17h2",
+  timeline: "M3 7h18M3 12h12M3 17h15M9 4v16",
   list: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01",
 };
 const Icon = ({ name }: { name: string }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICON[name]} /></svg>;
@@ -620,11 +621,6 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   // the editor's three tips, until hidden (remembered on this browser)
   const hintSeen = useSyncExternalStore(noop, () => { try { return localStorage.getItem("vs-editor-hint") === "1"; } catch { return false; } }, () => true);
   const [hintHidden, setHintGone] = useState(false), hintGone = hintSeen || hintHidden;
-  // Simple (the default): the video, the captions, Style and Export; Advanced adds the timeline, titles and logo, and
-  // every look setting. Remembered on this browser.
-  const modeSaved = useSyncExternalStore(noop, () => { try { return localStorage.getItem("vs-editor-mode") === "advanced"; } catch { return false; } }, () => false);
-  const [modeSet, setModeSet] = useState<boolean | null>(null), advanced = modeSet ?? modeSaved;
-  const setAdvanced = (on: boolean) => { setModeSet(on); try { localStorage.setItem("vs-editor-mode", on ? "advanced" : "simple"); } catch { /* private mode */ } if (!on && tab === "layers") setTab("style"); };
   const language = languageOf(job.language);
   const short = shortCode(job.language);
   const tamil = short === "ta" || initial.cues.some((c) => /[\u0B80-\u0BFF]/.test(c.ta)); // Tamil letters get their own font
@@ -1237,7 +1233,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const own = sel?.style ?? {};
 
   return (
-    <div className="editor ed" data-pane={pane} data-sheet={sheet || undefined} data-mode={advanced ? "advanced" : "simple"}>
+    <div className="editor ed" data-pane={pane} data-sheet={sheet || undefined}>
       <div className="ed-flow">
         <FlowSteps at={tab === "export" ? 4 : 3} />
         {!hintGone && <p className="ed-hint">
@@ -1307,10 +1303,6 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           <button className="btn ghost small" onClick={undo} disabled={!past.length} title="Undo (⌘Z)">Undo</button>
           <button className="btn ghost small" onClick={redo} disabled={!future.length} title="Redo (⇧⌘Z)">Redo</button>
           <span className="muted save-msg" aria-live="polite">{msg || (dirty ? "Unsaved changes" : "All changes saved")}</span>
-          <div className="seg ed-mode" role="group" aria-label="Editor mode" title="Simple: captions, style and export. Advanced: adds the timeline, titles and logo, and every look setting.">
-            <button aria-pressed={!advanced} onClick={() => setAdvanced(false)}>Simple</button>
-            <button aria-pressed={advanced} onClick={() => setAdvanced(true)}>Advanced</button>
-          </div>
           <button className="btn ghost" onClick={save} disabled={!dirty || saving} title="Save (⌘S)">{saving ? "Saving…" : "Save"}</button>
           <button className="btn" onClick={exportNow} disabled={rendering} title="Make the video with captions on this device (it downloads when ready)">{rendering ? `Exporting · ${exporting.pct}%` : "Export video"}</button>
         </div>
@@ -1354,6 +1346,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             <div className="vrail vrail-phone" role="toolbar" aria-label="Add and change">
               <button onClick={() => { addLayer("Your text"); openPane("layers"); }}><Icon name="title" />Add title</button>
               <button onClick={() => openPane("style")}><Icon name="style" />Caption style</button>
+              <button onClick={() => openPane("timeline")}><Icon name="timeline" />Timeline</button>
               <button onClick={() => setRetype(typeOf(initial))}><Icon name="lang" />Translate</button>
               <button onClick={() => setGuides((g) => !g)} aria-pressed={guides} title="Centring guides"><Icon name="guides" />Guides</button>
               {views.length > 1 && (
@@ -1510,7 +1503,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
             <button onClick={() => setSheet(false)}>Done</button>
           </div>
           <nav className="ed-mnav" aria-label="Editor sections">
-            {PANES.filter(([k]) => advanced || (k !== "timeline" && k !== "layers")).map(([k, l]) => (
+            {PANES.map(([k, l]) => (
               <button key={k} aria-pressed={pane === k} onClick={() => openPane(k)}>{l}</button>
             ))}
             <button className="ed-mdone" onClick={() => setSheet(false)}>Done</button>
@@ -1519,7 +1512,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
         <aside className="ed-side">
           <div className="seg ed-tabs" role="tablist" aria-label="Inspector">
-            {([["caption", "Text"], ["style", "Style"], ["layers", "Titles & logo"], ["export", "Export"]] as const).filter(([k]) => advanced || k !== "layers").map(([k, l]) => (
+            {([["caption", "Text"], ["style", "Style"], ["layers", "Titles & logo"], ["export", "Export"]] as const).map(([k, l]) => (
               <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>
             ))}
           </div>
@@ -1659,7 +1652,6 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 </div>
               )}
               <Presets styleId={styleId} custom={custom} onApply={applyLook} />
-              {advanced && <>
               <div className="insp-canvas">
               <h3>Canvas</h3>
               <label>Video shape
@@ -1708,13 +1700,11 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   </div>
                 </>}
               </section>
-              </>}
               <div className="insp-head">
                 <h3>Customize</h3>
                 <button className="btn ghost small" onClick={() => { sameLook(); setCustom((c) => projectOnly(c)); }} disabled={Object.keys(custom).every((k) => PROJECT_KEYS.includes(k)) && !ownLooks}>Reset to {styleOf(styleId).name}</button>
               </div>
-              <LookControls look={look} own={custom} set={lookAll} tamil={tamil} simple={!advanced} />
-              {!advanced && <button className="btn ghost small more-look" onClick={() => setAdvanced(true)}>More settings: outline, shadow, box, motion, position…</button>}
+              <LookControls look={look} own={custom} set={lookAll} tamil={tamil} />
               <div className="cz-grid">
                 <div className="cz-field">
                   <span>Lines</span>
