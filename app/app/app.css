@@ -977,10 +977,6 @@ a.signout { text-decoration: none; }
 .ed-hint { position: relative; display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; padding: 10px 40px 10px 14px; border-radius: 14px; background: var(--accent-soft); font-size: .88rem; }
 .ed-hint-x { position: absolute; right: 8px; top: 6px; border: 0; background: none; font-size: 1.2rem; cursor: pointer; color: var(--ink); }
 @media (max-width: 720px) { .ed-flow { display: none; } }
-/* Simple mode: no timeline, titles or extra look settings (Advanced shows them) */
-.ed[data-mode="simple"] .ed-timeline, .ed[data-mode="simple"] .cz-grid { display: none !important; }
-.ed-mode button { font-size: .85rem; }
-.more-look { justify-self: start; }
 .style-all { justify-self: start; margin: 4px 0 8px; }
 /* the projects as a compact list on phones */
 .project-rows { display: none; list-style: none; margin: 0; padding: 0; gap: 8px; }

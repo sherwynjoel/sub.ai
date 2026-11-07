@@ -10,7 +10,6 @@ type Props = {
   tamil: boolean;                   // show the Tamil font
   project?: CaptionStyle;           // set for one caption: "Project" choices fall back to this look
   setAll?: (patch: CaptionCustom) => void; // for one caption: line spacing, which is always every caption's
-  simple?: boolean;                 // only the text and colour settings (the editor's Simple mode)
 };
 
 const hex = (c: string | undefined, fallback: string) => (c ?? fallback).slice(0, 7);
@@ -26,7 +25,7 @@ function AlignIcon({ side }: { side: "left" | "center" | "right" }) {
 }
 
 /** Every control for how captions look, for the whole project or for one caption. */
-export default function LookControls({ look, own, set, tamil, project, setAll, simple }: Props) {
+export default function LookControls({ look, own, set, tamil, project, setAll }: Props) {
   const highlight = own.highlight ?? "style";
   return (
     <div className="look">
@@ -99,7 +98,7 @@ export default function LookControls({ look, own, set, tamil, project, setAll, s
         </label>
       </fieldset>
 
-      {!simple && <><fieldset>
+      <fieldset>
         <legend>Outline &amp; shadow</legend>
         <div className="look-row">
           <label className="cz-check"><input type="checkbox" checked={!!look.outline} onChange={(e) => set({ outline: e.target.checked ? hex(look.outline?.[0], "#000000") : null })} /> Outline</label>
@@ -148,7 +147,7 @@ export default function LookControls({ look, own, set, tamil, project, setAll, s
           ))}
         </div>
         <p className="muted small">Or drag the caption on the video.</p>
-      </fieldset></>}
+      </fieldset>
     </div>
   );
 }
