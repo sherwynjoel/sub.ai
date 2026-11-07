@@ -278,3 +278,30 @@ export function stretchEnd(cues: Cue[], i: number, end: number, limit: number): 
   const out = retime(cues, i, c.start, end, limit);
   return shiftFrom(out, i + 1, out[i].end - c.end, limit);
 }
+
+/** Plain text to look for, any case. Null when there's nothing to look for. */
+function finder(text: string) {
+  return text.trim() ? new RegExp(text.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "giu") : null;
+}
+
+/** How many times text is in the captions, both lines, and which captions have it. */
+export function findText(cues: Cue[], text: string) {
+  const re = finder(text), where: number[] = [];
+  let count = 0;
+  if (re) cues.forEach((c, i) => {
+    const n = (c.ta.match(re)?.length ?? 0) + (c.en.match(re)?.length ?? 0);
+    if (n) { count += n; where.push(i); }
+  });
+  return { count, where };
+}
+
+/** Text replaced in every caption, both lines; word times and colours stay with their words. Nothing typed: it's taken out. */
+export function replaceText(cues: Cue[], text: string, to: string): Cue[] {
+  const re = finder(text);
+  if (!re) return cues;
+  const swap = (c: Cue, line: "ta" | "en") => {
+    const next = c[line].replace(re, () => to);
+    return next === c[line] ? c : setText(c, line, to ? next : next.replace(/[^\S\n]{2,}/g, " ").trim());
+  };
+  return cues.map((c) => swap(swap(c, "ta"), "en"));
+}

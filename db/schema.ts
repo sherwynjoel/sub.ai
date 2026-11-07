@@ -63,6 +63,7 @@ export const jobs = pgTable("jobs", {
   error: text("error"),
   cues: jsonb("cues").$type<Cue[]>(),
   speech: jsonb("speech").$type<[number, number][]>(), // where someone speaks, for the editor's timing check (lib/timing.ts)
+  levels: text("levels"), // the sound's shape for the timeline (lib/waveform.ts); measured on first look
   captionStyle: text("caption_style").notNull().default("minimal"), // lib/captionStyles.ts id
   captionCustom: jsonb("caption_custom").$type<CaptionCustom>().notNull().default({}), // user edits on top of the style
   renderStatus: text("render_status"), // null | queued | rendering | done | failed (styled MP4)

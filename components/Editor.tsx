@@ -1,6 +1,8 @@
 "use client";
 import RenameProject from "@/components/RenameProject";
+import FindReplace from "@/components/FindReplace";
 import TimeInput, { tc } from "@/components/TimeInput";
+import { unpackLevels } from "@/lib/waveform";
 import { stem } from "@/lib/projectName";
 import type { Step } from "@/lib/deviceExport";
 import Link from "next/link";
@@ -70,6 +72,7 @@ const ICON: Record<string, string> = {
   back: "M15 5l-7 7 7 7",
   guides: "M12 3v18M3 12h18M7 3v2M17 3v2M3 7h2M3 17h2",
   timeline: "M3 7h18M3 12h12M3 17h15M9 4v16",
+  find: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-5-5",
   list: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01",
 };
 const Icon = ({ name }: { name: string }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICON[name]} /></svg>;
@@ -578,6 +581,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [pane, setPane] = useState<Pane>("list");
   const [zoom, setZoom] = useState(80); // timeline px per second
   const [ripple, setRipple] = useState(false); // moving a caption on the timeline takes the later ones with it
+  const [levels, setLevels] = useState<Uint8Array | null>(null); // the sound's shape, for the timeline
+  const [finding, setFinding] = useState(false); // find and replace is open
   const [lang, setLang] = useState<View>(!hasEnglish ? "ta" : !hasSpoken ? "en" : shown ?? "both");
   const [fmt, setFmt] = useState("srt");
   const [styleId, setStyleId] = useState(initial.captionStyle || "minimal");
@@ -756,14 +761,35 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const frameRatio = shaped ? RATIO[cv!.ratio as keyof typeof RATIO] : ratio;
   const hex = (c: string | undefined, fallback: string) => (c ?? fallback).slice(0, 7);
 
-  async function save() {
+  const latest = useRef(cues); // edits made while a save is on its way still need saving
+  useEffect(() => { latest.current = cues; }, [cues]);
+  /** The captions to the server: true when they got there. */
+  async function store() {
     setSaving(true);
-    const res = await fetch(`/api/jobs/${job.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ cues }) });
+    const sent = cues;
+    const res = await fetch(`/api/jobs/${job.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ cues: sent }) }).catch(() => null);
     setSaving(false);
-    if (res.ok) { setDirty(false); setMsg("Saved", 2000); }
-    else setMsg((await res.json().catch(() => ({}))).error || "Couldn't save. Try again.");
-    return res.ok;
+    if (res?.ok) setDirty(latest.current !== sent);
+    else setMsg((await res?.json().catch(() => ({})))?.error || "Couldn't save. Check your connection; we'll try again with your next change.");
+    return !!res?.ok;
   }
+  async function save() {
+    const ok = await store();
+    if (ok) setMsg("Saved", 2000);
+    return ok;
+  }
+  // Edits save themselves, quietly, a moment after they stop (not mid-drag).
+  useEffect(() => {
+    if (!dirty || saving) return;
+    const id = setTimeout(() => { if (!dragFrom.current) store(); }, 2500);
+    return () => clearTimeout(id);
+  }, [cues, dirty]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { // the sound's shape: measured on the server the first time, then stored
+    let on = true;
+    fetch(`/api/jobs/${job.id}/levels`).then((r) => r.json()).then((d) => { if (on && d.levels) setLevels(unpackLevels(d.levels)); }).catch(() => {});
+    return () => { on = false; };
+  }, [job.id]);
 
   // A moment after the captions or their look change: look for any that go outside the video.
   useEffect(() => {
@@ -1315,6 +1341,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           <button className="btn ghost small" onClick={undo} disabled={!past.length} title="Undo (⌘Z)">Undo</button>
           <button className="btn ghost small" onClick={redo} disabled={!future.length} title="Redo (⇧⌘Z)">Redo</button>
           <span className="muted save-msg" aria-live="polite">{msg || (dirty ? "Unsaved changes" : "All changes saved")}</span>
+          <button className="btn ghost" onClick={() => setFinding((f) => !f)} aria-pressed={finding} title="Find and replace words in all captions">Find</button>
           <button className="btn ghost" onClick={save} disabled={!dirty || saving} title="Save (⌘S)">{saving ? "Saving…" : "Save"}</button>
           <button className="btn" onClick={exportNow} disabled={rendering} title="Make the video with captions on this device (it downloads when ready)">{rendering ? `Exporting · ${exporting.pct}%` : "Export video"}</button>
         </div>
@@ -1359,6 +1386,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               <button onClick={() => { addLayer("Your text"); openPane("layers"); }}><Icon name="title" />Add title</button>
               <button onClick={() => openPane("style")}><Icon name="style" />Caption style</button>
               <button onClick={() => openPane("timeline")}><Icon name="timeline" />Timeline</button>
+              <button onClick={() => setFinding(true)}><Icon name="find" />Find</button>
               <button onClick={() => setRetype(typeOf(initial))}><Icon name="lang" />Translate</button>
               <button onClick={() => setGuides((g) => !g)} aria-pressed={guides} title="Centring guides"><Icon name="guides" />Guides</button>
               {views.length > 1 && (
@@ -1804,7 +1832,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       </div>
 
       <div className="ed-timeline">
-        <Timeline cues={cues} duration={duration} now={now} selected={layers[selLayer] ? -1 : selected} zoom={zoom} line={line} playing={playing} video={video} src={src} frame={frame}
+        <Timeline cues={cues} duration={duration} now={now} selected={layers[selLayer] ? -1 : selected} zoom={zoom} line={line} playing={playing} video={video} src={src} levels={levels} frame={frame}
           onSeek={seek} onSelect={select} onZoom={setZoom}
           onAddCaption={(t) => { // a caption where the timeline was double-clicked (or the playhead), typed into there
             const r = insertAt(cues, t, duration);
@@ -1834,6 +1862,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       {/* Phones: the editing actions within thumb's reach, and messages just above them. On the page body: inside
           the glass panels a fixed bar would stick to the panel, not the screen. */}
       {inBrowser && createPortal(<>
+      {finding && <FindReplace cues={cues} onClose={() => setFinding(false)} onGo={(i) => { select(i); seek(cues[i].start + 0.01); }}
+        onReplace={(next, n) => { commit(next); setMsg(`Replaced ${n}`, 2500); }} />}
       {msg && <p className="ed-mtoast" role="status">{msg}</p>}
       <div className="ed-mbar" role="toolbar" aria-label="Edit">
         <button onClick={undo} disabled={!past.length}><Icon name="undo" />Undo</button>
