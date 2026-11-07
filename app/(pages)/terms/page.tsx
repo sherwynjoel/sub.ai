@@ -63,6 +63,12 @@ export default function Page() {
         videos made with {BRAND.name}, but not resell or redistribute them separately.
       </p>
 
+      <h2>Open-source software</h2>
+      <p>
+        {BRAND.name} uses open-source software, including the video engine that runs on your device. That software stays under its own
+        licences, listed on our <Link href="/licences">licences page</Link>, and nothing in these terms limits your rights under them.
+      </p>
+
       <h2>Availability and liability</h2>
       <p>
         We work to keep {BRAND.name} running and your data safe, but we provide it &quot;as is&quot;, without a guarantee that it will
