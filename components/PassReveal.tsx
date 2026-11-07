@@ -42,7 +42,7 @@ export default function PassReveal({ plan, holder, passNo, until, fresh, onClose
   const reels = Math.round(minutes / REEL_MINUTES).toLocaleString("en-IN"), films = Math.round(minutes / FILM_MINUTES);
 
   const lead = (fresh ? "You have activated a" : "This is your").split(" ");
-  const hot = [`${mins}-minute`, "Vasanam", "pass"];
+  const hot = [`${mins}-minute`, "Vasanamm", "pass"];
   const rest = ["for", "generating", "subtitles."];
   const word = (w: string, i: number) => <span key={i} className="pass-word" style={{ "--i": i } as CSSProperties}>{w} </span>;
 
@@ -79,7 +79,7 @@ export default function PassReveal({ plan, holder, passNo, until, fresh, onClose
                 <b>{mins} minutes of subtitles</b>
                 <b>Tamil, Tanglish and English</b>
                 <b>{LANGUAGES.length} Indian languages</b>
-                <b>{plan === "free" ? "Every style, with a small Vasanam mark" : "Every caption style"}</b>
+                <b>{plan === "free" ? "Every style, with a small Vasanamm mark" : "Every caption style"}</b>
                 <b>SRT and VTT downloads</b>
                 <b>The Premiere Pro panel</b>
               </span>

@@ -995,7 +995,7 @@ a.signout { text-decoration: none; }
   .pr-state.bad { background: #ffd9d9; color: #8a1010; }
 }
 
-/* the Vasanam pass, shown when a payment goes through: a dark room, a holographic card, the news as a subtitle.
+/* the Vasanamm pass, shown when a payment goes through: a dark room, a holographic card, the news as a subtitle.
    Everything on the card is in card millimetres (--mm), so it scales with the card. */
 html:has(.pass-reveal[open]) { overflow: hidden; }
 .pass-reveal { position: fixed; inset: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 20px 16px; border: 0; border-radius: 0; overflow: auto; color: #fff; background: radial-gradient(70% 55% at 50% 38%, #24243a, #08080e 75%); }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ExtensionManifest Version="7.0" ExtensionBundleId="com.vasanam.panel" ExtensionBundleVersion="1.0.43" ExtensionBundleName="Vasanam" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.vasanam.panel" ExtensionBundleVersion="1.0.44" ExtensionBundleName="Vasanamm" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <ExtensionList>
-    <Extension Id="com.vasanam.panel.main" Version="1.0.43" />
+    <Extension Id="com.vasanam.panel.main" Version="1.0.44" />
   </ExtensionList>
   <ExecutionEnvironment>
     <HostList>
@@ -34,7 +34,7 @@
         </Lifecycle>
         <UI>
           <Type>Panel</Type>
-          <Menu>Vasanam</Menu>
+          <Menu>Vasanamm</Menu>
           <Geometry>
             <Size><Height>560</Height><Width>340</Width></Size>
             <MinSize><Height>360</Height><Width>260</Width></MinSize>

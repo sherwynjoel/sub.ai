@@ -79,7 +79,7 @@ export type GlassFolderProps = {
   seed?: number
   /** Your own picture for the back panel, instead of generated art. */
   image?: string
-  /** A video whose frame (one second in) fills the back panel, loaded once the folder is on screen. (Vasanam) */
+  /** A video whose frame (one second in) fills the back panel, loaded once the folder is on screen. (Vasanamm) */
   video?: string
   /** The folder's contents. Read once; after that the folder owns the list. */
   files?: FolderFile[]

@@ -218,7 +218,7 @@ export function cutGraph(from: string, color: string) {
     `[ccol][cm]alphamerge[cl];[cv][cl]overlay=format=auto[cut]`;
 }
 
-/** The free plan's mark: "Made with Vasanam", small and soft in the bottom-right corner, over everything. Output [out]. */
+/** The free plan's mark: "Made with Vasanamm", small and soft in the bottom-right corner, over everything. Output [out]. */
 export function watermarkGraph(from: string, width: number, height: number) {
   return `[${from}]${watermarkText(width, height)}[out]`;
 }

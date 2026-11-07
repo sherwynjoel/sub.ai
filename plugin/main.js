@@ -1,4 +1,4 @@
-/* Vasanam panel — CEP (Chromium + Node.js) side. Talks to the Vasanam API and to host.jsx. */
+/* Vasanamm panel — CEP (Chromium + Node.js) side. Talks to the Vasanamm API and to host.jsx. */
 (function () {
   var req = typeof require === "function" ? require : window.cep_node.require;
   var fs = req("fs"), path = req("path"), os = req("os"), http = req("http"), https = req("https");
@@ -128,7 +128,7 @@
     try { text = String(readClipboard()).replace(/\s+/g, ""); } catch (e) { $("connectMsg").textContent = "Couldn't read the clipboard. Type the key instead."; return; }
     if (!text) { $("connectMsg").textContent = "The clipboard is empty. Copy the key on the website first."; return; }
     $("key").value = text;
-    $("connectMsg").textContent = /^vsn_/.test(text) ? "" : "That doesn't look like a Vasanam key (they start with vsn_). Copy it again from the website's Plugin page.";
+    $("connectMsg").textContent = /^vsn_/.test(text) ? "" : "That doesn't look like a Vasanamm key (they start with vsn_). Copy it again from the website's Plugin page.";
   };
   $("settingsBtn").onclick = function () {
     $("server").value = server();
@@ -219,7 +219,7 @@
   }
 
   // Fonts come from the website once and are kept here, so a new one needs no panel update.
-  function fontsDir() { return path.join(os.homedir(), "Documents", "Vasanam", "Fonts"); }
+  function fontsDir() { return path.join(os.homedir(), "Documents", "Vasanamm", "Fonts"); }
   function getFonts(names) {
     fs.mkdirSync(fontsDir(), { recursive: true });
     return names.filter(function (f) { return !fs.existsSync(path.join(fontsDir(), f)); }).reduce(function (p, f) {
@@ -236,7 +236,7 @@
     return window.Device.overlay(picked.file, function (said) {
       return api("POST", url, { json: { style: id, lang: lang, probe: said } }).then(function (r) {
         if (r.status >= 400) throw new Error(r.data.error || "Couldn't make the styled captions.");
-        var dir = path.join(os.homedir(), "Documents", "Vasanam", "Styled captions");
+        var dir = path.join(os.homedir(), "Documents", "Vasanamm", "Styled captions");
         fs.mkdirSync(dir, { recursive: true });
         var d = r.data, out = path.join(dir, picked.name.replace(/\.[^.]+$/, "").replace(/[^\w\- ]+/g, "_") + "." + id + "." + d.key.slice(0, 8) + ".mov");
         if (fs.existsSync(out)) { made = out; return null; }
@@ -593,7 +593,7 @@
     g.innerHTML = "";
     var heading = function (text) { var h = document.createElement("p"); h.className = "ghead"; h.textContent = text; g.appendChild(h); };
     Array.prototype.forEach.call(sel.options, function (o, i) {
-      if (STYLES.length && i && isStyle(o.value) && !isStyle(sel.options[i - 1].value)) heading("Vasanam styles · exactly as on the website");
+      if (STYLES.length && i && isStyle(o.value) && !isStyle(sel.options[i - 1].value)) heading("Vasanamm styles · exactly as on the website");
       if (STYLES.length && i && !isStyle(o.value) && isStyle(sel.options[i - 1].value)) heading("Premiere templates · text stays editable in Premiere");
       var tile = styleTile(o, i, sel), t = TEMPLATES.filter(function (x) { return x.id === o.value; })[0];
       tile.disabled = o.disabled;

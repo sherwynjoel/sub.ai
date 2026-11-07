@@ -291,7 +291,7 @@ export default function Landing({ popular }: { popular: string[] }) {
       </main>
 
       <StickerSlapFooter
-        wordmark="vasanam"
+        wordmark="vasanamm"
         homeHref="/"
         navLabel="start" navHref="/signup"
         chatHref="" /* no messaging number yet: hides the chat bubble */

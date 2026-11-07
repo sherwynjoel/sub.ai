@@ -23,7 +23,7 @@ export default function UpdateBanner() {
   if (!stale) return null;
   return (
     <div className="update-banner" role="status">
-      <span>A new version of Vasanam is ready.</span>
+      <span>A new version of Vasanamm is ready.</span>
       <button onClick={() => location.reload()}>Refresh</button>
       <button className="update-x" onClick={() => setStale(false)} aria-label="Later">×</button>
     </div>

@@ -24,7 +24,7 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!j) return json({ error: "Not found" }, 404);
   if (j.status !== "done" || !j.cues?.length) return json({ error: "Subtitles aren't ready yet." }, 409);
   const { style, lang, probe } = await req.json().catch(() => ({}));
-  if (typeof probe !== "string" || probe.length > 50_000) return json({ error: "Update the Vasanam panel: download the new version from the website's Plugin page." }, 426);
+  if (typeof probe !== "string" || probe.length > 50_000) return json({ error: "Update the Vasanamm panel: download the new version from the website's Plugin page." }, 426);
   if (!STYLE_CHOICES.some((s) => s.id === style)) return json({ error: "Unknown style." }, 400);
   if (!["ta", "en", "both"].includes(lang)) return json({ error: "Pick which subtitles to use." }, 400);
   const watermark = effectivePlan(u) === "free", logo = !!(await logoFile(j));

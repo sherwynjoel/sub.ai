@@ -1,5 +1,5 @@
 /**
- * Timing check: how close the captions Vasanam makes are to an answer key of real word times.
+ * Timing check: how close the captions Vasanamm makes are to an answer key of real word times.
  *
  *   npx tsx scripts/timing-check.ts <clips dir>             score saved results (<name>.out.json)
  *   npx tsx scripts/timing-check.ts <clips dir> --upload    subtitle every clip on the server first

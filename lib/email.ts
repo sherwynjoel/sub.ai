@@ -37,7 +37,7 @@ export async function sendEmail(to: string, subject: string, text: string) {
   const { createTransport } = await import("nodemailer");
   const smtp = createTransport({ host: "smtp.gmail.com", port: 465, secure: true, auth: { user: r.user, pass: r.pass }, connectionTimeout: 15e3, greetingTimeout: 15e3, socketTimeout: 20e3 });
   try {
-    await smtp.sendMail({ from: { name: "Vasanam", address: r.user }, to, subject, text });
+    await smtp.sendMail({ from: { name: "Vasanamm", address: r.user }, to, subject, text });
   } catch (e) {
     const msg = String((e as Error)?.message ?? e);
     throw new Error(/Invalid login|BadCredentials|535/.test(msg)

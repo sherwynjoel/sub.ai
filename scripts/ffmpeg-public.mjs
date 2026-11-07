@@ -10,9 +10,9 @@ for (const f of ["index", "classes", "const", "errors", "types", "utils", "worke
 await cp("node_modules/@ffmpeg/core/dist/esm", `${out}/st`, { recursive: true });
 await cp("node_modules/@ffmpeg/core-mt/dist/esm", `${out}/mt`, { recursive: true });
 await writeFile(`${out}/NOTICE.txt`, `The video engine in this folder is FFmpeg 5.1.4 with libx264, libx265, libass and other libraries, built for WebAssembly
-by ffmpeg.wasm (@ffmpeg/core ${core}). Vasanam has not changed it.
+by ffmpeg.wasm (@ffmpeg/core ${core}). Vasanamm has not changed it.
 It is licensed under the GNU General Public License, version 2 or later: see GPL-2.0.txt beside this file.
 It comes with no warranty. The loader (@ffmpeg/ffmpeg) is under the MIT licence.
-The full list of parts, their licences and the complete source code: the /licences page of the Vasanam website.
+The full list of parts, their licences and the complete source code: the /licences page of the Vasanamm website.
 `);
 await cp("public/licences/GPL-2.0.txt", `${out}/GPL-2.0.txt`);

@@ -28,7 +28,7 @@ export const CONNECTIONS = {
   GMAIL_USER: { group: "email", label: "Gmail address", secret: false, help: "The Gmail that sends password resets (works without a domain, ~500 emails a day). Empty: the contact email on the Contact page." },
   GMAIL_APP_PASSWORD: { group: "email", label: "Gmail app password", secret: true, help: "myaccount.google.com/apppasswords (turn on 2-Step Verification first). Not the normal Gmail password." },
   RESEND_API_KEY: { group: "email", label: "Resend API key (optional, with a domain)", secret: true, help: "resend.com → API keys (verify your domain there first). Used instead of Gmail when set." },
-  EMAIL_FROM: { group: "email", label: "Send emails from", secret: false, help: "e.g. Vasanam <hello@yourdomain.in>, on the domain verified in Resend" },
+  EMAIL_FROM: { group: "email", label: "Send emails from", secret: false, help: "e.g. Vasanamm <hello@yourdomain.in>, on the domain verified in Resend" },
 } as const;
 
 export type ConnectionName = keyof typeof CONNECTIONS;
