@@ -12,7 +12,7 @@ import { createPortal } from "react-dom";
 import { popupRoot } from "@/lib/popupRoot";
 import type { Cue, WordLook } from "@/db/schema";
 import { LANGUAGES, languageOf, shortCode } from "@/lib/languages";
-import { BLENDS, CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCustom, punchBlend, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type CaptionStyle, type Placement, type SafeZoneId, type TextLayer, pushDown, shownLines } from "@/lib/captionStyles";
+import { BLENDS, CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCustom, MIN_FIT, punchBlend, resolveStyle, SAFE_ZONES, styleOf, type CanvasRatio, type CaptionCustom, type CaptionStyle, type Placement, type SafeZoneId, type TextLayer, pushDown, shownLines } from "@/lib/captionStyles";
 import { insertAt, insertBetween, mergeCues, MIN_CAPTION, removeCue, retime, setText, setWord, shiftFrom, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
@@ -78,6 +78,8 @@ const ICON: Record<string, string> = {
 const Icon = ({ name }: { name: string }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICON[name]} /></svg>;
 const RATIO = { "9:16": 9 / 16, "4:5": 4 / 5, "1:1": 1, "16:9": 16 / 9 } as const;
 /** Settings that belong to the project, not to a look: picking a style or resetting the look keeps them. */
+/** A look the user gave this caption (being fitted to the video isn't one). */
+const hasOwnLook = (c: Cue) => Object.keys(c.style ?? {}).some((k) => k !== "fit");
 const PROJECT_KEYS: string[] = ["safe", "safeCustom", "canvas", "layers", "logo", "show", "lines"];
 const projectOnly = (c: CaptionCustom): CaptionCustom => Object.fromEntries(Object.entries(c).filter(([k]) => PROJECT_KEYS.includes(k)));
 const EMOJIS = ["😀", "😂", "🔥", "❤️", "👍", "🎉", "✨", "💯", "😍", "🙏", "👀", "⭐"];
@@ -126,34 +128,99 @@ const sidesText = (o: { left: boolean; right: boolean; top: boolean; bottom: boo
   (["left", "right", "top", "bottom"] as const).filter((k) => o[k]).join(", ");
 
 /**
- * Every caption laid out once, unseen, in the player (fully shown, as it ends), to find the ones whose text goes
- * outside the video; reports their indexes and is then taken away.
+ * How a caption's text sits in the frame: past its edge (`out`), past the fit margin (`tight`), and what would bring it
+ * in. The second language keeps its own size and wraps, so its width is no reason to shrink the caption.
  */
-function OutsideScan({ cues, styleId, custom, portrait, ratio, line, onDone }: {
-  cues: Cue[]; styleId: string; custom: CaptionCustom; portrait: boolean; ratio: number; line: "ta" | "en"; onDone: (out: number[]) => void;
+function reachOf(box: HTMLElement, frame: DOMRect) {
+  let l = Infinity, r = -Infinity, t = Infinity, b = -Infinity, subL = Infinity, subR = -Infinity;
+  for (const el of box.querySelectorAll<HTMLElement>(".cap-main, .cap-main *, .cap-sub")) {
+    const q = el.getBoundingClientRect();
+    if (!q.width || !q.height) continue;
+    t = Math.min(t, q.top); b = Math.max(b, q.bottom);
+    if (el.classList.contains("cap-sub")) { subL = q.left; subR = q.right; }
+    else { l = Math.min(l, q.left); r = Math.max(r, q.right); }
+  }
+  if (t === Infinity) return null;
+  const m = Math.min(frame.width, frame.height) * 0.02;
+  return {
+    out: Math.min(l, subL) < frame.left - 2 || Math.max(r, subR) > frame.right + 2 || t < frame.top - 2 || b > frame.bottom + 2,
+    tight: l < frame.left + m || r > frame.right - m || t < frame.top + m || b > frame.bottom - m,
+    ratio: Math.min((frame.width - 2 * m) / Math.max(1, r - l), (frame.height - 2 * m) / (b - t)),
+  };
+}
+
+const FIT_ROUNDS = 14;
+type FitResult = { fits: Map<number, number>; out: number[] };
+type FitMemo = Map<string, { fit?: number; out: boolean }>;
+/** When to look at a caption, as a share of its time: 1 is fully shown. Pages, and marks that re-wrap the line, change as it plays. */
+const momentsOf = (s: CaptionStyle) => (s.effect === "stack" || s.mark ? [0.2, 0.4, 0.6, 0.8, 1] : [1]);
+
+/**
+ * Every caption laid out unseen in the player, as the view being exported shows it. One that goes outside is shrunk a
+ * step at a time until it fits; one whose size or place the user chose is left alone and reported. Always worked out
+ * from full size, so a caption grows back when it has room. Captions already worked out (`memo`) aren't measured again.
+ */
+function FitScan({ cues, styleId, custom, portrait, ratio, view, memo, onDone }: {
+  cues: Cue[]; styleId: string; custom: CaptionCustom; portrait: boolean; ratio: number; view: View; memo: FitMemo; onDone: (r: FitResult | null) => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
+  // English alone is grouped into its own captions; each takes its look, and its fit, from the caption it starts in.
+  const shown = useMemo(() => {
+    const regrouped = view === "en" && cues.some((c) => c.ta);
+    return (regrouped ? englishCues(cues) : cues).map((c, n) => {
+      const text = view === "en" ? c.en : c.ta, times = view === "en" ? c.we : c.w, looks = view === "en" ? c.wfe : c.wf;
+      const own = mergeCustom(custom, c.style), { fit: _, ...look } = own; // eslint-disable-line @typescript-eslint/no-unused-vars
+      const key = JSON.stringify([styleId, ratio, portrait, view, text, view === "both" ? c.en : "", c.end - c.start, times?.map((t) => t - c.start), looks, look]);
+      return { c, text, times, looks, own, key, i: regrouped ? cues.findIndex((x) => c.start >= x.start - 0.01 && c.start < x.end) : n };
+    }).filter((x) => x.i >= 0 && x.text.trim());
+  }, [cues, view, styleId, custom, ratio, portrait]);
+  const [fits, setFits] = useState<Record<number, number>>({});
+  const [left, setLeft] = useState(() => new Set(shown.filter((x) => !memo.has(x.key)).map((x) => x.i))); // the captions still being fitted
+  const round = useRef(0), out = useRef(new Map<number, boolean>()); // each caption as last measured
   useLayoutEffect(() => {
     const el = root.current, frame = el?.parentElement?.getBoundingClientRect();
-    if (!el || !frame) return;
-    const found: number[] = [];
-    el.querySelectorAll<HTMLElement>("[data-cue]").forEach((box) => { if (outsideOf(box, frame)) found.push(+box.dataset.cue!); });
-    onDone(found);
-  }, [onDone]);
+    if (!el || !frame?.width) { onDone(null); return; }
+    const need = new Map<number, number>(); // the captions to shrink, and by how much
+    const boxes = el.querySelectorAll<HTMLElement>("[data-cue]");
+    boxes.forEach((box) => out.current.set(+box.dataset.cue!, false));
+    boxes.forEach((box) => {
+      const at = reachOf(box, frame), i = +box.dataset.cue!;
+      if (!at) return;
+      if (at.out) out.current.set(i, true);
+      if (!box.dataset.fixed && at.tight) need.set(i, Math.min(need.get(i) ?? 1, at.ratio));
+    });
+    const next = { ...fits }, again = new Set<number>();
+    for (const [i, by] of need) {
+      const now = fits[i] ?? 1, smaller = Math.max(MIN_FIT, Math.floor(now * Math.min(0.94, by) * 100) / 100);
+      if (smaller < now) { next[i] = smaller; again.add(i); }
+    }
+    if (again.size && ++round.current < FIT_ROUNDS) { setFits(next); setLeft(again); return; }
+    // Whatever is outside now can't be fitted, or isn't ours to change.
+    if (memo.size > 20000) memo.clear();
+    const done = new Map<number, number>(), off = new Set<number>();
+    for (const x of shown) {
+      const seen = memo.get(x.key), fit = seen ? seen.fit : fits[x.i], isOut = seen ? seen.out : !!out.current.get(x.i);
+      if (!seen) memo.set(x.key, { fit, out: isOut });
+      if (fit) done.set(x.i, Math.min(fit, done.get(x.i) ?? 1));
+      if (isOut) off.add(x.i);
+    }
+    onDone({ fits: done, out: [...off].sort((a, b) => a - b) });
+  }, [fits]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div ref={root} className="out-scan" aria-hidden="true">
-      {cues.map((c, i) => {
-        const text = c[line];
-        if (!text.trim()) return null;
-        const own = mergeCustom(custom, c.style);
-        return (
-          <div key={i} data-cue={i} className={`overlay styled${placeOf(styleId, own, portrait).free ? " free" : ""}`} style={placeOf(styleId, own, portrait).place}>
+      {shown.map(({ c, text, times, looks, own: own0, i }, n) => {
+        if (!left.has(i)) return null;
+        const own = { ...own0, fit: fits[i] };
+        const fixed = own.size !== undefined || own.x !== undefined || !!looks?.some((l) => (l?.size ?? 1) > 1);
+        const { free, place } = placeOf(styleId, own, portrait);
+        return momentsOf(resolveStyle(styleId, own, portrait)).map((m) => (
+          <div key={`${n}/${m}`} data-cue={i} data-fixed={fixed ? "1" : undefined} className={`overlay styled${free ? " free" : ""}`} style={place}>
             <div className="drag-handle">
-              <StyledCaption styleId={styleId} custom={own} text={text} start={c.start} end={c.end} time={c.end - 0.01} ratio={ratio}
-                starts={(line === "en" ? c.we : c.w)?.map(() => c.start) ?? text.split(/\s+/).filter(Boolean).map(() => c.start)} looks={line === "en" ? c.wfe : c.wf} />
+              <StyledCaption styleId={styleId} custom={own} text={text} sub={view === "both" ? c.en : undefined} start={c.start} end={c.end} ratio={ratio} looks={looks}
+                time={m === 1 ? c.end - 0.01 : c.start + m * (c.end - c.start)} starts={m === 1 ? times?.map(() => c.start) ?? text.split(/\s+/).filter(Boolean).map(() => c.start) : times} />
             </div>
           </div>
-        );
+        ));
       })}
     </div>
   );
@@ -547,6 +614,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [future, setFuture] = useState<Cue[][]>([]);
   const dragFrom = useRef<Cue[] | null>(null);
   const [dirty, setDirty] = useState(false);
+  const latest = useRef<Cue[]>([]); // the captions now: edits made while a save is on its way still need saving
   const [saving, setSaving] = useState(false);
   const [msg, setMsgState] = useState("");
   const msgTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -598,7 +666,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   // Editing on the video: the word picked in the strip, the caption's text open over the video, the timing nudges.
   const [pickedWord, setPickedWord] = useState<WordRef | null>(null);
   const [wordBar, setWordBar] = useState(false);
-  // Captions whose text goes outside the video (found by OutsideScan a moment after each change), and the scan's turn.
+  // Captions whose text goes outside the video and that can't be fitted (found by FitScan a moment after each change).
   const [outside, setOutside] = useState<number[]>([]);
   // The account's plan: free exports carry a watermark (shown on the preview too, as the MP4 will have it).
   const [freePlan, setFreePlan] = useState(false);
@@ -610,7 +678,27 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   }, [job.filename]);
   useEffect(() => { fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((m) => setFreePlan(m?.plan === "free")).catch(() => {}); }, []);
   const [scan, setScan] = useState(0);
-  const scanDone = useCallback((found: number[]) => { setOutside(found); setScan(0); }, []); // the picked word's tools shown over it on the video (it was tapped there)
+  const fitMemo = useRef<FitMemo>(new Map());
+  const fitting = useRef(false), outsideNow = useRef<number[]>([]); // a fit is on its way, and what the last one couldn't fit
+  const scanDone = useCallback((r: FitResult | null) => {
+    fitting.current = false;
+    setScan(0);
+    if (!r) return;
+    setOutside(r.out);
+    outsideNow.current = r.out;
+    let changed = false;
+    const next = latest.current.map((c, i) => {
+      const want = r.fits.get(i);
+      if (want === c.style?.fit) return c;
+      changed = true;
+      const style = { ...c.style, fit: want }, out = { ...c };
+      if (want === undefined) delete style.fit;
+      if (Object.keys(style).length) out.style = style; else delete out.style;
+      return out;
+    });
+    if (changed) { setCuesRaw(next); setDirty(true); } // not an undo step: it's worked out, and worked out again after an undo
+  }, []);
+  // the picked word's tools shown over it on the video (it was tapped there)
   const [inline, setInline] = useState(false);
   const [nudging, setNudging] = useState(false);
   // Phones: the video fills the screen; the sections open as a sheet from the bottom, the video above it.
@@ -682,7 +770,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     fetch(`/api/jobs/${job.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => {});
   // A new style starts from its own look; the project's layers, logo, canvas, safe zone, languages and lines stay.
   /** Every caption back on the project's look (one undo step). */
-  const ownLooks = cues.filter((c) => c.style).length;
+  const ownLooks = cues.filter(hasOwnLook).length;
   function sameLook() {
     if (ownLooks) commit(cues.map((c) => { if (!c.style) return c; const out = { ...c }; delete out.style; return out; }));
   }
@@ -761,12 +849,11 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const frameRatio = shaped ? RATIO[cv!.ratio as keyof typeof RATIO] : ratio;
   const hex = (c: string | undefined, fallback: string) => (c ?? fallback).slice(0, 7);
 
-  const latest = useRef(cues); // edits made while a save is on its way still need saving
   useEffect(() => { latest.current = cues; }, [cues]);
   /** The captions to the server: true when they got there. */
   async function store() {
     setSaving(true);
-    const sent = cues;
+    const sent = latest.current;
     const res = await fetch(`/api/jobs/${job.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ cues: sent }) }).catch(() => null);
     setSaving(false);
     if (res?.ok) setDirty(latest.current !== sent);
@@ -791,11 +878,19 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     return () => { on = false; };
   }, [job.id]);
 
-  // A moment after the captions or their look change: look for any that go outside the video.
+  // A moment after the captions or their look change, fit them to the video; at once for a new style.
+  const fittedStyle = useRef(styleId);
   useEffect(() => {
-    const id = setTimeout(() => setScan(Date.now()), 700);
+    fitting.current = true;
+    const id = setTimeout(() => setScan(Date.now()), fittedStyle.current === styleId ? 700 : 120);
+    fittedStyle.current = styleId;
     return () => clearTimeout(id);
   }, [cues, custom, styleId, frameRatio, view, portrait]);
+  useEffect(() => { // and again when a caption font arrives: until then the text was measured in a stand-in
+    const again = () => { fitMemo.current.clear(); fitting.current = true; setScan(Date.now()); };
+    document.fonts?.addEventListener("loadingdone", again);
+    return () => document.fonts?.removeEventListener("loadingdone", again);
+  }, []);
   // Auto zoom on the preview: the video (and its blurred backdrop) scaled on each caption's key word, as the MP4.
   const autoZoom = zoomOf(custom.zoom), zoomKey = autoZoom ? `${autoZoom.strength}/${autoZoom.style}` : "";
   const moments = useMemo(() => (zoomKey ? zoomMoments(cues, line) : []), [cues, line, zoomKey]);
@@ -831,8 +926,11 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     void render();
   }
   async function render() {
-    if (outside.length && !confirm(`${outside.length} subtitle${outside.length === 1 ? " goes" : "s go"} outside the video and will be cut off in the MP4. Export anyway?`)) return;
-    if (dirty && !(await save())) return;
+    const waited = fitting.current; // a change just made: let its fit land, so the MP4 has it
+    for (let n = 0; fitting.current && n < 30; n++) await new Promise((r) => setTimeout(r, 100));
+    const off = outsideNow.current.length;
+    if (off && !confirm(`${off} subtitle${off === 1 ? " goes" : "s go"} outside the video and will be cut off in the MP4. Export anyway?`)) return;
+    if ((dirty || waited) && !(await store())) return;
     await saveLook({ captionStyle: styleId, captionCustom: custom });
     // The editor reached without a page load isn't isolated yet, and would export on one thread: load it and carry on.
     if (!self.crossOriginIsolated && !local) { location.assign(`${location.pathname}?export=${view}`); return; }
@@ -1356,7 +1454,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   <svg width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5z" fill="currentColor" /></svg>
                 </button>
                 <span className="muted small tnum">{tc(c.start)} → {tc(c.end)}</span>
-                {c.style && <span className="chip-own" title="This caption has its own style">Own style</span>}
+                {hasOwnLook(c) && <span className="chip-own" title="This caption has its own style">Own style</span>}
                 {issueOf.has(i) && <span className="chip-timing" title={ISSUE_TEXT[issueOf.get(i)!.kind]}>Check timing</span>}
               </div>
               {hasSpoken && <textarea lang={short} rows={1} value={c.ta} onChange={(e) => editCue(i, setText(c, "ta", e.target.value))} aria-label={`${language.name} subtitle ${i + 1}`} />}
@@ -1443,7 +1541,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 onResize={(i, size) => { if (onlyThis && i === selected) styleCue(i, { size }); else lookAll({ size }); }} />
               {freePlan && <span className="wm-preview" aria-hidden="true">Made with {BRAND.name}</span>}
               {canFull && !full && <button className="fs-open" onClick={toggleFull} aria-label="Full screen" title="Full screen (F)"><Icon name="expand" /></button>}
-              {scan > 0 && view !== "en" && <OutsideScan key={scan} cues={cues} styleId={styleId} custom={custom} portrait={portrait} ratio={frameRatio} line={line} onDone={scanDone} />}
+              {scan > 0 && <FitScan key={scan} cues={cues} styleId={styleId} custom={custom} portrait={portrait} ratio={frameRatio} view={view} memo={fitMemo.current} onDone={scanDone} />}
             </div>
           ) : (
             coming ? (
