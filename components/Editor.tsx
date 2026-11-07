@@ -897,7 +897,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   useEffect(() => { const v = video.current; if (v && v.readyState >= 1) metadata(v); }, []);
   useEffect(() => {
     const v = video.current;
-    if (!playing || !v?.requestVideoFrameCallback) return;
+    if (!playing || !v?.requestVideoFrameCallback || v.playbackRate !== 1) return; // sped up, frames get skipped
     let id = 0, last = -1;
     const gaps: number[] = [];
     const seen: VideoFrameRequestCallback = (_, m) => {

@@ -24,7 +24,7 @@ export default function FilmStrip({ src, scroller, zoom, duration, onPointerDown
     v.playsInline = true;
     v.preload = "auto";
     const cache = new Map<number, HTMLCanvasElement>();
-    let want: number[] = [], busy = false, ready = false, raf = 0;
+    let want: number[] = [], busy = false, ready = false, raf = 0, asked = 0;
 
     const nearest = (key: number) => {
       let best: HTMLCanvasElement | undefined, gap = Infinity;
@@ -55,7 +55,8 @@ export default function FilmStrip({ src, scroller, zoom, duration, onPointerDown
     const next = () => {
       if (busy || !want.length) return;
       busy = true;
-      v.currentTime = want.shift()!;
+      asked = want.shift()!;
+      v.currentTime = asked;
     };
     const onSeeked = () => {
       const { videoWidth: w, videoHeight: h } = v, cell = Math.max(H, (H * w) / h), dpr = devicePixelRatio || 1;
@@ -65,7 +66,7 @@ export default function FilmStrip({ src, scroller, zoom, duration, onPointerDown
       // The picture's middle, filling the cell: tall videos are cropped to a square-ish frame.
       const scale = Math.max(p.width / w, p.height / h), sw = p.width / scale, sh = p.height / scale;
       p.getContext("2d")!.drawImage(v, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, p.width, p.height);
-      cache.set(bucket(v.currentTime), p);
+      cache.set(bucket(asked), p); // under the time asked for: the video may stop short of it, and it would be asked for forever
       if (cache.size > MAX) cache.delete(cache.keys().next().value!);
       busy = false;
       soon();
