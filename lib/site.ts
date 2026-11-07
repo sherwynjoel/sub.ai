@@ -5,5 +5,5 @@ export const SITE_URL = (process.env.APP_URL || "http://localhost:3000").replace
 export const PUBLIC_PAGES = [
   "/", "/signup", "/login", "/forgot",
   "/tamil-subtitle-generator", "/tanglish-captions", "/premiere-pro-subtitle-plugin",
-  "/contact", "/terms", "/privacy", "/refunds", "/shipping",
+  "/contact", "/terms", "/privacy", "/refunds", "/shipping", "/licences",
 ];
