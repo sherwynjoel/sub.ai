@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import AppNav from "@/components/AppNav";
 import SignOut from "@/components/SignOut";
+import LogoName from "@/components/LogoName";
 
 /**
  * The app's header: the logo, the pages, the minutes left, Help and Sign out. On phones one slim row (the logo, the
@@ -21,7 +22,7 @@ export default function AppHeader({ brand, isAdmin, minutes, meter, plan, help }
   return (
     <header className="app-head" data-open={open || undefined}>
       <div className="wrap site-head">
-        <Link href="/app" className="logo"><i />{brand}</Link>
+        <Link href="/app" className="logo"><i /><LogoName name={brand} /></Link>
         <AppNav isAdmin={isAdmin} />
         <div className="account">
           <Link href="/app/billing" className="minutes" title={`${plan} plan`}>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BRAND } from "@/lib/brand";
 import "./(pages)/legal.css";
+import LogoName from "@/components/LogoName";
 
 export const metadata = { title: "Page not found" };
 
@@ -11,7 +12,7 @@ export default function NotFound() {
       <header className="wrap top">
         <div className="site-bar">
           <div className="site-head">
-            <Link href="/" className="logo"><i />{BRAND.name}</Link>
+            <Link href="/" className="logo"><i /><LogoName name={BRAND.name} /></Link>
           </div>
         </div>
       </header>

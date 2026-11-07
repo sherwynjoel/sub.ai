@@ -10,15 +10,14 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 const bold = await readFile(join(process.cwd(), "public/caption-fonts/Poppins-ExtraBold.ttf"));
+const logo = `data:image/png;base64,${(await readFile(join(process.cwd(), "public/vasanam-cover.png"))).toString("base64")}`;
 
 export default async function Image() {
   return new ImageResponse(
     (
       <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 72, background: "linear-gradient(135deg, #efe9ff 0%, #f6f5fb 45%, #e3f9ef 100%)", color: "#0c0c14", fontFamily: "Poppins" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 20, fontSize: 44 }}>
-          <div style={{ width: 64, height: 64, borderRadius: 18, background: "#0c0c14", display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 16 }}>
-            <div style={{ width: 36, height: 7, borderRadius: 4, background: "#d4ff3f" }} />
-          </div>
+          <img src={logo} width={72} height={72} alt="" />
           {BRAND.name}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>

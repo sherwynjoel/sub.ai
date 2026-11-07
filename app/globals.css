@@ -122,9 +122,10 @@ select { appearance: none; -webkit-appearance: none; padding-right: 2.5em; curso
 
 /* Header */
 .site-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 64px; }
-.logo { display: inline-flex; align-items: center; gap: .55em; color: var(--ink); font: 700 1.15rem var(--font-head); letter-spacing: -.03em; text-decoration: none; }
-.logo i { width: 28px; height: 28px; border-radius: 9px; background: var(--black); position: relative; display: inline-block; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3); }
-.logo i::after { content: ""; position: absolute; left: 6px; right: 6px; bottom: 7px; height: 3px; border-radius: 2px; background: var(--lime); box-shadow: 0 -5px 0 rgba(255, 255, 255, .7); }
+.logo { display: inline-flex; align-items: center; gap: .55em; color: var(--ink); font: 700 1.15rem var(--font-head); letter-spacing: -.012em; text-decoration: none; }
+.logo i { width: 30px; height: 30px; flex: none; display: inline-block; background: url(/logo.svg) center / 100% no-repeat; }
+.logo-mm { position: relative; display: inline-block; }
+.logo-mm::after { content: ""; position: absolute; left: 3%; right: 3%; bottom: -.1em; height: .11em; border-radius: 1em; background: var(--lime); }
 .site-head nav { display: flex; gap: 4px; align-items: center; }
 .site-head nav a:not(.btn) { color: var(--ink-2); font-weight: 500; font-size: .93rem; padding: .5em .8em; border-radius: 999px; text-decoration: none; transition: background .2s; }
 .site-head nav a:not(.btn):hover, .site-head nav a[aria-current="page"] { background: rgba(255, 255, 255, .7); }
@@ -168,8 +169,7 @@ select { appearance: none; -webkit-appearance: none; padding-right: 2.5em; curso
 .splash.leaving { opacity: 0; visibility: hidden; pointer-events: none; }
 .splash-glass { position: absolute; inset: 0; cursor: default; }
 /* Until the glass has its first frame (scripts still loading): the mark, still */
-.splash-mark { position: relative; width: 84px; height: 84px; border-radius: 27px; background: var(--black); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .3); z-index: -1; }
-.splash-mark::after { content: ""; position: absolute; left: 18px; right: 18px; bottom: 21px; height: 9px; border-radius: 5px; background: var(--lime); box-shadow: 0 -15px 0 rgba(255, 255, 255, .7); }
+.splash-mark { position: relative; width: 84px; height: 84px; background: url(/logo.svg) center / 100% no-repeat; z-index: -1; }
 .splash-glass ~ .splash-mark { position: absolute; }
 html[data-splash="seen"] .splash { display: none; }
 @keyframes splash-cap { to { opacity: 0; visibility: hidden; pointer-events: none; } }
