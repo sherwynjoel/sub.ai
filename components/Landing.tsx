@@ -11,6 +11,7 @@ import StyleShowcase from "@/components/StyleShowcase";
 import { BRAND, BUSINESS } from "@/lib/brand";
 import { LANGUAGES } from "@/lib/languages";
 import { PLANS, type PlanId } from "@/lib/plans";
+import LogoName from "@/components/LogoName";
 
 // The hero headline names a language in its own script; the chip above greets in the same language.
 const HELLO = [
@@ -115,7 +116,7 @@ export default function Landing({ popular }: { popular: string[] }) {
       <header className="wrap top">
         <div className="site-bar">
           <div className="site-head">
-            <Link href="/" className="logo"><i />{BRAND.name}</Link>
+            <Link href="/" className="logo"><i /><LogoName name={BRAND.name} /></Link>
             <nav aria-label="Main">
               <a href="#features" className="hide-sm">{t.nav[0]}</a>
               <a href="#styles" className="hide-sm">Styles</a>

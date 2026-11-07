@@ -2,6 +2,7 @@ import Link from "next/link";
 import LegalLinks, { Credit } from "@/components/LegalLinks";
 import { BRAND } from "@/lib/brand";
 import "./legal.css";
+import LogoName from "@/components/LogoName";
 
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,7 +10,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
       <header className="wrap top">
         <div className="site-bar">
           <div className="site-head">
-            <Link href="/" className="logo"><i />{BRAND.name}</Link>
+            <Link href="/" className="logo"><i /><LogoName name={BRAND.name} /></Link>
             <nav aria-label="Main">
               <Link href="/login">Sign in</Link>
               <Link href="/signup" className="btn small">Start free</Link>
