@@ -948,6 +948,7 @@ export const TAMIL_FONTS = ["Noto Sans Tamil", "Mukta Malar ExtraBold", "Hind Ma
 /** A user's edits on top of a style. Every field is optional; null turns a feature off. */
 export type CaptionCustom = {
   font?: string; fontTa?: string; size?: number; color?: string; accent?: string;
+  fit?: number;                  // shrunk to stay inside the video (a caption's own, set by the editor; a size the user set wins)
   outline?: string | null; outlineWidth?: number; box?: string | null; shadow?: boolean;
   case?: "none" | "upper" | "lower"; position?: "top" | "middle" | "bottom"; offset?: number;
   lines?: 1 | 2 | 3;             // lay each caption out on this many lines; unset = wrap by width
@@ -1002,6 +1003,8 @@ export const SAFE_ZONES = {
 export type SafeZoneId = keyof typeof SAFE_ZONES;
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
+/** The smallest a caption is shrunk to keep it inside the video. */
+export const MIN_FIT = 0.3;
 const clamp = (n: unknown, lo: number, hi: number) => (typeof n === "number" && Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : undefined);
 
 /** Keep only well-formed fields (custom styles arrive from the browser). */
@@ -1011,6 +1014,7 @@ export function sanitizeCustom(input: unknown): CaptionCustom {
   if (typeof i.font === "string" && (CAPTION_FONTS as readonly string[]).includes(i.font)) out.font = i.font;
   if (typeof i.fontTa === "string" && (TAMIL_FONTS as readonly string[]).includes(i.fontTa)) out.fontTa = i.fontTa;
   const size = clamp(i.size, 0.4, 2.6); if (size !== undefined) out.size = size;
+  const fit = clamp(i.fit, MIN_FIT, 1); if (fit !== undefined && fit < 1) out.fit = fit;
   if (typeof i.color === "string" && HEX.test(i.color)) out.color = i.color;
   if (typeof i.accent === "string" && HEX.test(i.accent)) out.accent = i.accent;
   if (i.outline === null || (typeof i.outline === "string" && HEX.test(i.outline))) out.outline = i.outline as string | null;
@@ -1112,7 +1116,7 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   else if (c.shadow === true && !s.shadow) s.shadow = 0.05;
   if (c.case) { s.caps = c.case === "upper"; s.lower = c.case === "lower"; }
   // Every style starts at the standard size, in any font or case; the user's size is relative to it (1 = 100%).
-  const scale = c.size ?? s.startSize ?? 1;
+  const scale = c.size ?? (s.startSize ?? 1) * (c.fit ?? 1);
   s.size = Math.round((s.size ?? 1) * (tall0 / looksTall(s.font, s.caps)) * scale * 1000) / 1000;
   if (c.bold !== undefined) s.bold = c.bold;
   if (c.italic !== undefined) s.italic = c.italic;
@@ -1451,7 +1455,7 @@ export function wordLookTags(l: WordLook | null | undefined) {
 
 export function tamilRuns(text: string, fonts: Record<string, string>, style: string, tamil = TAMIL_FONT, spacing = 0, ems?: Record<string, number>) {
   type Run = "latin" | "ta" | "emoji";
-  let font = fonts[style], out = "", run: Run = "latin", cur = style, z = 1;
+  let font = fonts[style], out = "", run: Run = "latin", cur = style, z = 1, sp = spacing; // sp: the letter spacing in force
   const fontOf = (r: Run) => (r === "ta" ? tamil : r === "emoji" ? EMOJI_FONT : font);
   // With the styles' em sizes: every font drawn em × its line height (libass sizes by the line, the editor by the em);
   // \fsz<n> (ours, not libass's) makes a word n × that size.
@@ -1460,21 +1464,22 @@ export function tamilRuns(text: string, fonts: Record<string, string>, style: st
     if (text[i] === "{") { // override block: follow \fn and \r[Style]
       const end = text.indexOf("}", i), block = text.slice(i, end + 1);
       let changed = false;
-      for (const m of block.matchAll(/\\(fsz|fn|r)([^\\}]*)/g)) {
+      for (const m of block.matchAll(/\\(fsz|fsp|fn|r)([^\\}]*)/g)) {
+        if (m[1] === "fsp") { sp = +m[2] || 0; continue; }
         if (m[1] === "fsz") { z = +m[2] || 1; changed = true; continue; }
-        if (m[1] === "r") { cur = fonts[m[2]] ? m[2] : style; z = 1; }
+        if (m[1] === "r") { cur = fonts[m[2]] ? m[2] : style; z = 1; sp = spacing; }
         font = m[1] === "fn" ? m[2] || fonts[style] : fonts[m[2]] ?? fonts[style];
         changed = true;
       }
       out += block.replace(/\\fsz[\d.]*/g, ""); i = end + 1;
-      if (run !== "latin") out += `{\\fn${fontOf(run)}${fsOf(fontOf(run))}${spacing ? "\\fsp0" : ""}}`; // a block inside a run may have reset the font
+      if (run !== "latin") out += `{\\fn${fontOf(run)}${fsOf(fontOf(run))}${sp ? "\\fsp0" : ""}}`; // a block inside a run may have reset the font
       else if (changed && ems && (font !== fonts[cur] || z !== 1)) out += `{${fsOf(font)}}`; // a word in another font or size (a keyword, a big word, one picked out)
       continue;
     }
     const cp = text.codePointAt(i)!, ch = String.fromCodePoint(cp);
     const kind: Run = /[\u0B80-\u0BFF\u200C\u200D]/.test(ch) ? "ta" : /\p{Extended_Pictographic}/u.test(ch) ? "emoji" : /[\uFE0F\u{1F3FB}-\u{1F3FF}]/u.test(ch) ? run : "latin";
     // Letter spacing pulls Tamil letters apart in libass (ப்ப drawn as ப ் ப): none inside Tamil or emoji.
-    if (kind !== run && (kind !== "latin" || !/\s/.test(ch))) { out += `{\\fn${fontOf(kind)}${fsOf(fontOf(kind))}${spacing ? `\\fsp${kind === "latin" ? spacing : 0}` : ""}}`; run = kind; }
+    if (kind !== run && (kind !== "latin" || !/\s/.test(ch))) { out += `{\\fn${fontOf(kind)}${fsOf(fontOf(kind))}${sp ? `\\fsp${kind === "latin" ? sp : 0}` : ""}}`; run = kind; }
     out += ch;
     i += ch.length;
   }
