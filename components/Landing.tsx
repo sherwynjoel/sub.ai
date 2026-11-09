@@ -296,7 +296,22 @@ export default function Landing({ popular }: { popular: string[] }) {
             <div>
               <p className="hm-kicker">For video editors</p>
               <h2>Stay in Premiere Pro.</h2>
-              <p>Pick a clip and its language, press Generate. Premiere gets a caption track you can style and export with the cut. After Effects gets timed text layers.</p>
+              <p>Pick a clip and its language, press Generate. Premiere gets a caption track you can style and export with the cut. After Effects gets timed text layers. DaVinci Resolve gets them from a script.</p>
+              {/* Our own badges, not the apps' logos (those are their makers' trademarks). */}
+              <ul className="hm-apps" aria-label="Works with">
+                <li>
+                  <span className="hm-app-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="M3 9h18M3 15h18M7.5 5v4M12 5v4M16.5 5v4M7.5 15v4M12 15v4M16.5 15v4" /></svg></span>
+                  <span><b>Premiere Pro</b><small>Caption track</small></span>
+                </li>
+                <li>
+                  <span className="hm-app-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 9 4.5-9 4.5-9-4.5L12 3Z" /><path d="m3 12 9 4.5 9-4.5M3 16.5 12 21l9-4.5" /></svg></span>
+                  <span><b>After Effects</b><small>Text layers</small></span>
+                </li>
+                <li>
+                  <span className="hm-app-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="8.2" r="2.4" /><circle cx="8.7" cy="14" r="2.4" /><circle cx="15.3" cy="14" r="2.4" /></svg></span>
+                  <span><b>DaVinci Resolve</b><small>Script</small></span>
+                </li>
+              </ul>
               <Link href="/premiere-pro-subtitle-plugin" className="btn lime">Get the panel</Link>
             </div>
             {/* The real panel (its own HTML and CSS), as it sits docked in Premiere's dark window. */}
