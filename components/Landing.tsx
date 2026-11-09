@@ -12,6 +12,7 @@ import { LANGUAGES } from "@/lib/languages";
 import { PLANS, type PlanId } from "@/lib/plans";
 import { STYLE_CHOICES } from "@/lib/captionStyles";
 import LogoName from "@/components/LogoName";
+import LiquidGlass, { GlassFilter } from "@/components/ui/liquid-glass";
 
 // The hero headline names a language in its own script; the chip above greets in the same language.
 const HELLO = [
@@ -115,7 +116,8 @@ export default function Landing({ popular }: { popular: string[] }) {
     <>
       <Effects />
       <header className="wrap top">
-        <div className="site-bar">
+        <GlassFilter />
+        <LiquidGlass className="site-bar">
           <div className="site-head">
             <Link href="/" className="logo"><i /><LogoName name={BRAND.name} /></Link>
             <nav aria-label="Main">
@@ -128,7 +130,7 @@ export default function Landing({ popular }: { popular: string[] }) {
               <Link href="/signup" className="btn small"><span className="start-long">{t.start}</span><span className="start-short">{t.startShort}</span></Link>
             </nav>
           </div>
-        </div>
+        </LiquidGlass>
       </header>
 
       <main>

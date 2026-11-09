@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BRAND } from "@/lib/brand";
 import "./(pages)/legal.css";
 import LogoName from "@/components/LogoName";
+import LiquidGlass, { GlassFilter } from "@/components/ui/liquid-glass";
 
 export const metadata = { title: "Page not found" };
 
@@ -10,11 +11,12 @@ export default function NotFound() {
   return (
     <>
       <header className="wrap top">
-        <div className="site-bar">
+        <GlassFilter />
+        <LiquidGlass className="site-bar">
           <div className="site-head">
             <Link href="/" className="logo"><i /><LogoName name={BRAND.name} /></Link>
           </div>
-        </div>
+        </LiquidGlass>
       </header>
       <main className="wrap legal not-found">
         <h1>This page isn&apos;t here</h1>
