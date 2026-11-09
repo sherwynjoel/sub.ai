@@ -1,4 +1,5 @@
 import type { Cue } from "@/db";
+import type { Meter } from "./usage";
 
 export type AiConfig = { provider: string; model: string; sttModel: string };
 
@@ -9,7 +10,8 @@ export type Script = (typeof SCRIPTS)[number];
 export type Want = { script: Script; english: boolean };
 
 /** Each provider turns one audio chunk (mp3) into chunk-relative cues: `ta` in `lang` (a lib/languages code), `en` in English. */
-export type Provider = (audio: Buffer, durationSec: number, cfg: AiConfig, lang: string, want: Want) => Promise<Cue[]>;
+/** `meter` collects what each call used, for the admin's AI cost page (lib/ai/usage.ts). */
+export type Provider = (audio: Buffer, durationSec: number, cfg: AiConfig, lang: string, want: Want, meter?: Meter) => Promise<Cue[]>;
 
 /** fetch with retries on rate limits / server errors. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped vendor JSON

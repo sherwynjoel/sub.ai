@@ -38,10 +38,10 @@ export async function saveAiConfig(cfg: AiConfig) {
     await db.insert(settings).values({ key, value }).onConflictDoUpdate({ target: settings.key, set: { value } });
 }
 
-export const transcribe: Provider = async (audio, dur, cfg, lang, want) => {
-  const cues = cfg.provider === "gemini" ? await gemini(audio, dur, cfg, lang, want)
-    : cfg.provider === "sarvam" ? await sarvam(audio, dur, cfg, lang, want)
-    : await openaiCompatible(audio, dur, cfg, await openaiApi(cfg.provider), lang, want);
+export const transcribe: Provider = async (audio, dur, cfg, lang, want, meter) => {
+  const cues = cfg.provider === "gemini" ? await gemini(audio, dur, cfg, lang, want, meter)
+    : cfg.provider === "sarvam" ? await sarvam(audio, dur, cfg, lang, want, meter)
+    : await openaiCompatible(audio, dur, cfg, await openaiApi(cfg.provider), lang, want, meter);
   return want.english ? cues : cues.map((c) => ({ ...c, en: "" })); // the LLM providers write English regardless
 };
 

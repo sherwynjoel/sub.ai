@@ -176,6 +176,13 @@
       "when": 1794238510631,
       "tag": "0024_invite_seen",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794247540525,
+      "tag": "0025_ai_usage",
+      "breakpoints": true
     }
   ]
 }

@@ -13,6 +13,7 @@ import { extractChunks, LEVEL_FRAME, loudness, makePreview, probe, removeUploads
 import { speechRegions } from "./lib/timing";
 import { alignCues } from "./lib/align";
 import { translateLines } from "./lib/ai/translate";
+import { Meter, saveUsage } from "./lib/ai/usage";
 import { recordExport } from "./lib/styleUsage";
 import { alertOn } from "./lib/health";
 import { dropAnchor, englishCues, mergeChunks, mergeShort, retimeWindows, snapToPauses, withWordTimes } from "./lib/subtitles";
@@ -33,6 +34,7 @@ async function processJob(job: typeof jobs.$inferSelect) {
   const cfg = await getAiConfig();
   await db.update(jobs).set({ provider: cfg.provider, model: cfg.model }).where(eq(jobs.id, job.id));
   const dir = await mkdtemp(join(tmpdir(), "vasanam-"));
+  const meter = new Meter(); // what the AI used, saved even if the job fails (the calls are billed anyway)
   try {
     const source = job.audioPath ?? job.filePath!; // phones send the sound first; the video may still be arriving
     const files = await extractChunks(source, dir, Math.ceil(job.durationSec) + 1); // only what was charged
@@ -54,7 +56,7 @@ async function processJob(job: typeof jobs.$inferSelect) {
     const queue = [...plan];
     await Promise.all(Array.from({ length: PARALLEL_CHUNKS }, async () => {
       for (let c; (c = queue.shift()); ) {
-        const cues = await transcribe(await readFile(c.f), c.duration, cfg, ask.lang, ask.want).catch((e) => {
+        const cues = await transcribe(await readFile(c.f), c.duration, cfg, ask.lang, ask.want, meter).catch((e) => {
           queue.length = 0; // stop the other lanes too
           throw e;
         });
@@ -77,7 +79,7 @@ async function processJob(job: typeof jobs.$inferSelect) {
     let stored = job.captionCustom?.show === "en" ? englishCues(cues) : cues;
     if (bySarvam) { // the English, cut into whole sentences, each translated
       const sentences = englishCues(cues.map((c) => ({ ...c, en: c.ta, we: c.w, ta: "", w: undefined })));
-      const lines = await translateLines(sentences.map((c) => c.en), job.language);
+      const lines = await translateLines(sentences.map((c) => c.en), job.language, "en-IN", meter);
       stored = sentences.map((c, i) => ({ ...c, ta: lines[i] }));
       await db.update(jobs).set({ progress: 98 }).where(eq(jobs.id, job.id));
     }
@@ -85,6 +87,7 @@ async function processJob(job: typeof jobs.$inferSelect) {
     await db.update(jobs).set({ status: "done", progress: 100, error: null, cues: stored, speech, updatedAt: new Date(), finishedAt: new Date() }).where(eq(jobs.id, job.id));
     console.log(`job ${job.id} done (${plan.length} chunks, ${cfg.provider}/${cfg.model})`);
   } finally {
+    await saveUsage(meter, { jobId: job.id, userId: job.userId, videoSec: job.durationSec });
     await rm(dir, { recursive: true, force: true });
   }
 }

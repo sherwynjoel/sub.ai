@@ -20,8 +20,8 @@ export default async function Revenue() {
         <div className="stat"><dt>This month</dt><dd>{inr(thisMonth.income - thisMonth.refunds)}</dd><span className="sub">{thisMonth.payments} payments{thisMonth.refunds ? `, ${inr(thisMonth.refunds)} refunded` : ""}</span></div>
         <div className="stat"><dt>Last month</dt><dd>{inr(lastMonth.income - lastMonth.refunds)}</dd><span className="sub">{lastMonth.payments} payments</span></div>
         <div className="stat"><dt>Last 12 months</dt><dd>{inr(total12)}</dd><span className="sub">After refunds</span></div>
-        <div className="stat"><dt>AI cost, this month</dt><dd>{m.cost ? inr(thisMonth.aiCost) : "—"}</dd><span className="sub">{Math.round(thisMonth.minutes)} min made{m.cost ? ` × ₹${m.cost}` : ""}</span></div>
-        <div className="stat"><dt>Profit, this month</dt><dd>{m.cost ? inr(thisMonth.profit) : "—"}</dd><span className="sub">{m.cost ? "Income − refunds − AI cost" : "Set the AI cost below"}</span></div>
+        <div className="stat"><dt>AI cost, this month</dt><dd>{thisMonth.known ? inr(thisMonth.aiCost) : "—"}</dd><span className="sub">{Math.round(thisMonth.minutes)} min made{thisMonth.measured ? " · measured" : m.cost ? ` × ₹${m.cost}` : ""} · <Link href="/admin/ai">details</Link></span></div>
+        <div className="stat"><dt>Profit, this month</dt><dd>{thisMonth.known ? inr(thisMonth.profit) : "—"}</dd><span className="sub">{thisMonth.known ? "Income − refunds − AI cost" : "Set the AI cost below"}</span></div>
       </dl>
 
       <section className="panel">
@@ -39,7 +39,7 @@ export default async function Revenue() {
             <thead><tr><th>Month</th><th className="num">Income</th><th className="num">Refunds</th><th className="num">Minutes made</th><th className="num">AI cost</th><th className="num">Profit</th></tr></thead>
             <tbody>{[...m.months].reverse().map((r) => (
               <tr key={r.m}><td>{monthName(r.m)}</td><td className="num">{inr(r.income)}</td><td className="num">{r.refunds ? inr(r.refunds) : "—"}</td><td className="num">{Math.round(r.minutes)}</td>
-                <td className="num">{m.cost ? inr(r.aiCost) : "—"}</td><td className="num">{m.cost ? inr(r.profit) : "—"}</td></tr>
+                <td className="num">{r.known ? inr(r.aiCost) : "—"}{r.measured ? <span className="muted small"> measured</span> : null}</td><td className="num">{r.known ? inr(r.profit) : "—"}</td></tr>
             ))}</tbody>
           </table></div>
         </section>
@@ -48,8 +48,8 @@ export default async function Revenue() {
           {m.byPlan.length === 0 ? <p className="muted">No payments yet.</p> : (
             <table><tbody>{m.byPlan.map(([plan, v]) => <tr key={plan}><td>{plan}</td><td className="num">{v.n} payments</td><td className="num">{inr(v.rupees)}</td></tr>)}</tbody></table>
           )}
-          <h2 className="spaced">AI cost per minute</h2>
-          <p className="muted small">What one minute of video costs you in AI fees (Gemini, Sarvam…), in ₹. Check your AI bill and divide by the minutes made that month. Used for the profit figures.</p>
+          <h2 className="spaced">AI cost per minute (older months)</h2>
+          <p className="muted small">The AI cost is now measured for every video (see <Link href="/admin/ai">AI cost</Link>). This ₹ per minute is only used for months before measuring started.</p>
           <AiCostForm cost={m.cost} />
         </section>
       </div>

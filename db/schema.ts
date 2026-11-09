@@ -211,3 +211,24 @@ export const coupons = pgTable("coupons", {
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * What the AI used, for the admin's AI cost page; priced when read (lib/aiPrices.ts). One row per model per run (one
+ * video made into subtitles, or one translation); every row of a run carries the run's id and the video's length.
+ */
+export const aiUsage = pgTable("ai_usage", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  run: uuid("run").notNull(),
+  videoSec: real("video_sec").notNull().default(0),
+  jobId: uuid("job_id"),
+  userId: uuid("user_id"),
+  kind: text("kind").notNull(),
+  provider: text("provider").notNull(),
+  model: text("model").notNull(),
+  audioSec: real("audio_sec").notNull().default(0),
+  inTok: integer("in_tok").notNull().default(0),
+  audioTok: integer("audio_tok").notNull().default(0),
+  outTok: integer("out_tok").notNull().default(0),
+  chars: integer("chars").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("ai_usage_created_idx").on(t.createdAt), index("ai_usage_job_idx").on(t.jobId)]);
