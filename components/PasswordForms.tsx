@@ -18,12 +18,15 @@ export function ForgotForm() {
     if (!ok) return setState({ error: data.error || "Something went wrong. Try again." });
     setState({ done: data.manual
       ? `Email ${data.support} from the address you signed up with, and we'll send you a link to set a new password.`
-      : "If an account uses that email, a link to set a new password is on its way. It works for one hour; check your spam folder too." });
+      : "If an account uses that email, a link to set a new password is on its way. It works for one hour." });
   }
   return (
     <form className="auth" onSubmit={submit}>
       <h1>Forgot your password?</h1>
-      {state.done ? <p role="status">{state.done}</p> : <>
+      {state.done ? <>
+        <p role="status">{state.done}</p>
+        {!state.done.startsWith("Email ") && <p className="spam-tip">Not in your inbox? Check your Spam folder: our emails sometimes land there by mistake. If you find it there, tap “Not spam”.</p>}
+      </> : <>
         <p className="muted">Enter the email you signed up with.</p>
         <label>Email<input name="email" type="email" autoComplete="email" required /></label>
         {state.error && <p className="error" role="alert">{state.error}</p>}

@@ -251,3 +251,6 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: man
 /* Safari and Firefox drop the backdrop blur when it's bent: there, a plain stronger blur */
 @supports (font: -apple-system-body) or (-moz-appearance: none) { .lg-warp { filter: none; -webkit-backdrop-filter: blur(12px) saturate(160%); backdrop-filter: blur(12px) saturate(160%); } }
 @media (prefers-reduced-motion: reduce) { .lg { transition: none; } .lg:hover { transform: none; } }
+
+/* "Check your spam" reminder after an email is sent */
+.spam-tip { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: #fff7d6; color: #6b4e00; font-size: .9rem; line-height: 1.45; }
