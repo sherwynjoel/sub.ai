@@ -5,7 +5,7 @@ import { ownJob } from "@/lib/jobs";
 import { isLanguage, languageOf } from "@/lib/languages";
 import { translateLines } from "@/lib/ai/translate";
 import { charge, refund } from "@/lib/credits";
-import { minSec, secondsLeft } from "@/lib/plans";
+import { minSec, outOfMinutes, passExpired, secondsLeft } from "@/lib/plans";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -42,6 +42,7 @@ export async function POST(req: Request, { params }: Ctx) {
   if (lang === "en-IN" ? !hasMain : !hasEn && !hasMain) return json({ error: "There's no caption line to translate." }, 409);
   if (lang !== "en-IN" && from === lang) return json({ error: `The captions are in ${languageOf(lang).name} already.` }, 409);
   if (!(await charge(u, j.durationSec))) {
+    if (passExpired(u)) return json({ error: outOfMinutes(u) }, 402);
     return json({ error: `A translation uses ${minSec(j.durationSec)} (the video's length), but you have ${minSec(secondsLeft(u))} left. Upgrade to continue.` }, 402);
   }
   try {

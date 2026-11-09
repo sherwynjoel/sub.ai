@@ -11,8 +11,8 @@ import LogoName from "@/components/LogoName";
  * The app's header: the logo, the pages, the minutes left, Help and Sign out. On phones one slim row (the logo, the
  * minutes and a menu button), the pages and the rest in the menu.
  */
-export default function AppHeader({ brand, isAdmin, seconds, meter, plan, help }: {
-  brand: string; isAdmin: boolean; seconds: number; meter: number; plan: string; help: string;
+export default function AppHeader({ brand, isAdmin, seconds, meter, plan, help, expires = "" }: {
+  brand: string; isAdmin: boolean; seconds: number; meter: number; plan: string; help: string; expires?: string;
 }) {
   const [open, setOpen] = useState(false);
   const path = usePathname();
@@ -26,7 +26,7 @@ export default function AppHeader({ brand, isAdmin, seconds, meter, plan, help }
         <Link href="/app" className="logo"><i /><LogoName name={brand} /></Link>
         <AppNav isAdmin={isAdmin} />
         <div className="account">
-          <Link href="/app/billing" className="minutes" title={`${plan} plan`}>
+          <Link href="/app/billing" className="minutes" title={`${plan} plan${expires ? ` · ${expires}` : ""}`}>
             <span>{minSec(seconds)} left</span>
             <span className="meter" aria-hidden="true"><i style={{ width: `${meter}%` }} /></span>
           </Link>

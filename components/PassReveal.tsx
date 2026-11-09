@@ -65,8 +65,7 @@ export default function PassReveal({ plan, holder, passNo, until, fresh, onClose
             <span className="pass-strip">
               <span className="pass-field grow"><small>Holder</small>{holder}</span>
               <span className="pass-field"><small>Pass no.</small>VSN-{passNo}</span>
-              {valid ? <span className="pass-field"><small>Valid until</small>{valid}</span>
-                : plan === "free" && <span className="pass-field"><small>Expires</small>Never</span>}
+              {valid && <span className="pass-field"><small>Valid until</small>{valid}</span>}
             </span>
           </span>
         }

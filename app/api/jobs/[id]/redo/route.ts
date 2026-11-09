@@ -6,7 +6,7 @@ import { ownJob } from "@/lib/jobs";
 import { englishCues } from "@/lib/subtitles";
 import { CAPTION_TYPES, typeSettings, type CaptionType } from "@/lib/captionTypes";
 import { charge } from "@/lib/credits";
-import { minSec, secondsLeft } from "@/lib/plans";
+import { minSec, outOfMinutes, passExpired, secondsLeft } from "@/lib/plans";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -40,6 +40,7 @@ export async function POST(req: Request, { params }: Ctx) {
   }
   if (!j.filePath && !j.audioPath) return json({ error: "The video was removed after 7 days, so the captions can't be made again. Upload it again to change the caption type." }, 409);
   if (!(await charge(u, j.durationSec))) {
+    if (passExpired(u)) return json({ error: outOfMinutes(u) }, 402);
     return json({ error: `Making the captions again uses ${minSec(j.durationSec)} (the video's length), but you have ${minSec(secondsLeft(u))} left. Upgrade to continue.` }, 402);
   }
   for (const f of [j.renderPath, j.overlayPath]) if (f) await unlink(f).catch(() => {});

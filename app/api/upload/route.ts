@@ -11,7 +11,8 @@ import { probe, remuxAudio, soundLength, STORAGE } from "@/lib/media";
 import { DEFAULT_LANGUAGE, isLanguage } from "@/lib/languages";
 import { JOB_SCRIPTS, type JobScript } from "@/lib/captionTypes";
 import { DEFAULT_STYLE, SAFE_ZONES, STYLE_CHOICES } from "@/lib/captionStyles";
-import { effectivePlan, minSec, PLANS, secondsLeft } from "@/lib/plans";
+import { minSec, outOfMinutes, secondsLeft } from "@/lib/plans";
+import { charge } from "@/lib/credits";
 import { mustConfirm } from "@/lib/verify";
 import { knownStyle, presetLook } from "@/lib/presets";
 
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
   const u = await currentUser();
   if (!u) return unauthorized();
   if (await mustConfirm(u)) return json({ error: `Confirm your email to start your free minutes: open the link we sent to ${u.email}.`, confirm: true }, 403);
-  if (secondsLeft(u) <= 0) return json({ error: "You've used all your minutes. Upgrade your plan to continue." }, 402);
+  if (secondsLeft(u) <= 0) return json({ error: outOfMinutes(u) }, 402);
   if (!req.body) return json({ error: "No file received." }, 400);
 
   const q = new URL(req.url).searchParams;
@@ -79,15 +80,9 @@ export async function POST(req: Request) {
     await unlink(source).catch(() => {});
     return json({ error: "That file has no audio track we can read." }, 400);
   }
-  // Charge minutes atomically so two parallel uploads can't overspend the quota.
-  const quota = PLANS[effectivePlan(u)].minutes * 60;
-  const secs = Math.ceil(duration);
-  const charged = await db
-    .update(users)
-    .set({ secondsUsed: sql`${users.secondsUsed} + ${secs}` })
-    .where(and(eq(users.id, u.id), sql`${users.secondsUsed} + ${secs} <= ${quota}`))
-    .returning({ id: users.id });
-  if (!charged.length) {
+  // Charge minutes atomically so two parallel uploads can't overspend the quota (or spend from an ended pass).
+  const charged = await charge(u, duration);
+  if (!charged) {
     await unlink(source).catch(() => {});
     return json({ error: `This video is ${minSec(duration)} but you have ${minSec(secondsLeft(u))} left. Upgrade to continue.` }, 402);
   }
