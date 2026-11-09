@@ -38,7 +38,7 @@ export default function Page() {
           Paid plans are monthly subscriptions in Indian rupees: {paid.map((p) => `${p.name} ₹${p.priceInr} for ${p.minutes} minutes`).join(", ")}.
           Prices include any applicable taxes unless the checkout says otherwise.
         </li>
-        <li>Minutes are counted by the length of each video you subtitle. Unused minutes don&apos;t carry over to the next month.</li>
+        <li>Minutes are counted by the length of each video you subtitle, and again for each translation or remake of its captions. Every pass, the free trial included, lasts 30 days; minutes not used by its end expire and don&apos;t carry over.</li>
         <li>If subtitling fails, the minutes for that video are given back automatically.</li>
         <li>Subscriptions renew every month through Razorpay until you cancel. Cancelling and refunds are covered in our <Link href="/refunds">Refund and cancellation policy</Link>.</li>
         <li>We may change prices with at least 30 days&apos; notice by email; the new price applies from your next renewal.</li>

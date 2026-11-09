@@ -2,7 +2,7 @@ import ConfirmEmail from "@/components/ConfirmEmail";
 import Dashboard from "@/components/Dashboard";
 import TrialPass from "@/components/TrialPass";
 import { requireUser } from "@/lib/auth";
-import { secondsLeft } from "@/lib/plans";
+import { passEnd, secondsLeft } from "@/lib/plans";
 import { mustConfirm } from "@/lib/verify";
 
 export default async function Page() {
@@ -17,7 +17,7 @@ export default async function Page() {
       </header>
       <ConfirmEmail />
       <Dashboard />
-      {trial && <TrialPass holder={u.name} passNo={u.id.slice(0, 8).toUpperCase()} />}
+      {trial && <TrialPass holder={u.name} passNo={u.id.slice(0, 8).toUpperCase()} until={passEnd(u)?.toISOString()} />}
     </>
   );
 }

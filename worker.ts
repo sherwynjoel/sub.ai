@@ -2,13 +2,13 @@
  * Background worker: picks queued jobs, extracts audio, sends chunks to the configured AI, stores cues.
  * Run alongside the web app:  npm run worker
  */
+import { charge } from "./lib/credits";
 import { mkdtemp, readdir, readFile, rm, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { inArray, and, desc, eq, isNotNull, isNull, lt, ne, notLike, or, sql } from "drizzle-orm";
 import { db, jobs, settings, users, type Cue } from "./db";
 import { getAiConfig, transcribe, type Script } from "./lib/ai";
-import { effectivePlan, PLANS } from "./lib/plans";
 import { extractChunks, LEVEL_FRAME, loudness, makePreview, probe, removeUploads, STORAGE } from "./lib/media";
 import { speechRegions } from "./lib/timing";
 import { alignCues } from "./lib/align";
@@ -97,9 +97,7 @@ async function chargeExtra(job: typeof jobs.$inferSelect, heard: number) {
   const extra = Math.ceil(heard) - Math.ceil(job.durationSec);
   if (extra <= 2) return; // rounding between formats
   const [u] = await db.select().from(users).where(eq(users.id, job.userId));
-  const quota = u ? PLANS[effectivePlan(u)].minutes * 60 : 0;
-  const ok = await db.update(users).set({ secondsUsed: sql`${users.secondsUsed} + ${extra}` })
-    .where(and(eq(users.id, job.userId), sql`${users.secondsUsed} + ${extra} <= ${quota}`)).returning({ id: users.id });
+  const ok = u && (await charge(u, extra)) ? [u] : [];
   if (!ok.length) throw new Error(`This file has ${Math.ceil(heard / 60)} min of sound, more than its stated length, and there aren't enough minutes left for all of it. Your minutes for it were given back.`);
   job.durationSec = heard; // so a later failure gives back everything charged
   await db.update(jobs).set({ durationSec: heard }).where(eq(jobs.id, job.id));
