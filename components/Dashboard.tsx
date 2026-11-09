@@ -1,4 +1,5 @@
 "use client";
+import { clearPending, peekPending } from "@/lib/pendingVideo";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -97,6 +98,13 @@ export default function Dashboard() {
   // A picked video, its length and the minutes left: shown before anything is sent.
   const [check, setCheck] = useState<{ file: File; audio: AudioTrack | null; seconds: number; left: number } | null>(null);
   useSyncExternalStore(subscribeVideos, videosVersion, () => 0);
+  // A video picked on the home page before signing in: on to its new project (once the page is set up, below).
+  const resumed = useRef(false);
+  useEffect(() => {
+    if (resumed.current || (!self.crossOriginIsolated && !sessionStorage.getItem("vs-isolate"))) return; // reloading first
+    resumed.current = true;
+    peekPending().then((p) => { if (p) { clearPending(); pick(p.file); } });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // The video picked here is exported from this same page, so it must be isolated already for the export's threads:
   // arriving without a page load (from sign-in or Billing), load it once.
   useEffect(() => {

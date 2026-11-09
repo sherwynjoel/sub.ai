@@ -1,16 +1,16 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import Cube from "@/components/Cube";
 import Effects from "@/components/Effects";
 import LegalLinks, { Credit } from "@/components/LegalLinks";
 import StickerSlapFooter from "@/components/StickerSlapFooter";
 import FruitSticker, { MEDIA } from "@/components/FruitStickerHero";
-import HeroEditor from "@/components/HeroEditor";
+import HomeUpload from "@/components/HomeUpload";
 import StyleShowcase from "@/components/StyleShowcase";
 import { BRAND, BUSINESS } from "@/lib/brand";
 import { LANGUAGES } from "@/lib/languages";
 import { PLANS, type PlanId } from "@/lib/plans";
+import { STYLE_CHOICES } from "@/lib/captionStyles";
 import LogoName from "@/components/LogoName";
 
 // The hero headline names a language in its own script; the chip above greets in the same language.
@@ -33,21 +33,21 @@ const t = {
   cta: "Start free · 15 min", how: "See how it works", note: "No card. No setup.",
   live: "Live",
   langs: `${LANGUAGES.length} Indian languages, each paired with English. All live.`,
-  featuresH: ["Made for how we ", "really talk", "."],
-  features: [
-    ["Real Tamil, real script", "Spoken lines stay spoken. Tanglish stays Tanglish. Nothing gets turned into textbook Tamil."],
-    ["One timeline, two languages", "Tamil and English share every timestamp, so switching tracks never drifts."],
-    ["Fix it while it plays", "Tap a line, change a word, nudge the timing. Export again in a second."],
-    ["Every format", "SRT, VTT, plain text, or a caption track straight onto your sequence."],
+  whyH: ["Built for how ", "we really talk", "."],
+  why: [
+    ["Speaks like you speak", "Tanglish stays Tanglish. Spoken Tamil stays spoken, never turned into textbook Tamil. English sits on the same timing."],
+    ["Full quality, every time", "Your video never leaves your device for the export. The finished MP4 keeps the quality you shot in."],
+    ["A real timeline", "Drag a caption to fix its timing, split or join lines, find and replace across the video. It saves by itself."],
+    ["Fits every frame", "Captions shrink to fit the video in every style, reels or wide. Make one huge and you get a warning, not a surprise."],
   ],
-  pluginH: "Lives right inside Premiere Pro and After Effects.",
-  pluginP: "Pick a clip and its language, hit Generate. Premiere gets a caption track; After Effects gets timed text layers.",
-  pluginBtn: "Get the plugin",
-  stepsH: "Cut to captions in three moves.",
+  pluginH: "Work in Premiere Pro or After Effects?",
+  pluginP: "Use the panel. Pick a clip and its language, press Generate. Premiere gets a caption track; After Effects gets timed text layers.",
+  pluginBtn: "Get the panel",
+  stepsH: "From video to subtitles in three steps.",
   steps: [
-    ["Upload", "Drop any cut up to 4 GB, from the browser or right from Premiere."],
-    ["Review", "Tamil and English side by side with your video. Fix anything."],
-    ["Export", "SRT, VTT, text, or straight onto your timeline."],
+    ["Drop your video", "Any cut up to 4 GB. Only the sound is sent; the video stays on your device."],
+    ["Pick a language and a look", `${LANGUAGES.length} Indian languages with English, and ${STYLE_CHOICES.length} styles to tap through.`],
+    ["Fix and download", "Edit any word or timing, then download a styled MP4, SRT, VTT or text."],
   ],
   priceH: "Pay for minutes, not features.",
   priceP: "Monthly, in rupees, through Razorpay with UPI or card. Every plan gets the Premiere panel.",
@@ -56,16 +56,17 @@ const t = {
   mins: (n: string, once: boolean) => `${n} minutes${once ? ", once" : " a month"}`,
   perks: [`${LANGUAGES.length} Indian languages + English`, "Ready-made caption styles, styled MP4 export", "SRT, VTT and text export", "Premiere & After Effects panel"],
   choose: (name: string) => `Choose ${name}`,
-  faqH: "Quick answers",
+  faqH: "Questions people ask",
   faq: [
-    ["Which languages work?", `Tamil, Hindi, Telugu, Malayalam, Kannada, Bengali, Marathi and ${LANGUAGES.length - 7} more Indian languages, each with English on the same timing. Pick the language when you upload.`],
+    ["Is it really free to try?", "Yes. You get 15 minutes once, with every style. No card. Pay only if you pick a monthly plan."],
+    ["Which languages work?", `Tamil, Hindi, Telugu, Malayalam, Kannada, Bengali, Marathi and ${LANGUAGES.length - 7} more Indian languages, each with English on the same timing.`],
     ["Does it get Tanglish?", "Yes. Mixed dialogue stays as spoken: Tamil words in Tamil script, English words in English."],
-    ["How long can a video be?", "Uploads go up to 4 GB. Minutes come out of your plan, and the free trial has 15 minutes once."],
-    ["Do I need a card to try it?", "No. Sign up and use the 15 trial minutes. Pay only when you pick a monthly plan."],
+    ["Is my video safe?", "Only the sound is sent to make the subtitles. The video stays on your device, and the styled MP4 is made there too."],
+    ["How long can a video be?", "Files go up to 4 GB. Minutes come out of your plan."],
     ["How do I pay and cancel?", "Monthly in rupees through Razorpay, with UPI or card. Cancel from Billing any time; your minutes stay until the period ends."],
   ],
-  ctaH: "Your next cut gets subtitles tonight.",
-  works: "Exports for",
+  ctaH: "Your next video gets subtitles tonight.",
+  ctaBtn: "Drop your video",
 };
 
 const d = (s: number) => ({ "--d": `${s}s` }) as React.CSSProperties;
@@ -118,6 +119,7 @@ export default function Landing({ popular }: { popular: string[] }) {
           <div className="site-head">
             <Link href="/" className="logo"><i /><LogoName name={BRAND.name} /></Link>
             <nav aria-label="Main">
+              <a href="#upload" className="hide-sm">Try it</a>
               <a href="#features" className="hide-sm">{t.nav[0]}</a>
               <a href="#styles" className="hide-sm">Styles</a>
               <a href="#how" className="hide-sm">{t.nav[1]}</a>
@@ -153,103 +155,61 @@ export default function Landing({ popular }: { popular: string[] }) {
           </p>
           <div className="cta">
             <Link href="/signup" className="btn">{t.cta}</Link>
-            <a href="#how" className="btn ghost">{t.how}</a>
+            <a href="#upload" className="btn ghost">Try it on your video</a>
           </div>
           <p className="note">{t.note}</p>
         </FruitSticker>
-        <div className="wrap"><HeroEditor /></div>
+        <HomeUpload popular={popular} />
 
-        <section className="langs" aria-label={t.langs}>
-          <p className="wrap langs-title rise">{t.langs}</p>
-          <div className="langs-strip">
-            <div className="langs-track">
-              {[...LANGUAGES, ...LANGUAGES].map((l, i) => (
-                <span key={i} className="lang-chip glass live" aria-hidden={i >= LANGUAGES.length || undefined}>
-                  <b>{l.native}</b><small>{l.name}</small><em>{t.live}</em>
-                </span>
-              ))}
-            </div>
-          </div>
+        <section className="wrap hl-langs" aria-label={t.langs}>
+          <p className="hl-langs-title">{t.langs}</p>
+          <ul className="hl-chips">
+            {LANGUAGES.map((l) => <li key={l.code}><b lang={l.code.slice(0, 2)}>{l.native}</b><small>{l.name}</small></li>)}
+          </ul>
         </section>
 
         <section className="wrap sec" id="features">
-          <h2 className="rise">{t.featuresH[0]}<span className="mark">{t.featuresH[1]}</span>{t.featuresH[2]}</h2>
-          <div className="bento">
-            <article className="tile glass shine big rise">
-              <h3>{t.features[0][0]}</h3>
-              <p>{t.features[0][1]}</p>
-              <div className="examples">
-                <div><b lang="ta">Bro, இது next level!</b><span lang="en">Bro, this is next level!</span></div>
-                <div><b lang="ta">சத்தியமா, பொய் இல்லை.</b><span lang="en">I swear, it&apos;s not a lie.</span></div>
-                <div><b lang="ta">மறக்காம page-அ follow பண்ணுங்க.</b><span lang="en">Don&apos;t forget to follow the page.</span></div>
-                <div><b lang="ta">Machi, இந்த edit semma!</b><span lang="en">Dude, this edit is awesome!</span></div>
-                <div><b lang="ta">நாளைக்கு client-க்கு deliver பண்ணணும்.</b><span lang="en">We have to deliver to the client tomorrow.</span></div>
-              </div>
-            </article>
-            <article className="tile glass shine rise" style={d(0.06)}>
-              <h3>{t.features[1][0]}</h3>
-              <p>{t.features[1][1]}</p>
-              <div className="lanes" aria-hidden="true">
-                <span>TA</span><i><b style={{ left: "4%", width: "28%" }} /><b style={{ left: "38%", width: "22%" }} /><b style={{ left: "66%", width: "30%" }} /></i>
-                <span>EN</span><i><b style={{ left: "4%", width: "28%" }} /><b style={{ left: "38%", width: "22%" }} /><b style={{ left: "66%", width: "30%" }} /></i>
-              </div>
-            </article>
-            <article className="tile glass shine rise" style={d(0.12)}>
-              <h3>{t.features[2][0]}</h3>
-              <p>{t.features[2][1]}</p>
-              <div className="edit-demo" aria-hidden="true"><span className="tc">00:01:15,050</span><b lang="ta">சத்தியமா, பொய் இல்லை<i className="caret" /></b></div>
-            </article>
-            <article className="tile glass shine wide rise" style={d(0.18)}>
-              <div>
-                <h3>{t.features[3][0]}</h3>
-                <p>{t.features[3][1]}</p>
-              </div>
-              <Cube />
-            </article>
+          <h2 className="rise">{t.whyH[0]}<span className="mark">{t.whyH[1]}</span>{t.whyH[2]}</h2>
+          <div className="hl-why">
+            {t.why.map(([h, p], n) => (
+              <article key={h} className="hl-card glass shine rise" style={d(n * 0.06)}>
+                <span className="hl-n">0{n + 1}</span>
+                <h3>{h}</h3>
+                <p>{p}</p>
+                {n === 0 && <div className="hl-say" aria-hidden="true">
+                  <div><b lang="ta">Machi, இந்த edit semma!</b><span>Dude, this edit is awesome!</span></div>
+                  <div><b lang="ta">மறக்காம page-அ follow பண்ணுங்க.</b><span>Don&apos;t forget to follow the page.</span></div>
+                </div>}
+              </article>
+            ))}
           </div>
         </section>
 
         <section className="wrap sec" id="styles">
-          <h2 className="rise">Pick a look. <span className="mark">One tap.</span></h2>
-          <p className="sec-lede rise">Pick a style in the editor, watch it on your clip, then download a finished MP4 with the captions burned in. Every style works in every language.</p>
+          <h2 className="rise">{STYLE_CHOICES.length} looks. <span className="mark">One tap.</span></h2>
+          <p className="sec-lede rise">These are playing live. Drop your video above to see any of them on your own clip.</p>
           <StyleShowcase popular={popular} />
-        </section>
-
-        <section className="wrap sec split" id="plugin">
-          <div className="rise">
-            <h2>{t.pluginH}</h2>
-            <p className="lede">{t.pluginP}</p>
-            <Link href="/signup" className="btn ghost">{t.pluginBtn}</Link>
-          </div>
-          <div className="pr-window tilt rise" aria-hidden="true">
-            <div className="pr-bar"><span className="dots"><i /><i /><i /></span>Premiere Pro — Sequence 01</div>
-            <div className="pr-body">
-              <div className="pr-monitor">
-                <div className="subtitle pr-cap"><span lang="ta">நீ சொன்னது உண்மையா?</span><small className="en">Was it true?</small></div>
-              </div>
-              <div className="pr-panel">
-                <span className="pr-title">{BRAND.name}</span>
-                <div className="pr-row"><span>Clip</span><b>interview_A.mov</b></div>
-                <div className="pr-row"><span>Subtitles in</span><b>Tamil + English</b></div>
-                <span className="pr-meter"><i /></span>
-                <span className="pr-go">Generate subtitles</span>
-              </div>
-            </div>
-            <div className="pr-tracks"><span>V1</span><i className="v" /><span>C1</span><i className="c"><b /><b /><b /><b /></i></div>
-          </div>
+          <p className="hl-center rise"><a href="#upload" className="btn">Try them on your video</a></p>
         </section>
 
         <section className="wrap sec" id="how">
           <h2 className="rise">{t.stepsH}</h2>
-          <ol className="steps" data-scroll>
+          <ol className="hl-steps">
             {t.steps.map(([h, p], n) => (
-              <li key={n} className="glass shine rise" style={d(n * 0.1)}>
-                <span className="step-n">0{n + 1}</span>
+              <li key={n} className="glass rise" style={d(n * 0.08)}>
+                <span className="hl-step">{n + 1}</span>
                 <h3>{h}</h3>
                 <p>{p}</p>
               </li>
             ))}
           </ol>
+          <div className="hl-plugin glass rise" id="plugin">
+            <div>
+              <h3>{t.pluginH}</h3>
+              <p>{t.pluginP}</p>
+            </div>
+            <Link href="/premiere-pro-subtitle-plugin" className="btn ghost">{t.pluginBtn}</Link>
+          </div>
         </section>
 
         <section className="wrap sec" id="pricing">
@@ -286,7 +246,7 @@ export default function Landing({ popular }: { popular: string[] }) {
         <section className="wrap">
           <div className="cta-band rise">
             <h2>{t.ctaH}</h2>
-            <Link href="/signup" className="btn">{t.start}</Link>
+            <a href="#upload" className="btn">{t.ctaBtn}</a>
           </div>
         </section>
       </main>
