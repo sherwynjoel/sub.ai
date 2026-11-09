@@ -80,7 +80,8 @@ export default function StyleWall({ popular }: { popular: string[] }) {
             </div>
             {/* The Dynamic Island opens for a moment with the style's name each time one is picked. */}
             <div className={`sw-island${open ? " open" : ""}`} aria-hidden="true">
-              <span className="sw-isl-art"><i /></span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="sw-isl-art" src="/logo.png" alt="" width={64} height={64} />
               <span className="sw-isl-text"><small>Now styling</small><b>{style.name}</b></span>
               <span className="sw-wave"><i /><i /><i /><i /><i /></span>
             </div>
@@ -93,7 +94,7 @@ export default function StyleWall({ popular }: { popular: string[] }) {
               <span><svg viewBox="0 0 24 24"><path d="M21 3 3 10.5l7 2.5 2.5 7L21 3Z" /></svg>Share</span>
             </div>
             <div className="sw-meta" aria-hidden="true">
-              <b><i />kavya.edits</b>
+              <b>{/* eslint-disable-next-line @next/next/no-img-element */}<img src="/logo.png" alt="" width={48} height={48} />kavya.edits</b>
               <span>Machi vlog · ep 12 · subtitles by Vasanamm</span>
             </div>
             <div className="sw-progress" aria-hidden="true"><i style={{ width: `${(t / LOOP) * 100}%` }} /></div>
