@@ -1,3 +1,4 @@
+import { billingEvents, db } from "@/db";
 import { currentUser, json, unauthorized } from "@/lib/auth";
 import { PAID, PLANS, type PlanId } from "@/lib/plans";
 import { PREPAID_DAYS, rzp } from "@/lib/razorpay";
@@ -25,6 +26,9 @@ export async function POST(req: Request) {
       receipt: `${plan}-${u.id.slice(0, 8)}-${Date.now().toString(36)}`, // ≤ 40 characters
       notes: { userId: u.id, plan, days: String(PREPAID_DAYS) },
     });
+    // Noted so the admin can see payments started but never finished (lib/money.ts).
+    await db.insert(billingEvents).values({ id: `checkout:order:${order.id}`, type: "checkout.started", payload: { userId: u.id, plan, orderId: order.id, amount } })
+      .onConflictDoNothing().catch((e) => console.error("checkout log", e));
     return json({ orderId: order.id, amount: order.amount, currency: order.currency, keyId, name: u.name, email: u.email });
   } catch (e) {
     const msg = (e as Error).message;

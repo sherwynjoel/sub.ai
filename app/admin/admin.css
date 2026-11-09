@@ -106,3 +106,7 @@
 .plain-list { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
 .note-form textarea { width: 100%; font: inherit; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: #fff; resize: vertical; }
 .note-form .btn-row { margin-top: 8px; align-items: center; }
+
+.day-bars { display: flex; align-items: flex-end; gap: 3px; height: 120px; padding: 6px 0; }
+.day-bars span { flex: 1; background: var(--ink, #111); border-radius: 3px 3px 0 0; min-height: 2px; }
+.day-bars span.zero { background: var(--line, #ddd); }
