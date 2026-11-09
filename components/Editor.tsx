@@ -607,6 +607,15 @@ const typing = (e: KeyboardEvent) => {
 /** The server said no, with a reason worth showing. */
 class ExportRefused extends Error {}
 
+/** One-tap export settings for where the video is going (what those apps recommend). */
+const EXPORT_PRESETS: { name: string; tip: string; q: ExportQuality }[] = [
+  { name: "Best quality", tip: "Your video's own size and frame rate, the sharpest setting", q: { height: null, fps: null, level: "best" } },
+  { name: "YouTube 4K", tip: "4K UHD, best quality", q: { height: 2160, fps: null, level: "best" } },
+  { name: "YouTube / Facebook", tip: "1080p Full HD, best quality", q: { height: 1080, fps: null, level: "best" } },
+  { name: "Reels / Shorts / TikTok", tip: "1080p, 30 fps, high quality", q: { height: 1080, fps: 30, level: "high" } },
+  { name: "WhatsApp", tip: "720p, 30 fps, a small file", q: { height: 720, fps: 30, level: "small" } },
+];
+
 export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?: string }) {
   const router = useRouter();
   const [job, setJob] = useState(initial);
@@ -762,8 +771,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [pickedQuality, setPickedQuality] = useState<ExportQuality | null>(null);
   const quality = useMemo<ExportQuality>(() => {
     if (pickedQuality) return pickedQuality;
-    try { const q = JSON.parse(savedQuality || "null"); if (q && q.level in QUALITY_LEVELS) return { height: typeof q.height === "number" ? q.height : null, level: q.level }; } catch { /* none saved */ }
-    return { height: null, level: "best" };
+    try { const q = JSON.parse(savedQuality || "null"); if (q && q.level in QUALITY_LEVELS) return { height: typeof q.height === "number" ? q.height : null, fps: typeof q.fps === "number" ? q.fps : null, level: q.level }; } catch { /* none saved */ }
+    return { height: null, fps: null, level: "best" };
   }, [pickedQuality, savedQuality]);
   const pickQuality = (q: ExportQuality) => { setPickedQuality(q); try { localStorage.setItem("vs-export-quality", JSON.stringify(q)); } catch { /* private mode */ } };
   const qualityKey = JSON.stringify(quality);
@@ -965,7 +974,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
         },
       });
       if (made) URL.revokeObjectURL(made.url);
-      const file = { url: URL.createObjectURL(blob), name: `${stem(job.filename)}.${styleId}${quality.height ? `.${quality.height}p` : ""}.mp4`, q: qualityKey };
+      const file = { url: URL.createObjectURL(blob), name: `${stem(job.filename)}.${styleId}${quality.height ? `.${quality.height === 2160 ? "4K" : quality.height === 1440 ? "2K" : `${quality.height}p`}` : ""}${quality.fps ? `.${quality.fps}fps` : ""}.mp4`, q: qualityKey };
       setMade(file);
       setRenderedLook(JSON.stringify([styleId, custom]));
       const a = document.createElement("a");
@@ -1911,13 +1920,26 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 </div>
               ) : (
                 <div className="insp-actions">
-                  <div className="export-row quality-row">
-                    <label>Size
+                  <div className="q-presets" role="group" aria-label="Made for">
+                    {EXPORT_PRESETS.map((p) => (
+                      <button key={p.name} type="button" className={`chip${JSON.stringify(p.q) === qualityKey ? " on" : ""}`} onClick={() => pickQuality(p.q)} title={p.tip}>{p.name}</button>
+                    ))}
+                  </div>
+                  <div className="quality-row">
+                    <label>Resolution
                       <select value={quality.height ?? ""} onChange={(e) => pickQuality({ ...quality, height: e.target.value ? +e.target.value : null })}>
                         <option value="">Original</option>
-                        <option value="1080">1080p Full HD</option>
-                        <option value="720">720p HD</option>
                         <option value="480">480p</option>
+                        <option value="720">720p HD</option>
+                        <option value="1080">1080p FHD</option>
+                        <option value="1440">2K QHD</option>
+                        <option value="2160">4K UHD</option>
+                      </select>
+                    </label>
+                    <label>Frame rate
+                      <select value={quality.fps ?? ""} onChange={(e) => pickQuality({ ...quality, fps: e.target.value ? +e.target.value : null })}>
+                        <option value="">Original</option>
+                        {[24, 25, 30, 50, 60].map((f) => <option key={f} value={f}>{f} fps</option>)}
                       </select>
                     </label>
                     <label>Quality
@@ -1929,13 +1951,16 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                     </label>
                   </div>
                   <p className="muted small">
-                    {quality.height ? `${quality.height}p: smaller than the original, so it exports and uploads faster (a video is never made bigger than it is). ` : "Original: the same size as your video. "}
-                    {{ best: "Best: the sharpest picture, the largest file. Best for posting.", high: "High: a smaller file that looks the same on a phone.", small: "Smaller file: quick to send on WhatsApp or email; a little softer." }[quality.level]}
+                    {quality.height === 2160 || quality.height === 1440
+                      ? `${quality.height === 2160 ? "4K UHD (2160p)" : "2K QHD (1440p)"}: a big file, slow to make (best on a computer). Captions are drawn sharp at that size; the picture is only sharper if it was filmed that big. `
+                      : quality.height ? `${quality.height}p: the same shape, ${quality.height}${quality.height === 720 ? " (HD)" : quality.height === 1080 ? " (Full HD)" : ""} pixels on the short side. ` : "Original: the same size as your video. "}
+                    {quality.fps ? `${quality.fps} fps${quality.fps >= 50 ? " (smoother only if filmed at 50 or 60)" : ""}. ` : ""}
+                    {{ best: "Best: the sharpest picture, the largest file.", high: "High: a smaller file that looks the same on a phone.", small: "Smaller file: quick to send on WhatsApp or email; a little softer." }[quality.level]}
                   </p>
                   <button className="btn" onClick={render} disabled={!videoHere}>{coming ? "Choose the video first" : dirty ? "Save and export MP4" : "Export MP4"}</button>
                   {made && !dirty && !lookChanged && made.q === qualityKey && <a className="btn ghost" href={made.url} download={made.name}>Download MP4</a>}
                   {made && (dirty || lookChanged || made.q !== qualityKey) && <>
-                    <p className="muted small render-stale">{dirty || lookChanged ? "Your last MP4 was made before your latest changes. Export again to get them in the video." : "Your last MP4 was made at a different size or quality. Export again to get this one."}</p>
+                    <p className="muted small render-stale">{dirty || lookChanged ? "Your last MP4 was made before your latest changes. Export again to get them in the video." : "Your last MP4 was made with other export settings. Export again to get these."}</p>
                     <a className="btn ghost" href={made.url} download={made.name}>Download the older MP4</a>
                   </>}
                   {!made && (job.renderStatus === "done" || job.renderStatus === "stale") && <a className="btn ghost" href={`/api/jobs/${job.id}/render`} download>Download the older MP4</a>}

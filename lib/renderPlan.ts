@@ -18,19 +18,20 @@ export const VIDEO = "<video>", LOGO = "<logo>", OUT = "<out>";
 export type VideoInfo = { size: { width: number; height: number } | null; aac: boolean; deep: boolean; colour: { space: string; primaries: string; trc: string } | null };
 
 /**
- * What the user picks for the MP4. `height`: the shorter side in pixels (1080 = "1080p"), never above the video's
- * own; null = the original size. `level`: best = the encoder's top setting (as before), high = a little smaller,
- * small = a much smaller file for sharing.
+ * What the user picks for the MP4, as in video apps. `height`: the shorter side in pixels (720 = "720p", 2160 = 4K);
+ * null = the video's own size. `fps`: frames a second; null = the video's own. `level`: best = the encoder's top
+ * setting, high = a little smaller, small = a much smaller file for sharing.
  */
-export type ExportQuality = { height: number | null; level: "best" | "high" | "small" };
-export const QUALITY_HEIGHTS = [2160, 1440, 1080, 720, 480] as const;
+export type ExportQuality = { height: number | null; fps?: number | null; level: "best" | "high" | "small" };
+export const QUALITY_HEIGHTS = [480, 720, 1080, 1440, 2160] as const;
+export const QUALITY_FPS = [24, 25, 30, 50, 60] as const;
 export const QUALITY_LEVELS = { best: "Best", high: "High", small: "Smaller file" } as const;
 const CRF = { best: [16, 18], high: [20, 22], small: [25, 27] } as const; // [H.264, H.265]: lower is better and bigger
 
-/** The frame size for a chosen shorter side: the same shape, even numbers; unchanged when that wouldn't shrink it. */
+/** The frame size for a chosen shorter side: the same shape, even numbers; null when it's the size already. */
 export function scaledSize(width: number, height: number, short: number | null) {
   const s = Math.min(width, height);
-  if (!short || short >= s) return null;
+  if (!short || short === s) return null;
   const k = short / s, even = (n: number) => Math.max(2, Math.round((n * k) / 2) * 2);
   return { width: even(width), height: even(height) };
 }
@@ -78,12 +79,16 @@ function subs(job: RenderJob, lang: "ta" | "en" | "both", width: number, height:
 export function exportPlan(job: RenderJob, o: VideoInfo & { logo: boolean; quality?: ExportQuality }): Plan {
   const src = o.size ?? { width: 1920, height: 1080 };
   const canvas = job.captionCustom?.canvas;
-  const { width, height } = canvasSize(canvas, src.width, src.height); // the exported frame
+  // The exported frame, at the picked resolution: the video is scaled to it first and everything (captions, logo,
+  // mark) is drawn at that size, so text stays sharp at 4K and nothing is drawn twice.
+  const base = canvasSize(canvas, src.width, src.height);
+  const to = scaledSize(base.width, base.height, o.quality?.height ?? null);
+  const { width, height } = to ?? base;
   const lang = langOf(job);
   const { files, look, blend, partial, cut } = subs(job, lang, width, height);
   const input = o.size ? ["-i", VIDEO] : ["-f", "lavfi", "-i", `color=c=0x0c0c14:s=${width}x${height}:r=30`, "-i", VIDEO, "-shortest"];
   const audio = o.size ? "0:a?" : "1:a?";
-  const graph = [frame(canvas, width, height, !!o.size)];
+  const graph = [frame(canvas, width, height, !!o.size, !!to)];
   let last = "framed";
   // Auto zoom: the frame scaled up around its centre on each caption's key word, cropped back to size (as the preview).
   const zoom = zoomOf(job.captionCustom?.zoom);
@@ -114,18 +119,18 @@ export function exportPlan(job: RenderJob, o: VideoInfo & { logo: boolean; quali
   } else if (blend) graph.push(blendGraph(last, BLENDS[blend][2], look.color));
   else graph.push(`[${last}]ass=subs.ass:fontsdir=fonts:shaping=complex[out]`);
   if (job.watermark) { graph[graph.length - 1] = graph[graph.length - 1].replace(/\[out\]$/, "[subbed]"); graph.push(watermarkGraph("subbed", width, height)); }
-  // A smaller size, if picked: everything is drawn at full size first, then the whole frame is scaled down, so the
-  // captions keep their sharp edges and their place.
-  const to = scaledSize(width, height, o.quality?.height ?? null);
-  if (to) { graph[graph.length - 1] = graph[graph.length - 1].replace(/\[out\]$/, "[full]"); graph.push(`[full]scale=${to.width}:${to.height}:flags=lanczos,setsar=1[out]`); }
   const [crf264, crf265] = CRF[o.quality?.level ?? "best"];
+  // 4K in the browser: one encoding thread and a short look-ahead, or the in-browser encoder runs out of memory.
+  const huge = width * height > 2560 * 1440;
+  const lean = huge ? (o.deep ? ["-threads", "1"] : ["-threads", "1", "-x264-params", "rc-lookahead=8:sync-lookahead=0"]) : [];
+  const fps = o.quality?.fps && (QUALITY_FPS as readonly number[]).includes(o.quality.fps) ? ["-r", String(o.quality.fps)] : [];
   return { files, args: [
-    ...input, "-filter_complex", graph.join(";"), "-map", "[out]", "-map", audio,
+    ...input, "-filter_complex", graph.join(";"), "-map", "[out]", "-map", audio, ...fps,
     // The picture has to be encoded again to carry the captions, so it's encoded to look the same as what came in: the
     // same size and frame rate, a high quality setting, and ten-bit HDR kept as ten-bit HDR (H.265, as phones write it).
     // Not x264's veryfast or slower: they crash its WebAssembly build ("function signature mismatch").
     ...(o.deep ? ["-c:v", "libx265", "-preset", "superfast", "-crf", String(crf265), "-pix_fmt", "yuv420p10le", "-tag:v", "hvc1", "-x265-params", "log-level=error"]
-      : ["-c:v", "libx264", "-preset", "superfast", "-crf", String(crf264), "-pix_fmt", "yuv420p"]),
+      : ["-c:v", "libx264", "-preset", "superfast", "-crf", String(crf264), "-pix_fmt", "yuv420p"]), ...lean,
     ...(o.colour ? ["-colorspace", o.colour.space, "-color_primaries", o.colour.primaries, "-color_trc", o.colour.trc] : []),
     ...(o.aac ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", o.quality?.level === "small" ? "160k" : "320k"]), "-movflags", "+faststart", OUT,
   ] };
@@ -256,8 +261,8 @@ function watermarkText(width: number, height: number) {
  * The video in the exported frame: as it is, filling the shape (cropped), or fitting inside it on a colour or on a
  * blurred, filled copy of itself. Output label [framed].
  */
-function frame(canvas: CaptionCustom["canvas"], w: number, h: number, video: boolean) {
-  if (!video || !canvas || canvas.ratio === "source") return "[0:v]setsar=1[framed]";
+function frame(canvas: CaptionCustom["canvas"], w: number, h: number, video: boolean, resized = false) {
+  if (!video || !canvas || canvas.ratio === "source") return resized ? `[0:v]scale=${w}:${h}:flags=lanczos,setsar=1[framed]` : "[0:v]setsar=1[framed]";
   if (canvas.fit === "fill") return `[0:v]scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h},setsar=1[framed]`;
   if (canvas.bg !== "blur") return `[0:v]scale=${w}:${h}:force_original_aspect_ratio=decrease:force_divisible_by=2,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=0x${canvas.bg.slice(1)},setsar=1[framed]`;
   return `[0:v]split[a][b];[a]scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h},boxblur=24:2[bg];` +

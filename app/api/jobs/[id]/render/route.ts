@@ -7,7 +7,7 @@ import { CAPTION_STYLES } from "@/lib/captionStyles";
 import { ownJob } from "@/lib/jobs";
 import { effectivePlan } from "@/lib/plans";
 import { FONTS, logoFile } from "@/lib/render";
-import { exportPlan, QUALITY_HEIGHTS, QUALITY_LEVELS, type ExportQuality, type VideoInfo } from "@/lib/renderPlan";
+import { exportPlan, QUALITY_FPS, QUALITY_HEIGHTS, QUALITY_LEVELS, type ExportQuality, type VideoInfo } from "@/lib/renderPlan";
 import { fileStream } from "@/lib/stream";
 import { recordExport } from "@/lib/styleUsage";
 
@@ -37,6 +37,7 @@ export async function POST(req: Request, { params }: Ctx) {
   // Size and quality picked in the Export tab; anything else means the original size at the best quality.
   const quality: ExportQuality = {
     height: (QUALITY_HEIGHTS as readonly number[]).includes(q?.height) ? q.height : null,
+    fps: (QUALITY_FPS as readonly number[]).includes(q?.fps) ? q.fps : null,
     level: q?.level in QUALITY_LEVELS ? q.level : "best",
   };
   if (!CAPTION_STYLES.some((s) => s.id === style)) return json({ error: "Unknown style." }, 400);
