@@ -120,3 +120,12 @@
 .disk-bar { height: 10px; border-radius: 6px; background: var(--line, #e5e5e5); overflow: hidden; margin-top: 12px; }
 .disk-bar span { display: block; height: 100%; background: #1a7f37; }
 .disk-bar span.hot { background: #c62828; }
+
+/* Invites */
+.nav-badge { display: inline-grid; place-items: center; min-width: 1.5em; height: 1.5em; margin-left: .45em; padding: 0 .4em; border-radius: 999px; background: #e5484d; color: #fff; font-size: .72rem; font-weight: 700; vertical-align: 1px; }
+.invite-admin { display: grid; gap: 12px; max-width: 640px; }
+.invite-admin label { display: grid; gap: 4px; }
+.invite-admin textarea { width: 100%; resize: vertical; }
+.invite-review { display: flex; flex-wrap: wrap; align-items: end; gap: 6px; }
+.invite-review label { display: grid; gap: 2px; font-size: .75rem; }
+.invite-review input { width: 70px; }

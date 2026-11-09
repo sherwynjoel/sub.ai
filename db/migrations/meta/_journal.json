@@ -162,6 +162,13 @@
       "when": 1794234732199,
       "tag": "0022_referrals",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794236196118,
+      "tag": "0023_invite_approval",
+      "breakpoints": true
     }
   ]
 }

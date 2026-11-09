@@ -6,9 +6,11 @@ import BlockUser from "@/components/admin/BlockUser";
 import UserNote from "@/components/admin/UserNote";
 import ResetLink from "@/components/admin/ResetLink";
 import UserPlanForm from "@/components/admin/UserPlanForm";
+import UserInviteForm from "@/components/admin/UserInviteForm";
 import { adminLog, billingEvents, creditLog, db, jobs, users } from "@/db";
 import { mins, requireAdmin, when } from "@/lib/admin";
 import { effectivePlan, longDate, minSec, passEnd, PLANS, secondsLeft } from "@/lib/plans";
+import { invitedBy, inviteSettings } from "@/lib/referral";
 
 const USE: Record<string, string> = { upload: "Subtitles made", translate: "Translated", remake: "Made again", extra: "Extra sound", refund: "Given back", bonus: "Minutes from admin" };
 
@@ -18,7 +20,10 @@ export default async function UserDetail({ params }: { params: Promise<{ id: str
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const [u] = await db.select().from(users).where(eq(users.id, id));
   if (!u) notFound();
-  const [projects, events, uses, sameIp, actions] = await Promise.all([
+  const [inv, invited, [by], projects, events, uses, sameIp, actions] = await Promise.all([
+    inviteSettings(),
+    invitedBy(id),
+    u.referredBy ? db.select({ id: users.id, email: users.email }).from(users).where(eq(users.id, u.referredBy)) : Promise.resolve([]),
     db.select().from(jobs).where(eq(jobs.userId, u.id)).orderBy(desc(jobs.createdAt)).limit(20),
     u.subscriptionId
       ? db.select().from(billingEvents).where(sql`${billingEvents.payload}->'payload'->'subscription'->'entity'->>'id' = ${u.subscriptionId}`).orderBy(desc(billingEvents.createdAt)).limit(20)
@@ -94,6 +99,16 @@ export default async function UserDetail({ params }: { params: Promise<{ id: str
           )}
         </section>
       </div>
+
+      <section className="panel">
+        <h2>Invites</h2>
+        {!inv.on && <p className="muted small">Invites are off for everyone (<Link href="/admin/growth#invites">Growth</Link>), so nobody sees a link right now.</p>}
+        {by && <p className="small">Invited by <Link href={`/admin/users/${by.id}`}>{by.email}</Link> · {u.referralStatus === "pending" ? <Link href="/admin/growth#invites">waiting to be checked</Link> : u.referralStatus}</p>}
+        <UserInviteForm url={url} on={u.inviteOn} minutes={u.inviteMinutes} siteUpTo={inv.upTo} />
+        {invited.length > 0 && (
+          <ul className="plain-list spaced">{invited.map((f) => <li key={f.id}><Link href={`/admin/users/${f.id}`}>{f.email}</Link> <span className="muted small">{when(f.createdAt)} · {f.status ?? "—"}{f.paidAt ? " · paid" : ""}</span></li>)}</ul>
+        )}
+      </section>
 
       <section className="panel">
         <h2>Minutes history</h2>

@@ -4,7 +4,7 @@ import { BRAND } from "@/lib/brand";
 import { emailReady } from "@/lib/email";
 import { emailAdmins } from "@/lib/health";
 import { setAiCostPerMin } from "@/lib/money";
-import { INVITE_MAX, setInviteOffer } from "@/lib/referral";
+import { INVITE_MAX, saveInviteSettings } from "@/lib/referral";
 
 /** Site-wide admin settings. */
 export async function POST(req: Request) {
@@ -18,11 +18,11 @@ export async function POST(req: Request) {
     await logAdmin(me, "Set AI cost per minute", `₹${r}`);
     return json({ ok: true });
   }
-  if (b.action === "invite_offer") {
-    const friend = Number(b.friend), inviter = Number(b.inviter), ok = (n: number) => Number.isInteger(n) && n >= 0 && n <= INVITE_MAX;
-    if (!ok(friend) || !ok(inviter)) return json({ error: `Enter whole minutes from 0 to ${INVITE_MAX}.` }, 400);
-    await setInviteOffer({ friend, inviter });
-    await logAdmin(me, "Set the invite offer", `friend ${friend} min at sign-up, inviter ${inviter} min on first pass`);
+  if (b.action === "invite_settings") {
+    const upTo = Number(b.upTo);
+    if (!(Number.isInteger(upTo) && upTo >= 0 && upTo <= INVITE_MAX)) return json({ error: `Enter whole minutes from 0 to ${INVITE_MAX}.` }, 400);
+    await saveInviteSettings({ on: !!b.on, upTo, message: String(b.message ?? "") });
+    await logAdmin(me, b.on ? "Invites on" : "Invites off", `up to ${upTo} min per approved friend`);
     return json({ ok: true });
   }
   if (b.action === "test_alert") {

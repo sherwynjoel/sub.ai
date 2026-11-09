@@ -4,7 +4,7 @@ import { eq, sql } from "drizzle-orm";
 import { billingEvents, db, users } from "@/db";
 import { countUse, discounted } from "@/lib/coupons";
 import { effectivePlan, PAID, PLANS, type PlanId } from "@/lib/plans";
-import { rewardInvite } from "@/lib/referral";
+import { noteInvitePaid } from "@/lib/referral";
 import { getSecret, type ConnectionName } from "@/lib/secrets";
 
 export async function rzp(path: string, body?: unknown) {
@@ -51,7 +51,7 @@ export async function applySubscription(s: Sub, charged: boolean) {
     })
     .where(where)
     .returning({ id: users.id })
-    .then(async (rows) => { if (charged) for (const r of rows) await rewardInvite(r.id).catch((e) => console.error("invite reward", e)); });
+    .then(async (rows) => { if (charged) for (const r of rows) await noteInvitePaid(r.id).catch((e) => console.error("invite paid", e)); });
 }
 
 /** Monthly auto-renewing subscriptions need Razorpay Subscriptions on the account and all three plan IDs saved. */
@@ -94,6 +94,6 @@ export async function applyOrderPayment(orderId: string, paymentId: string): Pro
   // Fresh minutes; extra minutes still unused (a negative count: invite rewards, admin top-ups) carry over.
   await db.update(users).set({ plan, periodEnd: new Date(running.getTime() + PREPAID_DAYS * 864e5), secondsUsed: Math.min(0, u.secondsUsed), subscriptionStatus: "prepaid" })
     .where(eq(users.id, userId));
-  await rewardInvite(userId).catch((e) => console.error("invite reward", e));
+  await noteInvitePaid(userId).catch((e) => console.error("invite paid", e));
   return plan;
 }
