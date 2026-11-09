@@ -90,9 +90,9 @@ export default async function Growth() {
         )}
       </section>
 
-      <section className="panel">
+      <section className="panel" id="invite-settings">
         <h2>Invite settings</h2>
-        <p className="muted small">Only users you turn on (on their page under Users, {inviters?.n ?? 0} so far) see an invite link on their Billing page, and only while invites are on here. Turning invites off hides every link; invites already waiting stay in the list above.</p>
+        <p className="muted small">Two switches: this one, and one per user. Only users you turn on (Users › open a user › Invites › Turn on; {inviters?.n ?? 0} so far) see an invite link on their Billing page, and only while invites are on here. Turning invites off hides every link; invites already waiting stay in the list above.</p>
         <InviteSettingsForm on={inv.on} upTo={inv.upTo} message={inv.message === INVITE_MESSAGE ? "" : inv.message} fallback={INVITE_MESSAGE} />
       </section>
 
