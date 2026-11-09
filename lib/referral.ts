@@ -11,8 +11,8 @@ export const INVITE_MAX = 1000;
 export const INVITE_VIDEO = "Invite reward"; // the credit_log name of invite minutes
 
 /**
- * Invites, set on Admin > Growth. Nobody gets minutes on their own: an admin turns invites on for chosen users, every
- * friend who signs up with one of their links waits in the admin's list, and minutes are only added when an admin
+ * Invites, set on Admin > Growth. Nobody gets minutes on their own: when an admin turns invites on, every user gets a
+ * link; every friend who signs up with one waits in the admin's list, and minutes are only added when an admin
  * approves that friend. `upTo`: the minutes promised per approved friend ("you can get up to …"), unless the user has
  * their own amount. `message`: the line on their Billing page; {minutes} is replaced by the amount.
  */
@@ -39,8 +39,8 @@ export async function saveInviteSettings(o: InviteSettings) {
 export const upToFor = (u: { inviteMinutes: number | null }, s: InviteSettings) => u.inviteMinutes ?? s.upTo;
 export const inviteText = (s: InviteSettings, minutes: number) => s.message.replaceAll("{minutes}", String(minutes));
 
-/** Whether this user may invite right now: invites on site-wide, turned on for them, not blocked. */
-export const canInvite = (u: { inviteOn: boolean; blockedAt: Date | null }, s: InviteSettings) => s.on && u.inviteOn && !u.blockedAt;
+/** Whether this user may invite right now: invites on (for everyone), and the user isn't blocked. */
+export const canInvite = (u: { blockedAt: Date | null }, s: InviteSettings) => s.on && !u.blockedAt;
 
 const ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"; // no 0/o, 1/l/i: easy to read out
 const newCode = () => Array.from(randomBytes(7), (b) => ALPHABET[b % ALPHABET.length]).join("");
