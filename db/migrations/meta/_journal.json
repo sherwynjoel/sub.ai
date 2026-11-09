@@ -127,6 +127,13 @@
       "when": 1794204416712,
       "tag": "0017_credit_log",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794210445886,
+      "tag": "0018_email_log",
+      "breakpoints": true
     }
   ]
 }

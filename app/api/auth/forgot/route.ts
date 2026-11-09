@@ -1,6 +1,6 @@
 import { clientIp, json, rateLimited } from "@/lib/auth";
 import { BRAND, BUSINESS } from "@/lib/brand";
-import { emailReady, sendEmail } from "@/lib/email";
+import { emailReady, logEmail, sendEmail } from "@/lib/email";
 import { resetLink } from "@/lib/reset";
 import { userByEmail } from "@/lib/findUser";
 
@@ -22,6 +22,6 @@ export async function POST(req: Request) {
       `Hi ${u.name},\n\nSomeone (hopefully you) asked to reset the password for your ${BRAND.name} account. Choose a new password here:\n\n${link}\n\nThe link works once, for the next hour. If you didn't ask for this, ignore this email: your password stays the same.\n\n${BRAND.name}\n${BUSINESS.email}`,
     ).then(() => true, (e) => { console.error("reset email", e); return false; });
     if (!sent) return json({ error: `We couldn't send the email just now. Try again in a few minutes, or write to ${BUSINESS.email} for a link.` }, 502);
-  }
+  } else await logEmail(mail, "Password reset", "no-account");
   return json({ ok: true });
 }
