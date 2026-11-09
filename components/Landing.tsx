@@ -6,7 +6,7 @@ import LegalLinks, { Credit } from "@/components/LegalLinks";
 import StickerSlapFooter from "@/components/StickerSlapFooter";
 import FruitSticker, { MEDIA } from "@/components/FruitStickerHero";
 import HomeUpload from "@/components/HomeUpload";
-import StyleShowcase from "@/components/StyleShowcase";
+import StyleWall from "@/components/StyleWall";
 import { BRAND, BUSINESS } from "@/lib/brand";
 import { LANGUAGES } from "@/lib/languages";
 import { PLANS, type PlanId } from "@/lib/plans";
@@ -29,77 +29,22 @@ const HELLO = [
 
 const t = {
   nav: ["Features", "How it works", "Pricing"], signIn: "Sign in", start: "Start free", startShort: "Start",
-  h1: ["Subtitles that ", "actually speak"],
-  lede: "Drop your cut. Get Tamil, or any of 22 Indian languages, plus English on one timeline, code-mix and all. Fix any line, export, get back to editing.",
-  cta: "Start free · 15 min", how: "See how it works", note: "No card. No setup.",
-  live: "Live",
-  langs: `${LANGUAGES.length} Indian languages, each paired with English. All live.`,
-  whyH: ["Built for how ", "we really talk", "."],
-  why: [
-    ["Speaks like you speak", "Tanglish stays Tanglish. Spoken Tamil stays spoken, never turned into textbook Tamil. English sits on the same timing."],
-    ["Full quality, every time", "Your video never leaves your device for the export. The finished MP4 keeps the quality you shot in."],
-    ["A real timeline", "Drag a caption to fix its timing, split or join lines, find and replace across the video. It saves by itself."],
-    ["Fits every frame", "Captions shrink to fit the video in every style, reels or wide. Make one huge and you get a warning, not a surprise."],
-  ],
-  pluginH: "Work in Premiere Pro or After Effects?",
-  pluginP: "Use the panel. Pick a clip and its language, press Generate. Premiere gets a caption track; After Effects gets timed text layers.",
-  pluginBtn: "Get the panel",
-  stepsH: "From video to subtitles in three steps.",
-  steps: [
-    ["Drop your video", "Any cut up to 4 GB. Only the sound is sent; the video stays on your device."],
-    ["Pick a language and a look", `${LANGUAGES.length} Indian languages with English, and ${STYLE_CHOICES.length} styles to tap through.`],
-    ["Fix and download", "Edit any word or timing, then download a styled MP4, SRT, VTT or text."],
-  ],
-  priceH: "Pay for minutes, not features.",
-  priceP: "Every pass lasts 30 days, in rupees, through Razorpay with UPI or card. Minutes not used in the 30 days expire. Every plan gets the Premiere panel.",
-  free: "Free", perMonth: "/month",
-  blurb: { free: PLANS.free.blurb, creator: PLANS.creator.blurb, pro: PLANS.pro.blurb, studio: PLANS.studio.blurb } as Record<PlanId, string>,
-  mins: (n: string, once: boolean) => `${n} minutes${once ? " to try, for 30 days" : " for 30 days"}`,
-  perks: [`${LANGUAGES.length} Indian languages + English`, "Ready-made caption styles, styled MP4 export", "SRT, VTT and text export", "Premiere & After Effects panel"],
-  choose: (name: string) => `Choose ${name}`,
-  faqH: "Questions people ask",
+  cta: "Start free · 15 min", note: "No card. No setup.",
   faq: [
     ["Is it really free to try?", "Yes. You get 15 minutes to use within 30 days, with every style. No card. Pay only if you pick a plan."],
-    ["Do unused minutes carry over?", "No. Every pass lasts 30 days, and the minutes not used by then expire. A new pass starts with fresh minutes."],
+    ["Does it get Tanglish?", "Yes. Mixed dialogue stays as spoken: Tamil words in Tamil script, English words in English, with an English translation under it."],
     ["Which languages work?", `Tamil, Hindi, Telugu, Malayalam, Kannada, Bengali, Marathi and ${LANGUAGES.length - 7} more Indian languages, each with English on the same timing.`],
-    ["Does it get Tanglish?", "Yes. Mixed dialogue stays as spoken: Tamil words in Tamil script, English words in English."],
+    ["Does it work on my phone?", "Yes, in the browser on Android and iPhone. Long videos and 4K exports are quicker on a computer."],
+    ["Is there a watermark?", "Only on the free trial, as a small “Made with Vasanamm” mark. Paid plans have none, and SRT and VTT files never do."],
+    ["Can I upload the subtitles to YouTube?", "Yes. Download the SRT and add it in YouTube Studio, or export the MP4 with the captions burned in."],
     ["Is my video safe?", "Only the sound is sent to make the subtitles. The video stays on your device, and the styled MP4 is made there too."],
     ["How long can a video be?", "Files go up to 4 GB. Minutes come out of your plan."],
-    ["How do I pay and cancel?", "Monthly in rupees through Razorpay, with UPI or card. Cancel from Billing any time; your minutes stay until the period ends."],
+    ["Do unused minutes carry over?", "No. Every pass lasts 30 days, and the minutes not used by then expire. A new pass starts with fresh minutes."],
+    ["How do I pay and cancel?", "In rupees through Razorpay, with UPI or card. Cancel from Billing any time; your minutes stay until the period ends."],
   ],
-  ctaH: "Your next video gets subtitles tonight.",
-  ctaBtn: "Drop your video",
 };
 
 const d = (s: number) => ({ "--d": `${s}s` }) as React.CSSProperties;
-
-/**
- * The shapes behind a pricing card, which squish and swap on hover (after 21st.dev's squishy pricing cards,
- * drawn in CSS instead of framer-motion: see .sq-* in app/landing.css). One set per card, 320 × 384.
- */
-function SquishyShapes({ kind }: { kind: number }) {
-  return (
-    <svg className={`sq-bg sq-bg${kind}`} viewBox="0 0 320 384" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-      {kind === 0 && <>
-        <circle className="s1" cx="160.5" cy="114.5" r="101.5" />
-        <ellipse className="s2" cx="160.5" cy="265.5" rx="101.5" ry="43.5" />
-      </>}
-      {kind === 1 && <>
-        <rect className="s1" x="14" y="12" width="153" height="153" rx="15" />
-        <rect className="s2" x="155" y="219" width="153" height="153" rx="15" />
-      </>}
-      {kind === 2 && <>
-        <path className="s1" d="M148.893 157.531C154.751 151.673 164.249 151.673 170.107 157.531L267.393 254.818C273.251 260.676 273.251 270.173 267.393 276.031L218.75 324.674C186.027 357.397 132.973 357.397 100.25 324.674L51.6068 276.031C45.7489 270.173 45.7489 260.676 51.6068 254.818L148.893 157.531Z" />
-        <path className="s2" d="M148.893 99.069C154.751 93.2111 164.249 93.2111 170.107 99.069L267.393 196.356C273.251 202.213 273.251 211.711 267.393 217.569L218.75 266.212C186.027 298.935 132.973 298.935 100.25 266.212L51.6068 217.569C45.7489 211.711 45.7489 202.213 51.6068 196.356L148.893 99.069Z" />
-        <path className="s3" d="M148.893 40.6066C154.751 34.7487 164.249 34.7487 170.107 40.6066L267.393 137.893C273.251 143.751 273.251 153.249 267.393 159.106L218.75 207.75C186.027 240.473 132.973 240.473 100.25 207.75L51.6068 159.106C45.7489 153.249 45.7489 143.751 51.6068 137.893L148.893 40.6066Z" />
-      </>}
-      {kind >= 3 && <>
-        <circle className="s1" cx="100" cy="120" r="92" />
-        <circle className="s2" cx="236" cy="290" r="62" />
-      </>}
-    </svg>
-  );
-}
 
 /** The landing page: English copy with Tamil dialogue samples and a multilingual greeting strip. */
 export default function Landing({ popular }: { popular: string[] }) {
@@ -164,132 +109,217 @@ export default function Landing({ popular }: { popular: string[] }) {
         </FruitSticker>
         <HomeUpload popular={popular} />
 
-        <section className="wrap hl-langs" aria-label={t.langs}>
-          <p className="hl-langs-title">{t.langs}</p>
-          <ul className="hl-chips">
-            {LANGUAGES.map((l) => <li key={l.code}><b lang={l.code.slice(0, 2)}>{l.native}</b><small>{l.name}</small></li>)}
+        {/* The languages, in their own scripts, drifting past in two rows. */}
+        <section className="hm-langs" aria-label={`${LANGUAGES.length} Indian languages, each with English`}>
+          <p className="wrap hm-kicker">{LANGUAGES.length} Indian languages, each with English on the same timing</p>
+          <ul className="sr-only">{LANGUAGES.map((l) => <li key={l.code}>{l.name}</li>)}</ul>
+          {[LANGUAGES.slice(0, 11), LANGUAGES.slice(11)].map((row, r) => (
+            <div key={r} className={`hm-ticker${r ? " back" : ""}`} aria-hidden="true">
+              <ul>{[...row, ...row].map((l, i) => <li key={i}><b lang={l.code.slice(0, 2)}>{l.native}</b><small>{l.name}</small></li>)}</ul>
+            </div>
+          ))}
+        </section>
+
+        {/* The problem every Tamil creator has seen, and the fix. */}
+        <section className="wrap hm-sec" id="features">
+          <div className="hm-head rise">
+            <p className="hm-kicker">Why Vasanamm</p>
+            <h2>You said &ldquo;edit&rdquo;.<br />Not &ldquo;<span lang="ta">எடிட்</span>&rdquo;.</h2>
+            <p className="hm-lede">Most auto-captions push every word into one script, or turn spoken Tamil into textbook Tamil. Vasanamm writes it the way you said it, and puts the English under it on the same timing.</p>
+          </div>
+          <div className="hm-vs">
+            <figure className="hm-frame bad rise">
+              <span className="hm-frame-tag">Usual auto-captions</span>
+              <p className="hm-cap" lang="ta"><span className="sq">மச்சி</span>, இந்த <span className="sq">எடிட்</span> <span className="sq">செம்ம</span>!</p>
+              <figcaption>English words forced into Tamil letters. No English line.</figcaption>
+            </figure>
+            <figure className="hm-frame good rise" style={d(0.08)}>
+              <span className="hm-frame-tag">Vasanamm</span>
+              <p className="hm-cap">Machi, <span lang="ta">இந்த</span> edit semma!<small>Dude, this edit is awesome!</small></p>
+              <figcaption>Tamil words in Tamil, English words in English, a translation under it.</figcaption>
+            </figure>
+          </div>
+          <p className="hm-note rise">An example of a common mistake, not a test of any one app.</p>
+          <dl className="hm-facts">
+            {[
+              ["Tanglish stays Tanglish", "Mixed sentences are written as spoken, word by word."],
+              ["Spoken stays spoken", "“வருவ” stays “வருவ”. It isn't turned into “வருவாய்”."],
+              ["English under every line", "Your viewers outside Tamil Nadu can follow too, on the same timing."],
+            ].map(([k, v], i) => <div key={k} className="rise" style={d(i * 0.06)}><dt>{k}</dt><dd>{v}</dd></div>)}
+          </dl>
+        </section>
+
+        {/* Who it's for, in the jobs they actually do. */}
+        <section className="wrap hm-sec" id="who">
+          <div className="hm-head rise">
+            <p className="hm-kicker">Who uses it</p>
+            <h2>Made for people who post every week.</h2>
+          </div>
+          <ul className="hm-who">
+            {[
+              ["Reels & Shorts creators", "Captions that pop in the style you post with. One tap to export 1080p for Reels, Shorts and TikTok.", "MP4 · 9:16"],
+              ["YouTubers", "Long videos in Tamil or any of 22 languages, with English for viewers abroad. Export in 4K, or upload the SRT to YouTube.", "4K MP4 · SRT"],
+              ["Video editors & agencies", "Subtitle client work without leaving Premiere Pro or After Effects. Studio gives you 4,000 minutes a month.", "Premiere · After Effects"],
+              ["Teachers, podcasts & brands", "Classes, interviews and ads that people can follow with the sound off.", "SRT · VTT · Text"],
+            ].map(([who, what, out], i) => (
+              <li key={who} className="rise" style={d(i * 0.05)}>
+                <h3>{who}</h3>
+                <p>{what}</p>
+                <span className="hm-out">{out}</span>
+              </li>
+            ))}
           </ul>
         </section>
 
-        <section className="wrap sec" id="features">
-          <h2 className="rise">{t.whyH[0]}<span className="mark">{t.whyH[1]}</span>{t.whyH[2]}</h2>
-          <div className="fx">
-            {/* 1: the way people talk, kept: Tamil words in Tamil, English words in English, English under it */}
-            <article className="fx-card fx-talk rise">
-              <span className="fx-tag">Tanglish · Tamil · English</span>
-              <h3>{t.why[0][0]}</h3>
-              <p>{t.why[0][1]}</p>
-              <div className="fx-chat" aria-hidden="true">
-                {[
-                  [["Machi,", "en"], ["இந்த", "ta"], ["edit", "en"], ["semma!", "en"], "Dude, this edit is awesome!"],
-                  [["மறக்காம", "ta"], ["page-அ", "mix"], ["follow", "en"], ["பண்ணுங்க.", "ta"], "Don't forget to follow the page."],
-                  [["Bro,", "en"], ["இது", "ta"], ["next", "en"], ["level!", "en"], "Bro, this is next level!"],
-                ].map((line, n) => (
-                  <div key={n} className="fx-line" style={d(n * 0.5)}>
-                    <b>{(line.slice(0, -1) as [string, string][]).map(([w, k], i) => <span key={i} className={`w-${k}`} lang={k === "ta" ? "ta" : undefined}>{w} </span>)}</b>
-                    <small>{line.at(-1) as string}</small>
-                  </div>
-                ))}
-              </div>
-              <p className="fx-key" aria-hidden="true"><span className="w-ta">Tamil script</span><span className="w-en">English words</span></p>
-            </article>
-
-            {/* 2: quality in = quality out */}
-            <article className="fx-card fx-quality glass rise" style={d(0.06)}>
-              <h3>{t.why[1][0]}</h3>
-              <p>{t.why[1][1]}</p>
-              <div className="fx-q" aria-hidden="true">
-                <span className="fx-file"><small>Your video</small><b>4K · 60 fps</b></span>
-                <span className="fx-arrow">→</span>
-                <span className="fx-file out"><small>Your MP4</small><b>4K · 60 fps</b></span>
-              </div>
-            </article>
-
-            {/* 3: a timeline whose caption gets dragged to the right time */}
-            <article className="fx-card fx-time glass rise" style={d(0.12)}>
-              <h3>{t.why[2][0]}</h3>
-              <p>{t.why[2][1]}</p>
-              <div className="fx-tl" aria-hidden="true">
-                <span className="fx-wave" />
-                <span className="fx-blocks"><i style={{ left: "2%", width: "24%" }} /><i className="drag" style={{ width: "22%" }} /><i style={{ left: "72%", width: "26%" }} /></span>
-                <span className="fx-head" />
-              </div>
-            </article>
-
-            {/* 4: the same caption fitted to a reel and a wide video */}
-            <article className="fx-card fx-fit glass rise" style={d(0.18)}>
-              <h3>{t.why[3][0]}</h3>
-              <p>{t.why[3][1]}</p>
-              <div className="fx-frames" aria-hidden="true">
-                <span className="fx-frame tall"><b>சத்தியமா, பொய் இல்லை</b></span>
-                <span className="fx-frame wide"><b>சத்தியமா, பொய் இல்லை</b></span>
-              </div>
-            </article>
-          </div>
-        </section>
-
-        <section className="wrap sec" id="styles">
-          <h2 className="rise">{STYLE_CHOICES.length} looks. <span className="mark">One tap.</span></h2>
-          <p className="sec-lede rise">These are playing live. Drop your video above to see any of them on your own clip.</p>
-          <StyleShowcase popular={popular} />
-          <p className="hl-center rise"><a href="#upload" className="btn">Try them on your video</a></p>
-        </section>
-
-        <section className="wrap sec" id="how">
-          <h2 className="rise">{t.stepsH}</h2>
-          <ol className="hl-steps">
-            {t.steps.map(([h, p], n) => (
-              <li key={n} className="glass rise" style={d(n * 0.08)}>
-                <span className="hl-step">{n + 1}</span>
-                <h3>{h}</h3>
-                <p>{p}</p>
-              </li>
-            ))}
-          </ol>
-          <div className="hl-plugin glass rise" id="plugin">
-            <div>
-              <h3>{t.pluginH}</h3>
-              <p>{t.pluginP}</p>
+        {/* The styles, live: pick one by name, watch it play. */}
+        <section className="hm-dark" id="styles">
+          <div className="wrap hm-sec">
+            <div className="hm-head rise">
+              <p className="hm-kicker">Premium caption styles</p>
+              <h2>{STYLE_CHOICES.length} styles, every one included.</h2>
+              <p className="hm-lede">Pick a look for the whole video, then change its colours, font and size, or make a single word stand out. What you see here is what goes into your MP4.</p>
             </div>
-            <Link href="/premiere-pro-subtitle-plugin" className="btn ghost">{t.pluginBtn}</Link>
+            <StyleWall popular={popular} />
+            <p className="hm-row-cta"><a href="#upload" className="btn lime">Try them on your video</a></p>
           </div>
         </section>
 
-        <section className="wrap sec" id="pricing">
-          <h2 className="rise">{t.priceH}</h2>
-          <p className="sec-lede rise">{t.priceP}</p>
-          <div className="sq-plans">
+        {/* The editor itself: real screenshots, with what each part does. */}
+        <section className="wrap hm-sec" id="editor">
+          <div className="hm-head rise">
+            <p className="hm-kicker">The editor</p>
+            <h2>If you&apos;ve used CapCut,<br />you already know it.</h2>
+            <p className="hm-lede">Fix a word, move a line, change a style. Every change shows on the video at once and saves by itself.</p>
+          </div>
+          <div className="hm-shots">
+            <figure className="hm-desk rise">
+              <span className="hm-dots" aria-hidden="true"><i /><i /><i /></span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/home/editor.webp" width={2000} height={1014} loading="lazy" alt="The Vasanamm editor on a computer: the captions in Tamil and English on the left, the video in the middle, caption styles on the right." />
+              {[["21%", "23%"], ["37.5%", "23%"], ["72.5%", "31%"], ["23.5%", "96%"]].map(([x, y], i) => <span key={i} className="hm-pin" style={{ left: x, top: y }} aria-hidden="true">{i + 1}</span>)}
+            </figure>
+            <figure className="hm-mobile rise" style={d(0.1)}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/home/phone.webp" width={780} height={1688} loading="lazy" alt="The same editor on a phone, with buttons to edit text, highlight a word and change timing." />
+              <figcaption>The same editor on your phone</figcaption>
+            </figure>
+          </div>
+          <ol className="hm-legend">
+            {[
+              ["Every line, in both languages", "Type straight into the Tamil or English to fix it."],
+              ["A live preview", "Your style plays on your own video while you edit."],
+              ["Styles for the whole video", "Or give one caption its own look."],
+              ["Word by word", "Tap a word to highlight it, change its timing or split the line there."],
+            ].map(([k, v], i) => <li key={k} className="rise" style={d(i * 0.05)}><b>{k}</b> {v}</li>)}
+          </ol>
+          <p className="hm-extras rise">Also: find and replace · undo and redo · translate into any of {LANGUAGES.length} languages · titles and your logo · a timeline to drag captions · keyboard shortcuts</p>
+        </section>
+
+        {/* How it works, written as the subtitle file it makes. */}
+        <section className="wrap hm-sec hm-how" id="how">
+          <div className="hm-head rise">
+            <p className="hm-kicker">How it works</p>
+            <h2>Three steps, written as a subtitle file.</h2>
+            <p className="hm-lede">SRT is the subtitle file YouTube, Premiere and every video app reads. Vasanamm gives you one with every video, along with the styled MP4.</p>
+          </div>
+          <div className="hm-srt rise" role="list">
+            <span className="hm-srt-name" aria-hidden="true">how-it-works.srt</span>
+            {[
+              ["00:00:00,000 --> 00:00:05,000", "Drop your video. Only the sound is sent;", "the video stays on your device."],
+              ["00:00:05,000 --> 00:00:10,000", "Pick the language and a style.", "Subtitles come back timed to every word."],
+              ["00:00:10,000 --> 00:00:15,000", "Fix anything, then export an MP4 up to 4K,", "or SRT, VTT and text."],
+            ].map(([time, a, b], i) => (
+              <div key={i} className="hm-cue" role="listitem">
+                <span className="n">{i + 1}</span>
+                <span className="tc">{time}</span>
+                <span className="tx">{a}<br />{b}</span>
+              </div>
+            ))}
+          </div>
+          <div className="hm-export rise">
+            <h3>Export for wherever it&apos;s going</h3>
+            <table>
+              <thead><tr><th>Preset</th><th>Size</th><th>Frame rate</th></tr></thead>
+              <tbody>
+                {[["Best quality", "Same as your video", "Same as your video"], ["YouTube 4K", "4K UHD", "Same as your video"], ["YouTube / Facebook", "1080p Full HD", "Same as your video"], ["Reels / Shorts / TikTok", "1080p", "30 fps"], ["WhatsApp", "720p, small file", "30 fps"]].map(([a, b, c]) => <tr key={a}><td>{a}</td><td>{b}</td><td>{c}</td></tr>)}
+              </tbody>
+            </table>
+            <p>The MP4 is made on your own phone or computer, so it never waits in a queue.</p>
+          </div>
+        </section>
+
+        {/* For editors: the panel. */}
+        <section className="wrap hm-sec" id="plugin">
+          <div className="hm-panel rise">
+            <div>
+              <p className="hm-kicker">For video editors</p>
+              <h2>Stay in Premiere Pro.</h2>
+              <p>Pick a clip and its language, press Generate. Premiere gets a caption track you can style and export with the cut. After Effects gets timed text layers.</p>
+              <Link href="/premiere-pro-subtitle-plugin" className="btn lime">Get the panel</Link>
+            </div>
+            <div className="hm-ui" aria-hidden="true">
+              <div className="hm-ui-bar"><i /><span>Vasanamm</span></div>
+              <label>Clip<b>interview_cam_A.mp4</b></label>
+              <label>Language<b>Tamil + English</b></label>
+              <span className="hm-ui-go">Generate</span>
+              <span className="hm-ui-done">Caption track added · 214 lines</span>
+              <div className="hm-ui-track"><i style={{ width: "14%" }} /><i style={{ width: "22%" }} /><i style={{ width: "9%" }} /><i style={{ width: "18%" }} /><i style={{ width: "12%" }} /></div>
+            </div>
+          </div>
+        </section>
+
+        {/* Prices as the 30-day passes they are. */}
+        <section className="wrap hm-sec" id="pricing">
+          <div className="hm-head rise">
+            <p className="hm-kicker">Pricing</p>
+            <h2>Pay for minutes.<br />Every style is in every plan.</h2>
+            <p className="hm-lede">A minute is one minute of your video. A 1-minute reel uses one minute, however many times you change the words or the style.</p>
+          </div>
+          <div className="hm-passes">
             {(Object.keys(PLANS) as PlanId[]).map((id, n) => {
               const p = PLANS[id];
               return (
-                // The scroll-in lives on the wrapper so it doesn't override the card's own hover transform.
-                <div key={id} className="sq-wrap rise" style={d(n * 0.06)}><div className={`sq-card sq-${id}`}>
-                  <div className="sq-body">
-                    <span className="sq-label">{p.name}{id === "pro" ? " · popular" : ""}</span>
-                    <span className="sq-price">{p.priceInr ? `₹${p.priceInr.toLocaleString("en-IN")}` : t.free}<br />{p.priceInr ? "Month" : "Once"}</span>
-                    <p className="sq-mins">{t.mins(p.minutes.toLocaleString("en-IN"), id === "free")}</p>
-                    <p className="sq-desc">{t.blurb[id]}</p>
-                  </div>
-                  <Link href={id === "free" ? "/signup" : `/signup?plan=${id}`} className="sq-cta">{id === "free" ? t.start : t.choose(p.name)}</Link>
-                  <SquishyShapes kind={n} />
-                </div></div>
+                <article key={id} className={`hm-pass${id === "pro" ? " hot" : ""} rise`} style={d(n * 0.06)}>
+                  <header><span>{p.name}</span>{id === "pro" && <em>Popular</em>}</header>
+                  <p className="hm-price">{p.priceInr ? <>₹{p.priceInr.toLocaleString("en-IN")}<small> / 30 days</small></> : <>Free<small> once</small></>}</p>
+                  <p className="hm-mins"><b>{p.minutes.toLocaleString("en-IN")}</b> minutes</p>
+                  <ul>
+                    <li>{p.priceInr ? `₹${(p.priceInr / p.minutes).toFixed(2).replace(/\.00$/, "")} a minute` : "No card needed"}</li>
+                    <li>{p.priceInr ? `About ${p.minutes.toLocaleString("en-IN")} one-minute reels` : "Every style, with a small Vasanamm mark"}</li>
+                    <li>{p.blurb}</li>
+                  </ul>
+                  <Link href={id === "free" ? "/signup" : `/signup?plan=${id}`} className={`btn${id === "pro" ? " lime" : id === "free" ? "" : " ghost"}`}>{id === "free" ? "Start free" : `Choose ${p.name}`}</Link>
+                </article>
               );
             })}
           </div>
-          <ul className="sq-perks rise">{t.perks.map((x) => <li key={x}>{x}</li>)}</ul>
+          <ul className="hm-fine rise">
+            <li>Pay in rupees with UPI or card, through Razorpay</li>
+            <li>If a video fails, its minutes are given back</li>
+            <li>Paid plans have no watermark</li>
+            <li>Minutes not used in 30 days expire</li>
+            <li>The Premiere Pro panel is in every plan</li>
+          </ul>
         </section>
 
-        <section className="wrap sec faq">
-          <h2 className="rise">{t.faqH}</h2>
-          <div className="glass faq-list rise">
+        <section className="wrap hm-sec hm-faq" id="faq">
+          <div className="hm-head rise">
+            <p className="hm-kicker">Questions</p>
+            <h2>Asked before signing up.</h2>
+            <p className="hm-lede">Anything else? Write to <a href={`mailto:${BUSINESS.email}`}>{BUSINESS.email}</a>. A person replies within a day.</p>
+          </div>
+          <div className="hm-qa rise">
             {t.faq.map(([q, a]) => <details key={q}><summary>{q}</summary><p>{a}</p></details>)}
           </div>
         </section>
 
-        <section className="wrap">
-          <div className="cta-band rise">
-            <h2>{t.ctaH}</h2>
-            <a href="#upload" className="btn">{t.ctaBtn}</a>
+        {/* The last word, as a subtitle on a frame. */}
+        <section className="wrap hm-sec">
+          <div className="hm-end rise">
+            <span className="hm-end-tc" aria-hidden="true">REC ● 00:00:59:24</span>
+            <h2>Your next video gets subtitles tonight.</h2>
+            <p lang="ta">உங்கள் அடுத்த வீடியோவுக்கு இன்றிரவே subtitles.</p>
+            <a href="#upload" className="btn lime">Drop your video</a>
           </div>
         </section>
       </main>

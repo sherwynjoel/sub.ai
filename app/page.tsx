@@ -5,6 +5,7 @@ import { PLANS } from "@/lib/plans";
 import { SITE_URL } from "@/lib/site";
 import { styleCounts, topStyles } from "@/lib/styleUsage";
 import "./landing.css";
+import "./home.css";
 
 // What the product is and costs, in the form search engines read (schema.org SoftwareApplication).
 const ld = {
