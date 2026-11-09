@@ -170,18 +170,58 @@ export default function Landing({ popular }: { popular: string[] }) {
 
         <section className="wrap sec" id="features">
           <h2 className="rise">{t.whyH[0]}<span className="mark">{t.whyH[1]}</span>{t.whyH[2]}</h2>
-          <div className="hl-why">
-            {t.why.map(([h, p], n) => (
-              <article key={h} className="hl-card glass shine rise" style={d(n * 0.06)}>
-                <span className="hl-n">0{n + 1}</span>
-                <h3>{h}</h3>
-                <p>{p}</p>
-                {n === 0 && <div className="hl-say" aria-hidden="true">
-                  <div><b lang="ta">Machi, இந்த edit semma!</b><span>Dude, this edit is awesome!</span></div>
-                  <div><b lang="ta">மறக்காம page-அ follow பண்ணுங்க.</b><span>Don&apos;t forget to follow the page.</span></div>
-                </div>}
-              </article>
-            ))}
+          <div className="fx">
+            {/* 1: the way people talk, kept: Tamil words in Tamil, English words in English, English under it */}
+            <article className="fx-card fx-talk rise">
+              <span className="fx-tag">Tanglish · Tamil · English</span>
+              <h3>{t.why[0][0]}</h3>
+              <p>{t.why[0][1]}</p>
+              <div className="fx-chat" aria-hidden="true">
+                {[
+                  [["Machi,", "en"], ["இந்த", "ta"], ["edit", "en"], ["semma!", "en"], "Dude, this edit is awesome!"],
+                  [["மறக்காம", "ta"], ["page-அ", "mix"], ["follow", "en"], ["பண்ணுங்க.", "ta"], "Don't forget to follow the page."],
+                  [["Bro,", "en"], ["இது", "ta"], ["next", "en"], ["level!", "en"], "Bro, this is next level!"],
+                ].map((line, n) => (
+                  <div key={n} className="fx-line" style={d(n * 0.5)}>
+                    <b>{(line.slice(0, -1) as [string, string][]).map(([w, k], i) => <span key={i} className={`w-${k}`} lang={k === "ta" ? "ta" : undefined}>{w} </span>)}</b>
+                    <small>{line.at(-1) as string}</small>
+                  </div>
+                ))}
+              </div>
+              <p className="fx-key" aria-hidden="true"><span className="w-ta">Tamil script</span><span className="w-en">English words</span></p>
+            </article>
+
+            {/* 2: quality in = quality out */}
+            <article className="fx-card fx-quality glass rise" style={d(0.06)}>
+              <h3>{t.why[1][0]}</h3>
+              <p>{t.why[1][1]}</p>
+              <div className="fx-q" aria-hidden="true">
+                <span className="fx-file"><small>Your video</small><b>4K · 60 fps</b></span>
+                <span className="fx-arrow">→</span>
+                <span className="fx-file out"><small>Your MP4</small><b>4K · 60 fps</b></span>
+              </div>
+            </article>
+
+            {/* 3: a timeline whose caption gets dragged to the right time */}
+            <article className="fx-card fx-time glass rise" style={d(0.12)}>
+              <h3>{t.why[2][0]}</h3>
+              <p>{t.why[2][1]}</p>
+              <div className="fx-tl" aria-hidden="true">
+                <span className="fx-wave" />
+                <span className="fx-blocks"><i style={{ left: "2%", width: "24%" }} /><i className="drag" style={{ width: "22%" }} /><i style={{ left: "72%", width: "26%" }} /></span>
+                <span className="fx-head" />
+              </div>
+            </article>
+
+            {/* 4: the same caption fitted to a reel and a wide video */}
+            <article className="fx-card fx-fit glass rise" style={d(0.18)}>
+              <h3>{t.why[3][0]}</h3>
+              <p>{t.why[3][1]}</p>
+              <div className="fx-frames" aria-hidden="true">
+                <span className="fx-frame tall"><b>சத்தியமா, பொய் இல்லை</b></span>
+                <span className="fx-frame wide"><b>சத்தியமா, பொய் இல்லை</b></span>
+              </div>
+            </article>
           </div>
         </section>
 
