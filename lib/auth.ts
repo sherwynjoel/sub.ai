@@ -44,7 +44,7 @@ export async function currentUser() {
   const bearer = (await headers()).get("authorization")?.match(/^Bearer (\S+)$/)?.[1];
   if (bearer) {
     const [u] = await db.select().from(users).where(eq(users.apiKeyHash, sha256(bearer)));
-    return u ?? null;
+    return u && !u.blockedAt ? u : null;
   }
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
@@ -53,7 +53,7 @@ export async function currentUser() {
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
     .where(and(eq(sessions.id, sha256(token)), gt(sessions.expiresAt, new Date())));
-  return row?.user ?? null;
+  return row?.user && !row.user.blockedAt ? row.user : null; // a blocked account counts as signed out
 }
 
 export type User = NonNullable<Awaited<ReturnType<typeof currentUser>>>;

@@ -1,7 +1,7 @@
 import "server-only";
 import { notFound } from "next/navigation";
 import { and, eq, gt, inArray, isNotNull, ne, sql } from "drizzle-orm";
-import { billingEvents, db, jobs, settings, users } from "@/db";
+import { adminLog, billingEvents, db, jobs, settings, users } from "@/db";
 import { currentUser, requireUser } from "@/lib/auth";
 import { PLANS, effectivePlan, type PlanId } from "@/lib/plans";
 
@@ -16,6 +16,12 @@ export async function requireAdmin() {
 export async function adminOrNull() {
   const u = await currentUser();
   return u?.isAdmin ? u : null;
+}
+
+/** Notes an admin's change in the admin log. Never throws. */
+export async function logAdmin(admin: { email: string }, action: string, detail?: string | null, user?: { id: string; email: string } | null) {
+  await db.insert(adminLog).values({ adminEmail: admin.email, action, detail: detail ?? null, userId: user?.id ?? null, userEmail: user?.email ?? null })
+    .catch((e) => console.error("admin log", e));
 }
 
 const WORKER_STALE_MS = 90e3;

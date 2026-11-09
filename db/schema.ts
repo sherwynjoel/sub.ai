@@ -33,6 +33,9 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").notNull().default(false),
   signupIp: text("signup_ip"), // limits how many free trials one connection can start (api/auth/signup)
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }), // the free minutes start once set (lib/verify.ts)
+  blockedAt: timestamp("blocked_at", { withTimezone: true }), // set by an admin: can't sign in or use the plugin key
+  blockReason: text("block_reason"),
+  adminNote: text("admin_note"), // the admins' own notes on this user; never shown to them
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("users_signup_ip_idx").on(t.signupIp, t.createdAt)]);
 
@@ -173,5 +176,16 @@ export const emailLog = pgTable("email_log", {
   subject: text("subject").notNull(),
   result: text("result").notNull(), // sent | no-account | failed
   error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Every change an admin makes (to an account, a project or the site), and who made it. */
+export const adminLog = pgTable("admin_log", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  adminEmail: text("admin_email").notNull(),
+  userId: uuid("user_id"), // the account it was about, if any (kept after the account is deleted)
+  userEmail: text("user_email"),
+  action: text("action").notNull(),
+  detail: text("detail"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

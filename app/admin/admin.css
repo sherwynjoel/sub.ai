@@ -102,3 +102,7 @@
   .use-table th, .use-table td { padding-left: 6px; padding-right: 6px; }
   .use-bar { width: 44px; }
 }
+
+.plain-list { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.note-form textarea { width: 100%; font: inherit; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: #fff; resize: vertical; }
+.note-form .btn-row { margin-top: 8px; align-items: center; }

@@ -6,7 +6,7 @@ import { effectivePlan, longDate, minSec, passEnd, passExpired, PLANS, secondsLe
 
 export const metadata = { title: "Usage" };
 
-const WHAT: Record<string, string> = { upload: "Subtitles made", translate: "Translated", remake: "Captions made again", extra: "Extra sound", refund: "Given back" };
+const WHAT: Record<string, string> = { upload: "Subtitles made", translate: "Translated", remake: "Captions made again", extra: "Extra sound", refund: "Given back", bonus: "Minutes from Vasanamm" };
 const when = (d: Date) => d.toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
 
 /** Where the user's minutes went: this pass at a glance, each video's total, then every use. */
@@ -15,11 +15,12 @@ export default async function Page() {
   const rows = await db.select().from(creditLog).where(eq(creditLog.userId, u.id)).orderBy(desc(creditLog.createdAt), desc(creditLog.id)).limit(1000);
   const plan = effectivePlan(u), end = passEnd(u), ended = passExpired(u);
   const total = PLANS[plan].minutes * 60, left = secondsLeft(u), used = ended ? 0 : Math.max(0, Math.min(total, u.secondsUsed));
-  const spent = rows.reduce((a, r) => a + r.seconds, 0);
+  const spent = rows.reduce((a, r) => a + (r.kind === "bonus" ? 0 : r.seconds), 0);
 
   // Each video's total, newest first (a deleted project keeps its name here).
   const byVideo = new Map<string, { video: string; jobId: string | null; seconds: number; uses: number; last: Date }>();
   for (const r of rows) {
+    if (r.kind === "bonus") continue; // not a video
     const k = r.jobId ?? `name:${r.video}`, v = byVideo.get(k) ?? { video: r.video, jobId: r.jobId, seconds: 0, uses: 0, last: r.createdAt };
     v.seconds += r.seconds;
     if (r.kind !== "refund" && r.kind !== "extra") v.uses++;
@@ -62,7 +63,7 @@ export default async function Page() {
               <tr key={r.id} className={r.seconds < 0 ? "back" : undefined}>
                 <td>{when(r.createdAt)}</td>
                 <td><span className="vid">{r.video}</span><br />{WHAT[r.kind] ?? r.kind}{r.detail ? <span className="muted"> · {r.detail}</span> : null}</td>
-                <td className="num">{r.seconds < 0 ? `+${minSec(-r.seconds)} back` : `−${minSec(r.seconds)}`}</td>
+                <td className="num">{r.seconds < 0 ? `+${minSec(-r.seconds)}${r.kind === "bonus" ? "" : " back"}` : `−${minSec(r.seconds)}`}</td>
               </tr>
             ))}</tbody>
           </table></div>
