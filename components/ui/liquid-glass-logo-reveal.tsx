@@ -1084,8 +1084,9 @@ function startEngine(
 /* ------------------------------------------------------------------ *
  * VasanamReveal
  * ------------------------------------------------------------------ */
-/** Vasanamm's mark without its tile: a big solid tile turns the glass's rim into coloured blotches. */
-const MARK_VASANAM = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512"><rect width="512" height="512" fill="#fff"/><path d="M148 124 L256 322 L364 124" fill="none" stroke="#000" stroke-width="112" stroke-linecap="round" stroke-linejoin="round"/></mask><rect x="96" y="362" width="320" height="52" rx="26" fill="#a9d600" mask="url(#m)"/><path d="M148 124 L256 322 L364 124" fill="none" stroke="#0c0c14" stroke-width="76" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+/** Vasanamm's mark without its tile (a big solid tile turns the glass's rim into coloured blotches): the black V with
+ * its play button and caption lines, transparent around it (public/logo-mark.png). */
+const MARK_VASANAM = "/logo-mark.png"
 
 export type VasanamRevealProps = Omit<GlassIconRevealProps, "logo">
 
