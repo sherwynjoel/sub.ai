@@ -36,6 +36,7 @@ export const users = pgTable("users", {
   blockedAt: timestamp("blocked_at", { withTimezone: true }), // set by an admin: can't sign in or use the plugin key
   blockReason: text("block_reason"),
   adminNote: text("admin_note"), // the admins' own notes on this user; never shown to them
+  noNews: boolean("no_news").notNull().default(false), // unsubscribed from emails sent by admins to groups (lib/news.ts)
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("users_signup_ip_idx").on(t.signupIp, t.createdAt)]);
 
@@ -189,5 +190,16 @@ export const adminLog = pgTable("admin_log", {
   userEmail: text("user_email"),
   action: text("action").notNull(),
   detail: text("detail"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Discount codes for one-time payments (api/billing/order): a percentage off, optionally limited in uses and time. */
+export const coupons = pgTable("coupons", {
+  code: text("code").primaryKey(), // upper case
+  percent: integer("percent").notNull(), // 1..90
+  maxUses: integer("max_uses"), // null: no limit
+  uses: integer("uses").notNull().default(0),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

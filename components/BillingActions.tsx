@@ -40,13 +40,27 @@ export default function BillingActions({ current, live, prepaidUntil, subscripti
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState("");
   const [pass, setPass] = useState<{ plan: PlanId; until?: string; fresh: boolean } | null>(null);
+  const [code, setCode] = useState("");
+  const [deal, setDeal] = useState<{ code: string; percent: number; prices: Record<string, number> } | null>(null);
+  const [codeMsg, setCodeMsg] = useState("");
+
+  async function applyCode(e: React.FormEvent) {
+    e.preventDefault();
+    setCodeMsg("");
+    const res = await fetch("/api/billing/coupon", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { setDeal(null); return setCodeMsg(data.error || "That code isn't valid."); }
+    setDeal(data);
+    setCodeMsg(`${data.percent}% off applied. Pay once for 30 days to use it.`);
+  }
+  const price = (id: PlanId) => (deal ? deal.prices[id] : PLANS[id].priceInr);
 
   /** One-time payment (Standard Checkout): an order for the plan's price, then the payment is verified on the server. */
   async function payOnce(plan: PlanId) {
     setBusy(plan);
     setMsg("");
     try {
-      const res = await fetch("/api/billing/order", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ plan }) });
+      const res = await fetch("/api/billing/order", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ plan, coupon: deal?.code }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       const Razorpay = await loadCheckout();
@@ -134,12 +148,12 @@ export default function BillingActions({ current, live, prepaidUntil, subscripti
           return (
             <div key={id} className={`panel plan${preselect === id ? " picked" : ""}${mine ? " mine" : ""}`}>
               <h3>{p.name}</h3>
-              <div className="amt">₹{p.priceInr.toLocaleString("en-IN")}<small> / month</small></div>
+              <div className="amt">{deal && !live && <s className="muted">₹{p.priceInr.toLocaleString("en-IN")}</s>} ₹{price(id).toLocaleString("en-IN")}<small> / month</small></div>
               <p className="muted">{p.minutes.toLocaleString("en-IN")} minutes a month. {p.blurb}.</p>
               {mine && <span className="current">{prepaidUntil ? `Your plan, until ${prepaidUntil}` : "Your current plan"}</span>}
               {!live && (
                 <button className={`btn${preselect === id || mine ? "" : " ghost"}`} disabled={!!busy} onClick={() => payOnce(id)}>
-                  {busy === id ? "Opening checkout…" : mine ? `Add 30 days · ₹${p.priceInr.toLocaleString("en-IN")}` : `Pay ₹${p.priceInr.toLocaleString("en-IN")} for 30 days`}
+                  {busy === id ? "Opening checkout…" : mine ? `Add 30 days · ₹${price(id).toLocaleString("en-IN")}` : `Pay ₹${price(id).toLocaleString("en-IN")} for 30 days`}
                 </button>
               )}
               {subscriptions && !live && !mine && (
@@ -149,6 +163,13 @@ export default function BillingActions({ current, live, prepaidUntil, subscripti
           );
         })}
       </div>
+      {!live && (
+        <form className="coupon-form" onSubmit={applyCode}>
+          <label>Have a discount code?<input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g. DIWALI20" maxLength={30} /></label>
+          <button className="btn ghost small" disabled={!code.trim()}>Apply</button>
+          {codeMsg && <span className={deal ? "muted small" : "error small"} role="status">{codeMsg}</span>}
+        </form>
+      )}
       {live && (
         <p className="muted">
           To change plans, cancel your current subscription first.{" "}

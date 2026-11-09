@@ -49,6 +49,11 @@ function masterKey() {
   return (cachedKey = createHash("sha256").update(raw).digest());
 }
 
+/** A short signature of `text` with the server's key (for links that must not be guessed, like unsubscribe). */
+export function sign(text: string) {
+  return createHash("sha256").update(masterKey()).update("|").update(text).digest("base64url").slice(0, 32);
+}
+
 export function encrypt(text: string) {
   const iv = randomBytes(12);
   const c = createCipheriv("aes-256-gcm", masterKey(), iv);
