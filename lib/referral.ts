@@ -139,3 +139,12 @@ export async function inviteStats(userId: string) {
 export const invitedBy = (userId: string) =>
   db.select({ id: users.id, email: users.email, createdAt: users.createdAt, status: users.referralStatus, paidAt: users.referralPaidAt })
     .from(users).where(eq(users.referredBy, userId)).orderBy(desc(users.createdAt)).limit(50);
+
+/** Invite minutes added since the user last closed the "minutes added" popup (none: nothing to show). */
+export async function unseenInviteMinutes(u: { id: string; inviteSeenAt: Date | null }) {
+  const rows = await db.select({ seconds: creditLog.seconds, detail: creditLog.detail }).from(creditLog)
+    .where(and(eq(creditLog.userId, u.id), eq(creditLog.video, INVITE_VIDEO), sql`${creditLog.seconds} < 0`,
+      u.inviteSeenAt ? sql`${creditLog.createdAt} > ${u.inviteSeenAt}` : undefined))
+    .orderBy(creditLog.createdAt).limit(20).catch(() => []);
+  return { minutes: Math.round(rows.reduce((a, r) => a - r.seconds, 0) / 60), reasons: rows.map((r) => r.detail).filter((d): d is string => !!d) };
+}

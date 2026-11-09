@@ -43,6 +43,7 @@ export const users = pgTable("users", {
   referralPaidAt: timestamp("referral_paid_at", { withTimezone: true }), // when the invited user first paid (shown to the admin)
   referralRewardedAt: timestamp("referral_rewarded_at", { withTimezone: true }), // when an admin approved or rejected the invite
   inviteOn: boolean("invite_on").notNull().default(false), // not used: invites are on for everyone or no one (Admin > Growth)
+  inviteSeenAt: timestamp("invite_seen_at", { withTimezone: true }), // invite minutes added after this pop up once in the app
   inviteMinutes: integer("invite_minutes"), // their own "up to" minutes per approved invite; null = the site-wide amount
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("users_signup_ip_idx").on(t.signupIp, t.createdAt)]);
