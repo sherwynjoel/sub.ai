@@ -116,3 +116,7 @@
 .stack-form input, .stack-form select, .stack-form textarea { font: inherit; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
 .announce-preview { background: #111; color: #fff; padding: 9px 14px; border-radius: 10px; }
 .announce-preview a { color: #c8f560; }
+
+.disk-bar { height: 10px; border-radius: 6px; background: var(--line, #e5e5e5); overflow: hidden; margin-top: 12px; }
+.disk-bar span { display: block; height: 100%; background: #1a7f37; }
+.disk-bar span.hot { background: #c62828; }
