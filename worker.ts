@@ -14,6 +14,7 @@ import { speechRegions } from "./lib/timing";
 import { alignCues } from "./lib/align";
 import { translateLines } from "./lib/ai/translate";
 import { recordExport } from "./lib/styleUsage";
+import { alertOn } from "./lib/health";
 import { dropAnchor, englishCues, mergeChunks, mergeShort, retimeWindows, snapToPauses, withWordTimes } from "./lib/subtitles";
 
 const PARALLEL_CHUNKS = 3;
@@ -153,9 +154,20 @@ async function heartbeat() {
   await db.insert(settings).values({ key: "worker_heartbeat", value }).onConflictDoUpdate({ target: settings.key, set: { value } });
 }
 
+/** The website checks the worker; this checks the website answers, and emails the admins if it doesn't twice in a row. */
+let webMisses = 0;
+async function checkWebsite() {
+  const up = await fetch(`http://127.0.0.1:${process.env.PORT || 3000}/api/health`, { signal: AbortSignal.timeout(20e3) })
+    .then((r) => r.status === 200 || r.status === 503, () => false); // 503 = answering, with a problem it reports itself
+  webMisses = up ? 0 : webMisses + 1;
+  if (up) await alertOn("alert_web", []);
+  else if (webMisses >= 2) await alertOn("alert_web", ["The website isn't answering (the worker can't reach it)"]);
+}
+
 async function main() {
   heartbeat().catch(console.error);
   setInterval(() => heartbeat().catch(console.error), 20e3);
+  if (!process.env.NO_ALERTS) setInterval(() => checkWebsite().catch(console.error), 5 * 60e3);
   // ponytail: assumes a single worker process; with several, only requeue jobs whose updated_at is stale.
   await db.update(jobs).set({ status: "queued", progress: 0 }).where(eq(jobs.status, "processing"));
   await db.update(jobs).set({ overlayStatus: null }).where(inArray(jobs.overlayStatus, ["queued", "rendering"]));

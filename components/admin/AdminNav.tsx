@@ -11,6 +11,7 @@ const LINKS = [
   ["/admin/billing", "Subscriptions"],
   ["/admin/traffic", "Traffic"],
   ["/admin/styles", "Styles"],
+  ["/admin/server", "Server"],
   ["/admin/log", "Admin log"],
 ];
 

@@ -1,4 +1,3 @@
-import "server-only";
 import { getSecret } from "@/lib/secrets";
 import { BUSINESS } from "@/lib/brand";
 import { db, emailLog } from "@/db";
