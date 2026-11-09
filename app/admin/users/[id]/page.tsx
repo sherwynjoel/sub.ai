@@ -102,7 +102,12 @@ export default async function UserDetail({ params }: { params: Promise<{ id: str
 
       <section className="panel">
         <h2>Invites</h2>
-        {!inv.on && <p className="muted small">Invites are off for everyone (<Link href="/admin/growth#invites">Growth</Link>), so nobody sees a link right now.</p>}
+        <p className="small">
+          <b>Invite box on their Billing page: {inv.on && u.inviteOn && !u.blockedAt ? "showing" : "hidden"}</b>
+          {!inv.on && <> · invites are off for everyone: turn them on in <Link href="/admin/growth#invite-settings">Growth › Invite settings</Link></>}
+          {!u.inviteOn && <> · not turned on for this user: click Turn on below</>}
+          {u.blockedAt && <> · this user is blocked</>}
+        </p>
         {by && <p className="small">Invited by <Link href={`/admin/users/${by.id}`}>{by.email}</Link> · {u.referralStatus === "pending" ? <Link href="/admin/growth#invites">waiting to be checked</Link> : u.referralStatus}</p>}
         <UserInviteForm url={url} on={u.inviteOn} minutes={u.inviteMinutes} siteUpTo={inv.upTo} />
         {invited.length > 0 && (
