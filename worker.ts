@@ -2,7 +2,7 @@
  * Background worker: picks queued jobs, extracts audio, sends chunks to the configured AI, stores cues.
  * Run alongside the web app:  npm run worker
  */
-import { charge } from "./lib/credits";
+import { charge, logUse, refund } from "./lib/credits";
 import { mkdtemp, readdir, readFile, rm, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
@@ -101,6 +101,7 @@ async function chargeExtra(job: typeof jobs.$inferSelect, heard: number) {
   if (!ok.length) throw new Error(`This file has ${Math.ceil(heard / 60)} min of sound, more than its stated length, and there aren't enough minutes left for all of it. Your minutes for it were given back.`);
   job.durationSec = heard; // so a later failure gives back everything charged
   await db.update(jobs).set({ durationSec: heard }).where(eq(jobs.id, job.id));
+  await logUse(job.userId, extra, { jobId: job.id, video: job.filename, kind: "extra", detail: "More sound than the file said" });
   console.log(`job ${job.id}: ${extra}s more sound than stated, charged`);
 }
 
@@ -128,7 +129,7 @@ async function fail(job: typeof jobs.$inferSelect, err: unknown) {
   console.error(`job ${job.id} failed`, err);
   await db.update(jobs).set({ status: "failed", error: String((err as Error)?.message ?? err).slice(0, 500), updatedAt: new Date() }).where(eq(jobs.id, job.id));
   // Give the minutes back — the user got nothing for them. (Every run is charged: the upload, and each remake.)
-  await db.update(users).set({ secondsUsed: sql`greatest(0, ${users.secondsUsed} - ${Math.ceil(job.durationSec)})` }).where(eq(users.id, job.userId));
+  await refund(job.userId, job.durationSec, { jobId: job.id, video: job.filename, kind: "refund", detail: "Making the subtitles didn't work" });
 }
 
 async function purgeOld() {

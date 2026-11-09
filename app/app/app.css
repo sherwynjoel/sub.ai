@@ -1139,3 +1139,21 @@ html:has(.pass-reveal[open]) { overflow: hidden; }
   .ed-frame > .vrail-phone button { padding: 4px 2px; gap: 2px; }
   .ed-frame > .vrail-phone svg { width: 20px; height: 20px; }
 }
+
+/* Usage: where the minutes went */
+.usage-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.stat-card { display: grid; gap: 2px; padding: 18px 20px; }
+.stat-card b { font: 700 1.5rem var(--font-head); letter-spacing: -.02em; }
+.usage-sec { margin-bottom: 16px; }
+.usage-sec h2 { margin: 0 0 10px; font-size: 1.2rem; }
+.table-wrap { overflow-x: auto; }
+.usage-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.usage-table th { text-align: left; font-size: .78rem; font-weight: 600; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.usage-table td { padding: 10px; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+.usage-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.usage-table .vid { max-width: 280px; overflow-wrap: anywhere; font-weight: 600; }
+.usage-table tr.back td.num { color: #1a7f37; }
+@media (max-width: 760px) {
+  .usage-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .usage-table .opt { display: none; }
+}

@@ -36,6 +36,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
           {/* Extra minutes (an admin top-up) can leave more than the plan gives. */}
           <strong>{minSec(left)}{left <= total && !ended ? ` of ${PLANS[plan].minutes} min` : ""} left</strong>
           {!ended && endDate && <span className="muted small">Expires {endDate}</span>}
+          <Link href="/app/usage" className="small">See where your minutes went</Link>
           <span className="bar"><i style={{ width: `${Math.min(1, left / total) * 100}%` }} /></span>
         </div>
       </div>

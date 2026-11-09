@@ -149,3 +149,19 @@ export const styleEvents = pgTable("style_events", {
   userId: uuid("user_id").notNull(),
   at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("style_events_kind_idx").on(t.kind, t.at)]);
+
+/**
+ * Every use of a user's minutes (lib/credits.ts): `seconds` taken (a negative number when given back), what for
+ * (`kind`: upload | translate | remake | extra | refund) and the video's name then, so the history stays when the
+ * project is deleted.
+ */
+export const creditLog = pgTable("credit_log", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  jobId: uuid("job_id"),
+  video: text("video").notNull(),
+  kind: text("kind").notNull(),
+  detail: text("detail"),
+  seconds: integer("seconds").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("credit_log_user_idx").on(t.userId, t.createdAt)]);

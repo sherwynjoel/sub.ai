@@ -4,7 +4,7 @@ import { currentUser, json, unauthorized } from "@/lib/auth";
 import { ownJob } from "@/lib/jobs";
 import { isLanguage, languageOf } from "@/lib/languages";
 import { translateLines } from "@/lib/ai/translate";
-import { charge, refund } from "@/lib/credits";
+import { charge, logUse, refund } from "@/lib/credits";
 import { minSec, outOfMinutes, passExpired, secondsLeft } from "@/lib/plans";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -45,6 +45,8 @@ export async function POST(req: Request, { params }: Ctx) {
     if (passExpired(u)) return json({ error: outOfMinutes(u) }, 402);
     return json({ error: `A translation uses ${minSec(j.durationSec)} (the video's length), but you have ${minSec(secondsLeft(u))} left. Upgrade to continue.` }, 402);
   }
+  const into = lang === "en-IN" ? "English" : languageOf(lang).name;
+  await logUse(u.id, j.durationSec, { jobId: j.id, video: j.filename, kind: "translate", detail: `Into ${into}` });
   try {
     if (lang === "en-IN") {
       const out = await translateLines(cues.map((c) => c.ta), "en-IN", j.language);
@@ -59,7 +61,7 @@ export async function POST(req: Request, { params }: Ctx) {
     return json({ ok: true, language: languageOf(lang).name });
   } catch (e) {
     console.error("translate", j.id, e);
-    await refund(u.id, j.durationSec); // nothing came of it
+    await refund(u.id, j.durationSec, { jobId: j.id, video: j.filename, kind: "refund", detail: "The translation didn't work" }); // nothing came of it
     return json({ error: "Translation didn't work just now. Try again in a minute." }, 502);
   }
 }
