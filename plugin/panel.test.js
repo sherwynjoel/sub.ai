@@ -81,7 +81,7 @@ test("panel: templates list, connect, pick, generate, place, edit against the li
   els.key.value = key; els.server.value = SERVER; els.connectBtn.onclick();
   assert.ok(await until(() => !els.main.hidden || /not accepted|Can't reach|no answer/.test(els.connectMsg.textContent), 40e3), "connect finished: " + els.connectMsg.textContent);
   assert.ok(!els.main.hidden, "main screen after connect: " + els.connectMsg.textContent);
-  assert.match(els.account.textContent, /min left/);
+  assert.match(els.account.textContent, /(min|s)( \d+ s)? left$/);
 
   // Pick the clip (fake Premiere returns the selected clip).
   els.pickBtn.onclick();

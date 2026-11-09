@@ -1,9 +1,10 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { billingEvents, db, users } from "@/db";
 import { countUse, discounted } from "@/lib/coupons";
 import { effectivePlan, PAID, PLANS, type PlanId } from "@/lib/plans";
+import { rewardInvite } from "@/lib/referral";
 import { getSecret, type ConnectionName } from "@/lib/secrets";
 
 export async function rzp(path: string, body?: unknown) {
@@ -46,9 +47,11 @@ export async function applySubscription(s: Sub, charged: boolean) {
       subscriptionId: s.id,
       subscriptionStatus: s.status,
       ...(plan && s.current_end ? { plan, periodEnd: new Date(s.current_end * 1000) } : {}),
-      ...(charged ? { secondsUsed: 0 } : {}),
+      ...(charged ? { secondsUsed: sql`least(0, ${users.secondsUsed})` } : {}), // extra minutes still unused carry over
     })
-    .where(where);
+    .where(where)
+    .returning({ id: users.id })
+    .then(async (rows) => { if (charged) for (const r of rows) await rewardInvite(r.id).catch((e) => console.error("invite reward", e)); });
 }
 
 /** Monthly auto-renewing subscriptions need Razorpay Subscriptions on the account and all three plan IDs saved. */
@@ -88,7 +91,9 @@ export async function applyOrderPayment(orderId: string, paymentId: string): Pro
   const [u] = await db.select().from(users).where(eq(users.id, userId));
   if (!u) return null;
   const now = new Date(), running = effectivePlan(u, now) === plan && u.periodEnd && u.periodEnd > now ? u.periodEnd : now;
-  await db.update(users).set({ plan, periodEnd: new Date(running.getTime() + PREPAID_DAYS * 864e5), secondsUsed: 0, subscriptionStatus: "prepaid" })
+  // Fresh minutes; extra minutes still unused (a negative count: invite rewards, admin top-ups) carry over.
+  await db.update(users).set({ plan, periodEnd: new Date(running.getTime() + PREPAID_DAYS * 864e5), secondsUsed: Math.min(0, u.secondsUsed), subscriptionStatus: "prepaid" })
     .where(eq(users.id, userId));
+  await rewardInvite(userId).catch((e) => console.error("invite reward", e));
   return plan;
 }

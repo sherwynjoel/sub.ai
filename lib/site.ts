@@ -4,6 +4,7 @@ export const SITE_URL = (process.env.APP_URL || "http://localhost:3000").replace
 /** Public pages, for the sitemap. */
 export const PUBLIC_PAGES = [
   "/", "/signup", "/login", "/forgot",
-  "/tamil-subtitle-generator", "/tanglish-captions", "/premiere-pro-subtitle-plugin",
+  "/tamil-subtitle-generator", "/tanglish-captions", "/tamil-to-english-subtitles", "/telugu-subtitle-generator",
+  "/malayalam-subtitle-generator", "/hindi-subtitle-generator", "/premiere-pro-subtitle-plugin",
   "/contact", "/terms", "/privacy", "/refunds", "/shipping", "/licences",
 ];

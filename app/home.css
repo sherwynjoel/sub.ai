@@ -1,5 +1,6 @@
 /* The homepage between the hero and the footer. Editorial: big type, real screenshots, the subtitle file as a motif. */
 
+.hm-invited { margin-top: 18px; padding: 12px 18px; border-radius: 14px; background: var(--lime); color: var(--black); font-weight: 600; text-align: center; }
 .btn.lime { background: var(--lime); color: var(--black); border-color: var(--lime); }
 .btn.lime:hover { box-shadow: 0 16px 30px -14px rgba(160, 200, 20, .75); }
 
@@ -160,15 +161,12 @@
 .hm-panel h2 { font-size: clamp(2rem, 4.4vw, 3.4rem); }
 .hm-panel p { color: #c4c2d6; max-width: 46ch; margin: 0 0 26px; }
 .hm-panel .hm-kicker { color: #9d9bb2; }
-.hm-ui { background: #232323; border: 1px solid #3a3a3a; border-radius: 6px; padding: 0 16px 18px; font: 500 .82rem system-ui, sans-serif; color: #d6d6d6; display: grid; gap: 12px; box-shadow: 0 30px 60px -30px rgba(0, 0, 0, .8); }
-.hm-ui-bar { display: flex; align-items: center; gap: 8px; margin: 0 -16px; padding: 8px 12px; background: #1a1a1a; border-bottom: 1px solid #333; font-size: .74rem; color: #a8a8a8; }
-.hm-ui-bar i { width: 8px; height: 8px; border-radius: 2px; background: var(--lime); }
-.hm-ui label { display: grid; gap: 5px; color: #9a9a9a; font-size: .72rem; }
-.hm-ui label b { font-weight: 500; font-size: .85rem; color: #eaeaea; background: #1b1b1b; border: 1px solid #3c3c3c; border-radius: 4px; padding: 7px 9px; }
-.hm-ui-go { justify-self: start; background: #2d8ceb; color: #fff; border-radius: 4px; padding: 7px 18px; font-weight: 600; }
-.hm-ui-done { color: #8bd17c; font-size: .78rem; }
-.hm-ui-track { display: flex; gap: 3px; height: 18px; background: #161616; border-radius: 3px; padding: 3px; }
-.hm-ui-track i { background: #c27ae0; border-radius: 2px; opacity: .85; }
+.hm-ui { margin: 0 auto; width: min(100%, 360px); background: #0a0a0a; border: 1px solid #333; border-radius: 6px; overflow: hidden; box-shadow: 0 40px 70px -30px rgba(0, 0, 0, .85), 0 0 0 6px #1f1f1f; }
+.hm-ui-bar { display: flex; align-items: stretch; gap: 0; background: #1d1d1d; border-bottom: 1px solid #333; font: 500 .72rem system-ui, sans-serif; color: #8d8d8d; }
+.hm-ui-bar span { padding: 7px 12px; border-right: 1px solid #2c2c2c; white-space: nowrap; }
+.hm-ui-bar span.on { color: #eaeaea; background: #0a0a0a; box-shadow: inset 0 2px 0 #2d8ceb; }
+.hm-ui-bar b { margin-left: auto; padding: 6px 12px; font-weight: 400; color: #9a9a9a; }
+.hm-ui img { display: block; width: 100%; height: auto; }
 
 /* ---------- Pricing: 30-day passes ---------- */
 .hm-passes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }

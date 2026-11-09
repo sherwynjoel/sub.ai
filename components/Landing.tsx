@@ -49,6 +49,13 @@ const d = (s: number) => ({ "--d": `${s}s` }) as React.CSSProperties;
 /** The landing page: English copy with Tamil dialogue samples and a multilingual greeting strip. */
 export default function Landing({ popular }: { popular: string[] }) {
   const [hi, setHi] = useState(0);
+  const [invited, setInvited] = useState(false);
+  useEffect(() => {
+    // From /r/<code>: say so once, and tidy the address.
+    if (!new URLSearchParams(location.search).has("invited")) return;
+    setInvited(true); // eslint-disable-line react-hooks/set-state-in-effect -- read once from the address after hydration
+    history.replaceState(null, "", location.pathname + location.hash);
+  }, []);
 
   useEffect(() => {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -80,6 +87,7 @@ export default function Landing({ popular }: { popular: string[] }) {
       </header>
 
       <main>
+        {invited && <p className="wrap hm-invited" role="status">A friend invited you to {BRAND.name}. Start free, and when you buy your first pass you both get 60 free minutes.</p>}
         {/* Hero: a headline that ends in a hand-written word (click it for another) with fruit stickers to play with. */}
         <FruitSticker
           as="section" headingTag="h1" className="hero-fruit"
@@ -291,14 +299,12 @@ export default function Landing({ popular }: { popular: string[] }) {
               <p>Pick a clip and its language, press Generate. Premiere gets a caption track you can style and export with the cut. After Effects gets timed text layers.</p>
               <Link href="/premiere-pro-subtitle-plugin" className="btn lime">Get the panel</Link>
             </div>
-            <div className="hm-ui" aria-hidden="true">
-              <div className="hm-ui-bar"><i /><span>Vasanamm</span></div>
-              <label>Clip<b>interview_cam_A.mp4</b></label>
-              <label>Language<b>Tamil + English</b></label>
-              <span className="hm-ui-go">Generate</span>
-              <span className="hm-ui-done">Caption track added · 214 lines</span>
-              <div className="hm-ui-track"><i style={{ width: "14%" }} /><i style={{ width: "22%" }} /><i style={{ width: "9%" }} /><i style={{ width: "18%" }} /><i style={{ width: "12%" }} /></div>
-            </div>
+            {/* The real panel (its own HTML and CSS), as it sits docked in Premiere's dark window. */}
+            <figure className="hm-ui">
+              <div className="hm-ui-bar" aria-hidden="true"><span className="on">Vasanamm</span><span>Effects</span><span>Lumetri Color</span><b>≡</b></div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/home/panel.webp" width={800} height={1588} loading="lazy" alt="The Vasanamm panel in Premiere Pro: pick a clip, the spoken language and a style, then Generate subtitles. It reports a caption track added with 214 lines." />
+            </figure>
           </div>
         </section>
 
