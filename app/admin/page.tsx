@@ -3,19 +3,20 @@ import AdminAi from "@/components/AdminAi";
 import AdminEmailTest from "@/components/AdminEmailTest";
 import AdminBento from "@/components/admin/AdminBento";
 import { desc, eq } from "drizzle-orm";
-import { db, jobs, users } from "@/db";
+import { db, emailLog, jobs, users } from "@/db";
 import { DEFAULT_MODELS, getAiConfig, PROVIDERS } from "@/lib/ai";
 import { dashboard, mins, overview, when } from "@/lib/admin";
 import { connectionStatus } from "@/lib/secrets";
 
 export default async function Overview() {
-  const [o, dash, cfg, conns, recentFails] = await Promise.all([
+  const [o, dash, cfg, conns, recentFails, emails] = await Promise.all([
     overview(),
     dashboard(),
     getAiConfig(),
     connectionStatus(),
     db.select({ j: jobs, email: users.email }).from(jobs).innerJoin(users, eq(users.id, jobs.userId))
       .where(eq(jobs.status, "failed")).orderBy(desc(jobs.createdAt)).limit(5),
+    db.select().from(emailLog).orderBy(desc(emailLog.id)).limit(15),
   ]);
   const has = (n: string) => conns.some((c) => c.name === n && c.source);
   const aiKey = { gemini: "GEMINI_API_KEY", sarvam: "SARVAM_API_KEY", openai: "OPENAI_API_KEY", groq: "GROQ_API_KEY", custom: "AI_API_KEY" }[cfg.provider] ?? "";
@@ -47,6 +48,15 @@ export default async function Overview() {
         <h2>Email</h2>
         <p className="muted">Password resets and email confirmations. Send yourself a test to check they go out; if not, this shows why.</p>
         <AdminEmailTest />
+        <h3 style={{ marginTop: 20 }}>Last emails</h3>
+        {emails.length === 0 ? <p className="muted small">None yet.</p> : (
+          <table><thead><tr><th>To</th><th>What</th><th>Result</th><th>When</th></tr></thead>
+            <tbody>{emails.map((m) => (
+              <tr key={m.id}><td>{m.to}</td><td>{m.subject}</td>
+                <td className={m.result === "failed" ? "error" : undefined}>{m.result === "sent" ? "Sent" : m.result === "no-account" ? "No account with this email, nothing sent" : `Failed: ${m.error ?? ""}`}</td>
+                <td>{when(m.createdAt)}</td></tr>
+            ))}</tbody></table>
+        )}
       </section>
 
       <section className="panel">

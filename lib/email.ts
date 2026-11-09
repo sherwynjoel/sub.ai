@@ -1,6 +1,7 @@
 import "server-only";
 import { getSecret } from "@/lib/secrets";
 import { BUSINESS } from "@/lib/brand";
+import { db, emailLog } from "@/db";
 
 /**
  * Emails (password resets) go through Resend when its key and sender are saved, which needs a verified domain;
@@ -20,8 +21,23 @@ export async function emailReady() {
   return !!(await route());
 }
 
-/** Sends one plain-text email. Throws with the service's reason when it is refused. */
+/** Notes what happened to an email, for the admin's email log. Never throws. */
+export async function logEmail(to: string, subject: string, result: "sent" | "no-account" | "failed", error?: string) {
+  await db.insert(emailLog).values({ to, subject, result, error: error?.slice(0, 500) }).catch((e) => console.error("email log", e));
+}
+
+/** Sends one plain-text email and logs it. Throws with the service's reason when it is refused. */
 export async function sendEmail(to: string, subject: string, text: string) {
+  try {
+    await deliver(to, subject, text);
+    await logEmail(to, subject, "sent");
+  } catch (e) {
+    await logEmail(to, subject, "failed", String((e as Error)?.message ?? e));
+    throw e;
+  }
+}
+
+async function deliver(to: string, subject: string, text: string) {
   const r = await route();
   if (!r) throw new Error("Email isn't set up: set GMAIL_APP_PASSWORD (or RESEND_API_KEY) in the server's .env.local.");
   if (r.kind === "resend") {

@@ -165,3 +165,13 @@ export const creditLog = pgTable("credit_log", {
   seconds: integer("seconds").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("credit_log_user_idx").on(t.userId, t.createdAt)]);
+
+/** What happened to each email the site tried to send, and each reset asked for an address with no account (admin only). */
+export const emailLog = pgTable("email_log", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  to: text("to").notNull(),
+  subject: text("subject").notNull(),
+  result: text("result").notNull(), // sent | no-account | failed
+  error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
