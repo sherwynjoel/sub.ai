@@ -1,42 +1,46 @@
 import { randomBytes } from "node:crypto";
-import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
-import { db, settings, users } from "@/db";
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { creditLog, db, settings, users } from "@/db";
 import { logUse } from "@/lib/credits";
 import { SITE_URL } from "@/lib/site";
 
-/**
- * The invite offer, set by the admin on the Growth page: the friend gets `friend` extra minutes on top of the free
- * trial as soon as they sign up; whoever invited them gets `inviter` minutes when the friend buys their first pass
- * (paid, so made-up accounts earn nothing). 0 turns that side off.
- */
-export type InviteOffer = { friend: number; inviter: number };
-export const INVITE_DEFAULT: InviteOffer = { friend: 60, inviter: 60 };
-export const INVITE_MAX = 1000;
-const OFFER_KEY = "invite_offer";
-const minutes = (v: unknown, d: number) => { const n = Math.round(Number(v)); return Number.isFinite(n) && n >= 0 && n <= INVITE_MAX ? n : d; };
-
-export async function inviteOffer(): Promise<InviteOffer> {
-  const [r] = await db.select().from(settings).where(eq(settings.key, OFFER_KEY)).catch(() => []);
-  if (!r) return INVITE_DEFAULT;
-  try {
-    const o = JSON.parse(r.value);
-    return { friend: minutes(o.friend, INVITE_DEFAULT.friend), inviter: minutes(o.inviter, INVITE_DEFAULT.inviter) };
-  } catch { return INVITE_DEFAULT; }
-}
-export async function setInviteOffer(o: InviteOffer) {
-  const value = JSON.stringify({ friend: minutes(o.friend, 0), inviter: minutes(o.inviter, 0) });
-  await db.insert(settings).values({ key: OFFER_KEY, value }).onConflictDoUpdate({ target: settings.key, set: { value } });
-}
-
-/** Extra minutes = less usage counted (a negative count is credit, and is kept when a new pass starts). */
-async function giveMinutes(userId: string, mins: number, detail: string) {
-  if (mins <= 0) return;
-  await db.update(users).set({ secondsUsed: sql`${users.secondsUsed} - ${mins * 60}` }).where(eq(users.id, userId));
-  await logUse(userId, -mins * 60, { kind: "bonus", video: "Invite reward", detail });
-}
 /** Set by /r/<code> so the sign-up that follows knows who sent the visitor (30 days). */
 export const REF_COOKIE = "vs_ref";
 export const REF_DAYS = 30;
+export const INVITE_MAX = 1000;
+export const INVITE_VIDEO = "Invite reward"; // the credit_log name of invite minutes
+
+/**
+ * Invites, set on Admin > Growth. Nobody gets minutes on their own: an admin turns invites on for chosen users, every
+ * friend who signs up with one of their links waits in the admin's list, and minutes are only added when an admin
+ * approves that friend. `upTo`: the minutes promised per approved friend ("you can get up to …"), unless the user has
+ * their own amount. `message`: the line on their Billing page; {minutes} is replaced by the amount.
+ */
+export type InviteSettings = { on: boolean; upTo: number; message: string };
+export const INVITE_MESSAGE = "You can get up to {minutes} minutes of credits for every friend who joins with your link. We check each invite, then add your minutes.";
+export const INVITE_DEFAULT: InviteSettings = { on: false, upTo: 35, message: INVITE_MESSAGE };
+const KEY = "invite_settings";
+const mins = (v: unknown, d: number) => { const n = Math.round(Number(v)); return Number.isFinite(n) && n >= 0 && n <= INVITE_MAX ? n : d; };
+
+export async function inviteSettings(): Promise<InviteSettings> {
+  const [r] = await db.select().from(settings).where(eq(settings.key, KEY)).catch(() => []);
+  if (!r) return INVITE_DEFAULT;
+  try {
+    const o = JSON.parse(r.value);
+    return { on: !!o.on, upTo: mins(o.upTo, INVITE_DEFAULT.upTo), message: typeof o.message === "string" && o.message.trim() ? o.message.trim().slice(0, 300) : INVITE_MESSAGE };
+  } catch { return INVITE_DEFAULT; }
+}
+export async function saveInviteSettings(o: InviteSettings) {
+  const value = JSON.stringify({ on: !!o.on, upTo: mins(o.upTo, INVITE_DEFAULT.upTo), message: String(o.message ?? "").trim().slice(0, 300) });
+  await db.insert(settings).values({ key: KEY, value }).onConflictDoUpdate({ target: settings.key, set: { value } });
+}
+
+/** The "up to" minutes for one user: their own amount if the admin set one, else the site-wide one. */
+export const upToFor = (u: { inviteMinutes: number | null }, s: InviteSettings) => u.inviteMinutes ?? s.upTo;
+export const inviteText = (s: InviteSettings, minutes: number) => s.message.replaceAll("{minutes}", String(minutes));
+
+/** Whether this user may invite right now: invites on site-wide, turned on for them, not blocked. */
+export const canInvite = (u: { inviteOn: boolean; blockedAt: Date | null }, s: InviteSettings) => s.on && u.inviteOn && !u.blockedAt;
 
 const ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"; // no 0/o, 1/l/i: easy to read out
 const newCode = () => Array.from(randomBytes(7), (b) => ALPHABET[b % ALPHABET.length]).join("");
@@ -47,8 +51,7 @@ export async function inviteCode(userId: string): Promise<string> {
   const [u] = await db.select({ code: users.referralCode }).from(users).where(eq(users.id, userId));
   if (u?.code) return u.code;
   for (let i = 0; i < 5; i++) {
-    const code = newCode();
-    const [set] = await db.update(users).set({ referralCode: code }).where(and(eq(users.id, userId), isNull(users.referralCode)))
+    const [set] = await db.update(users).set({ referralCode: newCode() }).where(and(eq(users.id, userId), isNull(users.referralCode)))
       .returning({ code: users.referralCode }).catch(() => []); // taken by someone else: try another
     if (set?.code) return set.code;
     const [again] = await db.select({ code: users.referralCode }).from(users).where(eq(users.id, userId));
@@ -59,29 +62,80 @@ export async function inviteCode(userId: string): Promise<string> {
 
 export const inviteLink = (code: string) => `${SITE_URL}/r/${code}`;
 
-/** Remember who invited a new account (not themselves, not a blocked account), and give the friend their minutes. */
-export async function rememberInvite(newUserId: string, code: unknown) {
+/** Who a code belongs to, if they may invite right now. */
+export async function inviterFor(code: unknown) {
   const c = cleanCode(code);
-  if (!c) return;
-  const [from] = await db.select({ id: users.id, name: users.name }).from(users).where(and(eq(users.referralCode, c), isNull(users.blockedAt)));
+  if (!c) return null;
+  const [from] = await db.select().from(users).where(eq(users.referralCode, c));
+  return from && canInvite(from, await inviteSettings()) ? from : null;
+}
+
+/** A new account came from an invite link: note who sent them; it waits in the admin's list. No minutes yet. */
+export async function rememberInvite(newUserId: string, code: unknown) {
+  const from = await inviterFor(code);
   if (!from || from.id === newUserId) return;
-  const [set] = await db.update(users).set({ referredBy: from.id }).where(and(eq(users.id, newUserId), isNull(users.referredBy))).returning({ id: users.id });
-  if (set) await giveMinutes(newUserId, (await inviteOffer()).friend, `Invited by ${from.name}`);
+  await db.update(users).set({ referredBy: from.id, referralStatus: "pending" }).where(and(eq(users.id, newUserId), isNull(users.referredBy)));
 }
 
-/** After the invited user's first paid pass: whoever invited them gets their minutes, once. */
-export async function rewardInvite(userId: string) {
-  const [u] = await db.update(users).set({ referralRewardedAt: new Date() })
-    .where(and(eq(users.id, userId), isNotNull(users.referredBy), isNull(users.referralRewardedAt)))
-    .returning({ by: users.referredBy, name: users.name });
-  if (u?.by) await giveMinutes(u.by, (await inviteOffer()).inviter, `${u.name} bought a pass`);
+/** The invited user paid: shown to the admin when they check the invite. */
+export async function noteInvitePaid(userId: string) {
+  await db.update(users).set({ referralPaidAt: new Date() }).where(and(eq(users.id, userId), isNotNull(users.referredBy), isNull(users.referralPaidAt)));
 }
 
-/** How many people joined with the user's link, and how many of them have bought a pass. */
+/** Extra minutes = less usage counted (a negative count is credit, and is kept when a new pass starts). */
+async function giveMinutes(userId: string, m: number, detail: string) {
+  if (m <= 0) return;
+  await db.update(users).set({ secondsUsed: sql`${users.secondsUsed} - ${m * 60}` }).where(eq(users.id, userId));
+  await logUse(userId, -m * 60, { kind: "bonus", video: INVITE_VIDEO, detail });
+}
+
+/**
+ * The admin's decision on one invited friend. Approve: the inviter gets `inviterMin` (and the friend `friendMin`, if
+ * any). Only a pending invite can be decided, once, so a double click can't pay twice. Returns the two users, or null.
+ */
+export async function decideInvite(friendId: string, approve: boolean, inviterMin = 0, friendMin = 0) {
+  const [f] = await db.update(users).set({ referralStatus: approve ? "approved" : "rejected", referralRewardedAt: new Date() })
+    .where(and(eq(users.id, friendId), eq(users.referralStatus, "pending")))
+    .returning({ id: users.id, name: users.name, email: users.email, by: users.referredBy });
+  if (!f?.by) return null;
+  const [by] = await db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(eq(users.id, f.by));
+  if (approve) {
+    if (by) await giveMinutes(by.id, inviterMin, `${f.name} joined with your invite`);
+    await giveMinutes(f.id, friendMin, `Invited by ${by?.name ?? "a friend"}`);
+  }
+  return { friend: f, inviter: by ?? null };
+}
+
+/** The invites waiting for an admin, oldest first, with what helps decide (paid? same connection? confirmed email?). */
+export async function pendingInvites() {
+  const rows = await db.select().from(users).where(eq(users.referralStatus, "pending")).orderBy(users.createdAt).limit(200);
+  const ids = [...new Set(rows.map((r) => r.referredBy!))];
+  const from = ids.length ? await db.select().from(users).where(inArray(users.id, ids)) : [];
+  const s = await inviteSettings();
+  return rows.map((f) => {
+    const by = from.find((b) => b.id === f.referredBy) ?? null;
+    return { friend: f, inviter: by, upTo: by ? upToFor(by, s) : s.upTo, sameIp: !!(by?.signupIp && by.signupIp === f.signupIp) };
+  });
+}
+export async function pendingInviteCount() {
+  const [r] = await db.select({ n: sql<number>`count(*)::int` }).from(users).where(eq(users.referralStatus, "pending")).catch(() => [{ n: 0 }]);
+  return r?.n ?? 0;
+}
+
+/** For the user's Billing page: how many joined, are waiting, were approved, and the invite minutes they've got. */
 export async function inviteStats(userId: string) {
-  const [r] = await db.select({
-    joined: sql<number>`count(*)::int`,
-    paid: sql<number>`count(${users.referralRewardedAt})::int`,
-  }).from(users).where(eq(users.referredBy, userId));
-  return r ?? { joined: 0, paid: 0 };
+  const [[r], [m]] = await Promise.all([
+    db.select({
+      joined: sql<number>`count(*)::int`,
+      pending: sql<number>`count(*) filter (where ${users.referralStatus} = 'pending')::int`,
+      approved: sql<number>`count(*) filter (where ${users.referralStatus} = 'approved')::int`,
+    }).from(users).where(eq(users.referredBy, userId)),
+    db.select({ s: sql<number>`coalesce(-sum(${creditLog.seconds}), 0)::int` }).from(creditLog).where(and(eq(creditLog.userId, userId), eq(creditLog.video, INVITE_VIDEO))),
+  ]);
+  return { joined: r?.joined ?? 0, pending: r?.pending ?? 0, approved: r?.approved ?? 0, earned: Math.round((m?.s ?? 0) / 60) };
 }
+
+/** The people one user invited, newest first (the admin's user page). */
+export const invitedBy = (userId: string) =>
+  db.select({ id: users.id, email: users.email, createdAt: users.createdAt, status: users.referralStatus, paidAt: users.referralPaidAt })
+    .from(users).where(eq(users.referredBy, userId)).orderBy(desc(users.createdAt)).limit(50);

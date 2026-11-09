@@ -33,6 +33,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       await log(m > 0 ? `Added ${m} min` : `Removed ${-m} min`, reason || undefined);
       break;
     }
+    case "invite_on":
+      await db.update(users).set({ inviteOn: !!b.value }).where(where);
+      await log(b.value ? "Turned on invites" : "Turned off invites");
+      break;
+    case "invite_minutes": {
+      const m = b.minutes == null ? null : Number(b.minutes);
+      if (m !== null && !(Number.isInteger(m) && m >= 0 && m <= 1000)) return json({ error: "Enter whole minutes from 0 to 1000, or leave it empty." }, 400);
+      await db.update(users).set({ inviteMinutes: m }).where(where);
+      await log("Set invite minutes", m === null ? "site-wide amount" : `up to ${m} min`);
+      break;
+    }
     case "note":
       await db.update(users).set({ adminNote: String(b.note ?? "").slice(0, 4000) || null }).where(where);
       await log("Changed the note");

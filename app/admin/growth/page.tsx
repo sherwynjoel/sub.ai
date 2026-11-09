@@ -3,27 +3,29 @@ import { desc } from "drizzle-orm";
 import Action from "@/components/admin/Action";
 import AnnounceForm from "@/components/admin/AnnounceForm";
 import CouponForm from "@/components/admin/CouponForm";
-import InviteOfferForm from "@/components/admin/InviteOfferForm";
+import InviteReview from "@/components/admin/InviteReview";
+import InviteSettingsForm from "@/components/admin/InviteSettingsForm";
 import NewsForm from "@/components/admin/NewsForm";
 import { coupons, db, users } from "@/db";
 import { when } from "@/lib/admin";
 import { GROUPS, groupMembers, rawAnnouncement, type Group } from "@/lib/news";
-import { inviteOffer } from "@/lib/referral";
-import { count, isNotNull } from "drizzle-orm";
+import { INVITE_MESSAGE, inviteSettings, pendingInvites } from "@/lib/referral";
+import { count, eq } from "drizzle-orm";
 import { effectivePlan, longDate, minSec, PLANS, secondsLeft } from "@/lib/plans";
 
 /** Bringing people back and getting them to pay: who to contact, the announcement bar, codes and group emails. */
 export default async function Growth() {
   const groups = Object.keys(GROUPS) as Group[];
-  const [offer, [inv], ann, codes, ending, trial, ...counts] = await Promise.all([
-    inviteOffer(),
-    db.select({ joined: count(), paid: count(users.referralRewardedAt) }).from(users).where(isNotNull(users.referredBy)),
+  const [inv, [inviters], ann, codes, ending, trial, ...counts] = await Promise.all([
+    inviteSettings(),
+    db.select({ n: count() }).from(users).where(eq(users.inviteOn, true)),
     rawAnnouncement(),
     db.select().from(coupons).orderBy(desc(coupons.createdAt)),
     groupMembers("ending"),
     groupMembers("trial"),
     ...groups.map((g) => groupMembers(g).then((m) => m.length)),
   ]);
+  const toCheck = await pendingInvites();
   const sizes = Object.fromEntries(groups.map((g, i) => [g, counts[i]])) as Record<Group, number>;
   // Trial users who have used most of their free minutes: the likeliest to buy.
   const trialPeople = await db.select().from(users);
@@ -64,10 +66,34 @@ export default async function Growth() {
         <AnnounceForm current={ann} />
       </section>
 
+      <section className="panel" id="invites">
+        <h2>Invites to check ({toCheck.length})</h2>
+        <p className="muted small">People who signed up with someone&apos;s invite link. Nothing is given until you approve. Check it&apos;s a real person (a confirmed email, real use, ideally a payment, not the same connection as the inviter), then approve with the minutes to give, or reject.</p>
+        {toCheck.length === 0 ? <p className="muted">Nothing to check.</p> : (
+          <div className="table-wrap"><table>
+            <thead><tr><th>Friend</th><th>Invited by</th><th>Checks</th><th>Give minutes</th></tr></thead>
+            <tbody>{toCheck.map(({ friend: f, inviter: by, upTo, sameIp }) => (
+              <tr key={f.id}>
+                <td><Link href={`/admin/users/${f.id}`}>{f.email}</Link><br /><span className="muted small">joined {when(f.createdAt)}</span></td>
+                <td>{by ? <Link href={`/admin/users/${by.id}`}>{by.email}</Link> : <span className="muted">deleted</span>}</td>
+                <td className="small">
+                  <span className={`status ${f.referralPaidAt ? "good" : "neutral"}`}>{f.referralPaidAt ? `Paid ${when(f.referralPaidAt)}` : "Not paid"}</span>{" "}
+                  <span className={`status ${f.emailVerifiedAt ? "good" : "neutral"}`}>{f.emailVerifiedAt ? "Email confirmed" : "Email not confirmed"}</span>{" "}
+                  <span className="status neutral">{minSec(Math.max(0, f.secondsUsed))} used</span>
+                  {sameIp && <> <span className="status bad">Same connection as inviter</span></>}
+                  {f.blockedAt && <> <span className="status bad">Blocked</span></>}
+                </td>
+                <td><InviteReview friendId={f.id} upTo={upTo} inviter={by?.email ?? "the inviter"} /></td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        )}
+      </section>
+
       <section className="panel">
-        <h2>Invite a friend</h2>
-        <p className="muted small">Every user has an invite link on their Billing page. The friend gets the free trial plus these extra minutes when they sign up with it; whoever invited them gets theirs when the friend buys a first pass (so made-up accounts earn the inviter nothing). 0 turns that side off; both 0 hides the invite box. So far: {inv?.joined ?? 0} joined with a link, {inv?.paid ?? 0} of them bought a pass.</p>
-        <InviteOfferForm friend={offer.friend} inviter={offer.inviter} />
+        <h2>Invite settings</h2>
+        <p className="muted small">Only users you turn on (on their page under Users, {inviters?.n ?? 0} so far) see an invite link on their Billing page, and only while invites are on here. Turning invites off hides every link; invites already waiting stay in the list above.</p>
+        <InviteSettingsForm on={inv.on} upTo={inv.upTo} message={inv.message === INVITE_MESSAGE ? "" : inv.message} fallback={INVITE_MESSAGE} />
       </section>
 
       <section className="panel">

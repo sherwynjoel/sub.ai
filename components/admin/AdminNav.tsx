@@ -15,13 +15,14 @@ const LINKS = [
   ["/admin/log", "Admin log"],
 ];
 
-export default function AdminNav() {
+export default function AdminNav({ invites = 0 }: { invites?: number }) {
   const path = usePathname();
   return (
     <nav className="admin-nav" aria-label="Admin">
       {LINKS.map(([href, label]) => (
         <Link key={href} href={href} aria-current={(href === "/admin" ? path === href : path.startsWith(href)) ? "page" : undefined}>
           {label}
+          {href === "/admin/growth" && invites > 0 && <span className="nav-badge" title={`${invites} invite${invites === 1 ? "" : "s"} to check`}>{invites}</span>}
         </Link>
       ))}
     </nav>

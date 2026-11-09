@@ -2,12 +2,14 @@ import Link from "next/link";
 import AdminNav from "@/components/admin/AdminNav";
 import { requireAdmin } from "@/lib/admin";
 import { BRAND } from "@/lib/brand";
+import { pendingInviteCount } from "@/lib/referral";
 import "../app/app.css";
 import "./admin.css";
 import LogoName from "@/components/LogoName";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const me = await requireAdmin();
+  const invites = await pendingInviteCount();
   return (
     <>
       <header className="app-head">
@@ -18,7 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </header>
       <div className="wrap admin-shell">
-        <AdminNav />
+        <AdminNav invites={invites} />
         <main className="admin-main">{children}</main>
       </div>
     </>

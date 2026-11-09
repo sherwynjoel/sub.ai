@@ -39,7 +39,11 @@ export const users = pgTable("users", {
   noNews: boolean("no_news").notNull().default(false), // unsubscribed from emails sent by admins to groups (lib/news.ts)
   referralCode: text("referral_code").unique(), // their invite link's code, made the first time it's shown (lib/referral.ts)
   referredBy: uuid("referred_by"), // who invited them
-  referralRewardedAt: timestamp("referral_rewarded_at", { withTimezone: true }), // when their first paid pass gave both the invite minutes
+  referralStatus: text("referral_status"), // pending | approved | rejected: the admin checks every invite before minutes are given
+  referralPaidAt: timestamp("referral_paid_at", { withTimezone: true }), // when the invited user first paid (shown to the admin)
+  referralRewardedAt: timestamp("referral_rewarded_at", { withTimezone: true }), // when an admin approved or rejected the invite
+  inviteOn: boolean("invite_on").notNull().default(false), // an admin turned on invites for this user (special users only)
+  inviteMinutes: integer("invite_minutes"), // their own "up to" minutes per approved invite; null = the site-wide amount
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("users_signup_ip_idx").on(t.signupIp, t.createdAt)]);
 

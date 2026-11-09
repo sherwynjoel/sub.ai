@@ -4,7 +4,7 @@ import InviteBox from "@/components/InviteBox";
 import { requireUser } from "@/lib/auth";
 import { type PlanId, effectivePlan, longDate, minSec, passEnd, passExpired, PLANS, secondsLeft } from "@/lib/plans";
 import { subscriptionsReady } from "@/lib/razorpay";
-import { inviteCode, inviteLink, inviteOffer, inviteStats } from "@/lib/referral";
+import { canInvite, inviteCode, inviteLink, inviteSettings, inviteStats, inviteText, upToFor } from "@/lib/referral";
 import { mustConfirm } from "@/lib/verify";
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
@@ -15,7 +15,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
   const live = ["active", "authenticated", "pending"].includes(u.subscriptionStatus ?? "");
   const date = u.periodEnd ? longDate(u.periodEnd) : undefined;
   const end = passEnd(u), ended = passExpired(u), endDate = end ? longDate(end) : "";
-  const [code, stats, offer] = await Promise.all([inviteCode(u.id).catch(() => null), inviteStats(u.id), inviteOffer()]);
+  const inv = await inviteSettings();
+  const [code, stats] = canInvite(u, inv) ? await Promise.all([inviteCode(u.id).catch(() => null), inviteStats(u.id)]) : [null, null];
 
   return (
     <>
@@ -46,7 +47,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
       <BillingActions current={plan} live={live} subscriptions={await subscriptionsReady()} preselect={(await searchParams).plan}
         holder={u.name} passNo={u.id.slice(0, 8).toUpperCase()} until={end?.toISOString()} hasPass={!(await mustConfirm(u))}
         prepaidUntil={u.subscriptionStatus === "prepaid" && plan !== "free" ? date : undefined} />
-      {code && (offer.friend > 0 || offer.inviter > 0) && <InviteBox link={inviteLink(code)} offer={offer} joined={stats.joined} paid={stats.paid} />}
+      {code && stats && <InviteBox link={inviteLink(code)} minutes={upToFor(u, inv)} text={inviteText(inv, upToFor(u, inv))} stats={stats} />}
       <p className="muted small">Pay for 30 days at a time by card, UPI or netbanking; nothing renews unless you choose a monthly subscription. See the <Link href="/refunds">refund and cancellation policy</Link> and <Link href="/terms">terms</Link>.</p>
     </>
   );
