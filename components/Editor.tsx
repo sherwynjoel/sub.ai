@@ -1957,6 +1957,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                     {quality.fps ? `${quality.fps} fps${quality.fps >= 50 ? " (smoother only if filmed at 50 or 60)" : ""}. ` : ""}
                     {{ best: "Best: the sharpest picture, the largest file.", high: "High: a smaller file that looks the same on a phone.", small: "Smaller file: quick to send on WhatsApp or email; a little softer." }[quality.level]}
                   </p>
+                  {(quality.height ?? 0) >= 1440 && <p className="small q-phone-warn" role="note">On a phone, 2K and 4K often stop part way: phones give the browser little memory. Pick 1080p here, or export 4K on a computer.</p>}
                   <button className="btn" onClick={render} disabled={!videoHere}>{coming ? "Choose the video first" : dirty ? "Save and export MP4" : "Export MP4"}</button>
                   {made && !dirty && !lookChanged && made.q === qualityKey && <a className="btn ghost" href={made.url} download={made.name}>Download MP4</a>}
                   {made && (dirty || lookChanged || made.q !== qualityKey) && <>

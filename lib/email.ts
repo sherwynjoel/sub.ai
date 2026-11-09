@@ -7,12 +7,14 @@ import { db, emailLog } from "@/db";
  * otherwise through a Gmail account with an app password, which works without a domain (about 500 a day).
  * Both are set in the server's .env.local (GMAIL_USER / GMAIL_APP_PASSWORD, or RESEND_API_KEY / EMAIL_FROM).
  */
+async function gmail() {
+  const [user, pass] = [(await getSecret("GMAIL_USER")) || BUSINESS.email, await getSecret("GMAIL_APP_PASSWORD")]; // the contact Gmail unless another is saved
+  return user && pass ? { kind: "gmail" as const, user, pass: pass.replace(/\s+/g, "") } : null; // Google shows it in groups of 4
+}
 async function route() {
   const [key, from] = [await getSecret("RESEND_API_KEY"), await getSecret("EMAIL_FROM")];
   if (key && from) return { kind: "resend" as const, key, from };
-  const [user, pass] = [(await getSecret("GMAIL_USER")) || BUSINESS.email, await getSecret("GMAIL_APP_PASSWORD")]; // the contact Gmail unless another is saved
-  if (user && pass) return { kind: "gmail" as const, user, pass: pass.replace(/\s+/g, "") }; // Google shows it in groups of 4
-  return null;
+  return gmail();
 }
 
 /** Whether emails can be sent. */
@@ -43,12 +45,22 @@ async function deliver(to: string, subject: string, text: string) {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { authorization: `Bearer ${r.key}`, "content-type": "application/json" },
-      body: JSON.stringify({ from: r.from, to: [to], subject, text }),
+      // Replies go to the contact inbox: the domain's sender address has no mailbox.
+      body: JSON.stringify({ from: r.from, to: [to], subject, text, reply_to: BUSINESS.email }),
       signal: AbortSignal.timeout(15e3),
-    });
-    if (!res.ok) throw new Error(`Resend refused the email (${res.status}): ${(await res.text()).slice(0, 200)}`);
-    return;
+    }).catch((e) => e as Error);
+    if (res instanceof Response && res.ok) return;
+    const why = res instanceof Response ? `Resend refused the email (${res.status}): ${(await res.text()).slice(0, 200)}` : `Resend couldn't be reached: ${res.message}`;
+    // Resend down or misconfigured: send through Gmail instead, if that is set up too.
+    const g = await gmail();
+    if (!g) throw new Error(why);
+    console.error(why, "- sending through Gmail");
+    return viaGmail(g, to, subject, text);
   }
+  return viaGmail(r, to, subject, text);
+}
+
+async function viaGmail(r: { user: string; pass: string }, to: string, subject: string, text: string) {
   const { createTransport } = await import("nodemailer");
   const smtp = createTransport({ host: "smtp.gmail.com", port: 465, secure: true, auth: { user: r.user, pass: r.pass }, connectionTimeout: 15e3, greetingTimeout: 15e3, socketTimeout: 20e3 });
   try {

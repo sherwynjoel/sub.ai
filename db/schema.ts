@@ -37,6 +37,9 @@ export const users = pgTable("users", {
   blockReason: text("block_reason"),
   adminNote: text("admin_note"), // the admins' own notes on this user; never shown to them
   noNews: boolean("no_news").notNull().default(false), // unsubscribed from emails sent by admins to groups (lib/news.ts)
+  referralCode: text("referral_code").unique(), // their invite link's code, made the first time it's shown (lib/referral.ts)
+  referredBy: uuid("referred_by"), // who invited them
+  referralRewardedAt: timestamp("referral_rewarded_at", { withTimezone: true }), // when their first paid pass gave both the invite minutes
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("users_signup_ip_idx").on(t.signupIp, t.createdAt)]);
 

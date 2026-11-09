@@ -31,10 +31,15 @@
   function say(text, cls, details) { $("msg").textContent = text; $("msg").className = cls || ""; $("msg").title = details || ""; }
   // Host replies are "OK|message|details" or "ERR|message".
   function reply(res) { var p = String(res).split("|"); return { ok: p[0] === "OK", text: p[1] || String(res), details: p.slice(2).join(" ") }; }
-  var minutesLeft = null; // from /api/me; 0 = nothing left to generate with
+  var secondsLeft = null; // from /api/me; 0 = nothing left to generate with
+  // Seconds as minutes and seconds, as the website shows them: "12 min 5 s", "45 s".
+  function minSec(sec) {
+    var s = Math.max(0, Math.ceil(sec)), m = Math.floor(s / 60), r = s % 60;
+    return m ? m + " min" + (r ? " " + r + " s" : "") : r + " s";
+  }
   function updateGo() {
-    $("goBtn").disabled = !picked || minutesLeft === 0;
-    $("goBtn").title = minutesLeft === 0 ? "No minutes left on your plan" : !picked ? "Select a clip first" : "";
+    $("goBtn").disabled = !picked || secondsLeft === 0;
+    $("goBtn").title = secondsLeft === 0 ? "No minutes left on your plan" : !picked ? "Select a clip first" : "";
   }
 
   // Generate | Edit subtitles: one screen at a time, the action bar follows.
@@ -84,14 +89,14 @@
   function refreshAccount() {
     return api("GET", "/api/me").then(function (r) {
       if (r.status !== 200) { show("connect"); return false; }
-      minutesLeft = Math.floor(r.data.secondsLeft / 60);
-      $("account").textContent = minutesLeft + " min left";
-      $("account").title = r.data.name + " · " + r.data.planName + " plan · " + minutesLeft + " min left";
-      $("account").className = "chip" + (minutesLeft === 0 ? " warn" : "");
+      secondsLeft = Math.max(0, Math.ceil(r.data.secondsLeft || 0));
+      $("account").textContent = minSec(secondsLeft) + " left";
+      $("account").title = r.data.name + " · " + r.data.planName + " plan · " + minSec(secondsLeft) + " left";
+      $("account").className = "chip" + (secondsLeft === 0 ? " warn" : "");
       show("main");
       updateGo();
       if (!STYLES.length) loadStyles(); // a new server address, or none reachable at the start
-      if (minutesLeft === 0 && !$("msg").textContent) say("No minutes left on your " + r.data.planName + " plan. Upgrade on the website to generate more.", "error");
+      if (secondsLeft === 0 && !$("msg").textContent) say("No minutes left on your " + r.data.planName + " plan. Upgrade on the website to generate more.", "error");
       return true;
     });
   }

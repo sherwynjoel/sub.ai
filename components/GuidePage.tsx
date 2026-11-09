@@ -15,6 +15,10 @@ type Props = {
 const GUIDES: [string, string][] = [
   ["/tamil-subtitle-generator", "Tamil subtitle generator"],
   ["/tanglish-captions", "Tanglish captions"],
+  ["/tamil-to-english-subtitles", "Tamil to English subtitles"],
+  ["/telugu-subtitle-generator", "Telugu subtitle generator"],
+  ["/malayalam-subtitle-generator", "Malayalam subtitle generator"],
+  ["/hindi-subtitle-generator", "Hindi subtitle generator"],
   ["/premiere-pro-subtitle-plugin", "Premiere Pro subtitle plugin"],
 ];
 

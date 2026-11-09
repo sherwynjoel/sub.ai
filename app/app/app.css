@@ -1174,3 +1174,16 @@ html:has(.pass-reveal[open]) { overflow: hidden; }
 .q-presets .chip { border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 999px; padding: 5px 11px; font: 500 .82rem var(--font-body); cursor: pointer; }
 .q-presets .chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 @media (max-width: 760px) { .quality-row { grid-template-columns: 1fr 1fr; } .quality-row label:first-child { grid-column: 1 / -1; } }
+
+/* Only on phones and small tablets: 2K/4K exports run out of memory there. */
+.q-phone-warn { display: none; }
+@media (pointer: coarse) and (max-width: 1024px) {
+  .q-phone-warn { display: block; margin: 6px 0 10px; padding: 9px 12px; border-radius: 10px; background: #fff4d6; color: #6b4300; font-weight: 600; }
+  .ed[data-sheet] .ed-side .q-phone-warn { background: #3a2c08; color: #ffd98a; }
+}
+
+/* Billing: the invite link */
+.invite { display: grid; gap: 14px; margin: 18px 0; }
+.invite h2 { margin-bottom: 4px; }
+.invite-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.invite-row input { flex: 1 1 260px; min-width: 0; font: 500 .95rem ui-monospace, Menlo, monospace; }

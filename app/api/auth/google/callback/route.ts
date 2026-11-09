@@ -6,6 +6,7 @@ import { db, sessions, users } from "@/db";
 import { clientIp, hashPassword, rateLimited, startSession } from "@/lib/auth";
 import { googleIdentity } from "@/lib/google";
 import { effectivePlan } from "@/lib/plans";
+import { REF_COOKIE, rememberInvite } from "@/lib/referral";
 import { SITE_URL } from "@/lib/site";
 import { EMAIL_KEY_SQL, emailKey, throwawayEmail, TRIALS_PER_IP_PER_DAY } from "@/lib/trial";
 
@@ -13,7 +14,7 @@ const same = (a: string, b: string) => a.length === b.length && timingSafeEqual(
 const unusablePassword = () => hashPassword(randomBytes(32).toString("base64url"));
 
 /** The account for a Google sign-in, or the reason there isn't one. */
-async function accountFor(email: string, name: string, ip: string) {
+async function accountFor(email: string, name: string, ip: string, invite?: string) {
   const [u] = await db.select().from(users).where(sql`${sql.raw(EMAIL_KEY_SQL)} = ${emailKey(email)}`).limit(1);
   if (u) {
     // Sign-ups aren't proven to own their email, so someone could have registered this one first and be waiting. Google
@@ -35,6 +36,7 @@ async function accountFor(email: string, name: string, ip: string) {
   const [made] = await db.insert(users)
     .values({ name, email, passwordHash: await unusablePassword(), signupIp: ip, emailVerifiedAt: new Date() })
     .onConflictDoNothing().returning({ id: users.id });
+  if (made) await rememberInvite(made.id, invite).catch((e) => console.error("invite", e));
   return made?.id ?? "google";
 }
 
@@ -62,7 +64,7 @@ export async function GET(req: Request) {
   const who = googleIdentity((await res?.json().catch(() => null))?.id_token, clientId);
   if (!who) redirect("/login?error=google");
 
-  const account = await accountFor(who.email, who.name, ip);
+  const account = await accountFor(who.email, who.name, ip, jar.get(REF_COOKIE)?.value);
   if (account.startsWith("google")) redirect(`/login?error=${account}`);
   const [acc] = await db.select({ blockedAt: users.blockedAt }).from(users).where(eq(users.id, account));
   if (acc?.blockedAt) redirect("/login?error=blocked");
