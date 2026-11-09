@@ -7,7 +7,7 @@ import { CAPTION_STYLES } from "@/lib/captionStyles";
 import { ownJob } from "@/lib/jobs";
 import { effectivePlan } from "@/lib/plans";
 import { FONTS, logoFile } from "@/lib/render";
-import { exportPlan, type VideoInfo } from "@/lib/renderPlan";
+import { exportPlan, QUALITY_HEIGHTS, QUALITY_LEVELS, type ExportQuality, type VideoInfo } from "@/lib/renderPlan";
 import { fileStream } from "@/lib/stream";
 import { recordExport } from "@/lib/styleUsage";
 
@@ -33,13 +33,18 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!j) return json({ error: "Not found" }, 404);
   if (!j.filePath && !j.videoTotal) return json({ error: "The video was removed after 7 days, so it can't be rendered." }, 410);
   if (j.status !== "done" || !j.cues?.length) return json({ error: "Subtitles aren't ready yet." }, 409);
-  const { style, lang, video } = await req.json().catch(() => ({}));
+  const { style, lang, video, quality: q } = await req.json().catch(() => ({}));
+  // Size and quality picked in the Export tab; anything else means the original size at the best quality.
+  const quality: ExportQuality = {
+    height: (QUALITY_HEIGHTS as readonly number[]).includes(q?.height) ? q.height : null,
+    level: q?.level in QUALITY_LEVELS ? q.level : "best",
+  };
   if (!CAPTION_STYLES.some((s) => s.id === style)) return json({ error: "Unknown style." }, 400);
   if (!["ta", "en", "both"].includes(lang)) return json({ error: "Pick which subtitles to burn in." }, 400);
   const info = videoInfo(video);
   if (!info) return json({ error: "Couldn't read the video." }, 400);
   await db.update(jobs).set({ captionStyle: style, renderLang: lang }).where(eq(jobs.id, j.id));
-  const plan = exportPlan({ cues: j.cues, captionStyle: style, captionCustom: j.captionCustom, renderLang: lang, watermark: effectivePlan(u) === "free" }, { ...info, logo: !!(await logoFile(j)) });
+  const plan = exportPlan({ cues: j.cues, captionStyle: style, captionCustom: j.captionCustom, renderLang: lang, watermark: effectivePlan(u) === "free" }, { ...info, logo: !!(await logoFile(j)), quality });
   return json({ plan, seconds: j.durationSec, fonts: (await readdir(FONTS)).filter((f) => /\.(ttf|otf)$/i.test(f)) });
 }
 

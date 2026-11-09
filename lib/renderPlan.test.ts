@@ -31,3 +31,17 @@ test("the MP4 keeps the video's quality: size, depth and colours", () => {
   assert.equal(hdr[hdr.indexOf("-pix_fmt") + 1], "yuv420p10le");
   assert.equal(hdr[hdr.indexOf("-b:a") + 1], "320k");
 });
+
+test("the MP4 at a picked size and quality: scaled down after the captions are drawn, never up", () => {
+  const p = exportPlan(job, { size, aac: false, logo: false, deep: false, colour: null, quality: { height: 720, level: "high" } }).args;
+  const graph = p[p.indexOf("-filter_complex") + 1];
+  assert.match(graph, /\[full\]scale=720:1280:flags=lanczos,setsar=1\[out\]$/);
+  assert.ok(graph.indexOf("ass=") < graph.indexOf("scale=720"));
+  assert.equal(p[p.indexOf("-crf") + 1], "20");
+  const small = exportPlan(job, { size, aac: false, logo: false, deep: true, colour: null, quality: { height: null, level: "small" } }).args;
+  assert.equal(small[small.indexOf("-crf") + 1], "27");
+  assert.equal(small[small.indexOf("-b:a") + 1], "160k");
+  const up = exportPlan(job, { size, aac: true, logo: false, deep: false, colour: null, quality: { height: 2160, level: "best" } }).args;
+  assert.ok(!up.some((a) => /scale=\d+:\d+:flags/.test(a)));
+  assert.equal(up[up.indexOf("-crf") + 1], "16");
+});

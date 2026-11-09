@@ -17,6 +17,24 @@ export const VIDEO = "<video>", LOGO = "<logo>", OUT = "<out>";
 /** What the export must match in the user's video. `deep`: more than 8 bits (HDR phone clips); `colour`: how it's coloured. */
 export type VideoInfo = { size: { width: number; height: number } | null; aac: boolean; deep: boolean; colour: { space: string; primaries: string; trc: string } | null };
 
+/**
+ * What the user picks for the MP4. `height`: the shorter side in pixels (1080 = "1080p"), never above the video's
+ * own; null = the original size. `level`: best = the encoder's top setting (as before), high = a little smaller,
+ * small = a much smaller file for sharing.
+ */
+export type ExportQuality = { height: number | null; level: "best" | "high" | "small" };
+export const QUALITY_HEIGHTS = [2160, 1440, 1080, 720, 480] as const;
+export const QUALITY_LEVELS = { best: "Best", high: "High", small: "Smaller file" } as const;
+const CRF = { best: [16, 18], high: [20, 22], small: [25, 27] } as const; // [H.264, H.265]: lower is better and bigger
+
+/** The frame size for a chosen shorter side: the same shape, even numbers; unchanged when that wouldn't shrink it. */
+export function scaledSize(width: number, height: number, short: number | null) {
+  const s = Math.min(width, height);
+  if (!short || short >= s) return null;
+  const k = short / s, even = (n: number) => Math.max(2, Math.round((n * k) / 2) * 2);
+  return { width: even(width), height: even(height) };
+}
+
 /** The frame rate from what `ffmpeg -i` prints, as a fraction where it's an NTSC rate; 30 when it can't tell. */
 export function readRate(log: string) {
   const rate = log.match(/Stream #.*Video: .*?([\d.]+) tbr/)?.[1];
@@ -57,7 +75,7 @@ function subs(job: RenderJob, lang: "ta" | "en" | "both", width: number, height:
  * The finished MP4: captions burned into the video. `size`: the video's, null for an audio-only project (a plain dark
  * canvas). `aac`: its sound is AAC already, so it's copied (no quality lost, less work). `logo`: an uploaded logo is to hand.
  */
-export function exportPlan(job: RenderJob, o: VideoInfo & { logo: boolean }): Plan {
+export function exportPlan(job: RenderJob, o: VideoInfo & { logo: boolean; quality?: ExportQuality }): Plan {
   const src = o.size ?? { width: 1920, height: 1080 };
   const canvas = job.captionCustom?.canvas;
   const { width, height } = canvasSize(canvas, src.width, src.height); // the exported frame
@@ -96,15 +114,20 @@ export function exportPlan(job: RenderJob, o: VideoInfo & { logo: boolean }): Pl
   } else if (blend) graph.push(blendGraph(last, BLENDS[blend][2], look.color));
   else graph.push(`[${last}]ass=subs.ass:fontsdir=fonts:shaping=complex[out]`);
   if (job.watermark) { graph[graph.length - 1] = graph[graph.length - 1].replace(/\[out\]$/, "[subbed]"); graph.push(watermarkGraph("subbed", width, height)); }
+  // A smaller size, if picked: everything is drawn at full size first, then the whole frame is scaled down, so the
+  // captions keep their sharp edges and their place.
+  const to = scaledSize(width, height, o.quality?.height ?? null);
+  if (to) { graph[graph.length - 1] = graph[graph.length - 1].replace(/\[out\]$/, "[full]"); graph.push(`[full]scale=${to.width}:${to.height}:flags=lanczos,setsar=1[out]`); }
+  const [crf264, crf265] = CRF[o.quality?.level ?? "best"];
   return { files, args: [
     ...input, "-filter_complex", graph.join(";"), "-map", "[out]", "-map", audio,
     // The picture has to be encoded again to carry the captions, so it's encoded to look the same as what came in: the
     // same size and frame rate, a high quality setting, and ten-bit HDR kept as ten-bit HDR (H.265, as phones write it).
     // Not x264's veryfast or slower: they crash its WebAssembly build ("function signature mismatch").
-    ...(o.deep ? ["-c:v", "libx265", "-preset", "superfast", "-crf", "18", "-pix_fmt", "yuv420p10le", "-tag:v", "hvc1", "-x265-params", "log-level=error"]
-      : ["-c:v", "libx264", "-preset", "superfast", "-crf", "16", "-pix_fmt", "yuv420p"]),
+    ...(o.deep ? ["-c:v", "libx265", "-preset", "superfast", "-crf", String(crf265), "-pix_fmt", "yuv420p10le", "-tag:v", "hvc1", "-x265-params", "log-level=error"]
+      : ["-c:v", "libx264", "-preset", "superfast", "-crf", String(crf264), "-pix_fmt", "yuv420p"]),
     ...(o.colour ? ["-colorspace", o.colour.space, "-color_primaries", o.colour.primaries, "-color_trc", o.colour.trc] : []),
-    ...(o.aac ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", "320k"]), "-movflags", "+faststart", OUT,
+    ...(o.aac ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", o.quality?.level === "small" ? "160k" : "320k"]), "-movflags", "+faststart", OUT,
   ] };
 }
 
