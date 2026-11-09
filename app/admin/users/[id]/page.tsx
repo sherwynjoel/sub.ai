@@ -103,13 +103,14 @@ export default async function UserDetail({ params }: { params: Promise<{ id: str
       <section className="panel">
         <h2>Invites</h2>
         <p className="small">
-          <b>Invite box on their Billing page: {inv.on && u.inviteOn && !u.blockedAt ? "showing" : "hidden"}</b>
+          <b>Invite box on their Billing page: {inv.on && !u.blockedAt ? "showing" : "hidden"}</b>
           {!inv.on && <> · invites are off for everyone: turn them on in <Link href="/admin/growth#invite-settings">Growth › Invite settings</Link></>}
-          {!u.inviteOn && <> · not turned on for this user: click Turn on below</>}
           {u.blockedAt && <> · this user is blocked</>}
         </p>
         {by && <p className="small">Invited by <Link href={`/admin/users/${by.id}`}>{by.email}</Link> · {u.referralStatus === "pending" ? <Link href="/admin/growth#invites">waiting to be checked</Link> : u.referralStatus}</p>}
-        <UserInviteForm url={url} on={u.inviteOn} minutes={u.inviteMinutes} siteUpTo={inv.upTo} />
+        <UserInviteForm url={url} minutes={u.inviteMinutes} siteUpTo={inv.upTo} />
+        <h3 className="spaced small">People they invited ({invited.length})</h3>
+        {invited.length === 0 && <p className="muted small">Nobody yet.</p>}
         {invited.length > 0 && (
           <ul className="plain-list spaced">{invited.map((f) => <li key={f.id}><Link href={`/admin/users/${f.id}`}>{f.email}</Link> <span className="muted small">{when(f.createdAt)} · {f.status ?? "—"}{f.paidAt ? " · paid" : ""}</span></li>)}</ul>
         )}

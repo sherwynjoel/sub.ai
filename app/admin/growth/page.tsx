@@ -10,15 +10,13 @@ import { coupons, db, users } from "@/db";
 import { when } from "@/lib/admin";
 import { GROUPS, groupMembers, rawAnnouncement, type Group } from "@/lib/news";
 import { INVITE_MESSAGE, inviteSettings, pendingInvites } from "@/lib/referral";
-import { count, eq } from "drizzle-orm";
 import { effectivePlan, longDate, minSec, PLANS, secondsLeft } from "@/lib/plans";
 
 /** Bringing people back and getting them to pay: who to contact, the announcement bar, codes and group emails. */
 export default async function Growth() {
   const groups = Object.keys(GROUPS) as Group[];
-  const [inv, [inviters], ann, codes, ending, trial, ...counts] = await Promise.all([
+  const [inv, ann, codes, ending, trial, ...counts] = await Promise.all([
     inviteSettings(),
-    db.select({ n: count() }).from(users).where(eq(users.inviteOn, true)),
     rawAnnouncement(),
     db.select().from(coupons).orderBy(desc(coupons.createdAt)),
     groupMembers("ending"),
@@ -77,7 +75,7 @@ export default async function Growth() {
                 <td><Link href={`/admin/users/${f.id}`}>{f.email}</Link><br /><span className="muted small">joined {when(f.createdAt)}</span></td>
                 <td>{by ? <Link href={`/admin/users/${by.id}`}>{by.email}</Link> : <span className="muted">deleted</span>}</td>
                 <td className="small">
-                  <span className={`status ${f.referralPaidAt ? "good" : "neutral"}`}>{f.referralPaidAt ? `Paid ${when(f.referralPaidAt)}` : "Not paid"}</span>{" "}
+                  <span className={`status ${f.referralPaidAt ? "good" : "neutral"}`}>{f.referralPaidAt ? `Bought ${PLANS[effectivePlan(f)].name} · ${when(f.referralPaidAt)}` : `Not bought yet · ${PLANS[effectivePlan(f)].name}`}</span>{" "}
                   <span className={`status ${f.emailVerifiedAt ? "good" : "neutral"}`}>{f.emailVerifiedAt ? "Email confirmed" : "Email not confirmed"}</span>{" "}
                   <span className="status neutral">{minSec(Math.max(0, f.secondsUsed))} used</span>
                   {sameIp && <> <span className="status bad">Same connection as inviter</span></>}
@@ -92,7 +90,7 @@ export default async function Growth() {
 
       <section className="panel" id="invite-settings">
         <h2>Invite settings</h2>
-        <p className="muted small">Two switches: this one, and one per user. Only users you turn on (Users › open a user › Invites › Turn on; {inviters?.n ?? 0} so far) see an invite link on their Billing page, and only while invites are on here. Turning invites off hides every link; invites already waiting stay in the list above.</p>
+        <p className="muted small">On: every user sees an invite link on their Billing page. Nobody gets minutes by themselves: each friend who signs up with a link waits in “Invites to check” above until you approve. Off: every link is hidden; invites already waiting stay in the list.</p>
         <InviteSettingsForm on={inv.on} upTo={inv.upTo} message={inv.message === INVITE_MESSAGE ? "" : inv.message} fallback={INVITE_MESSAGE} />
       </section>
 
