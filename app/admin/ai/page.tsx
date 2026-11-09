@@ -17,13 +17,15 @@ export default async function AiCost() {
   const names = await jobNames(s.recent.map((r) => r.jobId).filter((x): x is string => !!x));
   const thisMonth = s.months.at(-1)!, lastMonth = s.months.at(-2)!;
   const last30 = s.recent; // shown below
-  const used = [...new Set([...s.models.map((m) => m.model), cfg.model, ...(cfg.sttModel ? [cfg.sttModel] : [])])];
+  // Only the models this site uses: the chosen service's, the translation models (the Translate button always uses
+  // Sarvam: Mayura for 10 languages, Sarvam-Translate for the rest), and any model used in the last 12 months.
+  const used = [...new Set([cfg.model, ...(cfg.sttModel ? [cfg.sttModel] : []), "mayura:v1", "sarvam-translate:v1", ...s.everUsed])];
 
   return (
     <>
       <h1>AI cost</h1>
       <p className="muted">
-        Measured from every AI call: what the service reports it used (Gemini tokens, seconds of audio, characters translated), priced with the list at the bottom.
+        Measured from every AI call (seconds of audio heard, characters translated) and priced with the list at the bottom.
         {s.since ? <> Measuring since {when(s.since)}.</> : <> Nothing measured yet: the first video made from now on shows up here.</>}
         {" "}Now using <b>{cfg.provider}</b> · {cfg.model}{cfg.sttModel ? ` + ${cfg.sttModel}` : ""} (<Link href="/admin/server">change</Link>).
       </p>
@@ -78,9 +80,9 @@ export default async function AiCost() {
       <section className="panel">
         <h2>Prices</h2>
         <p className="muted small">
-          List prices per unit, in the currency the service bills in. Change one when the service changes its price; the figures above update straight away
-          (past ones too). Remaining credit isn&apos;t shown: Gemini and Sarvam don&apos;t give a balance to apps. Check it on their dashboards
-          (<a href="https://aistudio.google.com/usage" target="_blank" rel="noreferrer">Google AI Studio</a>, <a href="https://dashboard.sarvam.ai" target="_blank" rel="noreferrer">Sarvam</a>).
+          The models this site uses, at their list prices (filled in already). Change one only if the service changes its price; the figures above
+          update straight away (past ones too). Remaining credit isn&apos;t shown: Sarvam doesn&apos;t give the balance to apps. See it on the{" "}
+          <a href="https://dashboard.sarvam.ai" target="_blank" rel="noreferrer">Sarvam dashboard</a> (Settings → Billing).
         </p>
         <AiPriceForm book={s.book} used={used} />
       </section>

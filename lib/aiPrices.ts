@@ -132,6 +132,8 @@ export async function aiCostStats() {
       return { at: new Date(r.at), jobId: r.jobId, kind: r.kind, providers: r.providers, videoSec: r.videoSec, cost, perMin: r.videoSec > 0 ? cost / (r.videoSec / 60) : null };
     }),
     unpriced: [...unpriced],
+    /** Every model used in the last 12 months */
+    everUsed: [...new Set(byModelMonth.map((r) => r.model))],
     book,
   };
 }
