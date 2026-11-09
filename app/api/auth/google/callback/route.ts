@@ -64,6 +64,8 @@ export async function GET(req: Request) {
 
   const account = await accountFor(who.email, who.name, ip);
   if (account.startsWith("google")) redirect(`/login?error=${account}`);
+  const [acc] = await db.select({ blockedAt: users.blockedAt }).from(users).where(eq(users.id, account));
+  if (acc?.blockedAt) redirect("/login?error=blocked");
   await startSession(account);
   redirect(saved.plan ? `/app/billing?plan=${saved.plan}` : "/app");
 }

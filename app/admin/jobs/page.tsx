@@ -54,7 +54,7 @@ export default async function Operations({ searchParams }: { searchParams: Promi
               <tbody>
                 {rows.map(({ j, email, userId }) => (
                   <tr key={j.id}>
-                    <td>{j.filename}{!j.filePath && <span className="muted">Video deleted</span>}</td>
+                    <td><Link href={`/admin/jobs/${j.id}`}>{j.filename}</Link>{!j.filePath && <span className="muted">Video deleted</span>}</td>
                     <td><Link href={`/admin/users/${userId}`}>{email}</Link></td>
                     <td className="num">{mins(j.durationSec)}</td>
                     <td>

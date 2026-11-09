@@ -6,6 +6,7 @@ import { useState } from "react";
 const GOOGLE_ERRORS: Record<string, string> = {
   google: "Google sign-in didn't work. Try again, or use your email and password.",
   "google-email": "Please use your regular email, not a temporary inbox.",
+  blocked: "This account has been blocked. If you think that's a mistake, write to vasanam2026@gmail.com.",
   "google-limit": "Too many accounts were made from this connection today. Sign in to your existing account, or try again tomorrow.",
 };
 

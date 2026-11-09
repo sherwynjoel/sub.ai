@@ -22,7 +22,7 @@ export async function refund(userId: string, seconds: number, use: Use) {
   await logUse(userId, -seconds, use);
 }
 
-export type Use = { jobId?: string | null; video: string; kind: "upload" | "translate" | "remake" | "extra" | "refund"; detail?: string };
+export type Use = { jobId?: string | null; video: string; kind: "upload" | "translate" | "remake" | "extra" | "refund" | "bonus"; detail?: string };
 
 /** Note a use of minutes in the user's history (Usage page). Never in the way: a failure to note it is only logged. */
 export async function logUse(userId: string, seconds: number, use: Use) {
