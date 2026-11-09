@@ -64,6 +64,8 @@ export const jobs = pgTable("jobs", {
   provider: text("provider"),
   model: text("model"),
   error: text("error"),
+  startedAt: timestamp("started_at", { withTimezone: true }), // when the worker last picked it up
+  finishedAt: timestamp("finished_at", { withTimezone: true }), // when that run ended (done or failed): how long making subtitles takes
   cues: jsonb("cues").$type<Cue[]>(),
   speech: jsonb("speech").$type<[number, number][]>(), // where someone speaks, for the editor's timing check (lib/timing.ts)
   levels: text("levels"), // the sound's shape for the timeline (lib/waveform.ts); measured on first look

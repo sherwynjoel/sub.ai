@@ -3,6 +3,8 @@ import { and, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import Action from "@/components/admin/Action";
 import { db, jobs, users } from "@/db";
 import { mins, when } from "@/lib/admin";
+import { minSec } from "@/lib/plans";
+import { quality } from "@/lib/quality";
 
 const PER_PAGE = 50;
 const STATUSES = ["queued", "processing", "done", "failed"];
@@ -20,10 +22,11 @@ export default async function Operations({ searchParams }: { searchParams: Promi
   if (sp.q?.trim()) filters.push(or(ilike(jobs.filename, `%${sp.q.trim()}%`), ilike(users.email, `%${sp.q.trim()}%`))!);
   const where = filters.length ? and(...filters) : undefined;
 
-  const [rows, [{ total }]] = await Promise.all([
+  const [rows, [{ total }], q] = await Promise.all([
     db.select({ j: jobs, email: users.email, userId: users.id }).from(jobs).innerJoin(users, eq(users.id, jobs.userId))
       .where(where).orderBy(desc(jobs.createdAt)).limit(PER_PAGE).offset((page - 1) * PER_PAGE),
     db.select({ total: sql<number>`count(*)::int` }).from(jobs).innerJoin(users, eq(users.id, jobs.userId)).where(where),
+    quality(),
   ]);
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
   const link = (p: number) => `/admin/jobs?${new URLSearchParams({ ...(sp.status ? { status: sp.status } : {}), ...(sp.q ? { q: sp.q } : {}), page: String(p) })}`;
@@ -31,6 +34,33 @@ export default async function Operations({ searchParams }: { searchParams: Promi
   return (
     <>
       <h1>Operations</h1>
+      {q.queue.slow && (
+        <p className="error panel">The queue is slow: {q.queue.waiting} video{q.queue.waiting === 1 ? "" : "s"} waiting{q.queue.oldest ? `, the oldest for ${Math.round(q.queue.waitMin)} min` : ""}. Check that the worker is running and the AI service is answering.</p>
+      )}
+      <dl className="stats">
+        <div className="stat"><dt>Waiting now</dt><dd>{q.queue.waiting}</dd><span className="sub">{q.queue.processing} being made{q.queue.oldest ? `, oldest ${Math.round(q.queue.waitMin)} min` : ""}</span></div>
+        <div className="stat"><dt>Worked, 30 days</dt><dd>{q.done}</dd><span className="sub">{q.failed} failed ({Math.round(q.failRate * 100)}%)</span></div>
+        <div className="stat"><dt>Usual time</dt><dd>{q.speed.n ? minSec(Math.round(q.speed.median)) : "—"}</dd><span className="sub">{q.speed.n ? `Per video, last 7 days (${q.speed.n} videos)` : "No finished videos timed yet"}</span></div>
+        <div className="stat"><dt>Per minute of video</dt><dd>{q.speed.perMin ? minSec(Math.round(q.speed.perMin)) : "—"}</dd><span className="sub">{q.speed.slowest ? `Slowest: ${minSec(Math.round(q.speed.slowest))}` : "Time to make subtitles"}</span></div>
+      </dl>
+
+      <div className="two-col">
+        <section className="panel">
+          <h2>Why videos failed (30 days)</h2>
+          {q.reasons.length === 0 ? <p className="muted">Nothing failed. 🎉</p> : (
+            <div className="table-wrap"><table><tbody>{q.reasons.slice(0, 10).map((r) => (
+              <tr key={r.kind}><td className="num"><b>{r.n}×</b></td><td>{r.kind}<span className="muted small">Last: {when(r.last)} · <Link href={`/admin/jobs/${r.example.id}`}>{r.example.filename}</Link></span></td></tr>
+            ))}</tbody></table></div>
+          )}
+        </section>
+        <section className="panel">
+          <h2>By AI service (30 days)</h2>
+          {q.byProvider.length === 0 ? <p className="muted">No videos yet.</p> : (
+            <div className="table-wrap"><table><thead><tr><th>Service</th><th className="num">Worked</th><th className="num">Failed</th></tr></thead>
+              <tbody>{q.byProvider.map((p) => <tr key={p.provider}><td>{p.provider}</td><td className="num">{p.done}</td><td className="num">{p.failed}{p.done + p.failed ? ` (${Math.round((p.failed / (p.done + p.failed)) * 100)}%)` : ""}</td></tr>)}</tbody></table></div>
+          )}
+        </section>
+      </div>
       <form className="filters" method="get">
         <label>Search<input type="search" name="q" defaultValue={sp.q} placeholder="File name or email" /></label>
         <label>Status
