@@ -11,9 +11,9 @@ export function emailKey(email: string) {
 }
 
 /** The same rule in SQL, for comparing with the emails already saved. */
-export const EMAIL_KEY_SQL = `(case when split_part(email, '@', 2) in ('gmail.com', 'googlemail.com')
-  then replace(split_part(split_part(email, '@', 1), '+', 1), '.', '') || '@gmail.com'
-  else split_part(split_part(email, '@', 1), '+', 1) || '@' || split_part(email, '@', 2) end)`;
+export const EMAIL_KEY_SQL = `(case when split_part(lower(email), '@', 2) in ('gmail.com', 'googlemail.com')
+  then replace(split_part(split_part(lower(email), '@', 1), '+', 1), '.', '') || '@gmail.com'
+  else split_part(split_part(lower(email), '@', 1), '+', 1) || '@' || split_part(lower(email), '@', 2) end)`;
 
 /** Free trials a single connection can start in a day (homes and offices share one; so do some mobile networks). */
 export const TRIALS_PER_IP_PER_DAY = 3;
