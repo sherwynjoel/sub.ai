@@ -812,6 +812,8 @@ interface GlassIconRevealProps extends Omit<React.HTMLAttributes<HTMLDivElement>
   tuning?: Partial<GlassTuning>
   /** Accessible name of the logo */
   label?: string
+  /** Called once when a reveal that doesn't loop has played to the end (or can't play: no WebGL, reduced motion) */
+  onDone?: () => void
 }
 
 export function GlassIconReveal({
@@ -833,6 +835,7 @@ export function GlassIconReveal({
   time,
   tuning,
   label = "Logo",
+  onDone,
   className,
   style,
   onClick,
@@ -852,15 +855,15 @@ export function GlassIconReveal({
     return { ...LOOKS[look], ...set, ...(JSON.parse(tuningKey) as Partial<GlassTuning>) }
   }, [look, background, logoColor, plateColor, iconPlate, keepPlate, originalColors, tileSize, logoScale, finalScale, hold, offsetKey, tuningKey])
 
-  const live = React.useRef({ settings, loop, speed, time })
-  React.useEffect(() => { live.current = { settings, loop, speed, time } })
+  const live = React.useRef({ settings, loop, speed, time, onDone })
+  React.useEffect(() => { live.current = { settings, loop, speed, time, onDone } })
 
   React.useEffect(() => {
     const wrap = wrapRef.current
     if (!wrap) return
     const engine = startEngine(wrap, live)
     if (!engine) {
-      requestAnimationFrame(() => setFallback(true)) // no WebGL2: the plain mark instead
+      requestAnimationFrame(() => { setFallback(true); live.current.onDone?.() }) // no WebGL2: the plain mark instead
       return
     }
     engineRef.current = engine
@@ -881,7 +884,7 @@ export function GlassIconReveal({
         if (cancelled) return
         engineRef.current?.setLogo(data)
       },
-      (err) => console.error(err),
+      (err) => { console.error(err); live.current.onDone?.() }, // nothing to reveal
     )
     return () => {
       cancelled = true
@@ -924,7 +927,7 @@ export function GlassIconReveal({
 // drawn only while on screen and only when something changed.
 function startEngine(
   wrap: HTMLDivElement,
-  live: React.RefObject<{ settings: Settings; loop: boolean; speed: number; time?: number }>,
+  live: React.RefObject<{ settings: Settings; loop: boolean; speed: number; time?: number; onDone?: () => void }>,
 ) {
   const canvas = document.createElement("canvas")
   canvas.setAttribute("aria-hidden", "true")
@@ -953,6 +956,9 @@ function startEngine(
   let lost = false
   let raf = 0
   let last = 0
+  let told = false
+  const finished = () => { if (!told) { told = true; live.current.onDone?.() } }
+  if (reduceMotion) setTimeout(finished, 600) // the still frame, shown for a moment
 
   function tick(now: number) {
     raf = 0
@@ -983,7 +989,7 @@ function startEngine(
         if (time >= end) {
           time = end
           if (loop) pauseLeft = Math.max(0.05, P.hold) + OUTRO
-          else playing = false
+          else { playing = false; finished() }
         }
         dirty = true
       }
