@@ -25,7 +25,7 @@ export function ForgotForm() {
       <h1>Forgot your password?</h1>
       {state.done ? <>
         <p role="status">{state.done}</p>
-        {!state.done.startsWith("Email ") && <p className="spam-tip">Not in your inbox? Check your Spam folder: our emails sometimes land there by mistake. If you find it there, tap “Not spam”.</p>}
+        {!state.done.startsWith("Email ") && <p className="spam-tip">Not in your inbox? <b>Check your Spam folder</b>: our emails sometimes land there by mistake. If you find it there, tap “Not spam”.</p>}
       </> : <>
         <p className="muted">Enter the email you signed up with.</p>
         <label>Email<input name="email" type="email" autoComplete="email" required /></label>

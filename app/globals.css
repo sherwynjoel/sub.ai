@@ -254,3 +254,4 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: man
 
 /* "Check your spam" reminder after an email is sent */
 .spam-tip { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: #fff7d6; color: #6b4e00; font-size: .9rem; line-height: 1.45; }
+.spam-tip b { background: #ffd43b; color: #3d2c00; padding: 1px 6px; border-radius: 5px; font-weight: 700; }
