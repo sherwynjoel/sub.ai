@@ -120,6 +120,13 @@
       "when": 1794077491923,
       "tag": "0016_levels",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794204416712,
+      "tag": "0017_credit_log",
+      "breakpoints": true
     }
   ]
 }

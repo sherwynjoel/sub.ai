@@ -7,6 +7,7 @@ export default function AppNav({ isAdmin }: { isAdmin: boolean }) {
   const links = [
     ["/app", "Projects"],
     ["/app/plugin", "Plugin"],
+    ["/app/usage", "Usage"],
     ["/app/billing", "Billing"],
     ...(isAdmin ? [["/admin", "Admin"]] : []),
   ];

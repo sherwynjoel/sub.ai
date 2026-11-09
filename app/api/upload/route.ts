@@ -12,7 +12,8 @@ import { DEFAULT_LANGUAGE, isLanguage } from "@/lib/languages";
 import { JOB_SCRIPTS, type JobScript } from "@/lib/captionTypes";
 import { DEFAULT_STYLE, SAFE_ZONES, STYLE_CHOICES } from "@/lib/captionStyles";
 import { minSec, outOfMinutes, secondsLeft } from "@/lib/plans";
-import { charge } from "@/lib/credits";
+import { charge, logUse } from "@/lib/credits";
+import { languageOf } from "@/lib/languages";
 import { mustConfirm } from "@/lib/verify";
 import { knownStyle, presetLook } from "@/lib/presets";
 
@@ -92,5 +93,6 @@ export async function POST(req: Request) {
     userId: u.id, filename: name, durationSec: duration, mime, language: lang, script, withEnglish, captionStyle, captionCustom,
     ...(audioFirst ? { audioPath: source, videoTotal: videoBytes } : { filePath: path }),
   }).returning();
+  await logUse(u.id, duration, { jobId: job.id, video: name, kind: "upload", detail: languageOf(lang).name });
   return json({ id: job.id, durationSec: duration }, 201);
 }

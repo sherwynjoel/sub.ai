@@ -5,7 +5,8 @@ import { currentUser, json, unauthorized } from "@/lib/auth";
 import { ownJob } from "@/lib/jobs";
 import { englishCues } from "@/lib/subtitles";
 import { CAPTION_TYPES, typeSettings, type CaptionType } from "@/lib/captionTypes";
-import { charge } from "@/lib/credits";
+import { charge, logUse } from "@/lib/credits";
+import { languageOf } from "@/lib/languages";
 import { minSec, outOfMinutes, passExpired, secondsLeft } from "@/lib/plans";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -43,6 +44,7 @@ export async function POST(req: Request, { params }: Ctx) {
     if (passExpired(u)) return json({ error: outOfMinutes(u) }, 402);
     return json({ error: `Making the captions again uses ${minSec(j.durationSec)} (the video's length), but you have ${minSec(secondsLeft(u))} left. Upgrade to continue.` }, 402);
   }
+  await logUse(u.id, j.durationSec, { jobId: j.id, video: j.filename, kind: "remake", detail: CAPTION_TYPES.find((t) => t.id === body.type)!.title(languageOf(j.language).name) });
   for (const f of [j.renderPath, j.overlayPath]) if (f) await unlink(f).catch(() => {});
   await db.update(jobs).set({
     script: want.script, withEnglish: want.english, captionCustom: { ...j.captionCustom, show: want.show },

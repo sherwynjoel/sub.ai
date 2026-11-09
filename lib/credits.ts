@@ -1,5 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
-import { db, users } from "@/db";
+import { creditLog, db, users } from "@/db";
 import { effectivePlan, PLANS, secondsLeft } from "@/lib/plans";
 
 type Payer = { id: string; plan: string; periodEnd: Date | null; secondsUsed: number; createdAt?: Date };
@@ -16,7 +16,16 @@ export async function charge(u: Payer, seconds: number) {
   return done.length > 0;
 }
 
-/** Give back what a run that failed was charged. */
-export async function refund(userId: string, seconds: number) {
+/** Give back what a run that failed was charged (noted in the history as given back). */
+export async function refund(userId: string, seconds: number, use: Use) {
   await db.update(users).set({ secondsUsed: sql`greatest(0, ${users.secondsUsed} - ${Math.ceil(seconds)})` }).where(eq(users.id, userId));
+  await logUse(userId, -seconds, use);
+}
+
+export type Use = { jobId?: string | null; video: string; kind: "upload" | "translate" | "remake" | "extra" | "refund"; detail?: string };
+
+/** Note a use of minutes in the user's history (Usage page). Never in the way: a failure to note it is only logged. */
+export async function logUse(userId: string, seconds: number, use: Use) {
+  await db.insert(creditLog).values({ userId, seconds: Math.ceil(seconds), jobId: use.jobId ?? null, video: use.video, kind: use.kind, detail: use.detail ?? null })
+    .catch((e) => console.error("credit log", e));
 }
