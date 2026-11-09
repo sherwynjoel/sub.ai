@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AdminAi from "@/components/AdminAi";
+import AdminEmailTest from "@/components/AdminEmailTest";
 import AdminBento from "@/components/admin/AdminBento";
 import { desc, eq } from "drizzle-orm";
 import { db, jobs, users } from "@/db";
@@ -41,6 +42,12 @@ export default async function Overview() {
       {!o.worker.online && (
         <p className="error">The worker isn&apos;t running, so uploads will wait in the queue. Start it with <code>npm run worker</code> (or <code>pm2 restart vasanam-worker</code> on the server).</p>
       )}
+
+      <section className="panel">
+        <h2>Email</h2>
+        <p className="muted">Password resets and email confirmations. Send yourself a test to check they go out; if not, this shows why.</p>
+        <AdminEmailTest />
+      </section>
 
       <section className="panel">
         <h2>Subtitle AI</h2>
