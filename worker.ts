@@ -21,7 +21,7 @@ const KEEP_DAYS = 7;
 
 async function claim() {
   const rows = await db.execute(sql`
-    UPDATE jobs SET status = 'processing', progress = 1, updated_at = now()
+    UPDATE jobs SET status = 'processing', progress = 1, updated_at = now(), started_at = now(), finished_at = NULL
     WHERE id = (SELECT id FROM jobs WHERE status = 'queued' ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1)
     RETURNING id`);
   const id = (rows as unknown as { id: string }[])[0]?.id;
@@ -81,7 +81,7 @@ async function processJob(job: typeof jobs.$inferSelect) {
       await db.update(jobs).set({ progress: 98 }).where(eq(jobs.id, job.id));
     }
     const speech = level ? speechRegions(level, LEVEL_FRAME) : null; // for the editor's timing check
-    await db.update(jobs).set({ status: "done", progress: 100, error: null, cues: stored, speech, updatedAt: new Date() }).where(eq(jobs.id, job.id));
+    await db.update(jobs).set({ status: "done", progress: 100, error: null, cues: stored, speech, updatedAt: new Date(), finishedAt: new Date() }).where(eq(jobs.id, job.id));
     console.log(`job ${job.id} done (${plan.length} chunks, ${cfg.provider}/${cfg.model})`);
   } finally {
     await rm(dir, { recursive: true, force: true });
@@ -127,7 +127,7 @@ async function processPreview(job: typeof jobs.$inferSelect) {
 
 async function fail(job: typeof jobs.$inferSelect, err: unknown) {
   console.error(`job ${job.id} failed`, err);
-  await db.update(jobs).set({ status: "failed", error: String((err as Error)?.message ?? err).slice(0, 500), updatedAt: new Date() }).where(eq(jobs.id, job.id));
+  await db.update(jobs).set({ status: "failed", error: String((err as Error)?.message ?? err).slice(0, 500), updatedAt: new Date(), finishedAt: new Date() }).where(eq(jobs.id, job.id));
   // Give the minutes back — the user got nothing for them. (Every run is charged: the upload, and each remake.)
   await refund(job.userId, job.durationSec, { jobId: job.id, video: job.filename, kind: "refund", detail: "Making the subtitles didn't work" });
 }
