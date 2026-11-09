@@ -5,6 +5,7 @@ import TimeInput, { tc } from "@/components/TimeInput";
 import { unpackLevels } from "@/lib/waveform";
 import { stem } from "@/lib/projectName";
 import type { Step } from "@/lib/deviceExport";
+import { QUALITY_LEVELS, type ExportQuality } from "@/lib/renderPlan";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -755,7 +756,17 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
   // The MP4 is made on this device (lib/deviceExport.ts), so it lasts as long as this page.
   const [exporting, setExporting] = useState<Step | null>(null);
-  const [made, setMade] = useState<{ url: string; name: string } | null>(null);
+  const [made, setMade] = useState<{ url: string; name: string; q: string } | null>(null);
+  // The size and quality picked for the MP4 (remembered on this device): the original size at the best quality unless changed.
+  const savedQuality = useSyncExternalStore(noop, () => { try { return localStorage.getItem("vs-export-quality") ?? ""; } catch { return ""; } }, () => "");
+  const [pickedQuality, setPickedQuality] = useState<ExportQuality | null>(null);
+  const quality = useMemo<ExportQuality>(() => {
+    if (pickedQuality) return pickedQuality;
+    try { const q = JSON.parse(savedQuality || "null"); if (q && q.level in QUALITY_LEVELS) return { height: typeof q.height === "number" ? q.height : null, level: q.level }; } catch { /* none saved */ }
+    return { height: null, level: "best" };
+  }, [pickedQuality, savedQuality]);
+  const pickQuality = (q: ExportQuality) => { setPickedQuality(q); try { localStorage.setItem("vs-export-quality", JSON.stringify(q)); } catch { /* private mode */ } };
+  const qualityKey = JSON.stringify(quality);
   const [exportError, setExportError] = useState("");
   const [wrongFile, setWrongFile] = useState(false);
   const stopExport = useRef<AbortController | null>(null);
@@ -923,7 +934,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   /** One tap: the Export tab, and the video made unless the last one is current. */
   function exportNow() {
     setTab("export");
-    if (rendering || (made && !dirty && !lookChanged) || !videoHere) return;
+    if (rendering || (made && !dirty && !lookChanged && made.q === qualityKey) || !videoHere) return;
     void render();
   }
   async function render() {
@@ -947,14 +958,14 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
         video: localVideo(job.id)?.file ?? `/api/jobs/${job.id}/media`, logo: custom.logo ? `/api/jobs/${job.id}/logo` : undefined,
         signal: stop.signal, onStep: setExporting,
         plan: async (video) => {
-          const res = await fetch(`/api/jobs/${job.id}/render`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ style: styleId, lang, video }) });
+          const res = await fetch(`/api/jobs/${job.id}/render`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ style: styleId, lang, video, quality }) });
           const body = await res.json().catch(() => ({}));
           if (!res.ok) throw new ExportRefused(body.error || "Couldn't start the export.");
           return body;
         },
       });
       if (made) URL.revokeObjectURL(made.url);
-      const file = { url: URL.createObjectURL(blob), name: `${stem(job.filename)}.${styleId}.mp4` };
+      const file = { url: URL.createObjectURL(blob), name: `${stem(job.filename)}.${styleId}${quality.height ? `.${quality.height}p` : ""}.mp4`, q: qualityKey };
       setMade(file);
       setRenderedLook(JSON.stringify([styleId, custom]));
       const a = document.createElement("a");
@@ -1900,10 +1911,31 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 </div>
               ) : (
                 <div className="insp-actions">
+                  <div className="export-row quality-row">
+                    <label>Size
+                      <select value={quality.height ?? ""} onChange={(e) => pickQuality({ ...quality, height: e.target.value ? +e.target.value : null })}>
+                        <option value="">Original</option>
+                        <option value="1080">1080p Full HD</option>
+                        <option value="720">720p HD</option>
+                        <option value="480">480p</option>
+                      </select>
+                    </label>
+                    <label>Quality
+                      <select value={quality.level} onChange={(e) => pickQuality({ ...quality, level: e.target.value as ExportQuality["level"] })}>
+                        <option value="best">Best</option>
+                        <option value="high">High</option>
+                        <option value="small">Smaller file</option>
+                      </select>
+                    </label>
+                  </div>
+                  <p className="muted small">
+                    {quality.height ? `${quality.height}p: smaller than the original, so it exports and uploads faster (a video is never made bigger than it is). ` : "Original: the same size as your video. "}
+                    {{ best: "Best: the sharpest picture, the largest file. Best for posting.", high: "High: a smaller file that looks the same on a phone.", small: "Smaller file: quick to send on WhatsApp or email; a little softer." }[quality.level]}
+                  </p>
                   <button className="btn" onClick={render} disabled={!videoHere}>{coming ? "Choose the video first" : dirty ? "Save and export MP4" : "Export MP4"}</button>
-                  {made && !dirty && !lookChanged && <a className="btn ghost" href={made.url} download={made.name}>Download MP4</a>}
-                  {made && (dirty || lookChanged) && <>
-                    <p className="muted small render-stale">Your last MP4 was made before your latest changes. Export again to get them in the video.</p>
+                  {made && !dirty && !lookChanged && made.q === qualityKey && <a className="btn ghost" href={made.url} download={made.name}>Download MP4</a>}
+                  {made && (dirty || lookChanged || made.q !== qualityKey) && <>
+                    <p className="muted small render-stale">{dirty || lookChanged ? "Your last MP4 was made before your latest changes. Export again to get them in the video." : "Your last MP4 was made at a different size or quality. Export again to get this one."}</p>
                     <a className="btn ghost" href={made.url} download={made.name}>Download the older MP4</a>
                   </>}
                   {!made && (job.renderStatus === "done" || job.renderStatus === "stale") && <a className="btn ghost" href={`/api/jobs/${job.id}/render`} download>Download the older MP4</a>}

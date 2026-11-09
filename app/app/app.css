@@ -1164,3 +1164,6 @@ html:has(.pass-reveal[open]) { overflow: hidden; }
 .plan .amt s { font-size: .6em; font-weight: 500; }
 .announce { background: #111; color: #fff; text-align: center; padding: 9px 16px; font-size: .92rem; }
 .announce a { color: #c8f560; font-weight: 600; margin-left: 6px; }
+
+.quality-row { margin-bottom: 4px; }
+.quality-row select { max-width: 100%; }
