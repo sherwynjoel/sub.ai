@@ -29,8 +29,9 @@ export default function ConfirmEmail() {
     <div className="confirm-note" role="alert">
       <p>
         <b>{opened === "0" ? "That link has expired or was already used." : "Confirm your email to start your free minutes."}</b>{" "}
-        {sent === "sent" ? `A new link is on its way to ${me.email}.` : `Open the link we sent to ${me.email} (check spam too).`}
+        {sent === "sent" ? `A new link is on its way to ${me.email}.` : `Open the link we sent to ${me.email}.`}
       </p>
+      <p className="spam-tip">Not in your inbox? Check your Spam folder: our emails sometimes land there by mistake. If you find it there, tap “Not spam”.</p>
       {sent !== "sent" && (
         <button className="btn ghost small" onClick={again} disabled={sent === "sending"}>{sent === "sending" ? "Sending…" : "Send the email again"}</button>
       )}
