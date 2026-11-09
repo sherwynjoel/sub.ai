@@ -76,16 +76,58 @@
 .sw-group button[aria-pressed="true"] { background: var(--lime); border-color: var(--lime); color: var(--black); }
 .sw-group button:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
 
-/* ---------- Editor: real screenshots ---------- */
-.hm-shots { position: relative; padding-right: clamp(60px, 14vw, 190px); }
-.hm-desk { position: relative; margin: 0; border-radius: 18px; background: #fff; padding: 34px 0 0; box-shadow: 0 50px 90px -50px rgba(40, 30, 90, .55), 0 0 0 1px var(--line); overflow: hidden; }
-.hm-desk img { display: block; width: 100%; height: auto; }
-.hm-dots { position: absolute; top: 13px; left: 16px; display: flex; gap: 6px; }
-.hm-dots i { width: 10px; height: 10px; border-radius: 50%; background: #e2e0ea; }
-.hm-pin { position: absolute; translate: -50% -50%; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--lime); color: var(--black); font: 700 .9rem var(--font-body); box-shadow: 0 0 0 5px rgba(212, 255, 63, .35), 0 6px 14px rgba(0, 0, 0, .25); }
-.hm-mobile { position: absolute; right: 0; bottom: -40px; width: clamp(130px, 21%, 250px); margin: 0; }
-.hm-mobile img { display: block; width: 100%; height: auto; border-radius: 28px; border: 6px solid var(--black); box-shadow: 0 40px 70px -30px rgba(12, 12, 20, .6); }
-.hm-mobile figcaption { margin-top: 10px; font-size: .82rem; color: var(--muted); text-align: center; }
+/* ---------- Editor: real screenshots on a MacBook and an iPhone, both drawn in CSS ---------- */
+.hm-shots { position: relative; padding: 0 clamp(70px, 15vw, 210px) 0 0; }
+.hm-pin { position: absolute; translate: -50% -50%; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--lime); color: var(--black); font: 700 .9rem var(--font-body); box-shadow: 0 0 0 5px rgba(212, 255, 63, .35), 0 6px 14px rgba(0, 0, 0, .25); z-index: 2; }
+
+/* MacBook: a black glass lid with an aluminium rim and a camera notch, a thin aluminium base with the thumb groove. */
+.mac { margin: 0 auto; width: 100%; container-type: inline-size; }
+.mac-lid { position: relative; margin: 0 6.5%; padding: 1.6cqw 1.6cqw 2.1cqw; border-radius: 2.6cqw 2.6cqw 1.1cqw 1.1cqw; background: #0b0b0d;
+  box-shadow: 0 0 0 .22cqw #a9abb1, 0 0 0 .32cqw #d9dadf, inset 0 0 0 .18cqw #2a2a2e; }
+.mac-cam { position: absolute; top: 1.6cqw; left: 50%; translate: -50% 0; width: 13%; height: 2cqw; background: #0b0b0d; border-radius: 0 0 1cqw 1cqw; z-index: 3; }
+.mac-cam::after { content: ""; position: absolute; top: .55cqw; left: 50%; translate: -50% 0; width: .7cqw; height: .7cqw; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #3a4a6a, #0d0f16 60%); box-shadow: 0 0 0 .12cqw #1b1b20; }
+.mac-screen { position: relative; overflow: hidden; border-radius: .9cqw .9cqw .2cqw .2cqw; aspect-ratio: 1.545;
+  background: radial-gradient(120% 90% at 20% 10%, #b7a8ff, transparent 55%), radial-gradient(90% 90% at 90% 100%, #8fd3ff, transparent 55%), linear-gradient(160deg, #6f5bd6, #2b2a5e); }
+.mac-screen::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 4; background: linear-gradient(115deg, rgba(255, 255, 255, .07) 0%, rgba(255, 255, 255, 0) 38%); }
+.mac-menu { display: flex; align-items: center; gap: 1.5cqw; height: 2.6%; min-height: 0; padding: 0 1.4cqw; font: 500 .82cqw/1 -apple-system, "SF Pro Text", "Helvetica Neue", var(--font-sans), sans-serif; color: #fff; background: rgba(30, 24, 60, .35); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+.mac-menu b { font-weight: 700; }
+.mac-menu em { margin-left: auto; font-style: normal; }
+.mac-win { position: absolute; left: 2.2%; right: 2.2%; top: 5%; bottom: 0; border-radius: .9cqw .9cqw 0 0; overflow: hidden; background: #f4f3fb; box-shadow: 0 1.6cqw 4cqw rgba(0, 0, 0, .45), 0 0 0 .08cqw rgba(0, 0, 0, .35); }
+.mac-bar { position: relative; display: flex; align-items: center; height: 3.6cqw; padding: 0 1.2cqw; background: linear-gradient(#ecebf0, #e1e0e6); border-bottom: .08cqw solid #c9c8cf; }
+.mac-lights { display: flex; gap: .62cqw; }
+.mac-lights i { width: .95cqw; height: .95cqw; border-radius: 50%; background: #ff5f57; box-shadow: inset 0 0 0 .06cqw rgba(0, 0, 0, .15); }
+.mac-lights i:nth-child(2) { background: #febc2e; }
+.mac-lights i:nth-child(3) { background: #28c840; }
+.mac-url { position: absolute; left: 50%; translate: -50% 0; display: flex; align-items: center; justify-content: center; gap: .5cqw; width: 34%; height: 2.2cqw; border-radius: .6cqw; background: #fff; box-shadow: 0 0 0 .06cqw #d3d2d8; font: 500 .95cqw -apple-system, "SF Pro Text", "Helvetica Neue", var(--font-sans), sans-serif; color: #2b2b30; }
+.mac-url svg { width: .7cqw; fill: #6b6b72; }
+.mac-page { position: relative; }
+.mac-page img { display: block; width: 100%; height: auto; }
+.mac-base { position: relative; height: 1.9cqw; border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  background: linear-gradient(#f3f4f6 0%, #d5d7db 30%, #a9acb2 75%, #7f8288 100%); box-shadow: 0 2.4cqw 3cqw -1.6cqw rgba(20, 20, 40, .55); }
+.mac-base::before { content: ""; position: absolute; top: 0; left: 50%; translate: -50% 0; width: 15%; height: 45%; border-radius: 0 0 1.2cqw 1.2cqw; background: linear-gradient(#a4a7ad, #c9cbd0); }
+
+/* iPhone: a titanium band, black bezel, Dynamic Island, status bar, home indicator and side buttons. */
+.iph { position: absolute; right: 0; bottom: -6%; width: clamp(130px, 22%, 260px); margin: 0; z-index: 5; container-type: inline-size; }
+.iph-body { position: relative; padding: 4cqw; border-radius: 17cqw; background: linear-gradient(135deg, #8d8e93, #4a4b50 30%, #2c2d31 55%, #6b6c71);
+  box-shadow: inset 0 0 0 .7cqw #1d1d20, 0 0 0 .5cqw #5c5d62, 0 40px 70px -26px rgba(12, 12, 20, .65); }
+.iph-screen { position: relative; overflow: hidden; border-radius: 13cqw; aspect-ratio: 390 / 844; background: #000; }
+.iph-screen img { position: absolute; left: 0; right: 0; top: 10.5cqw; width: 100%; height: auto; display: block; }
+.iph-status { position: absolute; inset: 0 0 auto; height: 12.5cqw; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 1cqw 8cqw 0 10cqw; color: #fff; background: #000;
+  font: 600 4.3cqw -apple-system, "SF Pro Text", "Helvetica Neue", var(--font-sans), sans-serif; }
+.iph-island { position: absolute; top: 2.8cqw; left: 50%; translate: -50% 0; width: 31cqw; height: 9cqw; border-radius: 99px; background: #000; box-shadow: 0 0 0 .3cqw #0a0a0a; }
+.iph-island::after { content: ""; position: absolute; right: 3cqw; top: 50%; translate: 0 -50%; width: 2.6cqw; height: 2.6cqw; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #2c3a5a, #07080c 65%); }
+.iph-icons { display: flex; align-items: center; gap: 1.4cqw; }
+.iph-icons svg { height: 3.2cqw; fill: #fff; }
+.iph-batt { position: relative; width: 6.6cqw; height: 3.2cqw; border-radius: 1cqw; border: .35cqw solid rgba(255, 255, 255, .45); padding: .35cqw; }
+.iph-batt::after { content: ""; position: absolute; right: -1.2cqw; top: 50%; translate: 0 -50%; width: .6cqw; height: 1.2cqw; border-radius: 0 .4cqw .4cqw 0; background: rgba(255, 255, 255, .45); }
+.iph-batt i { display: block; width: 80%; height: 100%; border-radius: .5cqw; background: #fff; }
+.iph-home { position: absolute; left: 50%; bottom: 2.2cqw; translate: -50% 0; width: 36cqw; height: 1.4cqw; border-radius: 99px; background: rgba(255, 255, 255, .85); z-index: 2; }
+.iph-btn { position: absolute; width: 1.1cqw; border-radius: 1cqw; background: linear-gradient(90deg, #3a3b3f, #8a8b90); }
+.iph-btn.mute { left: -1cqw; top: 19%; height: 7%; }
+.iph-btn.vol1 { left: -1cqw; top: 29%; height: 12%; }
+.iph-btn.vol2 { left: -1cqw; top: 43%; height: 12%; }
+.iph-btn.power { right: -1cqw; top: 31%; height: 18%; background: linear-gradient(270deg, #3a3b3f, #8a8b90); }
+.iph figcaption { margin-top: 12px; font-size: .82rem; color: var(--muted); text-align: center; }
 .hm-legend { list-style: none; counter-reset: pin; margin: 80px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
 .hm-legend li { counter-increment: pin; color: var(--muted); font-size: .95rem; }
 .hm-legend li::before { content: counter(pin); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--lime); color: var(--black); font: 700 .8rem var(--font-body); margin-bottom: 12px; }
@@ -178,8 +220,8 @@
   .sw-phone { position: relative; top: 0; width: min(260px, 70%); margin-inline: auto; }
   .sw-group { grid-template-columns: 1fr; gap: 8px; }
   .hm-shots { padding-right: 0; }
-  .hm-mobile { position: relative; bottom: 0; width: 56%; margin: -60px 0 0 auto; }
-  .hm-pin { width: 22px; height: 22px; font-size: .72rem; box-shadow: 0 0 0 3px rgba(212, 255, 63, .35); }
+  .iph { position: relative; bottom: 0; width: 40%; margin: -16% 2% 0 auto; }
+  .hm-pin { width: 17px; height: 17px; font-size: .62rem; box-shadow: 0 0 0 2px rgba(212, 255, 63, .35); }
   .hm-legend { margin-top: 36px; }
   .hm-faq .hm-head { position: static; }
   .hm-dark { border-radius: 24px; margin-inline: 8px; }

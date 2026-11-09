@@ -192,15 +192,49 @@ export default function Landing({ popular }: { popular: string[] }) {
             <p className="hm-lede">Fix a word, move a line, change a style. Every change shows on the video at once and saves by itself.</p>
           </div>
           <div className="hm-shots">
-            <figure className="hm-desk rise">
-              <span className="hm-dots" aria-hidden="true"><i /><i /><i /></span>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/home/editor.webp" width={2000} height={1014} loading="lazy" alt="The Vasanamm editor on a computer: the captions in Tamil and English on the left, the video in the middle, caption styles on the right." />
-              {[["21%", "23%"], ["37.5%", "23%"], ["72.5%", "31%"], ["23.5%", "96%"]].map(([x, y], i) => <span key={i} className="hm-pin" style={{ left: x, top: y }} aria-hidden="true">{i + 1}</span>)}
+            {/* A MacBook (drawn in CSS) with the editor open in a browser window. */}
+            <figure className="mac rise">
+              <div className="mac-lid">
+                <span className="mac-cam" aria-hidden="true" />
+                <div className="mac-screen">
+                  <div className="mac-menu" aria-hidden="true">
+                    <b>Safari</b><span>File</span><span>Edit</span><span>View</span><span>History</span><span>Window</span>
+                    <em>Mon 9 Nov&nbsp;&nbsp;9:41 PM</em>
+                  </div>
+                  <div className="mac-win">
+                    <div className="mac-bar" aria-hidden="true">
+                      <span className="mac-lights"><i /><i /><i /></span>
+                      <span className="mac-url"><svg viewBox="0 0 10 12"><path d="M2 5V3.5a3 3 0 0 1 6 0V5h.5A1.5 1.5 0 0 1 10 6.5v4A1.5 1.5 0 0 1 8.5 12h-7A1.5 1.5 0 0 1 0 10.5v-4A1.5 1.5 0 0 1 1.5 5H2Zm1.2 0h3.6V3.5a1.8 1.8 0 0 0-3.6 0V5Z" /></svg>vasanamm.com</span>
+                    </div>
+                    <div className="mac-page">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/home/editor.webp" width={2000} height={1250} loading="lazy" alt="The Vasanamm editor on a computer: the captions in Tamil and English on the left, the video in the middle, caption styles on the right." />
+                      {[["21%", "33%"], ["37.5%", "32%"], ["71.6%", "34.4%"], ["30.2%", "91%"]].map(([x, y], i) => <span key={i} className="hm-pin" style={{ left: x, top: y }} aria-hidden="true">{i + 1}</span>)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mac-base" aria-hidden="true" />
             </figure>
-            <figure className="hm-mobile rise" style={d(0.1)}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/home/phone.webp" width={780} height={1688} loading="lazy" alt="The same editor on a phone, with buttons to edit text, highlight a word and change timing." />
+            {/* An iPhone (drawn in CSS) with the phone editor. */}
+            <figure className="iph rise" style={d(0.1)}>
+              <div className="iph-body">
+                <i className="iph-btn mute" /><i className="iph-btn vol1" /><i className="iph-btn vol2" /><i className="iph-btn power" />
+                <div className="iph-screen">
+                  <div className="iph-status" aria-hidden="true">
+                    <b>9:41</b>
+                    <span className="iph-island" />
+                    <span className="iph-icons">
+                      <svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" /><rect x="5" y="5.5" width="3" height="6.5" rx="1" /><rect x="10" y="3" width="3" height="9" rx="1" /><rect x="15" y="0" width="3" height="12" rx="1" /></svg>
+                      <svg viewBox="0 0 16 12"><path d="M8 2.4c2.3 0 4.4.9 6 2.4l1.3-1.4A10.3 10.3 0 0 0 8 .4C5.2.4 2.6 1.5.7 3.4L2 4.8a8.4 8.4 0 0 1 6-2.4Zm0 3.8c1.3 0 2.5.5 3.4 1.3l1.3-1.4A6.8 6.8 0 0 0 8 4.2c-1.8 0-3.5.7-4.7 1.9l1.3 1.4C5.5 6.7 6.7 6.2 8 6.2Zm0 3.7c-.6 0-1.1.2-1.5.6L8 12l1.5-1.5c-.4-.4-.9-.6-1.5-.6Z" /></svg>
+                      <span className="iph-batt"><i /></span>
+                    </span>
+                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/home/phone.webp" width={780} height={1688} loading="lazy" alt="The same editor on a phone, with buttons to edit text, highlight a word and change timing." />
+                  <span className="iph-home" aria-hidden="true" />
+                </div>
+              </div>
               <figcaption>The same editor on your phone</figcaption>
             </figure>
           </div>
