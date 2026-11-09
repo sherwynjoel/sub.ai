@@ -3,16 +3,21 @@ import { desc } from "drizzle-orm";
 import Action from "@/components/admin/Action";
 import AnnounceForm from "@/components/admin/AnnounceForm";
 import CouponForm from "@/components/admin/CouponForm";
+import InviteOfferForm from "@/components/admin/InviteOfferForm";
 import NewsForm from "@/components/admin/NewsForm";
 import { coupons, db, users } from "@/db";
 import { when } from "@/lib/admin";
 import { GROUPS, groupMembers, rawAnnouncement, type Group } from "@/lib/news";
+import { inviteOffer } from "@/lib/referral";
+import { count, isNotNull } from "drizzle-orm";
 import { effectivePlan, longDate, minSec, PLANS, secondsLeft } from "@/lib/plans";
 
 /** Bringing people back and getting them to pay: who to contact, the announcement bar, codes and group emails. */
 export default async function Growth() {
   const groups = Object.keys(GROUPS) as Group[];
-  const [ann, codes, ending, trial, ...counts] = await Promise.all([
+  const [offer, [inv], ann, codes, ending, trial, ...counts] = await Promise.all([
+    inviteOffer(),
+    db.select({ joined: count(), paid: count(users.referralRewardedAt) }).from(users).where(isNotNull(users.referredBy)),
     rawAnnouncement(),
     db.select().from(coupons).orderBy(desc(coupons.createdAt)),
     groupMembers("ending"),
@@ -57,6 +62,12 @@ export default async function Growth() {
         <p className="muted small">A message along the top of the app for every signed-in user, e.g. “New: Hindi subtitles” or “Diwali offer: 20% off with DIWALI20”.</p>
         {ann && <p className="announce-preview">{ann.text}{ann.link && <> <a href={ann.link}>{ann.linkText || "See more"}</a></>}{ann.until && <span className="muted small"> · until {when(new Date(ann.until))}</span>}</p>}
         <AnnounceForm current={ann} />
+      </section>
+
+      <section className="panel">
+        <h2>Invite a friend</h2>
+        <p className="muted small">Every user has an invite link on their Billing page. The friend gets the free trial plus these extra minutes when they sign up with it; whoever invited them gets theirs when the friend buys a first pass (so made-up accounts earn the inviter nothing). 0 turns that side off; both 0 hides the invite box. So far: {inv?.joined ?? 0} joined with a link, {inv?.paid ?? 0} of them bought a pass.</p>
+        <InviteOfferForm friend={offer.friend} inviter={offer.inviter} />
       </section>
 
       <section className="panel">

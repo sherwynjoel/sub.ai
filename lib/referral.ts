@@ -1,11 +1,39 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
-import { db, users } from "@/db";
+import { db, settings, users } from "@/db";
 import { logUse } from "@/lib/credits";
 import { SITE_URL } from "@/lib/site";
 
-/** Minutes each side gets when an invited friend buys their first pass. */
-export const INVITE_MINUTES = 60;
+/**
+ * The invite offer, set by the admin on the Growth page: the friend gets `friend` extra minutes on top of the free
+ * trial as soon as they sign up; whoever invited them gets `inviter` minutes when the friend buys their first pass
+ * (paid, so made-up accounts earn nothing). 0 turns that side off.
+ */
+export type InviteOffer = { friend: number; inviter: number };
+export const INVITE_DEFAULT: InviteOffer = { friend: 60, inviter: 60 };
+export const INVITE_MAX = 1000;
+const OFFER_KEY = "invite_offer";
+const minutes = (v: unknown, d: number) => { const n = Math.round(Number(v)); return Number.isFinite(n) && n >= 0 && n <= INVITE_MAX ? n : d; };
+
+export async function inviteOffer(): Promise<InviteOffer> {
+  const [r] = await db.select().from(settings).where(eq(settings.key, OFFER_KEY)).catch(() => []);
+  if (!r) return INVITE_DEFAULT;
+  try {
+    const o = JSON.parse(r.value);
+    return { friend: minutes(o.friend, INVITE_DEFAULT.friend), inviter: minutes(o.inviter, INVITE_DEFAULT.inviter) };
+  } catch { return INVITE_DEFAULT; }
+}
+export async function setInviteOffer(o: InviteOffer) {
+  const value = JSON.stringify({ friend: minutes(o.friend, 0), inviter: minutes(o.inviter, 0) });
+  await db.insert(settings).values({ key: OFFER_KEY, value }).onConflictDoUpdate({ target: settings.key, set: { value } });
+}
+
+/** Extra minutes = less usage counted (a negative count is credit, and is kept when a new pass starts). */
+async function giveMinutes(userId: string, mins: number, detail: string) {
+  if (mins <= 0) return;
+  await db.update(users).set({ secondsUsed: sql`${users.secondsUsed} - ${mins * 60}` }).where(eq(users.id, userId));
+  await logUse(userId, -mins * 60, { kind: "bonus", video: "Invite reward", detail });
+}
 /** Set by /r/<code> so the sign-up that follows knows who sent the visitor (30 days). */
 export const REF_COOKIE = "vs_ref";
 export const REF_DAYS = 30;
@@ -31,28 +59,22 @@ export async function inviteCode(userId: string): Promise<string> {
 
 export const inviteLink = (code: string) => `${SITE_URL}/r/${code}`;
 
-/** Remember who invited a new account (not themselves, not a blocked account). */
+/** Remember who invited a new account (not themselves, not a blocked account), and give the friend their minutes. */
 export async function rememberInvite(newUserId: string, code: unknown) {
   const c = cleanCode(code);
   if (!c) return;
-  const [from] = await db.select({ id: users.id }).from(users).where(and(eq(users.referralCode, c), isNull(users.blockedAt)));
+  const [from] = await db.select({ id: users.id, name: users.name }).from(users).where(and(eq(users.referralCode, c), isNull(users.blockedAt)));
   if (!from || from.id === newUserId) return;
-  await db.update(users).set({ referredBy: from.id }).where(and(eq(users.id, newUserId), isNull(users.referredBy)));
+  const [set] = await db.update(users).set({ referredBy: from.id }).where(and(eq(users.id, newUserId), isNull(users.referredBy))).returning({ id: users.id });
+  if (set) await giveMinutes(newUserId, (await inviteOffer()).friend, `Invited by ${from.name}`);
 }
 
-/** After the invited user's first paid pass: both get the invite minutes, once. */
+/** After the invited user's first paid pass: whoever invited them gets their minutes, once. */
 export async function rewardInvite(userId: string) {
   const [u] = await db.update(users).set({ referralRewardedAt: new Date() })
     .where(and(eq(users.id, userId), isNotNull(users.referredBy), isNull(users.referralRewardedAt)))
     .returning({ by: users.referredBy, name: users.name });
-  if (!u?.by) return;
-  const [by] = await db.select({ name: users.name }).from(users).where(eq(users.id, u.by));
-  const s = INVITE_MINUTES * 60;
-  // Extra minutes = less usage counted (negative works as credit, and is kept when a new pass starts).
-  for (const [id, detail] of [[userId, `Invited by ${by?.name ?? "a friend"}`], [u.by, `${u.name} joined with your invite`]] as const) {
-    await db.update(users).set({ secondsUsed: sql`${users.secondsUsed} - ${s}` }).where(eq(users.id, id));
-    await logUse(id, -s, { kind: "bonus", video: "Invite reward", detail });
-  }
+  if (u?.by) await giveMinutes(u.by, (await inviteOffer()).inviter, `${u.name} bought a pass`);
 }
 
 /** How many people joined with the user's link, and how many of them have bought a pass. */

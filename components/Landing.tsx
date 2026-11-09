@@ -49,11 +49,12 @@ const d = (s: number) => ({ "--d": `${s}s` }) as React.CSSProperties;
 /** The landing page: English copy with Tamil dialogue samples and a multilingual greeting strip. */
 export default function Landing({ popular }: { popular: string[] }) {
   const [hi, setHi] = useState(0);
-  const [invited, setInvited] = useState(false);
+  const [invited, setInvited] = useState<number | null>(null); // the friend's extra minutes, from an invite link
   useEffect(() => {
     // From /r/<code>: say so once, and tidy the address.
-    if (!new URLSearchParams(location.search).has("invited")) return;
-    setInvited(true); // eslint-disable-line react-hooks/set-state-in-effect -- read once from the address after hydration
+    const q = new URLSearchParams(location.search).get("invited");
+    if (q === null) return;
+    setInvited(Math.max(0, Math.min(1000, Math.round(Number(q)) || 0))); // eslint-disable-line react-hooks/set-state-in-effect -- read once from the address after hydration
     history.replaceState(null, "", location.pathname + location.hash);
   }, []);
 
@@ -87,7 +88,7 @@ export default function Landing({ popular }: { popular: string[] }) {
       </header>
 
       <main>
-        {invited && <p className="wrap hm-invited" role="status">A friend invited you to {BRAND.name}. Start free, and when you buy your first pass you both get 60 free minutes.</p>}
+        {invited !== null && <p className="wrap hm-invited" role="status">A friend invited you to {BRAND.name}. {invited > 0 ? `Sign up for the free trial plus ${invited} extra minutes.` : "Sign up to start your free trial."}</p>}
         {/* Hero: a headline that ends in a hand-written word (click it for another) with fruit stickers to play with. */}
         <FruitSticker
           as="section" headingTag="h1" className="hero-fruit"
