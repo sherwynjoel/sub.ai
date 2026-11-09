@@ -231,7 +231,7 @@ export default function Landing({ popular }: { popular: string[] }) {
                     </span>
                   </div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/home/phone.webp" width={780} height={1688} loading="lazy" alt="The same editor on a phone, with buttons to edit text, highlight a word and change timing." />
+                  <img src="/home/phone.webp" width={780} height={1526} loading="lazy" alt="The same editor on a phone, with buttons to edit text, highlight a word and change timing." />
                   <span className="iph-home" aria-hidden="true" />
                 </div>
               </div>
