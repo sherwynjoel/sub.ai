@@ -1187,3 +1187,14 @@ html:has(.pass-reveal[open]) { overflow: hidden; }
 .invite h2 { margin-bottom: 4px; }
 .invite-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .invite-row input { flex: 1 1 260px; min-width: 0; font: 500 .95rem ui-monospace, Menlo, monospace; }
+
+/* "Invite minutes added" popup */
+.invite-reward { width: min(420px, calc(100% - 32px)); border: 0; border-radius: 22px; padding: 28px 24px 20px; text-align: center; display: grid; gap: 10px; background: #fff; color: var(--ink); box-shadow: 0 30px 80px -20px rgba(12, 12, 20, .45); }
+.invite-reward:not([open]) { display: none; }
+.invite-reward::backdrop { background: rgba(12, 12, 20, .5); backdrop-filter: blur(3px); }
+.invite-reward h2 { margin: 0; font-size: 1.25rem; letter-spacing: -.02em; }
+.invite-reward p { margin: 0; }
+.invite-reward ul { margin: 4px 0; padding: 10px 14px; list-style: none; border-radius: 12px; background: #f4f4f8; font-size: .9rem; display: grid; gap: 4px; }
+.ir-mins { justify-self: center; display: inline-flex; align-items: baseline; gap: 4px; padding: 10px 22px; border-radius: 999px; background: var(--lime, #d4ff3f); color: #0c0c14; font-size: 2.4rem; font-weight: 800; line-height: 1; letter-spacing: -.04em; }
+.ir-mins small { font-size: 1rem; font-weight: 700; }
+.invite-reward .modal-actions { justify-content: center; margin-top: 6px; }

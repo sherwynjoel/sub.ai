@@ -169,6 +169,13 @@
       "when": 1794236196118,
       "tag": "0023_invite_approval",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794238510631,
+      "tag": "0024_invite_seen",
+      "breakpoints": true
     }
   ]
 }
