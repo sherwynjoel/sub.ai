@@ -2,6 +2,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { billingEvents, db, users } from "@/db";
+import { countUse, discounted } from "@/lib/coupons";
 import { effectivePlan, PAID, PLANS, type PlanId } from "@/lib/plans";
 import { getSecret, type ConnectionName } from "@/lib/secrets";
 
@@ -59,7 +60,7 @@ export async function subscriptionsReady() {
 /** One paid plan period bought with a one-time payment (Standard Checkout). */
 export const PREPAID_DAYS = 30;
 
-type Order = { id: string; amount: number; currency: string; status: string; notes?: { userId?: string; plan?: string } };
+type Order = { id: string; amount: number; currency: string; status: string; notes?: { userId?: string; plan?: string; coupon?: string; percent?: string } };
 type Payment = { id: string; order_id: string; amount: number; currency: string; status: string };
 
 /**
@@ -73,14 +74,17 @@ export async function applyOrderPayment(orderId: string, paymentId: string): Pro
   let pay: Payment = await rzp(`/payments/${paymentId}`);
   const plan = order.notes?.plan as PlanId | undefined, userId = order.notes?.userId;
   if (!plan || !PAID.includes(plan) || !userId || pay.order_id !== order.id) return null;
-  if (order.amount !== PLANS[plan].priceInr * 100 || order.currency !== "INR" || pay.amount !== order.amount) return null;
+  const percent = Number(order.notes?.percent) || 0; // a coupon, set by api/billing/order
+  const price = percent > 0 && percent <= 90 ? discounted(plan, percent) : PLANS[plan].priceInr * 100;
+  if (order.amount !== price || order.currency !== "INR" || pay.amount !== order.amount) return null;
   // Accounts set to capture by hand leave a payment "authorized": capture it, or the money goes back after a few days.
   if (pay.status === "authorized") pay = await rzp(`/payments/${paymentId}/capture`, { amount: pay.amount, currency: pay.currency });
   if (pay.status !== "captured") return null;
   // Shaped like a subscription.charged event so revenue adds up the same way (lib/admin.ts chargedRupees).
-  const first = await db.insert(billingEvents).values({ id: `order:${order.id}`, type: "order.applied", payload: { userId, plan, orderId: order.id, paymentId, payload: { payment: { entity: { amount: pay.amount } } } } })
+  const first = await db.insert(billingEvents).values({ id: `order:${order.id}`, type: "order.applied", payload: { userId, plan, orderId: order.id, paymentId, coupon: order.notes?.coupon, payload: { payment: { entity: { amount: pay.amount } } } } })
     .onConflictDoNothing().returning();
   if (!first.length) return plan; // already applied
+  if (order.notes?.coupon) await countUse(order.notes.coupon);
   const [u] = await db.select().from(users).where(eq(users.id, userId));
   if (!u) return null;
   const now = new Date(), running = effectivePlan(u, now) === plan && u.periodEnd && u.periodEnd > now ? u.periodEnd : now;

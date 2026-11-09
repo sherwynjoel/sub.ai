@@ -110,3 +110,9 @@
 .day-bars { display: flex; align-items: flex-end; gap: 3px; height: 120px; padding: 6px 0; }
 .day-bars span { flex: 1; background: var(--ink, #111); border-radius: 3px 3px 0 0; min-height: 2px; }
 .day-bars span.zero { background: var(--line, #ddd); }
+
+.stack-form { display: grid; gap: 12px; max-width: 760px; }
+.stack-form label { display: grid; gap: 4px; }
+.stack-form input, .stack-form select, .stack-form textarea { font: inherit; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+.announce-preview { background: #111; color: #fff; padding: 9px 14px; border-radius: 10px; }
+.announce-preview a { color: #c8f560; }
