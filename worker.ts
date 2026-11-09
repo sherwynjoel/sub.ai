@@ -129,8 +129,8 @@ async function processPreview(job: typeof jobs.$inferSelect) {
 async function fail(job: typeof jobs.$inferSelect, err: unknown) {
   console.error(`job ${job.id} failed`, err);
   await db.update(jobs).set({ status: "failed", error: String((err as Error)?.message ?? err).slice(0, 500), updatedAt: new Date() }).where(eq(jobs.id, job.id));
-  // Give the minutes back — the user got nothing for them. (A redo with another caption type cost nothing.)
-  if (!job.redos) await db.update(users).set({ secondsUsed: sql`greatest(0, ${users.secondsUsed} - ${Math.ceil(job.durationSec)})` }).where(eq(users.id, job.userId));
+  // Give the minutes back — the user got nothing for them. (Every run is charged: the upload, and each remake.)
+  await db.update(users).set({ secondsUsed: sql`greatest(0, ${users.secondsUsed} - ${Math.ceil(job.durationSec)})` }).where(eq(users.id, job.userId));
 }
 
 async function purgeOld() {

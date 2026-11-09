@@ -4,6 +4,8 @@ import { currentUser, json, unauthorized } from "@/lib/auth";
 import { ownJob } from "@/lib/jobs";
 import { isLanguage, languageOf } from "@/lib/languages";
 import { translateLines } from "@/lib/ai/translate";
+import { charge, refund } from "@/lib/credits";
+import { minSec, secondsLeft } from "@/lib/plans";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -22,7 +24,8 @@ function allowed(user: string, now = Date.now()) {
  * Into English: the main line translated into the English line (added if the project had none).
  * Into another language: the main line becomes that language, translated from the English line when there is one
  * (the better source), else from the main line; the project's language becomes it. Times stay; a translated line's
- * word times, colours and looks go (its words are new).
+ * word times, colours and looks go (its words are new). Each translation uses the video's length from the user's
+ * minutes (given back if it fails).
  */
 export async function POST(req: Request, { params }: Ctx) {
   const u = await currentUser();
@@ -35,24 +38,27 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!allowed(u.id)) return json({ error: "That's a lot of translations in a short time. Try again in a few minutes." }, 429);
   const cues = j.cues as Cue[];
   const hasEn = cues.some((c) => c.en.trim()), hasMain = cues.some((c) => c.ta.trim());
+  const from = lang === "en-IN" ? j.language : hasEn ? "en-IN" : j.language;
+  if (lang === "en-IN" ? !hasMain : !hasEn && !hasMain) return json({ error: "There's no caption line to translate." }, 409);
+  if (lang !== "en-IN" && from === lang) return json({ error: `The captions are in ${languageOf(lang).name} already.` }, 409);
+  if (!(await charge(u, j.durationSec))) {
+    return json({ error: `A translation uses ${minSec(j.durationSec)} (the video's length), but you have ${minSec(secondsLeft(u))} left. Upgrade to continue.` }, 402);
+  }
   try {
     if (lang === "en-IN") {
-      if (!hasMain) return json({ error: "There's no caption line to translate." }, 409);
       const out = await translateLines(cues.map((c) => c.ta), "en-IN", j.language);
       const next = cues.map((c, i) => { const n: Cue = { ...c, en: out[i] }; delete n.we; delete n.wce; delete n.wfe; return n; });
       const show = j.captionCustom?.show === "ta" ? { ...j.captionCustom, show: "both" as const } : j.captionCustom;
       await db.update(jobs).set({ cues: next, withEnglish: true, captionCustom: show, updatedAt: new Date() }).where(eq(jobs.id, j.id));
       return json({ ok: true, language: "English" });
     }
-    const from = hasEn ? "en-IN" : j.language;
-    if (!hasEn && !hasMain) return json({ error: "There's no caption line to translate." }, 409);
-    if (from === lang) return json({ error: `The captions are in ${languageOf(lang).name} already.` }, 409);
     const out = await translateLines(cues.map((c) => (hasEn ? c.en : c.ta)), lang, from);
     const next = cues.map((c, i) => { const n: Cue = { ...c, ta: out[i] }; delete n.w; delete n.wc; delete n.wf; return n; });
     await db.update(jobs).set({ cues: next, language: lang, script: "translated", updatedAt: new Date() }).where(eq(jobs.id, j.id));
     return json({ ok: true, language: languageOf(lang).name });
   } catch (e) {
     console.error("translate", j.id, e);
+    await refund(u.id, j.durationSec); // nothing came of it
     return json({ error: "Translation didn't work just now. Try again in a minute." }, 502);
   }
 }

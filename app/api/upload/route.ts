@@ -11,7 +11,7 @@ import { probe, remuxAudio, soundLength, STORAGE } from "@/lib/media";
 import { DEFAULT_LANGUAGE, isLanguage } from "@/lib/languages";
 import { JOB_SCRIPTS, type JobScript } from "@/lib/captionTypes";
 import { DEFAULT_STYLE, SAFE_ZONES, STYLE_CHOICES } from "@/lib/captionStyles";
-import { effectivePlan, PLANS, secondsLeft } from "@/lib/plans";
+import { effectivePlan, minSec, PLANS, secondsLeft } from "@/lib/plans";
 import { mustConfirm } from "@/lib/verify";
 import { knownStyle, presetLook } from "@/lib/presets";
 
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
     .returning({ id: users.id });
   if (!charged.length) {
     await unlink(source).catch(() => {});
-    return json({ error: `This video is ${Math.ceil(duration / 60)} min but you have ${Math.floor(secondsLeft(u) / 60)} min left. Upgrade to continue.` }, 402);
+    return json({ error: `This video is ${minSec(duration)} but you have ${minSec(secondsLeft(u))} left. Upgrade to continue.` }, 402);
   }
   const type = audioFirst ? q.get("videoType") ?? "" : req.headers.get("content-type") ?? "";
   const mime = type.startsWith("video/") || type.startsWith("audio/") ? type : "video/mp4";

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 const TIPS = [
   "Drag a caption on the video to move it. It snaps to the middle.",
   "Drag the dot on a caption's corner to make it bigger or smaller.",
-  "\"Change type\" switches between Tamil, Tanglish and English without using minutes.",
+  "\"Change type\" switches between Tamil, Tanglish and English.",
   "Check timing jumps to any caption that may be off.",
   "Download an SRT for Premiere, Resolve or YouTube, or a styled MP4.",
   "Pick a safe zone so captions stay clear of Instagram and YouTube buttons.",

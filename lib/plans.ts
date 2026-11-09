@@ -19,3 +19,9 @@ export function effectivePlan(u: Quota, now = new Date()): PlanId {
 export function secondsLeft(u: Quota, now = new Date()) {
   return Math.max(0, PLANS[effectivePlan(u, now)].minutes * 60 - u.secondsUsed);
 }
+
+/** Seconds as minutes and seconds, e.g. "12 min 5 s" ("45 s" under a minute). */
+export function minSec(sec: number) {
+  const s = Math.max(0, Math.ceil(sec)), m = Math.floor(s / 60), r = s % 60;
+  return m ? `${m} min${r ? ` ${r} s` : ""}` : `${r} s`;
+}

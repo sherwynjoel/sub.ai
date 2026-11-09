@@ -1,7 +1,7 @@
 import Link from "next/link";
 import BillingActions from "@/components/BillingActions";
 import { requireUser } from "@/lib/auth";
-import { effectivePlan, PLANS, secondsLeft } from "@/lib/plans";
+import { effectivePlan, minSec, PLANS, secondsLeft } from "@/lib/plans";
 import { subscriptionsReady } from "@/lib/razorpay";
 import { mustConfirm } from "@/lib/verify";
 
@@ -31,7 +31,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
         </div>
         <div className="usage-meter">
           {/* Extra minutes (an admin top-up) can leave more than the plan gives. */}
-          <strong>{Math.floor(left / 60)}{left <= total ? ` of ${PLANS[plan].minutes}` : ""} minutes left</strong>
+          <strong>{minSec(left)}{left <= total ? ` of ${PLANS[plan].minutes} min` : ""} left</strong>
           <span className="bar"><i style={{ width: `${Math.min(1, left / total) * 100}%` }} /></span>
         </div>
       </div>

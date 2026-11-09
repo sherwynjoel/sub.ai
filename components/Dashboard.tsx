@@ -1,4 +1,5 @@
 "use client";
+import { minSec } from "@/lib/plans";
 import { clearPending, peekPending } from "@/lib/pendingVideo";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -27,7 +28,6 @@ type Job = {
 
 const mins = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 /** Minutes as charged (whole seconds), one decimal: 312 s → "5.2". */
-const minsUsed = (s: number) => (Math.ceil(s) / 60).toFixed(1);
 
 /** A video's length from the browser itself (formats the phone can play), or null. */
 function lengthOf(file: File, onPicture?: (shows: boolean) => void) {
@@ -254,7 +254,7 @@ export default function Dashboard() {
               </div>
               <div className="wiz-meta">
                 <strong title={check.file.name}>{check.file.name}</strong>
-                {check.seconds > 0 && <span className="muted small">{mins(check.seconds)} long · uses {minsUsed(check.seconds)} min{Number.isFinite(check.left) ? ` of your ${minsUsed(check.left)} min left` : ""}</span>}
+                {check.seconds > 0 && <span className="muted small">{mins(check.seconds)} long · uses {minSec(check.seconds)}{Number.isFinite(check.left) ? ` of your ${minSec(check.left)} left` : ""}</span>}
                 <button className="btn ghost small" onClick={cancel}>Choose another video</button>
               </div>
             </div>
@@ -262,7 +262,7 @@ export default function Dashboard() {
               {Number.isFinite(check.left) && Math.ceil(check.seconds) > check.left ? (
                 <div className="wiz-short">
                   <h2>Not enough minutes</h2>
-                  <p>This video needs <b>{minsUsed(check.seconds)} min</b>; you have <b>{minsUsed(check.left)} min</b> left.</p>
+                  <p>This video needs <b>{minSec(check.seconds)}</b>; you have <b>{minSec(check.left)}</b> left.</p>
                   <div className="wiz-actions"><Link className="btn" href="/app/billing">See plans</Link><button className="btn ghost" onClick={cancel}>Choose another</button></div>
                 </div>
               ) : step === 1 ? (
