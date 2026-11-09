@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { mergeCustom, MIN_FIT, ownLook, resolveStyle, sanitizeCustom, tamilRuns } from "./captionStyles";
+import { minSec } from "./plans";
 
 test("a fit shrinks the caption in proportion", () => {
   const full = resolveStyle("minimal", {}), fitted = resolveStyle("minimal", { fit: 0.5 });
@@ -23,4 +24,12 @@ test("letter spacing set inside a caption never pulls Tamil letters apart", () =
   const out = tamilRuns("{\\fsp6}abc கண்டிப்பாக def", { Main: "Inter" }, "Main");
   assert.match(out, /\\fsp0\}கண்டிப்பாக/);
   assert.match(out, /\\fsp6\}def/);
+});
+
+test("minutes and seconds read plainly", () => {
+  assert.equal(minSec(0), "0 s");
+  assert.equal(minSec(45), "45 s");
+  assert.equal(minSec(60), "1 min");
+  assert.equal(minSec(725), "12 min 5 s");
+  assert.equal(minSec(89.2), "1 min 30 s"); // a part second counts as a whole one, as charged
 });

@@ -1,4 +1,5 @@
 "use client";
+import { minSec } from "@/lib/plans";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -10,8 +11,8 @@ import LogoName from "@/components/LogoName";
  * The app's header: the logo, the pages, the minutes left, Help and Sign out. On phones one slim row (the logo, the
  * minutes and a menu button), the pages and the rest in the menu.
  */
-export default function AppHeader({ brand, isAdmin, minutes, meter, plan, help }: {
-  brand: string; isAdmin: boolean; minutes: number; meter: number; plan: string; help: string;
+export default function AppHeader({ brand, isAdmin, seconds, meter, plan, help }: {
+  brand: string; isAdmin: boolean; seconds: number; meter: number; plan: string; help: string;
 }) {
   const [open, setOpen] = useState(false);
   const path = usePathname();
@@ -26,7 +27,7 @@ export default function AppHeader({ brand, isAdmin, minutes, meter, plan, help }
         <AppNav isAdmin={isAdmin} />
         <div className="account">
           <Link href="/app/billing" className="minutes" title={`${plan} plan`}>
-            <span>{minutes} min left</span>
+            <span>{minSec(seconds)} left</span>
             <span className="meter" aria-hidden="true"><i style={{ width: `${meter}%` }} /></span>
           </Link>
           <a className="signout" href={help}>Help</a>

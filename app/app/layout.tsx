@@ -12,7 +12,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const left = secondsLeft(u);
   return (
     <>
-      <AppHeader brand={BRAND.name} isAdmin={u.isAdmin} minutes={Math.floor(left / 60)} meter={Math.min(1, left / total) * 100} plan={PLANS[plan].name}
+      <AppHeader brand={BRAND.name} isAdmin={u.isAdmin} seconds={left} meter={Math.min(1, left / total) * 100} plan={PLANS[plan].name}
         help={`mailto:${BUSINESS.email}?subject=${encodeURIComponent(`${BRAND.name} help (${u.email})`)}`} />
       <main className="wrap app-main">{children}</main>
       <footer className="wrap app-foot">

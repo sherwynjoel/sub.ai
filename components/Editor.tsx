@@ -16,7 +16,8 @@ import { BLENDS, CANVAS_RATIOS, CAPTION_FONTS, FONT_LIKE, highlights, mergeCusto
 import { insertAt, insertBetween, mergeCues, MIN_CAPTION, removeCue, retime, setText, setWord, shiftFrom, splitCue, startsOf, wordsOf } from "@/lib/cueEdit";
 import { englishCues } from "@/lib/subtitles";
 import { ISSUE_TEXT, timingIssues } from "@/lib/timing";
-import { MAX_REDOS, typeLabel, typeOf, type CaptionType } from "@/lib/captionTypes";
+import { typeLabel, typeOf, type CaptionType } from "@/lib/captionTypes";
+import { minSec } from "@/lib/plans";
 import CaptionTypePicker from "@/components/CaptionTypePicker";
 import { keepVideo, localVideo, subscribeVideos, videosVersion } from "@/lib/localVideo";
 import SubtitleReveal from "@/components/SubtitleReveal";
@@ -37,7 +38,7 @@ import "@/app/caption-styles.css";
 
 type Job = {
   id: string; filename: string; language: string; status: string; progress: number; error: string | null;
-  hasMedia: boolean; hasPreview?: boolean; videoTotal?: number | null; provider: string | null; model: string | null; cues: Cue[]; speech?: [number, number][]; script: string; redos: number;
+  hasMedia: boolean; hasPreview?: boolean; videoTotal?: number | null; provider: string | null; model: string | null; cues: Cue[]; speech?: [number, number][]; script: string; redos: number; durationSec: number;
   captionStyle: string; captionCustom: CaptionCustom; renderStatus: string | null; renderProgress: number; renderError: string | null; renderLang: string;
 };
 type View = "ta" | "en" | "both";
@@ -1106,6 +1107,15 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   }
   // Translate: the language picked (open while set), and the request running.
   const [translateTo, setTranslateTo] = useState<string | null>(null);
+  // The minutes left, read when a translation or a remake is being thought about (both use the video's length).
+  const [left, setLeft] = useState<number | null>(null);
+  useEffect(() => {
+    if (translateTo === null) return;
+    fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((d) => typeof d?.secondsLeft === "number" && setLeft(d.secondsLeft)).catch(() => {});
+  }, [translateTo]); // eslint-disable-line react-hooks/exhaustive-deps
+  const cost = Math.ceil(initial.durationSec || 0);
+  const costLine = `Uses ${minSec(cost)} of your minutes (the video's length)${left !== null ? `; you have ${minSec(left)} left` : ""}.`;
+  const short_ = left !== null && cost > left;
   const [translating, setTranslating] = useState(false);
   async function translate() {
     if (!translateTo) return;
@@ -1116,9 +1126,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     setTranslating(false);
     if (!res.ok) { setTranslateTo(null); setMsg(r.error || "Couldn't translate."); return; }
     setDirty(false);
-    setTimeout(() => window.location.reload(), 50); // the captions and the project's language come back new
+    setTimeout(() => window.location.reload(), 50); // the captions, the project's language and the minutes left come back new
   }
   const [retype, setRetype] = useState<{ type: CaptionType; withEnglish: boolean } | null>(null);
+  useEffect(() => {
+    if (retype) fetch("/api/me").then((r) => (r.ok ? r.json() : null)).then((d) => typeof d?.secondsLeft === "number" && setLeft(d.secondsLeft)).catch(() => {});
+  }, [!!retype]); // eslint-disable-line react-hooks/exhaustive-deps
   const [retyping, setRetyping] = useState(false);
   async function applyType() {
     if (!retype) return;
@@ -1408,11 +1421,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 {translateTo === "en-IN"
                   ? `The ${language.name} line is translated into English${cues.some((c) => c.en.trim()) ? ", replacing the English line" : " and shown under it"}.`
                   : `The ${language.name} line becomes ${languageOf(translateTo).name}, translated from ${cues.some((c) => c.en.trim()) ? "the English line" : `the ${language.name} line`}. Timing and style stay; word colours on that line are cleared.`}
-                {" "}Uses no minutes. To go back, translate again or use Change type.
+                {" "}To go back, translate again or use Change type.
               </p>
+              <p className={`small${short_ ? " error" : ""}`}><b>{costLine}</b>{short_ ? " Not enough minutes: upgrade on Billing." : ""}</p>
               <div className="modal-actions">
                 <button className="btn ghost" onClick={() => setTranslateTo(null)} disabled={translating}>Cancel</button>
-                <button className="btn" onClick={translate} disabled={translating}>{translating ? "Translating…" : "Translate"}</button>
+                <button className="btn" onClick={translate} disabled={translating || short_}>{translating ? "Translating…" : "Translate"}</button>
               </div>
             </div>
           </div>, document.body,
@@ -1425,9 +1439,9 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 onChange={(type, withEnglish) => setRetype({ type, withEnglish })} disabled={retyping} />
               <p className="muted small">
                 Some changes are instant (like hiding the English line). Others make the captions again from your video:
-                that takes a minute or two, uses no minutes, and replaces your text edits (your style stays).
-                {` ${Math.max(0, MAX_REDOS - initial.redos)} of ${MAX_REDOS} remakes left.`}{dirty ? " Unsaved changes will be lost." : ""}
+                that takes a minute or two and replaces your text edits (your style stays).{dirty ? " Unsaved changes will be lost." : ""}
               </p>
+              <p className={`small${short_ ? " error" : ""}`}><b>Making them again: {costLine}</b>{short_ ? " Not enough minutes: upgrade on Billing." : ""} Instant changes use nothing.</p>
               <div className="modal-actions">
                 <button className="btn ghost" onClick={() => setRetype(null)} disabled={retyping}>Cancel</button>
                 <button className="btn" onClick={applyType} disabled={retyping}>{retyping ? "Changing…" : "Change"}</button>

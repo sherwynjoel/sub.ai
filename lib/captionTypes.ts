@@ -40,5 +40,3 @@ export function typeLabel(job: { script: string; captionCustom?: { show?: Show }
   return withEnglish ? `${name} + English` : name;
 }
 
-/** How many times a project's captions can be redone from the video without using minutes. */
-export const MAX_REDOS = 3;
