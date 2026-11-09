@@ -59,12 +59,70 @@
 .hm-dark .hm-kicker, .hm-dark .hm-lede { color: #b9b7cc; }
 .hm-dark .hm-sec { padding-top: clamp(64px, 9vw, 110px); }
 .sw { display: grid; grid-template-columns: minmax(240px, 340px) minmax(0, 1fr); gap: clamp(28px, 5vw, 72px); align-items: start; }
-.sw-phone { margin: 0; position: sticky; top: 100px; }
-.sw-screen { position: relative; aspect-ratio: 9 / 16; border-radius: 34px; overflow: hidden; border: 6px solid #26242f;
-  background: radial-gradient(70% 50% at 30% 20%, #2b8f7e, transparent 70%), radial-gradient(60% 60% at 80% 70%, #d06a3c, transparent 70%), radial-gradient(80% 60% at 20% 100%, #24407a, transparent 70%), #1a1a22; }
-.sw-stage { container-type: size; position: absolute; inset: 0; display: grid; place-items: center; padding: 0 7%; }
+.sw-phone { margin: 0; position: sticky; top: 100px; container-type: inline-size; perspective: 1200px; --rx: 0deg; --ry: 0deg; }
+.sw-glow { position: absolute; inset: 8% -6% 14%; z-index: -1; border-radius: 40%; filter: blur(48px); opacity: .55;
+  background: conic-gradient(from 0deg, #d4ff3f, #2b8f7e, #6b5cff, #d06a3c, #d4ff3f); animation: sw-spin 14s linear infinite; }
+@keyframes sw-spin { to { rotate: 1turn; } }
+.sw-body { transform: rotateX(var(--rx)) rotateY(var(--ry)); transition: transform .5s cubic-bezier(.2, .8, .2, 1); transform-style: preserve-3d;
+  box-shadow: 0 0 0 .25cqw #1a1a1c, inset 0 0 0 .3cqw #1c1c1f, 0 50px 80px -30px rgba(0, 0, 0, .9), 0 0 0 1px rgba(255, 255, 255, .04); }
+.sw-phone:hover .sw-body { transition-duration: .15s; }
+.sw-screen { aspect-ratio: 9 / 19.5; }
+.sw-screen::after { z-index: 6; }
+
+/* The shot behind the captions: an evening sky with city lights drifting past, a slow push-in, grain and a vignette. */
+.sw-shot { position: absolute; inset: -6%; overflow: hidden; animation: sw-push 18s ease-in-out infinite alternate;
+  background: radial-gradient(120% 60% at 50% 105%, #0d0b18 30%, transparent 62%), radial-gradient(90% 55% at 70% 18%, #f08a4b 0%, rgba(240, 138, 75, 0) 60%),
+    radial-gradient(80% 50% at 20% 35%, #7a3f8f 0%, rgba(122, 63, 143, 0) 65%), linear-gradient(180deg, #1c2450 0%, #6d3b6e 46%, #2a1a35 70%, #0a0912 100%); }
+@keyframes sw-push { from { transform: scale(1) translate(0, 0); } to { transform: scale(1.1) translate(-2%, 1.5%); } }
+.sw-shot i { position: absolute; border-radius: 50%; filter: blur(2px); mix-blend-mode: screen; animation: sw-drift 9s ease-in-out infinite alternate; }
+.sw-shot i:nth-child(1) { left: 12%; top: 58%; width: 14cqw; height: 14cqw; background: radial-gradient(#ffcf7a, transparent 70%); }
+.sw-shot i:nth-child(2) { left: 64%; top: 52%; width: 20cqw; height: 20cqw; background: radial-gradient(#ff8a5c, transparent 70%); animation-delay: -3s; }
+.sw-shot i:nth-child(3) { left: 38%; top: 66%; width: 9cqw; height: 9cqw; background: radial-gradient(#9fd8ff, transparent 70%); animation-delay: -5s; }
+.sw-shot i:nth-child(4) { left: 78%; top: 70%; width: 11cqw; height: 11cqw; background: radial-gradient(#ffd9a0, transparent 70%); animation-delay: -1s; }
+.sw-shot i:nth-child(5) { left: 4%; top: 72%; width: 18cqw; height: 18cqw; background: radial-gradient(#ff7aa8, transparent 70%); opacity: .7; animation-delay: -7s; }
+.sw-shot i:nth-child(6) { left: 50%; top: 45%; width: 7cqw; height: 7cqw; background: radial-gradient(#fff2c4, transparent 70%); animation-delay: -4s; }
+.sw-shot i:nth-child(7) { inset: 0; width: auto; height: auto; border-radius: 0; filter: none; mix-blend-mode: normal; animation: none;
+  background: radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(0, 0, 0, .55) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E"); }
+@keyframes sw-drift { from { translate: 0 0; } to { translate: 6cqw -4cqw; } }
+
+.sw-status { position: absolute; inset: 0 0 auto; height: 12cqw; z-index: 4; display: flex; align-items: center; justify-content: space-between; padding: 1.2cqw 8cqw 0 10cqw; color: #fff;
+  font: 600 4.3cqw -apple-system, "SF Pro Text", "Helvetica Neue", var(--font-sans), sans-serif; text-shadow: 0 1px 2px rgba(0, 0, 0, .3); }
+
+/* Dynamic Island: a pill, opening into a small live activity. */
+.sw-island { position: absolute; z-index: 5; top: 2.6cqw; left: 50%; translate: -50% 0; width: 31cqw; height: 9cqw; border-radius: 99px; background: #000;
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 2.4cqw; padding: 0 2.2cqw; overflow: hidden;
+  transition: width .55s cubic-bezier(.3, 1.35, .4, 1), height .55s cubic-bezier(.3, 1.35, .4, 1), border-radius .55s, padding .55s;
+  box-shadow: 0 0 0 .3cqw rgba(255, 255, 255, .02); }
+.sw-island.open { width: 82cqw; height: 15cqw; border-radius: 7.5cqw; padding: 0 3.4cqw; }
+.sw-isl-art { width: 5cqw; height: 5cqw; border-radius: 1.6cqw; background: var(--lime); display: grid; place-items: center; transition: width .5s, height .5s; }
+.sw-island.open .sw-isl-art { width: 9cqw; height: 9cqw; border-radius: 2.4cqw; }
+.sw-isl-art i { width: 50%; height: 14%; border-radius: 99px; background: #0c0c14; box-shadow: 0 -2.2cqw 0 -0.2cqw #0c0c14; }
+.sw-isl-text { display: grid; min-width: 0; color: #fff; line-height: 1.15; opacity: 0; transform: translateY(1cqw); transition: opacity .3s, transform .3s; }
+.sw-island.open .sw-isl-text { opacity: 1; transform: none; transition-delay: .2s; }
+.sw-isl-text small { font-size: 2.9cqw; color: #9b9aa6; }
+.sw-isl-text b { font: 600 4cqw var(--font-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sw-wave { display: flex; align-items: center; gap: .7cqw; height: 4.4cqw; }
+.sw-wave i { width: .8cqw; height: 100%; border-radius: 99px; background: var(--lime); animation: sw-eq 1s ease-in-out infinite; transform-origin: center; }
+.sw-wave i:nth-child(2) { animation-delay: -.2s; } .sw-wave i:nth-child(3) { animation-delay: -.5s; } .sw-wave i:nth-child(4) { animation-delay: -.35s; } .sw-wave i:nth-child(5) { animation-delay: -.7s; }
+.sw-island:not(.open) .sw-wave i:nth-child(n+4) { display: none; }
+@keyframes sw-eq { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+
+/* A 9:16 frame in the middle of the screen, like the video itself, so every style lays out as it does in the MP4. */
+.sw-stage { container-type: size; position: absolute; left: 0; right: 0; top: 47%; translate: 0 -50%; aspect-ratio: 9 / 16; z-index: 3; display: grid; place-items: center; padding: 0 7%; }
 .sw-stage .cap-main { font-size: 7.5cqmin; }
-.sw-time { position: absolute; top: 16px; left: 18px; z-index: 1; font: 600 .7rem ui-monospace, Menlo, monospace; color: rgba(255, 255, 255, .75); background: rgba(0, 0, 0, .35); padding: 4px 8px; border-radius: 6px; }
+.sw-rail { position: absolute; z-index: 4; right: 3.5cqw; bottom: 15.5%; display: grid; gap: 4cqw; justify-items: center; color: #fff; font: 600 2.9cqw var(--font-body); text-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
+.sw-rail span { display: grid; justify-items: center; gap: .8cqw; }
+.sw-rail svg { width: 7.4cqw; height: 7.4cqw; fill: #fff; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .4)); }
+.sw-rail span:first-child svg { fill: #ff4d6d; animation: sw-beat 2.4s ease-in-out infinite; }
+@keyframes sw-beat { 0%, 70%, 100% { transform: scale(1); } 78% { transform: scale(1.22); } 86% { transform: scale(.95); } }
+.sw-meta { position: absolute; z-index: 4; left: 5cqw; right: 18cqw; bottom: 8.6%; display: grid; gap: 1.2cqw; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
+.sw-meta b { display: flex; align-items: center; gap: 2cqw; font: 600 3.6cqw var(--font-body); }
+.sw-meta b i { width: 6.4cqw; height: 6.4cqw; border-radius: 50%; background: linear-gradient(135deg, #d4ff3f, #2b8f7e); box-shadow: 0 0 0 .5cqw rgba(255, 255, 255, .85); }
+.sw-meta span { font-size: 3cqw; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sw-progress { position: absolute; z-index: 4; left: 5cqw; right: 5cqw; bottom: 6.2%; height: .7cqw; border-radius: 99px; background: rgba(255, 255, 255, .28); overflow: hidden; }
+.sw-progress i { display: block; height: 100%; background: #fff; border-radius: inherit; }
+@media (prefers-reduced-motion: reduce) { .sw-glow, .sw-shot, .sw-shot i, .sw-wave i, .sw-rail span:first-child svg { animation: none; } .sw-body { transition: none; } }
 .sw-phone figcaption { display: flex; justify-content: space-between; align-items: baseline; margin-top: 14px; }
 .sw-phone figcaption b { font: 700 1.25rem var(--font-head); }
 .sw-phone figcaption span { font-size: .8rem; color: #8f8da3; text-transform: uppercase; letter-spacing: .1em; }
