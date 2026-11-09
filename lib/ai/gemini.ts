@@ -1,6 +1,7 @@
 import { languageOf } from "@/lib/languages";
 import { getSecret } from "@/lib/secrets";
 import { postJson, subtitleRules, type Provider } from "./shared";
+import { geminiUsage } from "./usage";
 
 const schema = {
   type: "ARRAY",
@@ -13,7 +14,7 @@ const schema = {
 };
 
 /** Gemini hears the audio directly and returns timed <language> + English cues in a single call. */
-export const gemini: Provider = async (audio, dur, cfg, lang, want) => {
+export const gemini: Provider = async (audio, dur, cfg, lang, want, meter) => {
   const key = await getSecret("GEMINI_API_KEY");
   if (!key) throw new Error("Gemini API key is not set: set GEMINI_API_KEY in the server's .env.local.");
   const prompt = `${subtitleRules(languageOf(lang).name, want.script)}
@@ -29,6 +30,7 @@ Listen to this ${dur.toFixed(1)}-second audio clip and return subtitle cues for 
       }),
     },
   );
+  meter?.add({ ...geminiUsage(data.usageMetadata, cfg.model), audioSec: dur });
   const text = data.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") || "[]";
   return JSON.parse(text);
 };

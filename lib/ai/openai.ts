@@ -1,12 +1,13 @@
 import { postJson, subtitleRules, type AiConfig, type Want } from "./shared";
 import { languageOf } from "@/lib/languages";
 import type { Cue } from "@/db";
+import type { Meter } from "./usage";
 
 /**
  * Any OpenAI-compatible API (OpenAI, Groq, OpenRouter, local servers):
  * 1) Whisper-style transcription gives timed segments, 2) a chat model writes <language> + English for each.
  */
-export async function openaiCompatible(audio: Buffer, _dur: number, cfg: AiConfig, api: { baseUrl: string; apiKey: string }, lang: string, want: Want): Promise<Cue[]> {
+export async function openaiCompatible(audio: Buffer, dur: number, cfg: AiConfig, api: { baseUrl: string; apiKey: string }, lang: string, want: Want, meter?: Meter): Promise<Cue[]> {
   if (!api.baseUrl || !api.apiKey) throw new Error(`API key or URL for "${cfg.provider}" is not set in the server's .env.local.`);
   const auth = { authorization: `Bearer ${api.apiKey}` };
 
@@ -16,6 +17,7 @@ export async function openaiCompatible(audio: Buffer, _dur: number, cfg: AiConfi
   form.append("response_format", "verbose_json");
   form.append("timestamp_granularities[]", "segment");
   const stt = await postJson(`${api.baseUrl}/audio/transcriptions`, { headers: auth, body: form });
+  meter?.add({ provider: cfg.provider, model: cfg.sttModel, kind: "subtitles", audioSec: dur });
   const segs: { start: number; end: number; text: string }[] = (stt.segments ?? []).filter((s: { text: string }) => s.text.trim());
   if (!segs.length) return [];
 
@@ -31,6 +33,7 @@ export async function openaiCompatible(audio: Buffer, _dur: number, cfg: AiConfi
       ],
     }),
   });
+  meter?.add({ provider: cfg.provider, model: cfg.model, kind: "subtitles", inTok: chat.usage?.prompt_tokens ?? 0, outTok: chat.usage?.completion_tokens ?? 0 });
   const out: { i: number; ta: string; en: string }[] = JSON.parse(chat.choices[0].message.content).cues ?? [];
   const byIndex = new Map(out.map((c) => [c.i, c]));
   return segs.map((s, i) => ({ start: s.start, end: s.end, ta: byIndex.get(i)?.ta ?? s.text, en: byIndex.get(i)?.en ?? "" }));

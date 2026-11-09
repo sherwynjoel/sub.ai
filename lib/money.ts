@@ -2,6 +2,7 @@ import "server-only";
 import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import { billingEvents, creditLog, db, settings, users } from "@/db";
 import { PLANS, type PlanId } from "@/lib/plans";
+import { measuredCostByMonth } from "@/lib/aiPrices";
 
 type Pay = { id?: string; amount?: number; email?: string; contact?: string; error_description?: string; error_reason?: string; method?: string; notes?: { userId?: string }; order_id?: string };
 type Evt = {
@@ -24,7 +25,7 @@ export async function setAiCostPerMin(rupees: number) {
 /** Money in, money back, payments that failed or were never finished, and what the AI cost, for the Revenue page. */
 export async function money() {
   const now = new Date(), year = new Date(now.getTime() - 400 * 864e5), month = new Date(now.getTime() - 30 * 864e5);
-  const [paid, refunds, failed, started, usage, cost, people] = await Promise.all([
+  const [paid, refunds, failed, started, usage, cost, people, measured] = await Promise.all([
     db.select().from(billingEvents).where(and(inArray(billingEvents.type, ["order.applied", "subscription.charged"]), gt(billingEvents.createdAt, year))).orderBy(desc(billingEvents.createdAt)),
     db.select().from(billingEvents).where(and(inArray(billingEvents.type, ["refund.processed", "refund.created"]), gt(billingEvents.createdAt, year))).orderBy(desc(billingEvents.createdAt)),
     db.select().from(billingEvents).where(and(eq(billingEvents.type, "payment.failed"), gt(billingEvents.createdAt, month))).orderBy(desc(billingEvents.createdAt)).limit(50),
@@ -34,6 +35,7 @@ export async function money() {
       .from(creditLog).where(and(gt(creditLog.createdAt, year), inArray(creditLog.kind, ["upload", "translate", "remake", "extra", "refund"]))).groupBy(sql`1`),
     aiCostPerMin(),
     db.select({ id: users.id, email: users.email, name: users.name }).from(users),
+    measuredCostByMonth(),
   ]);
   const who = new Map(people.map((p) => [p.id, p]));
   const rupees = (e: Evt) => (e.payload?.payment?.entity?.amount ?? 0) / 100;
@@ -62,7 +64,11 @@ export async function money() {
 
   return {
     cost,
-    months: [...byMonth.values()].map((r) => ({ ...r, aiCost: r.minutes * cost, profit: r.income - r.refunds - r.minutes * cost })),
+    // The measured AI cost (lib/aiPrices.ts) where there is one; earlier months use the admin's ₹ per minute.
+    months: [...byMonth.values()].map((r) => {
+      const m = measured.get(r.m), aiCost = m ?? r.minutes * cost;
+      return { ...r, aiCost, measured: m !== undefined, known: m !== undefined || cost > 0, profit: r.income - r.refunds - aiCost };
+    }),
     days: [...byDay].map(([d, r]) => ({ d, r })),
     byPlan: Object.entries(byPlan).sort((a, b) => b[1].rupees - a[1].rupees),
     recent: paid.slice(0, 30).map((e) => ({ at: e.createdAt, user: who.get(userOf(e.payload as Evt) ?? ""), plan: (e.payload as Evt).plan, rupees: rupees(e.payload as Evt), type: e.type })),

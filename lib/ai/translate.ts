@@ -1,5 +1,6 @@
 import { getSecret } from "@/lib/secrets";
 import { postJson } from "./shared";
+import type { Meter } from "./usage";
 
 const API = "https://api.sarvam.ai/translate";
 /** Mayura translates into everyday speech ("modern-colloquial"), better for captions; Sarvam-Translate covers all 22 languages. */
@@ -10,7 +11,7 @@ const MAYURA = ["bn-IN", "gu-IN", "hi-IN", "kn-IN", "ml-IN", "mr-IN", "od-IN", "
  * empty lines stay empty. (Used for English speech, and for translating a project's captions into another language;
  * the English line of a Tamil video comes from the speech itself, see sarvam.ts.)
  */
-export async function translateLines(lines: string[], lang: string, from = "en-IN"): Promise<string[]> {
+export async function translateLines(lines: string[], lang: string, from = "en-IN", meter?: Meter): Promise<string[]> {
   const key = await getSecret("SARVAM_API_KEY");
   if (!key) throw new Error("Translation needs a Sarvam API key: set SARVAM_API_KEY in the server's .env.local.");
   const mayura = [lang, from].every((l) => l === "en-IN" || MAYURA.includes(l));
@@ -25,6 +26,7 @@ export async function translateLines(lines: string[], lang: string, from = "en-I
           model: mayura ? "mayura:v1" : "sarvam-translate:v1", ...(mayura ? { mode: "modern-colloquial" } : {}),
         }),
       });
+      meter?.add({ provider: "sarvam", model: mayura ? "mayura:v1" : "sarvam-translate:v1", kind: "translate", chars: lines[i].slice(0, 1000).length });
       out[i] = String(r.translated_text ?? "").trim();
     }
   }));

@@ -11,11 +11,12 @@ const API = "https://api.sarvam.ai/speech-to-text/job/v1";
  * time. (Text translation, sentence by sentence, was tried: sarvam-translate and Mayura both mistranslated
  * code-mixed Tamil far more often than Saaras translating the speech.)
  */
-export const sarvam: Provider = async (audio, dur, cfg, lang, want) => {
+export const sarvam: Provider = async (audio, dur, cfg, lang, want, meter) => {
   const key = await getSecret("SARVAM_API_KEY");
   if (!key) throw new Error("No Sarvam API key: set SARVAM_API_KEY in the server's .env.local.");
   const [native, english = []] = (await Promise.all(passesFor(want.script, want.english).map((mode) => batch(audio, key, cfg.model, mode, lang))))
     .map((pieces) => spanPieces(pieces, dur));
+  passesFor(want.script, want.english).forEach(() => meter?.add({ provider: "sarvam", model: cfg.model, kind: "subtitles", audioSec: dur })); // each pass hears the whole chunk
   // Saaras windows are 10–30 s, so each paired window is cut into readable cues by sentence (English sentences matched
   // to the native sentences they translate).
   return pairChunks(native, english).flatMap((c) => layoutCue(c));
