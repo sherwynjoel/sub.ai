@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import StyledCaption from "@/components/StyledCaption";
 import { STYLE_CHOICES, STYLE_GROUPS } from "@/lib/captionStyles";
 import "@/app/caption-styles.css";
+import { PHONE_CLIP } from "@/lib/phoneClip";
 
 // Lines people really post, each with its English under it; the preview moves to the next one every few loops.
 const LINES = [
@@ -13,8 +14,9 @@ const LINES = [
 const START = 0.1, END = 2.6, LOOP = 4.2;
 
 /**
- * The homepage's style picker: a phone playing one caption in the picked style, and every style by name to tap,
- * the popular ones first. The clock only runs while it's on screen.
+ * The homepage's style picker: a phone playing a real clip with its real subtitles in the picked style (lib/phoneClip.ts;
+ * the sample lines below while it has none), and every style by name to tap, the popular ones first. It only plays
+ * while it's on screen.
  */
 export default function StyleWall({ popular }: { popular: string[] }) {
   const first = popular.find((id) => STYLE_CHOICES.some((s) => s.id === id)) ?? STYLE_CHOICES[0].id;
@@ -22,6 +24,10 @@ export default function StyleWall({ popular }: { popular: string[] }) {
   const [t, setT] = useState(END - 0.01);
   const [n, setN] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
+  const vid = useRef<HTMLVideoElement>(null);
+  const [vt, setVt] = useState(0); // the clip's time
+  const [dur, setDur] = useState(72.6);
+  const clip = PHONE_CLIP.cues.length > 0;
   const [open, setOpen] = useState(false); // the Dynamic Island showing the style's name
   const mounted = useRef(false);
   useEffect(() => {
@@ -42,10 +48,13 @@ export default function StyleWall({ popular }: { popular: string[] }) {
 
   useEffect(() => {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    let timer = 0, t0 = 0;
+    let timer = 0, t0 = 0, raf = 0;
+    const v = vid.current;
+    const follow = () => { if (v) setVt(v.currentTime); raf = requestAnimationFrame(follow); };
     const io = new IntersectionObserver(([e]) => {
-      clearInterval(timer);
-      if (!e.isIntersecting) return;
+      clearInterval(timer); cancelAnimationFrame(raf);
+      if (!e.isIntersecting) { v?.pause(); return; }
+      if (v && PHONE_CLIP.cues.length) { v.play().catch(() => {}); raf = requestAnimationFrame(follow); return; }
       t0 = performance.now();
       timer = window.setInterval(() => {
         const s = (performance.now() - t0) / 1000;
@@ -54,12 +63,13 @@ export default function StyleWall({ popular }: { popular: string[] }) {
       }, 50);
     });
     if (ref.current) io.observe(ref.current);
-    return () => { io.disconnect(); clearInterval(timer); };
+    return () => { io.disconnect(); clearInterval(timer); cancelAnimationFrame(raf); };
   }, []);
 
   const style = STYLE_CHOICES.find((s) => s.id === id) ?? STYLE_CHOICES[0];
   const top = popular.filter((p) => STYLE_CHOICES.some((s) => s.id === p));
   const line = LINES[n];
+  const ci = clip ? PHONE_CLIP.cues.findIndex((c) => vt >= c.start && vt < c.end) : -1, cue = ci >= 0 ? PHONE_CLIP.cues[ci] : null;
 
   return (
     <div className="sw" ref={ref}>
@@ -68,8 +78,9 @@ export default function StyleWall({ popular }: { popular: string[] }) {
         <div className="iph-body sw-body">
           <i className="iph-btn mute" /><i className="iph-btn vol1" /><i className="iph-btn vol2" /><i className="iph-btn power" />
           <div className="iph-screen sw-screen">
-            {/* A moody evening shot, drawn in CSS: sky, drifting city lights, film grain. */}
-            <div className="sw-shot" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></div>
+            {clip
+              ? <video ref={vid} className="sw-video" src={PHONE_CLIP.src} poster={PHONE_CLIP.poster} muted loop playsInline preload="none" aria-hidden="true" tabIndex={-1} onLoadedMetadata={(e) => setDur(e.currentTarget.duration || 72.6)} />
+              : /* A moody evening shot, drawn in CSS: sky, drifting city lights, film grain. */ <div className="sw-shot" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></div>}
             <div className="sw-status" aria-hidden="true">
               <b>9:41</b>
               <span className="iph-icons">
@@ -86,7 +97,9 @@ export default function StyleWall({ popular }: { popular: string[] }) {
               <span className="sw-wave"><i /><i /><i /><i /><i /></span>
             </div>
             <div className="sw-stage" aria-hidden="true">
-              <StyledCaption key={`${id}-${n}`} styleId={id} text={line.text} sub={line.sub} start={START} end={END} time={Math.min(t, END - 0.01)} ratio={9 / 16} />
+              {clip
+                ? cue && <StyledCaption key={`${id}-c${ci}`} styleId={id} text={cue.text} sub={cue.sub} start={cue.start} end={cue.end} time={Math.min(vt, cue.end - 0.01)} ratio={9 / 16} />
+                : <StyledCaption key={`${id}-${n}`} styleId={id} text={line.text} sub={line.sub} start={START} end={END} time={Math.min(t, END - 0.01)} ratio={9 / 16} />}
             </div>
             <div className="sw-rail" aria-hidden="true">
               <span><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.3 3 4.5 6.6 4.5c2.1 0 3.6 1.2 5.4 3.1 1.8-1.9 3.3-3.1 5.4-3.1 3.6 0 5.7 3.8 4.2 7.3C19.5 16.4 12 21 12 21Z" /></svg>12.4K</span>
@@ -94,10 +107,10 @@ export default function StyleWall({ popular }: { popular: string[] }) {
               <span><svg viewBox="0 0 24 24"><path d="M21 3 3 10.5l7 2.5 2.5 7L21 3Z" /></svg>Share</span>
             </div>
             <div className="sw-meta" aria-hidden="true">
-              <b>{/* eslint-disable-next-line @next/next/no-img-element */}<img src="/logo.png" alt="" width={48} height={48} />kavya.edits</b>
-              <span>Machi vlog · ep 12 · subtitles by Vasanamm</span>
+              <b>{/* eslint-disable-next-line @next/next/no-img-element */}<img src="/logo.png" alt="" width={48} height={48} />{clip ? "sudhir.srinivasan" : "kavya.edits"}</b>
+              <span>{clip ? "With Riya Shibu · subtitles by Vasanamm" : "Machi vlog · ep 12 · subtitles by Vasanamm"}</span>
             </div>
-            <div className="sw-progress" aria-hidden="true"><i style={{ width: `${(t / LOOP) * 100}%` }} /></div>
+            <div className="sw-progress" aria-hidden="true"><i style={{ width: `${clip ? (vt / dur) * 100 : (t / LOOP) * 100}%` }} /></div>
             <span className="iph-home" aria-hidden="true" />
           </div>
         </div>

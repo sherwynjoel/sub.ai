@@ -315,3 +315,5 @@
   .hm-frame .hm-cap { font-size: 1.05rem; margin-bottom: 8px; min-height: 0; }
   .hm-frame { padding: 16px 14px 12px; }
 }
+
+.sw-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
