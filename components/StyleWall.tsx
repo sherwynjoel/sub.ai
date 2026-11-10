@@ -37,15 +37,6 @@ export default function StyleWall({ popular }: { popular: string[] }) {
     return () => clearTimeout(k);
   }, [id]);
 
-  // The phone leans a little toward the pointer.
-  const tilt = (e: React.PointerEvent<HTMLElement>) => {
-    if (e.pointerType !== "mouse") return;
-    const r = e.currentTarget.getBoundingClientRect();
-    e.currentTarget.style.setProperty("--rx", `${((e.clientY - r.top) / r.height - 0.5) * -8}deg`);
-    e.currentTarget.style.setProperty("--ry", `${((e.clientX - r.left) / r.width - 0.5) * 10}deg`);
-  };
-  const untilt = (e: React.PointerEvent<HTMLElement>) => { e.currentTarget.style.setProperty("--rx", "0deg"); e.currentTarget.style.setProperty("--ry", "0deg"); };
-
   useEffect(() => {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     let timer = 0, t0 = 0, raf = 0;
@@ -73,7 +64,7 @@ export default function StyleWall({ popular }: { popular: string[] }) {
 
   return (
     <div className="sw" ref={ref}>
-      <figure className="sw-phone" aria-label={`${style.name}: a preview of the style`} onPointerMove={tilt} onPointerLeave={untilt}>
+      <figure className="sw-phone" aria-label={`${style.name}: a preview of the style`}>
         <div className="sw-glow" aria-hidden="true" />
         <div className="iph-body sw-body">
           <i className="iph-btn mute" /><i className="iph-btn vol1" /><i className="iph-btn vol2" /><i className="iph-btn power" />
