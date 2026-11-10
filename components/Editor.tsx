@@ -651,9 +651,6 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [logoVer, setLogoVer] = useState(0); // bumps the logo image URL after an upload
   const bgCanvas = useRef<HTMLCanvasElement>(null);
   const [tab, setTab] = useState<Tab>("style");
-  // Linked (always on when the editor opens): dragging or resizing a caption on the video moves every caption.
-  // Unlinked: only that caption, which keeps its own place from then on (Put back returns it to the others).
-  const [linked, setLinked] = useState(true);
   const [stylesOpen, setStylesOpen] = useState(false); // the style list, folded to the chosen style once one is picked
   const inBrowser = useSyncExternalStore(noop, () => true, () => false); // false while rendered on the server
   // The video stays on the device: this page plays that file, in its original quality (lib/localVideo.ts).
@@ -1253,16 +1250,29 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     }));
   }
   /**
-   * A caption dragged or resized on the video. Linked: the shared place moves (a caption with its own place keeps it;
-   * the one dragged joins the others where it's dropped). Unlinked: only that caption, as its own place.
+   * Link / Unlink, per caption. Every caption starts linked: they share one place, and dragging or resizing a linked
+   * caption on the video moves all the linked ones. An unlinked caption has a place of its own (say, over a B-roll
+   * shot): dragging it moves only it, and moving the others leaves it where it is. Linking it again puts it back.
    * `i` counts the captions shown: in the English view they're regrouped, so there it's the caption picked.
    */
+  const unlinked = (c?: Cue) => !!c?.style && ("x" in c.style || "y" in c.style);
   function placeCaption(i: number, patch: { x?: number; y?: number; size?: number }) {
     const k = view === "en" ? target() : i;
-    if (!linked) { if (k >= 0) styleCue(k, patch); return; }
-    tweak(patch);
+    if (unlinked(cues[k])) styleCue(k, patch);
+    else tweak(patch);
+  }
+  function toggleLink(k: number) {
     const c = cues[k];
-    if (c?.style && Object.keys(patch).some((key) => key in c.style!)) styleCue(k, Object.fromEntries(Object.keys(patch).map((key) => [key, undefined])) as CaptionCustom);
+    if (!c) return;
+    if (unlinked(c)) { styleCue(k, { x: undefined, y: undefined, size: undefined }); return; } // back with the others
+    // Its own place starts where it is now (measured as a drag does: the centre of its box in the frame).
+    const frame = video.current?.parentElement, box = frame?.querySelector<HTMLElement>(".drag-handle")?.parentElement;
+    let x = look.x ?? 0.5, y = look.y ?? (look.position === "top" ? look.offset + 0.06 : look.position === "middle" ? 0.5 : 1 - look.offset - 0.06);
+    if (frame && box) {
+      const f = frame.getBoundingClientRect(), r = box.getBoundingClientRect();
+      if (f.width && r.width) { x = (r.left + r.width / 2 - f.left) / f.width; y = (r.top + r.height / 2 - f.top) / f.height; }
+    }
+    styleCue(k, { x, y });
   }
   /** Change the selected caption's own look; an empty look falls back to the project's. */
   function styleCue(i: number, patch: CaptionCustom | null) {
@@ -1415,8 +1425,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       return c.toDataURL("image/jpeg", 0.7);
     } catch { return undefined; } // a video from elsewhere can't be read back
   };
-  // The caption on hand has a place of its own (moved while unlinked): Put back offers to return it.
-  const ownPlace = (() => { const st = cues[target()]?.style; return !!st && ("x" in st || "y" in st || "size" in st); })();
+  const ownPlace = unlinked(cues[target()]); // the caption on hand is unlinked
 
   return (
     <div className="editor ed" data-pane={pane} data-sheet={sheet || undefined}>
@@ -1658,11 +1667,10 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   <button onClick={() => { current(); setInline(true); }}><Icon name="text" />Edit text</button>
                   {highlights(look) && <button onClick={highlight}><Icon name="mark" />Highlight</button>}
                   <button onClick={() => { current(); setNudging(true); }}><Icon name="clock" />Timing</button>
-                  <button className={`vt-link${linked ? "" : " off"}`} aria-pressed={!linked} onClick={() => setLinked((l) => !l)}
-                    title={linked ? "Linked: dragging a caption moves all of them. Tap to unlink and move just one." : "Unlinked: dragging moves only that caption. Tap to link again."}>
-                    <Icon name={linked ? "link" : "unlink"} />{linked ? "Linked" : "Unlinked"}
+                  <button className={`vt-link${ownPlace ? " off" : ""}`} aria-pressed={ownPlace} onClick={() => toggleLink(target())}
+                    title={ownPlace ? "Unlinked: this caption has its own place; drag it anywhere, the others stay. Tap to link it back with the others." : "Linked: this caption moves with all the others. Tap to unlink it and give it its own place (say, over a B-roll shot)."}>
+                    <Icon name={ownPlace ? "unlink" : "link"} />{ownPlace ? "Unlinked" : "Linked"}
                   </button>
-                  {ownPlace && <button className="vt-putback" onClick={() => styleCue(target(), { x: undefined, y: undefined, size: undefined })} title="Put this caption back with the others">Put back</button>}
                   <button onClick={() => remove(target())}><Icon name="delete" />Delete</button>
                   <button className="vt-more" onClick={split}><Icon name="split" />Split</button>
                   <button className="vt-more" onClick={merge}><Icon name="merge" />Merge</button>
