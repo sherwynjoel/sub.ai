@@ -1015,7 +1015,7 @@ html:has(.pass-reveal[open]) { overflow: hidden; }
 .pass-sky > .pass-ta, .pass-sky > .pass-seal { position: absolute; }
 .pass-row { display: flex; align-items: center; justify-content: space-between; gap: calc(3 * var(--mm)); }
 .pass-brand { display: inline-flex; align-items: center; gap: .45em; font: 700 calc(4 * var(--mm)) var(--font-display); letter-spacing: -.02em; }
-.pass-brand i { width: 1.15em; height: 1.15em; border-radius: 23.5%; background: url(/logo.png) center / 100% no-repeat; }
+.pass-brand i { width: 1.15em; height: 1.15em; border-radius: 23.5%; background: url(/logo-256.webp) center / 100% no-repeat; }
 .pass-tier { padding: .3em .8em; border-radius: 99px; background: rgb(255 255 255 / .22); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .5); font: 600 calc(2.3 * var(--mm)) var(--font-sans); }
 .pass-tag { margin-top: calc(.8 * var(--mm)); font: 500 calc(2.5 * var(--mm)) var(--font-sans); opacity: .92; }
 .pass-ta { position: absolute; right: calc(5 * var(--mm)); top: calc(14.5 * var(--mm)); font: 700 calc(7 * var(--mm)) var(--font-tamil); color: rgb(255 255 255 / .55); }

@@ -1091,8 +1091,8 @@ function startEngine(
  * VasanamReveal
  * ------------------------------------------------------------------ */
 /** Vasanamm's mark without its tile (a big solid tile turns the glass's rim into coloured blotches): the black V with
- * its play button and caption lines, transparent around it (public/logo-mark.png). */
-const MARK_VASANAM = "/logo-mark.png"
+ * its play button and caption lines, transparent around it (public/logo-mark.webp). */
+const MARK_VASANAM = "/logo-mark.webp"
 
 export type VasanamRevealProps = Omit<GlassIconRevealProps, "logo">
 
