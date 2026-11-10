@@ -103,9 +103,10 @@ export type CaptionStyle = {
   // white box flashing onto it and pulling off it (flashStack)
   flashBox?: { serif: string; flash: string; big: number };
   reveal4?: { accent: string; big: number; smallFont: string; small: number; lastFont: string; last: number; silver: [string, string] }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
-  // glossy neon lines (Neon Duo): each line its own gradient (top → bottom) and glow, in turn; a thin bright rim round
-  // the letters and a dark shadow under them (a Colour gradient the user sets is every line's instead)
-  neon?: { rows: { grad: [string, string]; glow: string }[]; rim: string };
+  // satin-metal neon lines (Neon Duo): each line, in turn, its metal (colours from its lower left to its upper right,
+  // the light coming from there: METAL_ANGLE), its glow and the dark depth under its letters; a thin bright rim round
+  // the letters (a Colour gradient the user sets is every line's fill instead, top → bottom)
+  neon?: { rows: { metal: [number, string][]; glow: string; depth: string }[]; rim: string };
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
@@ -830,7 +831,10 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-lifted-dot", name: "Lifted Dot", group: "Typography", blurb: "A thin italic line over a huge word; the dot of its i flies up into the italic line. Words fade in, the huge word rises letter by letter (change the colours and fonts in the Style tab).", font: "Inter SemiBold", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, shadow: 0.05, shadowColor: "#000000", effect: "liftdot", liftDot: { serif: "Instrument Serif Italic", dot: W, big: 3.4, top: 0.59 } },
   { id: "cc-flash-box", name: "Flash Box", group: "Typography", blurb: "Right-aligned stacked lines, italic serif and clean sans; a white box flashes onto each word as it's said and pulls away to reveal it (change the colours and fonts in the Style tab).", font: "Inter Medium", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: W, shadow: 0.05, shadowColor: "#000000", effect: "flashbox", flashBox: { serif: "Playfair Display Bold Italic", flash: W, big: 2.1 } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
-  { id: "cc-neon-duo", name: "Neon Duo", group: "Typography", blurb: "Glossy Bodoni italics, the first line ice blue and the next hot pink, each with a bright rim, a neon glow and a shadow under it; each word rises in as it's said.", font: "Bodoni Moda Bold Italic", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, lineHeight: 0.65, reveal: "rise", neon: { rows: [{ grad: ["#8EC6F2", "#2D6CD6"], glow: "#2F7BFF" }, { grad: ["#F59BDF", "#B02A6C"], glow: "#FF3FA8" }], rim: "#F2FCFF" } },
+  { id: "cc-neon-duo", name: "Neon Duo", group: "Typography", blurb: "Glossy Bodoni italics, the first line ice blue and the next hot pink, each with a bright rim, a neon glow and a shadow under it; each word rises in as it's said.", font: "Bodoni Moda Bold Italic", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, lineHeight: 0.65, reveal: "rise", neon: { rows: [
+    { metal: [[0, "#1C3FA8"], [0.35, "#3A7FE0"], [0.62, "#5FA6EE"], [0.82, "#A6E0F7"], [1, "#EFFCFF"]], glow: "#2F7BFF", depth: "#0A1A4A" },
+    { metal: [[0, "#6E1046"], [0.35, "#B92C80"], [0.62, "#DE6CB8"], [0.82, "#F4BDE3"], [1, "#FFF0FA"]], glow: "#FF3FA8", depth: "#3D0623" },
+  ], rim: "#F2FCFF" } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
   // Helvetica / Neue Haas Grotesk (commercial) become Inter Bold, Helvetica Rounded becomes Nunito ExtraBold.
@@ -2413,16 +2417,41 @@ export function buildAss(cues: Cue[], o: Opts) {
             const text0 = body((jj, kk) => jj === j && (u.k === null || kk === u.k), tagsFor, g, ...rows[r]).replace(/\{\\r/g, `{\\r${rowTag(r)}`);
             const text = isBig(r) ? upper(text0) : text0;
             const nn = s.neon;
-            if (nn) { // Neon Duo: the glow and shadow under, then the letters with their bright rim, in the line's gradient
-              const look = nn.rows[r % nn.rows.length], ng = grad ?? look.grad, path: [number, number][] = dy ? [[cy + dy, n], [cy, n]] : [];
-              // (the glow and the rim drawn whole, in the gradient's middle colour: the gradient's strips go on top with no edge
-              // of their own, so their seams never show)
-              const fill = `\\1c${colorOnly(mixHex(ng[0], ng[1], 0.5))}`, t0 = Math.max(g.s, u.s);
+            if (nn) { // Neon Duo: the glow under, then the rim and the dark depth, then the letters' metal on top
+              const look = nn.rows[r % nn.rows.length], path: [number, number][] = dy ? [[cy + dy, n], [cy, n]] : [], t0 = Math.max(g.s, u.s);
+              // (the glow and rim layers are filled whole in the metal's middle colour: the strips on top have no edge of
+              // their own, so their seams never show)
+              const fill = `\\1c${colorOnly(grad ? mixHex(grad[0], grad[1], 0.5) : metalAt(look.metal, 0.5))}`;
               const glow = `${fill}\\bord${px(0.05)}\\3c${colorOnly(look.glow)}\\blur${px(0.12)}\\shad${px(0.08)}\\4c&H000000&`;
-              const rim = `${fill}\\bord${px(0.02)}\\3c${colorOnly(nn.rim)}\\blur${px(0.008)}\\shad0`;
+              const rim = `${fill}\\bord${px(0.02)}\\3c${colorOnly(nn.rim)}\\blur${px(0.008)}\\shad${px(0.045)}\\4c${colorOnly(look.depth)}`;
               add(t0, g.e, lead + "{\\q2}" + text.replace(/\{\\r/g, `{\\r${glow}`), 1, 0, 0);
               add(t0, g.e, lead + "{\\q2}" + text.replace(/\{\\r/g, `{\\r${rim}`), 2, 0, 0);
-              strips(t0, g.e, lead, cy, n, "{\\q2}" + text.replace(/\{\\r/g, "{\\r\\bord0\\shad0"), 3, 0, 0, path, ms2, ng, 24); // (finer strips: its colours are far apart)
+              const bare = "{\\q2}" + text.replace(/\{\\r/g, "{\\r\\bord0\\shad0");
+              if (grad) { strips(t0, g.e, lead, cy, n, bare, 3, 0, 0, path, ms2, grad, 24); continue; }
+              // the metal: strips across the whole line (its box: as wide as its text, as tall as the font's line), each
+              // a band running from upper left to lower right, in its colour; the line lit from its upper right
+              const W = Math.max(1, rowW[r]), H = Math.max(1, nats[r]), xc = ax - (hz * W) / 2, yc = p.ys[r];
+              const uOf = ([x, y]: [number, number]) => ((x - xc) * H - (y - yc) * W) / (2 * W * H) + 0.5;
+              const cut = (poly: [number, number][], keep: (q: [number, number]) => number) => { // the part where keep ≥ 0
+                const out: [number, number][] = [];
+                poly.forEach((q, k) => {
+                  const nq = poly[(k + 1) % poly.length], a = keep(q), b = keep(nq);
+                  if (a >= 0) out.push(q);
+                  if ((a >= 0) !== (b >= 0)) { const f = a / (a - b); out.push([q[0] + (nq[0] - q[0]) * f, q[1] + (nq[1] - q[1]) * f]); }
+                });
+                return out;
+              };
+              const room = H * 2, box: [number, number][] = [[xc - W / 2 - room, yc - room], [xc + W / 2 + room, yc - room], [xc + W / 2 + room, yc + room], [xc - W / 2 - room, yc + room]];
+              const overlap = 2.5 / (2 * Math.min(W, H)); // about 2 px, in u
+              for (let k = 0; k < METAL_BANDS; k++) {
+                let poly = box;
+                if (k) poly = cut(poly, (q) => uOf(q) - (k / METAL_BANDS - overlap)); // (over the band before: no seam)
+                if (k < METAL_BANDS - 1) poly = cut(poly, (q) => (k + 1) / METAL_BANDS - uOf(q));
+                if (poly.length < 3) continue;
+                const clip = `\\clip(m ${poly.map(([x, y]) => `${Math.round(x)} ${Math.round(y)}`).join(" l ")})`;
+                const tint = `\\1c${colorOnly(metalAt(look.metal, (k + 0.5) / METAL_BANDS))}`;
+                add(t0, g.e, lead + `{${clip}${tint}}` + bare.replace(/\{\\r/g, `{\\r${tint}`), 3, 0, 0);
+              }
               continue;
             }
             strips(Math.max(g.s, u.s), g.e, lead, cy, n, "{\\q2}" + text, 1, 0, 0, dy ? [[cy + dy, n], [cy, n]] : [], ms2, bigOf(j)?.gradient ?? grad);
@@ -2688,6 +2717,17 @@ export function mixHex(a: string, b: string, t: number) {
 /** Where the letters are in a line's height (the rest is the font's room above and below): the gradient runs across
     them, top colour above, bottom colour below. The editor's CSS gradient uses the same stops. */
 export const GRADIENT_STOPS = [0.22, 0.78] as const;
+/** A metal's colour at t (0-1) along it: its stops blended. */
+export function metalAt(stops: [number, string][], t: number) {
+  const k = stops.findIndex(([at]) => at >= t);
+  if (k <= 0) return k === 0 ? stops[0][1] : stops[stops.length - 1][1];
+  const [a, ca] = stops[k - 1], [b, cb] = stops[k];
+  return mixHex(ca, cb, (t - a) / Math.max(1e-6, b - a));
+}
+/** A metal as CSS: from the box's lower left to its upper right corner (the MP4's strips run the same way). */
+export const metalCss = (stops: [number, string][]) => `linear-gradient(to top right, ${stops.map(([at, c]) => `${c} ${Math.round(at * 100)}%`).join(", ")})`;
+/** Neon Duo's metal strips: how many, across a line. */
+export const METAL_BANDS = 48;
 const inkT = (y: number) => Math.min(1, Math.max(0, (y - GRADIENT_STOPS[0]) / (GRADIENT_STOPS[1] - GRADIENT_STOPS[0])));
 
 /**
