@@ -840,3 +840,14 @@ test("Flash Box: lines as the reference, a box flashing onto each word as it's s
   const ass = buildAss([{ start: 0, end: 3, ta: W.join(" "), en: "" } as unknown as Parameters<typeof buildAss>[0][number]], { styleId: "cc-flash-box", lang: "ta", width: 1080, height: 1920 });
   assert.equal(ass.split("\n").filter((l) => /\\p1/.test(l)).length, 5, "a box for each word");
 });
+
+test("Neon Duo: each line's colour is editable (Line 1: the text colour, Line 2: the accent), its whole metal look made from it", () => {
+  const plain = resolveStyle("cc-neon-duo");
+  const s = resolveStyle("cc-neon-duo", { color: "#E0A030", accent: "#30C080" });
+  assert.equal(s.neon!.rows.length, 2);
+  assert.equal(s.neon!.rows[0].metal[1][1].toUpperCase(), "#E0A030", "line 1 from the text colour");
+  assert.equal(s.neon!.rows[1].metal[1][1].toUpperCase(), "#30C080", "line 2 from the accent");
+  assert.equal(s.neon!.rows[0].glow.toUpperCase(), "#E0A030");
+  assert.deepEqual(resolveStyle("cc-neon-duo", { color: "#E0A030" }).neon!.rows[1], plain.neon!.rows[1], "the other line kept");
+  assert.notDeepEqual(plain.neon!.rows[0], s.neon!.rows[0]);
+});

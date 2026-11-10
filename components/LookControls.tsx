@@ -1,7 +1,7 @@
 "use client";
 import ColorPicker from "@/components/ColorPicker";
 import FontPicker from "@/components/FontPicker";
-import { ANIMS, BLENDS, CAPTION_FONTS, highlights, takesLineSpacing, HIGHLIGHTS, TAMIL_FONTS, type Anim, type Blend, type CaptionCustom, type CaptionStyle, type Highlight, type Placement } from "@/lib/captionStyles";
+import { ANIMS, BLENDS, CAPTION_FONTS, highlights, neonBase, takesLineSpacing, HIGHLIGHTS, TAMIL_FONTS, type Anim, type Blend, type CaptionCustom, type CaptionStyle, type Highlight, type Placement } from "@/lib/captionStyles";
 
 type Props = {
   look: CaptionStyle & Placement;   // the resolved look these controls show
@@ -74,11 +74,15 @@ export default function LookControls({ look, own, set, tamil, project, setAll }:
       <fieldset>
         <legend>Colour</legend>
         <div className="look-row">
-          {look.gradient ? <>
+          {look.neon && !look.gradient ? <>
+            {/* Neon Duo: each line's metal made from its colour (the lines take turns) */}
+            <span className="cz-color">Line 1<ColorPicker value={hex(own.color ?? neonBase(look.neon.rows[0]), "#4a8be0")} onChange={(c) => set({ color: c })} label="First line's colour" /></span>
+            <span className="cz-color">Line 2<ColorPicker value={hex(own.accent ?? neonBase(look.neon.rows[1] ?? look.neon.rows[0]), "#c23e8c")} onChange={(c) => set({ accent: c })} label="Second line's colour" /></span>
+          </> : look.gradient ? <>
             <span className="cz-color">Top<ColorPicker value={hex(look.gradient[0], "#ffffff")} onChange={(c) => set({ gradient: [c, look.gradient![1]] })} label="Gradient top colour" /></span>
             <span className="cz-color">Bottom<ColorPicker value={hex(look.gradient[1], "#ffb37a")} onChange={(c) => set({ gradient: [look.gradient![0], c] })} label="Gradient bottom colour" /></span>
           </> : <span className="cz-color">Text<ColorPicker value={hex(look.color, "#ffffff")} onChange={(c) => set({ color: c })} label="Text colour" /></span>}
-          {highlights(look) && <span className="cz-color">{look.spark ? "Star" : look.dotStack ? "Dot" : look.cutOut ? "Bold word" : look.liftDot ? "Dot" : look.flashBox ? "Flash box" : look.reveal4 || look.stack4 ? "Accent" : look.boxPunch || look.cardSlide || look.dropCap ? "Box" : look.boldBar ? "Bar" : "Highlight"}<ColorPicker value={hex(own.accent ?? look.spark?.star ?? look.boxPunch?.color ?? look.cardSlide?.card ?? look.dropCap?.box ?? look.reveal4?.accent ?? look.stack4?.accent ?? look.dotStack?.dot ?? look.cutOut?.bold ?? look.liftDot?.dot ?? look.flashBox?.flash ?? look.boldBar?.colors[0] ?? look.mark ?? look.keyword?.color ?? look.active, "#ffe14d")} onChange={(c) => set({ accent: c })} label={look.spark ? "Star colour" : look.dotStack ? "Dot colour" : look.cutOut ? "Bold word colour" : look.liftDot ? "Dot colour" : look.flashBox ? "Flash box colour" : look.reveal4 || look.stack4 ? "Accent colour" : look.boxPunch || look.cardSlide || look.dropCap ? "Box colour" : look.boldBar ? "Bar colour" : "Highlight colour"} /></span>}
+          {highlights(look) && !look.neon && <span className="cz-color">{look.spark ? "Star" : look.dotStack ? "Dot" : look.cutOut ? "Bold word" : look.liftDot ? "Dot" : look.flashBox ? "Flash box" : look.reveal4 || look.stack4 ? "Accent" : look.boxPunch || look.cardSlide || look.dropCap ? "Box" : look.boldBar ? "Bar" : "Highlight"}<ColorPicker value={hex(own.accent ?? look.spark?.star ?? look.boxPunch?.color ?? look.cardSlide?.card ?? look.dropCap?.box ?? look.reveal4?.accent ?? look.stack4?.accent ?? look.dotStack?.dot ?? look.cutOut?.bold ?? look.liftDot?.dot ?? look.flashBox?.flash ?? look.boldBar?.colors[0] ?? look.mark ?? look.keyword?.color ?? look.active, "#ffe14d")} onChange={(c) => set({ accent: c })} label={look.spark ? "Star colour" : look.dotStack ? "Dot colour" : look.cutOut ? "Bold word colour" : look.liftDot ? "Dot colour" : look.flashBox ? "Flash box colour" : look.reveal4 || look.stack4 ? "Accent colour" : look.boxPunch || look.cardSlide || look.dropCap ? "Box colour" : look.boldBar ? "Bar colour" : "Highlight colour"} /></span>}
         </div>
         {(!project || setAll) && <label>Text blend{project && " (all captions)"}
           <select value={look.blend ?? ""} onChange={(e) => (setAll ?? set)({ blend: (e.target.value || null) as Blend | null })}

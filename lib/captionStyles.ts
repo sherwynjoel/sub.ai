@@ -832,7 +832,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-lifted-dot", name: "Lifted Dot", group: "Typography", blurb: "A thin italic line over a huge word; the dot of its i flies up into the italic line. Words fade in, the huge word rises letter by letter (change the colours and fonts in the Style tab).", font: "Inter SemiBold", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, shadow: 0.05, shadowColor: "#000000", effect: "liftdot", liftDot: { serif: "Instrument Serif Italic", dot: W, big: 3.4, top: 0.59 } },
   { id: "cc-flash-box", name: "Flash Box", group: "Typography", blurb: "Right-aligned stacked lines, italic serif and clean sans; a white box flashes onto each word as it's said and pulls away to reveal it (change the colours and fonts in the Style tab).", font: "Inter Medium", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: W, shadow: 0.05, shadowColor: "#000000", effect: "flashbox", flashBox: { serif: "Playfair Display Bold Italic", flash: W, big: 2.1 } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
-  { id: "cc-neon-duo", name: "Neon Duo", group: "Typography", blurb: "Glossy Bodoni italics, the first line ice blue and the next hot pink, each with a bright rim, a neon glow and a shadow under it; each word rises in as it's said.", font: "Bodoni Moda Bold Italic", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, lineHeight: 0.65, reveal: "rise", neon: { rows: [
+  { id: "cc-neon-duo", name: "Neon Duo", group: "Typography", blurb: "Glossy Bodoni italics, the first line ice blue and the next hot pink, each with a bright rim, a neon glow and a shadow under it; each word rises in as it's said (change each line's colour in Colour).", font: "Bodoni Moda Bold Italic", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, lineHeight: 0.65, reveal: "rise", neon: { rows: [
     { metal: [[0, "#2A5CC4"], [0.4, "#4A8BE0"], [0.7, "#7DBAF0"], [0.88, "#BDE9F8"], [1, "#E9FBFF"]], edge: "#DDF6FF", depth: "#16357E", glow: "#3D8BFF" },
     { metal: [[0, "#8A1B5A"], [0.4, "#C23E8C"], [0.7, "#E07FC4"], [0.88, "#F6C6E9"], [1, "#FFEDF9"]], edge: "#FFDDF4", depth: "#5A0E3A", glow: "#FF4FB0" },
   ] } },
@@ -1096,13 +1096,15 @@ export function resolveStyle(id: string | null | undefined, custom: CaptionCusto
   const tall0 = looksTall(s.font, s.caps);
   if (c.font) s.font = c.font;
   if (c.fontTa) s.fontTa = c.fontTa;
+  if (c.color && s.neon) s.neon = { rows: [neonLook(c.color), ...s.neon.rows.slice(1)] }; // Neon Duo: the first line's metal
   if (c.color) {
     if (s.stagger) s.stagger = { ...s.stagger, colors: s.stagger.colors.map((x) => (x === s.color ? c.color! : x)) }; // the lines in the style's colour
     s.color = c.color;
     if (typeof s.future === "string") s.future = c.color + "66"; // dimmed version of the new colour
   }
   if (c.accent) {
-    if (s.spark) s.spark = { ...s.spark, star: c.accent };
+    if (s.neon) s.neon = { rows: [s.neon.rows[0], neonLook(c.accent), ...s.neon.rows.slice(2)] }; // and the second's
+    else if (s.spark) s.spark = { ...s.spark, star: c.accent };
     else if (s.boxPunch) s.boxPunch = { ...s.boxPunch, color: c.accent };
     else if (s.cardSlide) s.cardSlide = { ...s.cardSlide, card: c.accent };
     else if (s.dropCap) s.dropCap = { ...s.dropCap, box: c.accent };
@@ -2755,6 +2757,14 @@ export function sheenAt(t: number) {
   const [a, va] = P[k - 1], [b, vb] = P[k], f = (t - a) / (b - a);
   return va + (vb - va) * (f * f * (3 - 2 * f)); // (eased: no corners)
 }
+/** A Neon Duo line's whole look made from one colour (picked in Colour): its metal from deep to pale, its lit edge,
+ * dark side and glow. */
+export function neonLook(base: string) {
+  const b = base.slice(0, 7), w = (k: number) => mixHex(b, "#FFFFFF", k), d = (k: number) => mixHex(b, "#000000", k);
+  return { metal: [[0, d(0.42)], [0.4, b], [0.7, w(0.3)], [0.88, w(0.66)], [1, w(0.9)]] as [number, string][], edge: w(0.8), depth: d(0.66), glow: b };
+}
+/** The colour a Neon Duo line is made from (its metal's main colour), for the colour pickers. */
+export const neonBase = (row: { metal: [number, string][] }) => metalAt(row.metal, 0.4);
 /** Neon Duo's dark side: how far back (em, right and down) and in how many copies. */
 export const NEON_DEPTH = { x: 0.065, y: 0.025, steps: 5 };
 /** Neon Duo's lit edge: how wide (em; softened by most of that). */
