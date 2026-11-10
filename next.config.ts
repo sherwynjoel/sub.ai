@@ -17,6 +17,8 @@ const nextConfig: NextConfig = {
     ] })),
     // The engine and fonts rarely change: browsers keep them a week instead of asking the server at every export.
     ...["/ffmpeg/:path*", "/caption-fonts/:path*"].map((source) => ({ source, headers: [{ key: "Cache-Control", value: "public, max-age=604800" }] })),
+    // Home page pictures, clips and logos: kept a day, then refreshed in the background (files are replaced under the same name).
+    ...["/home/:path*", "/logo-256.webp", "/logo-mark.webp"].map((source) => ({ source, headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }] })),
   ],
   allowedDevOrigins: ["192.168.1.2", "*.trycloudflare.com"], // LAN Mac and a Cloudflare quick tunnel for off-site testing
 };

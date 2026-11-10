@@ -43,7 +43,7 @@ export default function Splash() {
   if (state === "gone") return null
   return (
     <div className={`splash${state === "leaving" ? " leaving" : ""}`} aria-hidden={state === "leaving"} role="status" aria-label="Loading Vasanamm">
-      <VasanamReveal className="splash-glass" loop={false} speed={1.25} onDone={revealDone} />
+      <VasanamReveal className="splash-glass" loop={false} speed={1.6} onDone={revealDone} />
       <i className="splash-mark" aria-hidden="true" />
     </div>
   )

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { CLIP, type ClipCue } from "@/lib/vsClip";
+import { useNear } from "@/lib/useNear";
 
 /**
  * The home page's "Why Vasanamm" pair, playing muted and in step: the plain clip with the usual auto-captions on
@@ -10,6 +11,7 @@ import { CLIP, type ClipCue } from "@/lib/vsClip";
 export default function ClipCompare() {
   const lead = useRef<HTMLVideoElement>(null), follow = useRef<HTMLVideoElement>(null), box = useRef<HTMLDivElement>(null);
   const [t, setT] = useState(CLIP.cues[0]?.start ?? 0);
+  const near = useNear(box); // nothing is fetched until the section is close
 
   useEffect(() => {
     const a = lead.current, b = follow.current, el = box.current;
@@ -32,11 +34,11 @@ export default function ClipCompare() {
     }, { threshold: 0.35 });
     io.observe(el);
     return () => { io.disconnect(); cancelAnimationFrame(raf); };
-  }, []);
+  }, [near]);
 
   const cue: ClipCue | undefined = CLIP.cues.find((c) => t >= c.start && t < c.end);
   const video = (ref: React.RefObject<HTMLVideoElement | null>, src: string, poster: string) => (
-    <video ref={ref} className="hm-clip" src={src} poster={poster} muted loop playsInline preload="metadata" aria-hidden="true" tabIndex={-1} />
+    <video ref={ref} className="hm-clip" src={near ? src : undefined} poster={near ? poster : undefined} muted loop playsInline preload={near ? "auto" : "none"} aria-hidden="true" tabIndex={-1} />
   );
 
   return (

@@ -4,6 +4,7 @@ import StyledCaption from "@/components/StyledCaption";
 import { STYLE_CHOICES, STYLE_GROUPS } from "@/lib/captionStyles";
 import "@/app/caption-styles.css";
 import { PHONE_CLIP } from "@/lib/phoneClip";
+import { useNear } from "@/lib/useNear";
 
 // Lines people really post, each with its English under it; the preview moves to the next one every few loops.
 const LINES = [
@@ -24,6 +25,7 @@ export default function StyleWall({ popular }: { popular: string[] }) {
   const [t, setT] = useState(END - 0.01);
   const [n, setN] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
+  const near = useNear(ref); // the clip and its poster are fetched only when the section is close
   const vid = useRef<HTMLVideoElement>(null);
   const [vt, setVt] = useState(0); // the clip's time
   const [dur, setDur] = useState(72.6);
@@ -55,7 +57,7 @@ export default function StyleWall({ popular }: { popular: string[] }) {
     });
     if (ref.current) io.observe(ref.current);
     return () => { io.disconnect(); clearInterval(timer); cancelAnimationFrame(raf); };
-  }, []);
+  }, [near]);
 
   const style = STYLE_CHOICES.find((s) => s.id === id) ?? STYLE_CHOICES[0];
   const top = popular.filter((p) => STYLE_CHOICES.some((s) => s.id === p));
@@ -70,7 +72,7 @@ export default function StyleWall({ popular }: { popular: string[] }) {
           <i className="iph-btn mute" /><i className="iph-btn vol1" /><i className="iph-btn vol2" /><i className="iph-btn power" />
           <div className="iph-screen sw-screen">
             {clip
-              ? <video ref={vid} className="sw-video" src={PHONE_CLIP.src} poster={PHONE_CLIP.poster} muted loop playsInline preload="none" aria-hidden="true" tabIndex={-1} onLoadedMetadata={(e) => setDur(e.currentTarget.duration || 72.6)} />
+              ? <video ref={vid} className="sw-video" src={near ? PHONE_CLIP.src : undefined} poster={near ? PHONE_CLIP.poster : undefined} muted loop playsInline preload={near ? "auto" : "none"} aria-hidden="true" tabIndex={-1} onLoadedMetadata={(e) => setDur(e.currentTarget.duration || 72.6)} />
               : /* A moody evening shot, drawn in CSS: sky, drifting city lights, film grain. */ <div className="sw-shot" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></div>}
             <div className="sw-status" aria-hidden="true">
               <b>9:41</b>
@@ -83,7 +85,7 @@ export default function StyleWall({ popular }: { popular: string[] }) {
             {/* The Dynamic Island opens for a moment with the style's name each time one is picked. */}
             <div className={`sw-island${open ? " open" : ""}`} aria-hidden="true">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="sw-isl-art" src="/logo.png" alt="" width={64} height={64} />
+              <img className="sw-isl-art" src="/logo-256.webp" alt="" loading="lazy" width={64} height={64} />
               <span className="sw-isl-text"><small>Now styling</small><b>{style.name}</b></span>
               <span className="sw-wave"><i /><i /><i /><i /><i /></span>
             </div>
@@ -98,7 +100,7 @@ export default function StyleWall({ popular }: { popular: string[] }) {
               <span><svg viewBox="0 0 24 24"><path d="M21 3 3 10.5l7 2.5 2.5 7L21 3Z" /></svg>Share</span>
             </div>
             <div className="sw-meta" aria-hidden="true">
-              <b>{/* eslint-disable-next-line @next/next/no-img-element */}<img src="/logo.png" alt="" width={48} height={48} />{clip ? "sudhir.srinivasan" : "kavya.edits"}</b>
+              <b>{/* eslint-disable-next-line @next/next/no-img-element */}<img src="/logo-256.webp" alt="" loading="lazy" width={48} height={48} />{clip ? "sudhir.srinivasan" : "kavya.edits"}</b>
               <span>{clip ? "With Riya Shibu · subtitles by Vasanamm" : "Machi vlog · ep 12 · subtitles by Vasanamm"}</span>
             </div>
             <div className="sw-progress" aria-hidden="true"><i style={{ width: `${clip ? (vt / dur) * 100 : (t / LOOP) * 100}%` }} /></div>
