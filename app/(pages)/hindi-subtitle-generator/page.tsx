@@ -18,7 +18,7 @@ export default function Page() {
         ["Hindi the way people speak it", "Hinglish (Hindi mixed with English) stays as it was said: English words stay in English inside the Hindi line, instead of being forced into Hindi spellings. Prefer one script? Choose “Pure Hindi”."],
         ["English translation included", "Each subtitle gets an English line on the same timing, or choose English only for viewers who don't read Hindi."],
         ["Hindi in English letters", "Choose “Hindi in English letters” and the Hindi is written the way people type it in chats."],
-        ["Edit everything", "Fix a word, retime a line on the timeline, split or merge subtitles, and pick from 44 caption styles, then change their fonts, colours and size."],
+        ["Edit everything", "Fix a word, retime a line on the timeline, split or merge subtitles, and pick from 45 caption styles, then change their fonts, colours and size."],
         ["Every format you need", "Download SRT, WebVTT or plain text, or export an MP4 with the subtitles burned in, from 480p up to 4K, with presets for YouTube, Reels and WhatsApp."],
       ]}
       steps={[

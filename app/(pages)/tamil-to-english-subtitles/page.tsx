@@ -18,7 +18,7 @@ export default function Page() {
         ["English that sounds natural", "Each line is translated as a sentence, not word by word, so jokes, slang and Tanglish read the way a person would say them in English."],
         ["Tamil and English together, or English only", "Show the Tamil line with the English under it on the same timing, or choose English only for viewers outside Tamil Nadu and abroad."],
         ["Going the other way", "Have an English video? Choose “Translate to Tamil” and the captions are written in Tamil."],
-        ["Edit everything", "Fix a word, retime a line on the timeline, split or merge subtitles, and pick from 44 caption styles, then change their fonts, colours and size."],
+        ["Edit everything", "Fix a word, retime a line on the timeline, split or merge subtitles, and pick from 45 caption styles, then change their fonts, colours and size."],
         ["Every format you need", "Download SRT, WebVTT or plain text, or export an MP4 with the subtitles burned in, from 480p up to 4K, with presets for YouTube, Reels and WhatsApp."],
       ]}
       steps={[
