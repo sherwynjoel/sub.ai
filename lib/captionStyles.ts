@@ -103,10 +103,11 @@ export type CaptionStyle = {
   // white box flashing onto it and pulling off it (flashStack)
   flashBox?: { serif: string; flash: string; big: number };
   reveal4?: { accent: string; big: number; smallFont: string; small: number; lastFont: string; last: number; silver: [string, string] }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
-  // satin-metal neon lines (Neon Duo): each line, in turn, its metal (colours from its lower left to its upper right,
-  // the light coming from there: METAL_ANGLE), its glow and the dark depth under its letters; a thin bright rim round
-  // the letters (a Colour gradient the user sets is every line's fill instead, top → bottom)
-  neon?: { rows: { metal: [number, string][]; glow: string; depth: string }[]; rim: string };
+  // metal neon lines (Neon Duo), each line in turn its look: solid letters with a deep dark side going back to the right
+  // (depth), their face polished metal (colours from its lower left to its upper right, the light from there) with a
+  // reflection across it (NEON_SHEEN), their edges lit from inside (edge), a neon glow round them (glow). A Colour
+  // gradient the user sets is every line's face instead (top → bottom).
+  neon?: { rows: { metal: [number, string][]; edge: string; depth: string; glow: string }[] };
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
@@ -832,9 +833,9 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-flash-box", name: "Flash Box", group: "Typography", blurb: "Right-aligned stacked lines, italic serif and clean sans; a white box flashes onto each word as it's said and pulls away to reveal it (change the colours and fonts in the Style tab).", font: "Inter Medium", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: W, shadow: 0.05, shadowColor: "#000000", effect: "flashbox", flashBox: { serif: "Playfair Display Bold Italic", flash: W, big: 2.1 } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
   { id: "cc-neon-duo", name: "Neon Duo", group: "Typography", blurb: "Glossy Bodoni italics, the first line ice blue and the next hot pink, each with a bright rim, a neon glow and a shadow under it; each word rises in as it's said.", font: "Bodoni Moda Bold Italic", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, lineHeight: 0.65, reveal: "rise", neon: { rows: [
-    { metal: [[0, "#1C3FA8"], [0.35, "#3A7FE0"], [0.62, "#5FA6EE"], [0.82, "#A6E0F7"], [1, "#EFFCFF"]], glow: "#2F7BFF", depth: "#0A1A4A" },
-    { metal: [[0, "#6E1046"], [0.35, "#B92C80"], [0.62, "#DE6CB8"], [0.82, "#F4BDE3"], [1, "#FFF0FA"]], glow: "#FF3FA8", depth: "#3D0623" },
-  ], rim: "#F2FCFF" } },
+    { metal: [[0, "#2A5CC4"], [0.4, "#4A8BE0"], [0.7, "#7DBAF0"], [0.88, "#BDE9F8"], [1, "#E9FBFF"]], edge: "#DDF6FF", depth: "#16357E", glow: "#3D8BFF" },
+    { metal: [[0, "#8A1B5A"], [0.4, "#C23E8C"], [0.7, "#E07FC4"], [0.88, "#F6C6E9"], [1, "#FFEDF9"]], edge: "#FFDDF4", depth: "#5A0E3A", glow: "#FF4FB0" },
+  ] } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
   // Helvetica / Neue Haas Grotesk (commercial) become Inter Bold, Helvetica Rounded becomes Nunito ExtraBold.
@@ -2417,41 +2418,57 @@ export function buildAss(cues: Cue[], o: Opts) {
             const text0 = body((jj, kk) => jj === j && (u.k === null || kk === u.k), tagsFor, g, ...rows[r]).replace(/\{\\r/g, `{\\r${rowTag(r)}`);
             const text = isBig(r) ? upper(text0) : text0;
             const nn = s.neon;
-            if (nn) { // Neon Duo: the glow under, then the rim and the dark depth, then the letters' metal on top
+            if (nn) { // Neon Duo, back to front: the glow, the dark side, the lit edge, the metal face, its reflection
               const look = nn.rows[r % nn.rows.length], path: [number, number][] = dy ? [[cy + dy, n], [cy, n]] : [], t0 = Math.max(g.s, u.s);
-              // (the glow and rim layers are filled whole in the metal's middle colour: the strips on top have no edge of
-              // their own, so their seams never show)
-              const fill = `\\1c${colorOnly(grad ? mixHex(grad[0], grad[1], 0.5) : metalAt(look.metal, 0.5))}`;
-              const glow = `${fill}\\bord${px(0.05)}\\3c${colorOnly(look.glow)}\\blur${px(0.12)}\\shad${px(0.08)}\\4c&H000000&`;
-              const rim = `${fill}\\bord${px(0.02)}\\3c${colorOnly(nn.rim)}\\blur${px(0.008)}\\shad${px(0.045)}\\4c${colorOnly(look.depth)}`;
-              add(t0, g.e, lead + "{\\q2}" + text.replace(/\{\\r/g, `{\\r${glow}`), 1, 0, 0);
-              add(t0, g.e, lead + "{\\q2}" + text.replace(/\{\\r/g, `{\\r${rim}`), 2, 0, 0);
-              const bare = "{\\q2}" + text.replace(/\{\\r/g, "{\\r\\bord0\\shad0");
-              if (grad) { strips(t0, g.e, lead, cy, n, bare, 3, 0, 0, path, ms2, grad, 24); continue; }
-              // the metal: strips across the whole line (its box: as wide as its text, as tall as the font's line), each
-              // a band running from upper left to lower right, in its colour; the line lit from its upper right
-              const W = Math.max(1, rowW[r]), H = Math.max(1, nats[r]), xc = ax - (hz * W) / 2, yc = p.ys[r];
-              const uOf = ([x, y]: [number, number]) => ((x - xc) * H - (y - yc) * W) / (2 * W * H) + 0.5;
-              const cut = (poly: [number, number][], keep: (q: [number, number]) => number) => { // the part where keep ≥ 0
-                const out: [number, number][] = [];
-                poly.forEach((q, k) => {
-                  const nq = poly[(k + 1) % poly.length], a = keep(q), b = keep(nq);
-                  if (a >= 0) out.push(q);
-                  if ((a >= 0) !== (b >= 0)) { const f = a / (a - b); out.push([q[0] + (nq[0] - q[0]) * f, q[1] + (nq[1] - q[1]) * f]); }
-                });
-                return out;
-              };
-              const room = H * 2, box: [number, number][] = [[xc - W / 2 - room, yc - room], [xc + W / 2 + room, yc - room], [xc + W / 2 + room, yc + room], [xc - W / 2 - room, yc + room]];
-              const overlap = 2.5 / (2 * Math.min(W, H)); // about 2 px, in u
-              for (let k = 0; k < METAL_BANDS; k++) {
-                let poly = box;
-                if (k) poly = cut(poly, (q) => uOf(q) - (k / METAL_BANDS - overlap)); // (over the band before: no seam)
-                if (k < METAL_BANDS - 1) poly = cut(poly, (q) => (k + 1) / METAL_BANDS - uOf(q));
-                if (poly.length < 3) continue;
-                const clip = `\\clip(m ${poly.map(([x, y]) => `${Math.round(x)} ${Math.round(y)}`).join(" l ")})`;
-                const tint = `\\1c${colorOnly(metalAt(look.metal, (k + 0.5) / METAL_BANDS))}`;
-                add(t0, g.e, lead + `{${clip}${tint}}` + bare.replace(/\{\\r/g, `{\\r${tint}`), 3, 0, 0);
+              const tagged = (tags: string) => "{\\q2}" + text.replace(/\{\\r/g, `{\\r${tags}`);
+              const mid = grad ? mixHex(grad[0], grad[1], 0.5) : metalAt(look.metal, 0.5);
+              add(t0, g.e, lead + tagged(`\\1c${colorOnly(mid)}\\bord${px(0.06)}\\3c${colorOnly(look.glow)}\\blur${px(0.16)}\\shad0`), 1, 0, 0);
+              // the dark side: copies stepping back, darkest furthest (each placed as the line, moved back)
+              for (let k = NEON_DEPTH.steps; k >= 1; k--) {
+                const f = k / NEON_DEPTH.steps, [ld] = at(reveal === "flicker" ? "" : rise(""), p.ys[r] + px(NEON_DEPTH.y * f), ax + px(NEON_DEPTH.x * f));
+                add(t0, g.e, ld + tagged(`\\1c${colorOnly(mixHex(look.depth, "#000000", 0.35 * f))}\\bord0\\shad0\\blur${px(0.006)}`), 2, 0, 0);
               }
+              const face = tagged("\\bord0\\shad0");
+              if (grad) strips(t0, g.e, lead, cy, n, face, 4, 0, 0, path, ms2, grad, 24);
+              else {
+                // the metal: strips across the whole line (its box: as wide as its text, as tall as the font's line), each a
+                // band running from upper left to lower right, in its colour, each over the one before (no seams)
+                const W = Math.max(1, rowW[r]), H = Math.max(1, nats[r]), xc = ax - (hz * W) / 2, yc = p.ys[r];
+                const uOf = ([x, y]: [number, number]) => ((x - xc) * H - (y - yc) * W) / (2 * W * H) + 0.5;
+                const cut = (poly: [number, number][], keep: (q: [number, number]) => number) => { // the part where keep ≥ 0
+                  const out: [number, number][] = [];
+                  poly.forEach((q, k) => {
+                    const nq = poly[(k + 1) % poly.length], a = keep(q), b = keep(nq);
+                    if (a >= 0) out.push(q);
+                    if ((a >= 0) !== (b >= 0)) { const f = a / (a - b); out.push([q[0] + (nq[0] - q[0]) * f, q[1] + (nq[1] - q[1]) * f]); }
+                  });
+                  return out;
+                };
+                const room = H * 2, box: [number, number][] = [[xc - W / 2 - room, yc - room], [xc + W / 2 + room, yc - room], [xc + W / 2 + room, yc + room], [xc - W / 2 - room, yc + room]];
+                const overlap = 2.5 / (2 * Math.min(W, H)); // about 2 px, in u
+                for (let k = 0; k < METAL_BANDS; k++) {
+                  let poly = box;
+                  if (k) poly = cut(poly, (q) => uOf(q) - (k / METAL_BANDS - overlap));
+                  if (k < METAL_BANDS - 1) poly = cut(poly, (q) => (k + 1) / METAL_BANDS - uOf(q));
+                  if (poly.length < 3) continue;
+                  const clip = `\\clip(m ${poly.map(([x, y]) => `${Math.round(x)} ${Math.round(y)}`).join(" l ")})`;
+                  const tint = `\\1c${colorOnly(metalAt(look.metal, (k + 0.5) / METAL_BANDS))}`;
+                  add(t0, g.e, lead + `{${clip}${tint}}` + face.replace(/\{\\r/g, `{\\r${tint}`), 4, 0, 0);
+                }
+              }
+              // the reflection: thin bands down the line, white or black, as see-through as the reflection is weak there
+              const top = cy - n / 2, from = NEON_SHEEN[0][0], to = NEON_SHEEN[NEON_SHEEN.length - 1][0], bandsN = Math.max(8, Math.round(((to - from) * n) / 3));
+              for (let k = 0; k < bandsN; k++) {
+                const ta = from + ((to - from) * k) / bandsN, tb = from + ((to - from) * (k + 1)) / bandsN, v = sheenAt((ta + tb) / 2);
+                if (Math.abs(v) < 0.01) continue;
+                const al = Math.round(255 * (1 - Math.abs(v))).toString(16).toUpperCase().padStart(2, "0");
+                const y0 = Math.round(top + ta * n), y1 = Math.round(top + tb * n);
+                if (y1 <= y0) continue;
+                const body = face.replace(/\{\\r/g, `{\\r\\1c${v > 0 ? "&HFFFFFF&" : "&H000000&"}`).replace(/\\alpha&H00&/g, `\\alpha&H${al}&`);
+                add(t0, g.e, lead + `{\\clip(0,${y0},${o.width},${y1})}` + body, 5, 0, 0);
+              }
+              // the lit edge: a soft line of light round the letters, in the line's own pale tint (no fill)
+              add(t0, g.e, lead + tagged(`\\1a&HFF&\\bord${px(NEON_EDGE)}\\3c${colorOnly(look.edge)}\\blur${px(NEON_EDGE * 0.8)}\\shad0`).replace(/\\alpha&H00&/g, "\\1a&HFF&\\3a&H08&"), 6, 0, 0);
               continue;
             }
             strips(Math.max(g.s, u.s), g.e, lead, cy, n, "{\\q2}" + text, 1, 0, 0, dy ? [[cy + dy, n], [cy, n]] : [], ms2, bigOf(j)?.gradient ?? grad);
@@ -2727,7 +2744,21 @@ export function metalAt(stops: [number, string][], t: number) {
 /** A metal as CSS: from the box's lower left to its upper right corner (the MP4's strips run the same way). */
 export const metalCss = (stops: [number, string][]) => `linear-gradient(to top right, ${stops.map(([at, c]) => `${c} ${Math.round(at * 100)}%`).join(", ")})`;
 /** Neon Duo's metal strips: how many, across a line. */
-export const METAL_BANDS = 48;
+export const METAL_BANDS = 40;
+/** Neon Duo's reflection over its letters' face, down the line's box (0 its top, 1 its bottom; the letters span about
+ * 0.25-0.74): how much light (+, white over it) or shade (-, black) at each point, smoothly between them. */
+export const NEON_SHEEN: [number, number][] = [[0.2, 0.42], [0.3, 0.3], [0.46, 0], [0.54, -0.1], [0.61, -0.13], [0.67, 0], [0.71, 0.12], [0.77, 0]];
+/** The reflection at t (see NEON_SHEEN). */
+export function sheenAt(t: number) {
+  const P = NEON_SHEEN, k = P.findIndex(([at]) => at >= t);
+  if (k <= 0) return k === 0 && t >= P[0][0] ? P[0][1] : 0;
+  const [a, va] = P[k - 1], [b, vb] = P[k], f = (t - a) / (b - a);
+  return va + (vb - va) * (f * f * (3 - 2 * f)); // (eased: no corners)
+}
+/** Neon Duo's dark side: how far back (em, right and down) and in how many copies. */
+export const NEON_DEPTH = { x: 0.065, y: 0.025, steps: 5 };
+/** Neon Duo's lit edge: how wide (em; softened by most of that). */
+export const NEON_EDGE = 0.02;
 const inkT = (y: number) => Math.min(1, Math.max(0, (y - GRADIENT_STOPS[0]) / (GRADIENT_STOPS[1] - GRADIENT_STOPS[0])));
 
 /**
