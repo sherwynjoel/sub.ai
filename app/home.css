@@ -67,13 +67,12 @@
 .hm-dark .hm-kicker, .hm-dark .hm-lede { color: #b9b7cc; }
 .hm-dark .hm-sec { padding-top: clamp(64px, 9vw, 110px); }
 .sw { display: grid; grid-template-columns: minmax(240px, 340px) minmax(0, 1fr); gap: clamp(28px, 5vw, 72px); align-items: start; }
-.sw-phone { margin: 0; position: sticky; top: 100px; container-type: inline-size; perspective: 1200px; --rx: 0deg; --ry: 0deg; }
+.sw-phone { margin: 0; position: sticky; top: 100px; container-type: inline-size; }
 .sw-glow { position: absolute; inset: 8% -6% 14%; z-index: -1; border-radius: 40%; filter: blur(48px); opacity: .55;
   background: conic-gradient(from 0deg, #d4ff3f, #2b8f7e, #6b5cff, #d06a3c, #d4ff3f); animation: sw-spin 14s linear infinite; }
 @keyframes sw-spin { to { rotate: 1turn; } }
-.sw-body { transform: rotateX(var(--rx)) rotateY(var(--ry)); transition: transform .5s cubic-bezier(.2, .8, .2, 1); transform-style: preserve-3d;
+.sw-body {
   box-shadow: 0 0 0 .25cqw #1a1a1c, inset 0 0 0 .3cqw #1c1c1f, 0 50px 80px -30px rgba(0, 0, 0, .9), 0 0 0 1px rgba(255, 255, 255, .04); }
-.sw-phone:hover .sw-body { transition-duration: .15s; }
 .sw-screen { aspect-ratio: 9 / 19.5; }
 .sw-screen::after { z-index: 6; }
 
@@ -131,7 +130,7 @@
 .sw-meta span { font-size: 3cqw; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sw-progress { position: absolute; z-index: 4; left: 5cqw; right: 5cqw; bottom: 6.2%; height: .7cqw; border-radius: 99px; background: rgba(255, 255, 255, .28); overflow: hidden; }
 .sw-progress i { display: block; height: 100%; background: #fff; border-radius: inherit; }
-@media (prefers-reduced-motion: reduce) { .sw-glow, .sw-shot, .sw-shot i, .sw-wave i, .sw-rail span:first-child svg { animation: none; } .sw-body { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .sw-glow, .sw-shot, .sw-shot i, .sw-wave i, .sw-rail span:first-child svg { animation: none; } }
 .sw-phone figcaption { display: flex; justify-content: space-between; align-items: baseline; margin-top: 14px; }
 .sw-phone figcaption b { font: 700 1.25rem var(--font-head); }
 .sw-phone figcaption span { font-size: .8rem; color: #8f8da3; text-transform: uppercase; letter-spacing: .1em; }
