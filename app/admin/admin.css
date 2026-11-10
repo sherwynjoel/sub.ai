@@ -129,3 +129,6 @@
 .invite-review { display: flex; flex-wrap: wrap; align-items: end; gap: 6px; }
 .invite-review label { display: grid; gap: 2px; font-size: .75rem; }
 .invite-review input { width: 70px; }
+.note.warn { margin: 12px 0; padding: 12px 16px; border-radius: 14px; background: #fff1f0; border: 1px solid #f3b7b0; color: #8a1c12; line-height: 1.5; }
+.note.warn a { color: inherit; }
+td .note.warn { margin: 4px 0 0; padding: 2px 8px; border-radius: 8px; display: inline-block; }

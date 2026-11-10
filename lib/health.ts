@@ -15,6 +15,36 @@ const STUCK_MS = 15 * 60e3; // a job untouched this long while queued or running
 const MIN_FREE_GB = 2;
 const WORKER_STALE_MS = 90e3;
 const REPEAT_MS = 3 * 3600e3; // the same problem is emailed again after this long
+const NO_CREDIT = "ai_out_of_credit";
+
+/**
+ * Did the AI service refuse because the account has no credit left? Sarvam answers 402 (Payment Required) when the
+ * credits run out; the wording is checked too in case a service says it another way.
+ */
+export function isOutOfCredit(err: unknown) {
+  const m = String((err as Error)?.message ?? err);
+  return /AI service error 402\b/.test(m) || /(insufficient|no|not enough|out of|exhausted)\W+(\w+\W+)?(credits?|balance)|credits?\W+(exhausted|finished|over)|quota exceeded/i.test(m);
+}
+
+/** Notes an AI error: when it's "no credit left", remembers it (shown on the admin pages, emailed). Returns whether it was. */
+export async function noteAiError(err: unknown) {
+  if (!isOutOfCredit(err)) return false;
+  const [prev] = await db.select().from(settings).where(eq(settings.key, NO_CREDIT)).catch(() => []);
+  if (!prev) {
+    const value = JSON.stringify({ at: new Date().toISOString(), detail: String((err as Error)?.message ?? err).slice(0, 300) });
+    await db.insert(settings).values({ key: NO_CREDIT, value }).onConflictDoNothing().catch(() => {});
+  }
+  return true;
+}
+/** An AI call worked: the credit is fine again. */
+export async function noteAiWorked() {
+  await db.delete(settings).where(eq(settings.key, NO_CREDIT)).catch(() => {});
+}
+/** Since when the AI service has been out of credit, or null. */
+export async function aiOutOfCredit(): Promise<{ at: Date; detail: string } | null> {
+  const [r] = await db.select().from(settings).where(eq(settings.key, NO_CREDIT)).catch(() => []);
+  try { const v = r ? JSON.parse(r.value) : null; return v ? { at: new Date(v.at), detail: v.detail } : null; } catch { return null; }
+}
 
 export async function checkHealth() {
   const problems: string[] = [];
@@ -35,6 +65,8 @@ export async function checkHealth() {
     if (!worker || Date.now() - worker.getTime() > WORKER_STALE_MS) problems.push("The worker isn't running, so no subtitles are being made");
     if (stuck) problems.push(`${stuck} video${stuck === 1 ? " is" : "s are"} stuck (waiting or processing for over 15 minutes)`);
     // Several failures and no success in the last hour: subtitling itself is broken (AI key, provider down).
+    const noCredit = await aiOutOfCredit();
+    if (noCredit) problems.push(`Sarvam has no credits left (since ${noCredit.at.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}), so no subtitles can be made. Top up at https://dashboard.sarvam.ai (Settings → Billing); it clears by itself once a video works`);
     if (failedHour >= 3 && !doneHour) problems.push(`${failedHour} videos failed in the last hour and none worked (AI key or AI service?)`);
   } catch {
     dbOk = false;
