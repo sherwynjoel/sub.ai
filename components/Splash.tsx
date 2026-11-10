@@ -7,14 +7,14 @@ const HOLD_MS = 250
 /** Only if the reveal never reports its end (a frozen tab, a broken GPU): lift anyway. CSS lifts it at 7 s too. */
 const CAP_MS = 6500
 const SEEN = "vs-splash"
-/** The page shows by this time after the visit started (ms) once it has loaded, even if the reveal is still playing:
+/** The page shows by this time after the visit started (ms), even if the reveal is still playing or a picture is still loading:
  * on a slow connection the reveal starts late (it needs the page's code), and a visitor shouldn't wait for all of it. */
 const BUDGET_MS = 2600
 
 /**
  * The first screen of a visit: Vasanamm's mark in glass while the page loads, then it fades away. It always plays
- * the whole reveal when the page is quick, waits for the page if that's slower, but never holds a loaded page past
- * BUDGET_MS from the start of the visit. Once per visit (a tab's
+ * the whole reveal when the page is quick, but never stays past BUDGET_MS from the start of the visit once the page
+ * is running. Once per visit (a tab's
  * session): a script in <head> hides it before anything is drawn when the visit already saw it. The server sends
  * it with the page, so it covers the page from the first paint.
  */
@@ -33,8 +33,9 @@ export default function Splash() {
       setState("leaving")
       setTimeout(() => setState("gone"), 450)
     }
-    // The page has to be loaded, and the reveal finished or the time budget used up.
-    leaveRef.current = () => { if (d.page && (d.reveal || d.late)) setTimeout(leave, d.reveal ? HOLD_MS : 0) }
+    // The reveal finished on a loaded page, or the time budget is used up: by then the page is drawn and working (this
+    // runs after it has started), and what may still be arriving (below-the-fold pictures, a caption font) fills in.
+    leaveRef.current = () => { if (d.late || (d.page && d.reveal)) setTimeout(leave, d.reveal ? HOLD_MS : 0) }
     const budget = setTimeout(() => { d.late = true; leaveRef.current() }, Math.max(0, BUDGET_MS - performance.now()))
     const loaded = () => { d.page = true; leaveRef.current() }
     if (document.readyState === "complete") loaded()
