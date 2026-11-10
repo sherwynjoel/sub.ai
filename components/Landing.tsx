@@ -207,7 +207,7 @@ export default function Landing({ popular }: { popular: string[] }) {
                     <div className="mac-page">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src="/home/editor.webp" width={2000} height={1250} loading="lazy" alt="The Vasanamm editor on a computer: the captions in Tamil and English on the left, the video in the middle, caption styles on the right." />
-                      {[["21%", "33%"], ["37.5%", "32%"], ["71.6%", "34.4%"], ["30.2%", "91%"]].map(([x, y], i) => <span key={i} className="hm-pin" style={{ left: x, top: y }} aria-hidden="true">{i + 1}</span>)}
+                      {[["21%", "33%"], ["37.5%", "32%"], ["70.6%", "34.5%"], ["30.2%", "91%"]].map(([x, y], i) => <span key={i} className="hm-pin" style={{ left: x, top: y }} aria-hidden="true">{i + 1}</span>)}
                     </div>
                   </div>
                 </div>
