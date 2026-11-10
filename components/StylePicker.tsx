@@ -78,8 +78,9 @@ export default function StylePicker({ styleId, onPick, onHover, text: line, fram
   }
   return (
     <div ref={ref} onMouseLeave={() => onHover?.(null)} style={bgStyle}>
-      <div className="style-group">
-        <span className="muted small">Popular</span>
+      {/* Popular in its own box: these styles show again in their groups below, and the box makes clear it's a shortlist. */}
+      <div className="style-group style-popular">
+        <span className="style-popular-head">Popular</span>
         <div className="style-grid" role="radiogroup" aria-label="Popular styles">{POPULAR.map((id) => chip(styleOf(id)))}</div>
       </div>
       {!showAll && <button type="button" className="btn ghost small style-all" onClick={() => setAll(true)}>See all {STYLE_CHOICES.length} styles</button>}

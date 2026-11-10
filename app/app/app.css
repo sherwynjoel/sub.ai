@@ -973,6 +973,10 @@ a.signout { text-decoration: none; }
 .ed-hint-x { position: absolute; right: 8px; top: 6px; border: 0; background: none; font-size: 1.2rem; cursor: pointer; color: var(--ink); }
 @media (max-width: 720px) { .ed-flow { display: none; } }
 .style-all { justify-self: start; margin: 4px 0 8px; }
+.style-popular { padding: 10px; margin-bottom: 10px; border: 1.5px solid var(--black); border-radius: 16px; background: rgb(212 255 63 / .14); }
+.style-popular-head { justify-self: start; padding: 2px 10px; border-radius: 999px; background: var(--black); color: #fff; font: 700 .72rem var(--font-body); letter-spacing: .02em; }
+.ed[data-sheet] .ed-side .style-popular { border-color: #2E7BFF; background: rgb(46 123 255 / .1); }
+.ed[data-sheet] .ed-side .style-popular-head { background: #2E7BFF; }
 /* The style list folded to the chosen one: its preview, name and what it does, and the button to change it. */
 .style-current { display: grid; grid-template-columns: 132px 1fr; gap: 12px; align-items: center; margin-bottom: 6px; }
 .style-current .sc-text { display: grid; gap: 4px; justify-items: start; }
