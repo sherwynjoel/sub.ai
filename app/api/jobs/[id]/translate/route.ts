@@ -5,6 +5,7 @@ import { ownJob } from "@/lib/jobs";
 import { isLanguage, languageOf } from "@/lib/languages";
 import { translateLines } from "@/lib/ai/translate";
 import { Meter, saveUsage } from "@/lib/ai/usage";
+import { alertOn, checkHealth, noteAiError, noteAiWorked } from "@/lib/health";
 import { charge, logUse, refund } from "@/lib/credits";
 import { minSec, outOfMinutes, passExpired, secondsLeft } from "@/lib/plans";
 
@@ -55,14 +56,17 @@ export async function POST(req: Request, { params }: Ctx) {
       const next = cues.map((c, i) => { const n: Cue = { ...c, en: out[i] }; delete n.we; delete n.wce; delete n.wfe; return n; });
       const show = j.captionCustom?.show === "ta" ? { ...j.captionCustom, show: "both" as const } : j.captionCustom;
       await db.update(jobs).set({ cues: next, withEnglish: true, captionCustom: show, updatedAt: new Date() }).where(eq(jobs.id, j.id));
+      await noteAiWorked();
       return json({ ok: true, language: "English" });
     }
     const out = await translateLines(cues.map((c) => (hasEn ? c.en : c.ta)), lang, from, meter);
     const next = cues.map((c, i) => { const n: Cue = { ...c, ta: out[i] }; delete n.w; delete n.wc; delete n.wf; return n; });
     await db.update(jobs).set({ cues: next, language: lang, script: "translated", updatedAt: new Date() }).where(eq(jobs.id, j.id));
+    await noteAiWorked();
     return json({ ok: true, language: languageOf(lang).name });
   } catch (e) {
     console.error("translate", j.id, e);
+    if (await noteAiError(e)) await alertOn("alert_site", (await checkHealth()).problems).catch(() => {});
     await refund(u.id, j.durationSec, { jobId: j.id, video: j.filename, kind: "refund", detail: "The translation didn't work" }); // nothing came of it
     return json({ error: "Translation didn't work just now. Try again in a minute." }, 502);
   } finally {

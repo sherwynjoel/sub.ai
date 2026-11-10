@@ -3,6 +3,7 @@ import AiPriceForm from "@/components/admin/AiPriceForm";
 import { when } from "@/lib/admin";
 import { aiCostStats, jobNames } from "@/lib/aiPrices";
 import { getAiConfig } from "@/lib/ai";
+import { aiOutOfCredit } from "@/lib/health";
 
 const monthName = (m: string) => new Date(`${m}-01T00:00:00`).toLocaleDateString("en-IN", { month: "short", year: "numeric" });
 /** ₹ with paise when small: AI costs per minute are often under ₹1. */
@@ -13,7 +14,7 @@ const big = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `
 
 /** What the AI really costs: measured from every call (tokens, audio, characters) and priced with the list below. */
 export default async function AiCost() {
-  const [s, cfg] = await Promise.all([aiCostStats(), getAiConfig()]);
+  const [s, cfg, noCredit] = await Promise.all([aiCostStats(), getAiConfig(), aiOutOfCredit()]);
   const names = await jobNames(s.recent.map((r) => r.jobId).filter((x): x is string => !!x));
   const thisMonth = s.months.at(-1)!, lastMonth = s.months.at(-2)!;
   const last30 = s.recent; // shown below
@@ -29,6 +30,13 @@ export default async function AiCost() {
         {s.since ? <> Measuring since {when(s.since)}.</> : <> Nothing measured yet: the first video made from now on shows up here.</>}
         {" "}Now using <b>{cfg.provider}</b> · {cfg.model}{cfg.sttModel ? ` + ${cfg.sttModel}` : ""} (<Link href="/admin/server">change</Link>).
       </p>
+      {noCredit && (
+        <p className="note warn" role="alert">
+          <b>Sarvam has no credits left</b> (since {when(noCredit.at)}). No subtitles can be made until you top up on the{" "}
+          <a href="https://dashboard.sarvam.ai" target="_blank" rel="noreferrer">Sarvam dashboard</a> (Settings → Billing). Users get their minutes back.
+          This clears by itself as soon as a video works again.
+        </p>
+      )}
       {s.unpriced.length > 0 && <p className="note warn">No price set for {s.unpriced.join(", ")}: counted as ₹0. Add it below.</p>}
 
       <dl className="stats">

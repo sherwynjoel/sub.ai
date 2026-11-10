@@ -15,7 +15,7 @@ import { alignCues } from "./lib/align";
 import { translateLines } from "./lib/ai/translate";
 import { Meter, saveUsage } from "./lib/ai/usage";
 import { recordExport } from "./lib/styleUsage";
-import { alertOn } from "./lib/health";
+import { alertOn, checkHealth, noteAiError, noteAiWorked } from "./lib/health";
 import { dropAnchor, englishCues, mergeChunks, mergeShort, retimeWindows, snapToPauses, withWordTimes } from "./lib/subtitles";
 
 const PARALLEL_CHUNKS = 3;
@@ -61,6 +61,7 @@ async function processJob(job: typeof jobs.$inferSelect) {
           throw e;
         });
         results.push({ offset: c.offset, duration: c.duration, cues });
+        if (results.length === 1) await noteAiWorked(); // the AI answered: its credit is fine
         done++;
         await db.update(jobs).set({ progress: Math.round(5 + (90 * done) / plan.length), updatedAt: new Date() }).where(eq(jobs.id, job.id));
       }
@@ -131,7 +132,12 @@ async function processPreview(job: typeof jobs.$inferSelect) {
 
 async function fail(job: typeof jobs.$inferSelect, err: unknown) {
   console.error(`job ${job.id} failed`, err);
-  await db.update(jobs).set({ status: "failed", error: String((err as Error)?.message ?? err).slice(0, 500), updatedAt: new Date(), finishedAt: new Date() }).where(eq(jobs.id, job.id));
+  // No AI credit left: the admins hear at once (the same alert the 5-minute health check sends, so it isn't sent twice),
+  // and the user is told plainly instead of seeing the service's error.
+  const noCredit = await noteAiError(err);
+  if (noCredit) await alertOn("alert_site", (await checkHealth()).problems).catch((e) => console.error("credit alert", e));
+  const error = noCredit ? "Subtitles can't be made just now: our subtitle service is paused for a short while. Your minutes were given back; please try again a little later." : String((err as Error)?.message ?? err).slice(0, 500);
+  await db.update(jobs).set({ status: "failed", error, updatedAt: new Date(), finishedAt: new Date() }).where(eq(jobs.id, job.id));
   // Give the minutes back — the user got nothing for them. (Every run is charged: the upload, and each remake.)
   await refund(job.userId, job.durationSec, { jobId: job.id, video: job.filename, kind: "refund", detail: "Making the subtitles didn't work" });
 }
