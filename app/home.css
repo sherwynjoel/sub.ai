@@ -37,6 +37,9 @@
 .hm-frame > :not(.hm-clip) { position: relative; z-index: 2; }
 .hm-frame > .hm-frame-tag { position: absolute; }
 .hm-cap { min-height: 2.6em; }
+.hm-pair { margin: 0; display: grid; gap: 10px; align-content: start; }
+.hm-pair > figcaption { font-size: .85rem; color: var(--muted, #6b6878); text-align: center; padding: 0 8px; }
+.hm-frame.good::after { display: none; } /* its captions are in the video: no dark wash over them */
 .hm-frame-tag { position: absolute; top: 16px; left: 16px; font: 600 .72rem var(--font-body); letter-spacing: .08em; text-transform: uppercase; padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, .14); }
 .hm-frame.good .hm-frame-tag { background: var(--lime); color: var(--black); }
 .hm-cap { margin: 0 0 14px; font: 700 clamp(1.15rem, 2.4vw, 1.9rem)/1.3 var(--font-sans), var(--font-tamil), sans-serif; text-shadow: 0 2px 14px rgba(0, 0, 0, .6); }
@@ -310,6 +313,5 @@
 }
 @media (max-width: 640px) {
   .hm-frame .hm-cap { font-size: 1.05rem; margin-bottom: 8px; min-height: 0; }
-  .hm-frame figcaption { font-size: .72rem; }
   .hm-frame { padding: 16px 14px 12px; }
 }

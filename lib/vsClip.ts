@@ -1,13 +1,17 @@
 /**
  * The clip in the home page's "Why Vasanamm" cards (public/home/vs-clip.mp4, muted), used with permission.
- * `good` and `en` are Vasanamm's own subtitles for it, as made by the site; `bad` is the same line the way usual
- * auto-captions write it (English words forced into Tamil letters, in [brackets] to underline them).
+ * The right card plays Vasanamm's own export of it (`styled`); `bad` is each line the way usual auto-captions write
+ * it (English words forced into Tamil letters, in [brackets] to underline them), shown on the left card. `good` and
+ * `en` are Vasanamm's subtitles for the clip, kept for reference and timing.
  */
 export type ClipCue = { start: number; end: number; good: string; en: string; bad: string };
 
-export const CLIP: { src: string; poster: string; cues: ClipCue[] } = {
+export const CLIP: { src: string; poster: string; styled: string; styledPoster: string; cues: ClipCue[] } = {
   src: "/home/vs-clip.mp4",
   poster: "/home/vs-clip.webp",
+  /** The same clip exported from Vasanamm in the Bold Bar style (captions burned in): the right card plays it as is */
+  styled: "/home/vs-clip-styled.mp4",
+  styledPoster: "/home/vs-clip-styled.webp",
   // Made by Vasanamm (Sarvam saaras:v4, Tamil, spoken + English) on 10 Nov 2026, unedited.
   cues: [
     { start: 0.00, end: 2.35, good: "அந்த final கூட கொடுக்காம அந்த வெத்தலை", en: "They would give only that betel leaf", bad: "அந்த [ஃபைனல்] கூட கொடுக்காம அந்த வெத்தலை" },
