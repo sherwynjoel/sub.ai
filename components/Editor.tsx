@@ -667,6 +667,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [fmt, setFmt] = useState("srt");
   const [styleId, setStyleId] = useState(initial.captionStyle || "minimal");
   const [hoverStyle, setHoverStyle] = useState<string | null>(null); // a style pointed at in the picker, shown on the video
+  const preview = playing ? null : hoverStyle; // only while paused: a playing video keeps its own style under a passing pointer
   const [custom, setCustom] = useState<CaptionCustom>(initial.captionCustom ?? {});
   // the look the last MP4 was made in: a changed one means that MP4 is out of date
   const [renderedLook, setRenderedLook] = useState(() => JSON.stringify([initial.captionStyle || "minimal", initial.captionCustom ?? {}]));
@@ -1561,7 +1562,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   </div>
                 </>
               )}
-              <LiveCaption video={video} cues={view === "en" && cues.some((c) => c.ta) ? englishCues(cues) : cues} styleId={hoverStyle ?? styleId} custom={hoverStyle ? projectOnly(custom) : custom} portrait={portrait} ratio={frameRatio} view={view} selected={selected}
+              <LiveCaption video={video} cues={view === "en" && cues.some((c) => c.ta) ? englishCues(cues) : cues} styleId={preview ?? styleId} custom={preview ? projectOnly(custom) : custom} portrait={portrait} ratio={frameRatio} view={view} selected={selected}
                 // The picked caption gets a dashed box (in the English view captions are regrouped: the one holding it).
                 picked={(start) => !playing && !!sel && (view === "en" ? start <= sel.start + 0.01 && now >= sel.start - 0.01 && now < sel.end : Math.abs(start - sel.start) < 0.001)}
                 editing={inline && cues[target()] ? cues[target()][line] : null}
