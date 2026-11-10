@@ -3,9 +3,9 @@ import { useEffect, useRef, useState } from "react";
 import { CLIP, type ClipCue } from "@/lib/vsClip";
 
 /**
- * The home page's "Why Vasanamm" pair: the same clip plays muted in both cards, in step, with the usual
- * auto-captions on one (English words forced into Tamil letters, no English) and Vasanamm's real subtitles on the
- * other. Plays only while on screen; with reduced motion it stays on the first line.
+ * The home page's "Why Vasanamm" pair, playing muted and in step: the plain clip with the usual auto-captions on
+ * the left (English words forced into Tamil letters, no English), and the same clip as exported from Vasanamm on the
+ * right (its captions are in the video). Plays only while on screen; with reduced motion it stays still.
  */
 export default function ClipCompare() {
   const lead = useRef<HTMLVideoElement>(null), follow = useRef<HTMLVideoElement>(null), box = useRef<HTMLDivElement>(null);
@@ -35,23 +35,26 @@ export default function ClipCompare() {
   }, []);
 
   const cue: ClipCue | undefined = CLIP.cues.find((c) => t >= c.start && t < c.end);
-  const video = (ref: React.RefObject<HTMLVideoElement | null>) => (
-    <video ref={ref} className="hm-clip" src={CLIP.src} poster={CLIP.poster} muted loop playsInline preload="metadata" aria-hidden="true" tabIndex={-1} />
+  const video = (ref: React.RefObject<HTMLVideoElement | null>, src: string, poster: string) => (
+    <video ref={ref} className="hm-clip" src={src} poster={poster} muted loop playsInline preload="metadata" aria-hidden="true" tabIndex={-1} />
   );
 
   return (
     <div className="hm-vs" ref={box}>
-      <figure className="hm-frame bad rise">
-        {video(lead)}
-        <span className="hm-frame-tag">Usual auto-captions</span>
-        <p className="hm-cap" lang="ta" aria-live="off">{cue ? <Marked text={cue.bad} /> : " "}</p>
-        <figcaption>English words forced into Tamil letters. No English line.</figcaption>
+      <figure className="hm-pair rise">
+        <div className="hm-frame bad">
+          {video(lead, CLIP.src, CLIP.poster)}
+          <span className="hm-frame-tag">Usual auto-captions</span>
+          <p className="hm-cap" lang="ta" aria-live="off">{cue ? <Marked text={cue.bad} /> : "\u00a0"}</p>
+        </div>
+        <figcaption>English words forced into Tamil letters, and no English line.</figcaption>
       </figure>
-      <figure className="hm-frame good rise" style={{ "--d": "0.08s" } as React.CSSProperties}>
-        {video(follow)}
-        <span className="hm-frame-tag">Vasanamm</span>
-        <p className="hm-cap" aria-live="off">{cue ? <>{cue.good}<small>{cue.en}</small></> : " "}</p>
-        <figcaption>Tamil words in Tamil, English words in English, a translation under it.</figcaption>
+      <figure className="hm-pair rise" style={{ "--d": "0.08s" } as React.CSSProperties}>
+        <div className="hm-frame good">
+          {video(follow, CLIP.styled, CLIP.styledPoster)}
+          <span className="hm-frame-tag">Vasanamm</span>
+        </div>
+        <figcaption>Exported from Vasanamm in the Bold Bar style: Tanglish written the way it was said.</figcaption>
       </figure>
     </div>
   );
