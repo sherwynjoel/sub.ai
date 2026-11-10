@@ -72,7 +72,7 @@ export default function StyleWall({ popular }: { popular: string[] }) {
           <i className="iph-btn mute" /><i className="iph-btn vol1" /><i className="iph-btn vol2" /><i className="iph-btn power" />
           <div className="iph-screen sw-screen">
             {clip
-              ? <video ref={vid} className="sw-video" src={near ? PHONE_CLIP.src : undefined} poster={near ? PHONE_CLIP.poster : undefined} muted loop playsInline preload={near ? "auto" : "none"} aria-hidden="true" tabIndex={-1} onLoadedMetadata={(e) => setDur(e.currentTarget.duration || 72.6)} />
+              ? <video ref={vid} className="sw-video" src={near ? PHONE_CLIP.src : undefined} poster={near ? PHONE_CLIP.poster : undefined} muted loop playsInline preload={near ? "metadata" : "none"} aria-hidden="true" tabIndex={-1} onLoadedMetadata={(e) => setDur(e.currentTarget.duration || 72.6)} />
               : /* A moody evening shot, drawn in CSS: sky, drifting city lights, film grain. */ <div className="sw-shot" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></div>}
             <div className="sw-status" aria-hidden="true">
               <b>9:41</b>

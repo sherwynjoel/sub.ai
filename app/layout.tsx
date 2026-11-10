@@ -35,8 +35,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${sans.variable} ${display.variable} ${tamil.variable}`} suppressHydrationWarning>
       <head>
-        {/* The intro plays once per visit: when this tab's visit already saw it, hide it before the first paint. */}
-        <script dangerouslySetInnerHTML={{ __html: `try{if(sessionStorage.getItem("vs-splash"))document.documentElement.dataset.splash="seen"}catch(e){}` }} />
+        {/* The intro plays once per visit: when this tab's visit already saw it, or the page itself took over 1.2 s to
+            arrive (a slow connection: the visitor has waited enough), hide it before the first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: `try{if(sessionStorage.getItem("vs-splash")||performance.now()>1200)document.documentElement.dataset.splash="seen"}catch(e){}` }} />
         {/* iOS ignores user-scalable=no: stop its pinch itself (gesture events in Safari; two-finger moves in in-app
             browsers such as WhatsApp's and Instagram's, which have no gesture events), and if a page did get zoomed (a
             field tapped), snap it back to 100% when the field is left. */}

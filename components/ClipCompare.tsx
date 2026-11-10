@@ -38,7 +38,7 @@ export default function ClipCompare() {
 
   const cue: ClipCue | undefined = CLIP.cues.find((c) => t >= c.start && t < c.end);
   const video = (ref: React.RefObject<HTMLVideoElement | null>, src: string, poster: string) => (
-    <video ref={ref} className="hm-clip" src={near ? src : undefined} poster={near ? poster : undefined} muted loop playsInline preload={near ? "auto" : "none"} aria-hidden="true" tabIndex={-1} />
+    <video ref={ref} className="hm-clip" src={near ? src : undefined} poster={near ? poster : undefined} muted loop playsInline preload={near ? "metadata" : "none"} aria-hidden="true" tabIndex={-1} />
   );
 
   return (

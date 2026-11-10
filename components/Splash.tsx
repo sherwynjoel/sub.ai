@@ -5,11 +5,11 @@ import { VasanamReveal } from "@/components/ui/liquid-glass-logo-reveal"
 /** After the reveal has played to the end, the finished logo stays this long before the screen fades. */
 const HOLD_MS = 250
 /** Only if the reveal never reports its end (a frozen tab, a broken GPU): lift anyway. CSS lifts it at 7 s too. */
-const CAP_MS = 6500
+const CAP_MS = 2400
 const SEEN = "vs-splash"
 /** The page shows by this time after the visit started (ms), even if the reveal is still playing or a picture is still loading:
  * on a slow connection the reveal starts late (it needs the page's code), and a visitor shouldn't wait for all of it. */
-const BUDGET_MS = 2600
+const BUDGET_MS = 1500
 
 /**
  * The first screen of a visit: Vasanamm's mark in glass while the page loads, then it fades away. It always plays
@@ -20,7 +20,7 @@ const BUDGET_MS = 2600
  */
 export default function Splash() {
   const [state, setState] = useState<"on" | "leaving" | "gone">("on")
-  const done = useRef({ reveal: false, page: false, left: false, late: false })
+  const done = useRef({ reveal: false, left: false, late: false })
   const leaveRef = useRef<() => void>(() => {})
 
   useEffect(() => {
@@ -35,13 +35,11 @@ export default function Splash() {
     }
     // The reveal finished on a loaded page, or the time budget is used up: by then the page is drawn and working (this
     // runs after it has started), and what may still be arriving (below-the-fold pictures, a caption font) fills in.
-    leaveRef.current = () => { if (d.late || (d.page && d.reveal)) setTimeout(leave, d.reveal ? HOLD_MS : 0) }
+    // It doesn't wait for the window's load event (every picture and font): the page is drawn and usable well before.
+    leaveRef.current = () => { if (d.late || d.reveal) setTimeout(leave, d.reveal ? HOLD_MS : 0) }
     const budget = setTimeout(() => { d.late = true; leaveRef.current() }, Math.max(0, BUDGET_MS - performance.now()))
-    const loaded = () => { d.page = true; leaveRef.current() }
-    if (document.readyState === "complete") loaded()
-    else addEventListener("load", loaded, { once: true })
     const cap = setTimeout(leave, CAP_MS)
-    return () => { removeEventListener("load", loaded); clearTimeout(cap); clearTimeout(budget) }
+    return () => { clearTimeout(cap); clearTimeout(budget) }
   }, [])
 
   const revealDone = useCallback(() => { done.current.reveal = true; leaveRef.current() }, [])
