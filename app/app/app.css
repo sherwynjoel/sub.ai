@@ -612,6 +612,9 @@ a.signout { text-decoration: none; }
 .vtools button:hover { filter: brightness(1.25); }
 .vtools .vt-label { font-size: .82rem; color: var(--ink-2); margin-left: 6px; }
 .vtools .vt-done { background: var(--lime); color: var(--black); }
+/* Unlinked: dragging moves only the caption on hand; lime so it's plain the captions no longer move together. */
+.vtools .vt-link.off, .ed-stage .vtools .vt-link.off { background: var(--lime); color: var(--black); border-color: var(--lime); }
+.vtools .vt-putback { background: #fff; color: #0c0c14; border-color: #0c0c14; }
 
 .wstrip { position: relative; width: 100%; padding-top: 12px; }
 .wstrip-mark { position: absolute; left: 50%; top: -1px; transform: translateX(-50%); font-size: 10px; color: #2E7BFF; pointer-events: none; }
