@@ -44,6 +44,8 @@ type Job = {
 };
 type View = "ta" | "en" | "both";
 type Tab = "layers" | "style" | "export";
+/** One version of the project, for undo: its captions and its look. */
+type Snap = { cues: Cue[]; custom: CaptionCustom; styleId: string };
 type Pane = "list" | "caption" | "timeline" | "style" | "layers" | "export";
 const PANES: [Pane, string][] = [["list", "Captions"], ["style", "Style"], ["timeline", "Timeline"], ["layers", "Layers"], ["export", "Export"]];
 const noop = () => () => {};
@@ -621,10 +623,11 @@ const EXPORT_PRESETS: { name: string; tip: string; q: ExportQuality }[] = [
 export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?: string }) {
   const router = useRouter();
   const [job, setJob] = useState(initial);
-  // Captions with undo/redo: `cues` is the present; past/future hold earlier and undone versions.
+  // Undo/redo for everything edited: the captions and the look (style, font, colours, size, place, titles, logo,
+  // canvas…). `cues`, `custom` and `styleId` are the present; past/future hold earlier and undone versions of all three.
   const [cues, setCuesRaw] = useState<Cue[]>(initial.cues);
-  const [past, setPast] = useState<Cue[][]>([]);
-  const [future, setFuture] = useState<Cue[][]>([]);
+  const [past, setPast] = useState<Snap[]>([]);
+  const [future, setFuture] = useState<Snap[]>([]);
   const dragFrom = useRef<Cue[] | null>(null);
   const [dirty, setDirty] = useState(false);
   const latest = useRef<Cue[]>([]); // the captions now: edits made while a save is on its way still need saving
@@ -728,15 +731,56 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const list = useRef<HTMLOListElement>(null);
   const line: "ta" | "en" = view === "en" ? "en" : "ta"; // the line words and the timeline follow
 
-  /** A change that is one undo step. */
-  const commit = useCallback((next: Cue[]) => {
-    setPast((p) => [...p.slice(-199), cues]);
-    setFuture([]);
+  /** A change to the captions that is one undo step. Changes with the same `group` close together (typing in one
+   * subtitle) are one step: a word typed is undone at once, not letter by letter. */
+  const typingGroup = useRef<{ key: string; at: number } | null>(null);
+  const commit = useCallback((next: Cue[], group?: string) => {
+    lookOpen.current = false; // a look change before it is a step of its own
+    const g = typingGroup.current, at = Date.now();
+    const same = !!group && g?.key === group && at - g.at < 1500;
+    typingGroup.current = group ? { key: group, at } : null;
+    if (!same) {
+      setPast((p) => [...p.slice(-199), { cues, custom, styleId }]);
+      setFuture([]);
+    }
     setCuesRaw(next);
     setDirty(true);
-  }, [cues]);
-  const undo = () => { if (!past.length) return; setFuture((f) => [cues, ...f]); setCuesRaw(past[past.length - 1]); setPast((p) => p.slice(0, -1)); setDirty(true); };
-  const redo = () => { if (!future.length) return; setPast((p) => [...p, cues]); setCuesRaw(future[0]); setFuture((f) => f.slice(1)); setDirty(true); };
+  }, [cues, custom, styleId]);
+  // Look changes become undo steps by themselves (whatever made them): the look before the first change is kept, and
+  // changes close together (a slider, a drag on the video) are one step, closed after a pause.
+  const lastLook = useRef({ custom, styleId });
+  const lookOpen = useRef(false), lookTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const restoring = useRef(false); // the look being set by undo/redo: not a new step
+  useEffect(() => {
+    const before = lastLook.current;
+    lastLook.current = { custom, styleId };
+    if (restoring.current) { restoring.current = false; return; }
+    if (before.custom === custom && before.styleId === styleId) return;
+    if (!lookOpen.current) {
+      lookOpen.current = true;
+      typingGroup.current = null;
+      setPast((p) => [...p.slice(-199), { cues: latest.current, ...before }]); // eslint-disable-line react-hooks/set-state-in-effect -- records the change just made
+      setFuture([]);
+    }
+    clearTimeout(lookTimer.current);
+    lookTimer.current = setTimeout(() => { lookOpen.current = false; }, 700);
+  }, [custom, styleId]);
+  /** Put a version back: its captions, and its look (saved at once, as a picked style is). */
+  const restore = (to: Snap) => {
+    lookOpen.current = false;
+    typingGroup.current = null;
+    setCuesRaw(to.cues);
+    setDirty(true);
+    if (to.custom !== custom || to.styleId !== styleId) {
+      restoring.current = true;
+      setCustom(to.custom);
+      setStyleId(to.styleId);
+      savedLook.current = JSON.stringify(to.custom);
+      saveLook({ captionStyle: to.styleId, captionCustom: to.custom });
+    }
+  };
+  const undo = () => { if (!past.length) return; setFuture((f) => [{ cues, custom, styleId }, ...f]); restore(past[past.length - 1]); setPast((p) => p.slice(0, -1)); };
+  const redo = () => { if (!future.length) return; setPast((p) => [...p, { cues, custom, styleId }]); restore(future[0]); setFuture((f) => f.slice(1)); };
   const editCue = (i: number, next: Cue) => commit(cues.map((c, j) => (j === i ? next : c)));
 
   // Poll until processing finishes: the time left from how fast it's going; a notice when ready if the tab is away.
@@ -1534,8 +1578,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 {hasOwnLook(c) && <span className="chip-own" title="This caption has its own style">Own style</span>}
                 {issueOf.has(i) && <span className="chip-timing" title={ISSUE_TEXT[issueOf.get(i)!.kind]}>Check timing</span>}
               </div>
-              {hasSpoken && <textarea lang={short} rows={1} value={c.ta} onChange={(e) => editCue(i, setText(c, "ta", e.target.value))} aria-label={`${language.name} subtitle ${i + 1}`} />}
-              {hasEnglish && <textarea rows={1} value={c.en} onChange={(e) => editCue(i, setText(c, "en", e.target.value))} aria-label={`English subtitle ${i + 1}`} />}
+              {hasSpoken && <textarea lang={short} rows={1} value={c.ta} onChange={(e) => commit(cues.map((x, j) => (j === i ? setText(c, "ta", e.target.value) : x)), `ta${i}`)} aria-label={`${language.name} subtitle ${i + 1}`} />}
+              {hasEnglish && <textarea rows={1} value={c.en} onChange={(e) => commit(cues.map((x, j) => (j === i ? setText(c, "en", e.target.value) : x)), `en${i}`)} aria-label={`English subtitle ${i + 1}`} />}
             </li>
           ))}
           {cues.length === 0 && (
@@ -2030,7 +2074,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
           onSelectLayer={(i) => { setSelLayer(i); setTab("layers"); }} onDragLayer={(i, span) => editLayer(i, span)}
           onDrag={(next) => { if (!dragFrom.current) dragFrom.current = cues; setCuesRaw(next); }}
           ripple={ripple} onRipple={setRipple} onSpan={setSpan} onNudge={moveBy} onSplit={split} onMerge={merge}
-          onDragEnd={() => { const from = dragFrom.current; dragFrom.current = null; if (from) { setPast((p) => [...p.slice(-199), from]); setFuture([]); setDirty(true); } }} />
+          onDragEnd={() => { const from = dragFrom.current; dragFrom.current = null; if (from) { lookOpen.current = false; setPast((p) => [...p.slice(-199), { cues: from, custom, styleId }]); setFuture([]); setDirty(true); } }} />
       </div>
 
       {/* Phones: the editing actions within thumb's reach, and messages just above them. On the page body: inside
