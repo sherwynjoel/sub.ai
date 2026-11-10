@@ -37,7 +37,7 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
   // Lines as tall as libass draws them (its font's own line height), × the line spacing in the plain layout; with
   // spacing set, broken at the same words as the MP4 (lineCount), which places each line itself.
   const g = takesLineSpacing(s) ? s.lineHeight ?? 1 : 1, lh = lineBox(s, text) * g;
-  const brk = typedBreaks(text) ?? (s.stagger || s.spark ? staggerBreaks(words.length) : null) ?? lineBreaks(words.map((w) => w.w), ratio && spacesLines(s) && Math.abs(g - 1) > 0.005 ? lineCount(s, caseOf(s, text), ratio) : linesOf(s));
+  const brk = typedBreaks(text) ?? (s.stagger || s.spark ? staggerBreaks(words.length) : null) ?? lineBreaks(words.map((w) => w.w), ratio && ((spacesLines(s) && Math.abs(g - 1) > 0.005) || s.neon) ? lineCount(s, caseOf(s, text), ratio) : linesOf(s));
   // a middle line in its own font (Blur Animation's Inter Italic), when there are three (as the MP4)
   const rowAt = [0, ...[...brk].sort((a, b) => a - b).map((b) => b + 1)], midRow = s.midFont && rowAt.length === 3 ? rowAt.slice(1) : null;
   let i = words.findIndex((w) => time < w.e);
@@ -641,6 +641,16 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
         ...(st.glow && !grad ? { textShadow: glowOf(big) } : {}), // (none when the Shadow is off: not the caption's own)
         ...(st.tight ? { lineHeight: lineScale(font) * st.tight * (s.lineHeight ?? 1) } : {}),
         ...(big ? { fontFamily: stack(font, s.fontTa), textTransform: "uppercase", fontSize: `min(${st.big}em, calc(${roomCqw.toFixed(1)}cqw / ${tw}))` } : {}), ...(shown ? {} : hide) }}>
+        {join(a, to).filter((x) => typeof x !== "object" || x === null || (x as React.ReactElement).type !== "br")}</span>;
+    })}</span>;
+  } else if (s.neon) {
+    // Neon Duo (as the MP4): each line its own gradient and glow, a thin bright rim round the letters, a dark shadow under
+    const nn = s.neon, starts = [0, ...[...brk].filter((b) => b < words.length - 1).sort((a, b) => a - b).map((b) => b + 1)];
+    body = <span className="stagger">{starts.map((a, r) => {
+      const look = nn.rows[r % nn.rows.length], to = r + 1 < starts.length ? starts[r + 1] : words.length;
+      return <span key={a} className={grad ? undefined : "grad"} style={{ textAlign: "center", WebkitTextStroke: `.02em ${nn.rim}`,
+        filter: `drop-shadow(0 0 .05em ${look.glow}) drop-shadow(0 0 .14em ${look.glow}c0) drop-shadow(.06em .08em .06em rgba(0,0,0,.85))`,
+        ...(grad ? {} : { "--grad": `linear-gradient(${look.grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${look.grad[1]} ${GRADIENT_STOPS[1] * 100}%)` }) } as React.CSSProperties}>
         {join(a, to).filter((x) => typeof x !== "object" || x === null || (x as React.ReactElement).type !== "br")}</span>;
     })}</span>;
   } else {

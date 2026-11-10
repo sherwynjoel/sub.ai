@@ -103,6 +103,9 @@ export type CaptionStyle = {
   // white box flashing onto it and pulling off it (flashStack)
   flashBox?: { serif: string; flash: string; big: number };
   reveal4?: { accent: string; big: number; smallFont: string; small: number; lastFont: string; last: number; silver: [string, string] }; // h: the box's height (em of the punch; BOX_PAD.h)            // staggered lines: only the big middle line is blended (the others stay plain text)
+  // glossy neon lines (Neon Duo): each line its own gradient (top → bottom) and glow, in turn; a thin bright rim round
+  // the letters and a dark shadow under them (a Colour gradient the user sets is every line's instead)
+  neon?: { rows: { grad: [string, string]; glow: string }[]; rim: string };
   gradient?: [string, string];   // the text filled top colour → bottom colour, each line
   opacity?: number;              // 0-1
   rotate?: number;               // degrees, clockwise
@@ -827,6 +830,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
   { id: "cc-lifted-dot", name: "Lifted Dot", group: "Typography", blurb: "A thin italic line over a huge word; the dot of its i flies up into the italic line. Words fade in, the huge word rises letter by letter (change the colours and fonts in the Style tab).", font: "Inter SemiBold", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, shadow: 0.05, shadowColor: "#000000", effect: "liftdot", liftDot: { serif: "Instrument Serif Italic", dot: W, big: 3.4, top: 0.59 } },
   { id: "cc-flash-box", name: "Flash Box", group: "Typography", blurb: "Right-aligned stacked lines, italic serif and clean sans; a white box flashes onto each word as it's said and pulls away to reveal it (change the colours and fonts in the Style tab).", font: "Inter Medium", fontTa: "Mukta Malar ExtraBold", size: 1.1, color: W, shadow: 0.05, shadowColor: "#000000", effect: "flashbox", flashBox: { serif: "Playfair Display Bold Italic", flash: W, big: 2.1 } },
   { id: "cc-letter-rise", name: "Letter Rise", group: "Typography", blurb: "Handwritten Caveat letters flowing in around a big Bebas Neue keyword on its own line.", font: "Caveat Bold", fontTa: "Hind Madurai", size: 1.29, color: W, shadow: 0.04, lineHeight: 0.8, reveal: "letters", flow: true, keyword: { font: "Bebas Neue", scale: 1.57, line: true } },
+  { id: "cc-neon-duo", name: "Neon Duo", group: "Typography", blurb: "Glossy Bodoni italics, the first line ice blue and the next hot pink, each with a bright rim, a neon glow and a shadow under it; each word rises in as it's said.", font: "Bodoni Moda Bold Italic", fontTa: "Mukta Malar ExtraBold", size: 1.13, color: W, lineHeight: 0.65, reveal: "rise", neon: { rows: [{ grad: ["#8EC6F2", "#2D6CD6"], glow: "#2F7BFF" }, { grad: ["#F59BDF", "#B02A6C"], glow: "#FF3FA8" }], rim: "#F2FCFF" } },
   { id: "cc-typo-block", name: "Typo Block", group: "Typography", blurb: "Small white Montserrat words and big Playfair italics in a peach-to-white gradient, mixed in a block, each rising in.", font: "Montserrat SemiBold", fontTa: "Hind Madurai", size: 1.13, color: W, shadow: 0.04, lineHeight: 0.7, effect: "typo", reveal: "rise", typoBig: { font: "Playfair Display Bold Italic", gradient: ["#FFB37A", "#FFFFFF"] } },
   // The Premiere template pack (Drive): its presets, its Reels text and its hooks, remade from our parts. Its
   // Helvetica / Neue Haas Grotesk (commercial) become Inter Bold, Helvetica Rounded becomes Nunito ExtraBold.
@@ -898,7 +902,7 @@ export const CAPTION_STYLES: CaptionStyle[] = [
  * keep their look and can still render; they just aren't offered for new looks.
  */
 const OFFERED = [
-  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-text-reveal", "cc-light-sweep", "cc-bold-dot", "cc-outline-cut", "cc-lifted-dot", "cc-flash-box", "cc-letter-rise", "cc-typo-block",
+  "cc-pro", "cc-word-cut", "cc-cinematic", "cc-rise", "cc-rise-ultra", "cc-spark", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-text-reveal", "cc-light-sweep", "cc-bold-dot", "cc-outline-cut", "cc-lifted-dot", "cc-flash-box", "cc-neon-duo", "cc-letter-rise", "cc-typo-block",
   "tpl-blur", "tpl-word-by-word", "tpl-reels-glow", "tpl-reels-simple", "tpl-hook-big-start",
   "pr-butter-up", "pr-energetic-2",
   "setup-punch", "setup-punch-pro", "comic-pop", "butter-serif", "handwritten", "trending-1", "trending-2", "trending-3", "neon-aura",
@@ -913,7 +917,7 @@ export const STYLE_GROUPS = (["Typography", "Templates", "Premiere", "Bold", "So
 
 export const DEFAULT_STYLE = "tall-caps";
 /** The styles shown first, the rest behind "See all styles". */
-export const POPULAR = ["cc-flash-box", "tall-caps", "cc-rise", "cc-word-cut", "cc-spark", "cc-rise-ultra", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-outline-cut", "setup-punch"];
+export const POPULAR = ["cc-neon-duo", "cc-flash-box", "tall-caps", "cc-rise", "cc-word-cut", "cc-spark", "cc-rise-ultra", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-outline-cut", "setup-punch"];
 
 /** Fonts users can pick (bundled in public/caption-fonts): the Premiere templates' fonts that are free for the web. */
 export const CAPTION_FONTS = [
@@ -938,6 +942,7 @@ export const CAPTION_FONTS = [
   "Inter Black",
   "Inter Bold Italic",
   "Playfair Display Black Italic",
+  "Bodoni Moda Bold Italic",
 ] as const;
 /** The commercial font a free one stands in for (shown in the font menu). */
 export const FONT_LIKE: Partial<Record<string, string>> = { "Great Vibes": "Snell", "Alex Brush": "Snell Bold", "Pinyon Script": "Snell", "Figtree Bold": "Avenir", "GFS Didot": "Didot" };
@@ -1627,16 +1632,16 @@ export function buildAss(cues: Cue[], o: Opts) {
     // GRADIENT_BANDS copies each showing its strip of the line in its colour (libass fills a letter with one colour).
     // Text that moves: where its line is (centre, height) at even steps over the first ms, ending at (y, nat), the
     // strips going along. Words' own colours (the spoken word, picked words) stay.
-    const strips = (start: number, end: number, lead: string, y: number, nat: number, body: string, layer = 0, ml = 0, mr = 0, path: [number, number][] = [], ms = 0, grad = gradAll) => {
+    const strips = (start: number, end: number, lead: string, y: number, nat: number, body: string, layer = 0, ml = 0, mr = 0, path: [number, number][] = [], ms = 0, grad = gradAll, bands = GRADIENT_BANDS) => {
       if (!grad) return add(start, end, lead + body, layer, ml, mr);
-      for (let k = 0; k < GRADIENT_BANDS; k++) {
+      for (let k = 0; k < bands; k++) {
         const clip = ([y, nat]: [number, number]) => {
-          const y0 = Math.floor(y - nat / 2 + (k * nat) / GRADIENT_BANDS) - (k ? 0 : 200), y1 = Math.ceil(y - nat / 2 + ((k + 1) * nat) / GRADIENT_BANDS) + (k === GRADIENT_BANDS - 1 ? 200 : 0);
+          const y0 = Math.floor(y - nat / 2 + (k * nat) / bands) - (k ? 0 : 200), y1 = Math.ceil(y - nat / 2 + ((k + 1) * nat) / bands) + (k === bands - 1 ? 200 : 0);
           return `\\clip(0,${y0},${o.width},${y1})`;
         };
         const at = (i: number) => Math.round((i * ms) / (path.length - 1));
         const tags = path.length > 1 ? clip(path[0]) + path.slice(1).map((g, i) => `\\t(${at(i)},${at(i + 1)},${clip(g)})`).join("") : clip([y, nat]);
-        const tint = `\\1c${colorOnly(mixHex(grad[0], grad[1], inkT((k + 0.5) / GRADIENT_BANDS)))}`;
+        const tint = `\\1c${colorOnly(mixHex(grad[0], grad[1], inkT((k + 0.5) / bands)))}`;
         add(start, end, lead + `{${tags}${tint}}` + body.replace(/\{\\r/g, `{\\r${tint}`), layer, ml, mr);
       }
     };
@@ -1652,7 +1657,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       subAt(start, end, ev, p.subY);
     };
     // (a word a line and Typo Block break their own way)
-    const brk = typedBreaks(main) ?? (s.stagger || s.spark ? staggerBreaks(words.length) : null) ?? lineBreaks(words.map((w) => w.w), ownLines && !s.wordLines && s.effect !== "typo" ? lineCount(s, caseOf(s, main), ratio) : linesOf(s));
+    const brk = typedBreaks(main) ?? (s.stagger || s.spark ? staggerBreaks(words.length) : null) ?? lineBreaks(words.map((w) => w.w), (ownLines || s.neon) && !s.wordLines && s.effect !== "typo" ? lineCount(s, caseOf(s, main), ratio) : linesOf(s));
     const glue = (j: number) => (j ? (brk.has(j - 1) ? "\\N" : " ") : "");
     // a middle line in its own font (Blur Animation's Inter Italic), when there are three
     const rowAt = [0, ...[...brk].sort((a, b) => a - b).map((b) => b + 1)], midRow = s.midFont && rowAt.length === 3 ? rowAt.slice(1) : null;
@@ -2367,7 +2372,7 @@ export function buildAss(cues: Cue[], o: Opts) {
       const rise = (t0: string) => `{\\an${an}\\move(${Math.round(ax)},${Math.round(ay + dy)},${Math.round(ax)},${Math.round(ay)},0,${ms})}` + t0;
       const tagsFor = reveal === "flicker" ? flickerTags(FLICKER2) : `\\alpha&HFF&\\t(0,${ms},\\alpha&H00&)`;
       for (const g of groups) {
-        if (grad || s.stagger || gapped || s.typoBig || s.keyword?.line) { // each line its own event (so its strips can be cut, or it sits on its own side), a word's layer only its line
+        if (grad || s.stagger || gapped || s.typoBig || s.keyword?.line || s.neon) { // each line its own event (so its strips can be cut, or it sits on its own side), a word's layer only its line
           const rows: [number, number][] = [];
           for (let j = g.from; j < g.to; j++) if (j === g.from || glueK(j) === "\\N") rows.push([j, j + 1]); else rows[rows.length - 1][1] = j + 1;
           // the middle line, or with two lines the second (one line: it), so a short caption still has its big line
@@ -2407,6 +2412,19 @@ export function buildAss(cues: Cue[], o: Opts) {
             const [lead, dy, ms2] = st ? at(reveal === "flicker" ? "" : rise(""), p.ys[r], cx + (side(r) * blockW) / 2, side(r)) : at(reveal === "flicker" ? "" : rise(""), p.ys[r]);
             const text0 = body((jj, kk) => jj === j && (u.k === null || kk === u.k), tagsFor, g, ...rows[r]).replace(/\{\\r/g, `{\\r${rowTag(r)}`);
             const text = isBig(r) ? upper(text0) : text0;
+            const nn = s.neon;
+            if (nn) { // Neon Duo: the glow and shadow under, then the letters with their bright rim, in the line's gradient
+              const look = nn.rows[r % nn.rows.length], ng = grad ?? look.grad, path: [number, number][] = dy ? [[cy + dy, n], [cy, n]] : [];
+              // (the glow and the rim drawn whole, in the gradient's middle colour: the gradient's strips go on top with no edge
+              // of their own, so their seams never show)
+              const fill = `\\1c${colorOnly(mixHex(ng[0], ng[1], 0.5))}`, t0 = Math.max(g.s, u.s);
+              const glow = `${fill}\\bord${px(0.05)}\\3c${colorOnly(look.glow)}\\blur${px(0.12)}\\shad${px(0.08)}\\4c&H000000&`;
+              const rim = `${fill}\\bord${px(0.02)}\\3c${colorOnly(nn.rim)}\\blur${px(0.008)}\\shad0`;
+              add(t0, g.e, lead + "{\\q2}" + text.replace(/\{\\r/g, `{\\r${glow}`), 1, 0, 0);
+              add(t0, g.e, lead + "{\\q2}" + text.replace(/\{\\r/g, `{\\r${rim}`), 2, 0, 0);
+              strips(t0, g.e, lead, cy, n, "{\\q2}" + text.replace(/\{\\r/g, "{\\r\\bord0\\shad0"), 3, 0, 0, path, ms2, ng, 24); // (finer strips: its colours are far apart)
+              continue;
+            }
             strips(Math.max(g.s, u.s), g.e, lead, cy, n, "{\\q2}" + text, 1, 0, 0, dy ? [[cy + dy, n], [cy, n]] : [], ms2, bigOf(j)?.gradient ?? grad);
           }
           subAt(g.s, g.e, "", p.subY);
@@ -2645,7 +2663,8 @@ export function lineCount(s: CaptionStyle & Placement, text: string, ratio: numb
   if (s.lines || s.midFont) return s.lines ?? 3;
   const w = Math.max(ratio, 1), em = 0.075 * (s.size ?? 1); // in short sides: the frame is w wide, the em 7.5% of it
   const room = s.x !== undefined ? 2 * Math.min(s.x - s.safe.left, 1 - s.safe.right - s.x) : 1 - s.safe.left - s.safe.right;
-  return Math.max(1, Math.ceil((textWidth(text, s.font, s.fontTa) * em) / (w * room * 0.95) - 1e-6));
+  const n = Math.max(1, Math.ceil((textWidth(text, s.font, s.fontTa) * em) / (w * room * 0.95) - 1e-6));
+  return s.neon && text.trim().includes(" ") ? Math.max(2, n) : n; // Neon Duo: two lines at least (its two colours)
 }
 
 /** Whether a style picks out the spoken word (its colour, box, underline, grow, words coloured by hand): not Word Cut,
