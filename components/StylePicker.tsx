@@ -13,11 +13,14 @@ const head = (text: string, n = 6) => text.trim().split(/\s+/).slice(0, n).join(
 /**
  * The styles on offer, each playing its own animation on the user's caption, so a style can be judged before it's
  * picked. One clock for all of them, running only while they're on screen (and not for reduced motion). Hovering
- * one (desktop) previews it on the video too.
+ * one (desktop) previews it on the video too. Folded (`folded`), it shows only the chosen style, with a button to
+ * open the rest, so the controls under it are in reach.
  */
-export default function StylePicker({ styleId, onPick, onHover, text: line, frame }: {
+export default function StylePicker({ styleId, onPick, onHover, text: line, frame, folded, onOpen }: {
   styleId: string;
   onPick: (id: string) => void;
+  folded?: boolean;                  // just the chosen style and a "Change style" button
+  onOpen?: () => void;               // that button (and tapping the chosen style)
   onHover?: (id: string | null) => void;
   text?: string;                     // the selected caption, in English
   frame?: () => string | undefined;  // a still of the video, behind the previews
@@ -25,10 +28,12 @@ export default function StylePicker({ styleId, onPick, onHover, text: line, fram
   const [t, setT] = useState(END);
   const [bg, setBg] = useState<string>();
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => { // taken once, when the picker opens (the video may still be loading: then the plain background)
-    const still = frame?.();
-    if (still) requestAnimationFrame(() => setBg(still));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { // taken when the list opens or folds, retried while the video has no picture yet (plain background till then)
+    let tries = 0;
+    const take = () => { const still = frame?.(); if (still) setBg(still); else if (tries++ < 20) id = window.setTimeout(take, 500); };
+    let id = window.setTimeout(take, 0);
+    return () => clearTimeout(id);
+  }, [folded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -50,15 +55,29 @@ export default function StylePicker({ styleId, onPick, onHover, text: line, fram
   const groups = showAll ? STYLE_GROUPS.concat(STYLE_GROUPS.includes(styleOf(styleId).group) ? [] : [styleOf(styleId).group]) : [];
   const chip = (x: (typeof CAPTION_STYLES)[number]) => (
     <button key={x.id} role="radio" aria-checked={styleId === x.id} className="style-chip" title={x.blurb}
-      onClick={() => onPick(x.id)} onMouseEnter={() => onHover?.(x.id)} onFocus={() => onHover?.(x.id)} onBlur={() => onHover?.(null)}>
+      onClick={() => (folded ? onOpen?.() : onPick(x.id))} onMouseEnter={() => onHover?.(x.id)} onFocus={() => onHover?.(x.id)} onBlur={() => onHover?.(null)}>
       <span className="style-sample" aria-hidden="true">
         <StyledCaption styleId={x.id} text={text} start={START} end={END} time={Math.min(t, END - 0.01)} />
       </span>
       <span className="style-name">{x.name}</span>
     </button>
   );
+  const bgStyle = bg ? { "--sample-bg": `url(${bg})` } as React.CSSProperties : undefined;
+  if (folded) {
+    const cur = styleOf(styleId);
+    return (
+      <div ref={ref} className="style-current" onMouseLeave={() => onHover?.(null)} style={bgStyle}>
+        {chip(cur)}
+        <div className="sc-text">
+          <b>{cur.name}</b>
+          <span className="muted small">{cur.blurb}</span>
+          <button type="button" className="btn small" onClick={onOpen}>Change style</button>
+        </div>
+      </div>
+    );
+  }
   return (
-    <div ref={ref} onMouseLeave={() => onHover?.(null)} style={bg ? { "--sample-bg": `url(${bg})` } as React.CSSProperties : undefined}>
+    <div ref={ref} onMouseLeave={() => onHover?.(null)} style={bgStyle}>
       <div className="style-group">
         <span className="muted small">Popular</span>
         <div className="style-grid" role="radiogroup" aria-label="Popular styles">{POPULAR.map((id) => chip(styleOf(id)))}</div>

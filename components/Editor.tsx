@@ -649,6 +649,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [logoVer, setLogoVer] = useState(0); // bumps the logo image URL after an upload
   const bgCanvas = useRef<HTMLCanvasElement>(null);
   const [tab, setTab] = useState<Tab>("style");
+  const [stylesOpen, setStylesOpen] = useState(false); // the style list, folded to the chosen style once one is picked
   const inBrowser = useSyncExternalStore(noop, () => true, () => false); // false while rendered on the server
   // The video stays on the device: this page plays that file, in its original quality (lib/localVideo.ts).
   useSyncExternalStore(subscribeVideos, videosVersion, () => 0);
@@ -797,6 +798,9 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   }
   // A new style is for every caption: the ones with their own look take it too.
   function pickStyle(id: string) {
+    setStylesOpen(false); // the list folds to the one picked; its controls come back into view
+    setHoverStyle(null);
+    setTimeout(() => document.querySelectorAll(".ed-side, .ed-side-body").forEach((e) => { e.scrollTop = 0; }), 0);
     sameLook();
     const kept = projectOnly(custom);
     setStyleId(id);
@@ -1167,6 +1171,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     setSheet(true);
     setTimeout(() => document.querySelectorAll(".ed-side, .ed-list, .ed-timeline").forEach((e) => { e.scrollTop = 0; }), 0); // each section opens at its top
     if (k === "style" || k === "layers" || k === "export") setTab(k);
+    if (k === "style") setStylesOpen(true); // "Caption style" is there to change it
     if (k === "caption" && selected < 0 && activeIdx >= 0) setSelected(activeIdx);
   }
   function select(i: number) {
@@ -1384,7 +1389,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   /** A small still of the video where it is now, for the style previews' background (none if it can't be read). */
   const videoStill = () => {
     const v = video.current;
-    if (!v?.videoWidth) return undefined;
+    if (!v?.videoWidth || v.readyState < 2) return undefined; // no picture yet: drawing it would give a black still
     try {
       const c = document.createElement("canvas"), k = 360 / Math.max(v.videoWidth, v.videoHeight);
       c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k);
@@ -1745,9 +1750,13 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
           {tab === "style" && (
             <div className="insp">
-              <h3>Project style</h3>
-              <p className="muted small">{styleOf(styleId).blurb} Applies to every caption without its own look.</p>
-              <StylePicker styleId={styleId} onPick={pickStyle} onHover={setHoverStyle} text={sample ? sample.en || sample.ta : undefined} frame={videoStill} />
+              <div className="insp-head">
+                <h3>Project style</h3>
+                {stylesOpen && <button className="btn ghost small" onClick={() => { setStylesOpen(false); setHoverStyle(null); }}>Close</button>}
+              </div>
+              {stylesOpen && <p className="muted small">{styleOf(styleId).blurb} Applies to every caption without its own look.</p>}
+              <StylePicker styleId={styleId} onPick={pickStyle} onHover={setHoverStyle} text={sample ? sample.en || sample.ta : undefined} frame={videoStill}
+                folded={!stylesOpen} onOpen={() => setStylesOpen(true)} />
               <h3>Font</h3>
               {/* Every font, written in itself: one tap sets it for the captions (the style's own font is "Style's"). */}
               <div className="font-chips" role="radiogroup" aria-label="Font">
