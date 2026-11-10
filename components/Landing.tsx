@@ -7,6 +7,7 @@ import StickerSlapFooter from "@/components/StickerSlapFooter";
 import FruitSticker, { MEDIA } from "@/components/FruitStickerHero";
 import HomeUpload from "@/components/HomeUpload";
 import StyleWall from "@/components/StyleWall";
+import ClipCompare from "@/components/ClipCompare";
 import { BRAND, BUSINESS } from "@/lib/brand";
 import { LANGUAGES } from "@/lib/languages";
 import { PLANS, type PlanId } from "@/lib/plans";
@@ -135,19 +136,8 @@ export default function Landing({ popular }: { popular: string[] }) {
             <h2>You said &ldquo;edit&rdquo;.<br />Not &ldquo;<span lang="ta">எடிட்</span>&rdquo;.</h2>
             <p className="hm-lede">Most auto-captions push every word into one script, or turn spoken Tamil into textbook Tamil. Vasanamm writes it the way you said it, and puts the English under it on the same timing.</p>
           </div>
-          <div className="hm-vs">
-            <figure className="hm-frame bad rise">
-              <span className="hm-frame-tag">Usual auto-captions</span>
-              <p className="hm-cap" lang="ta"><span className="sq">மச்சி</span>, இந்த <span className="sq">எடிட்</span> <span className="sq">செம்ம</span>!</p>
-              <figcaption>English words forced into Tamil letters. No English line.</figcaption>
-            </figure>
-            <figure className="hm-frame good rise" style={d(0.08)}>
-              <span className="hm-frame-tag">Vasanamm</span>
-              <p className="hm-cap">Machi, <span lang="ta">இந்த</span> edit semma!<small>Dude, this edit is awesome!</small></p>
-              <figcaption>Tamil words in Tamil, English words in English, a translation under it.</figcaption>
-            </figure>
-          </div>
-          <p className="hm-note rise">An example of a common mistake, not a test of any one app.</p>
+          <ClipCompare />
+          <p className="hm-note rise">The left card shows a common auto-caption mistake, not a test of any one app. The right card is Vasanamm&apos;s own output for this clip. Clip: Sudhir Srinivasan podcast, used with permission.</p>
           <dl className="hm-facts">
             {[
               ["Tanglish stays Tanglish", "Mixed sentences are written as spoken, word by word."],
