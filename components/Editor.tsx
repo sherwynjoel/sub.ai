@@ -1048,6 +1048,23 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   }, [playing, src]);
   const seek = (t: number) => { const v = video.current; if (v) v.currentTime = Math.max(0, Math.min(t, (v.duration || duration) - 0.01)); setNow(t); };
   const togglePlay = () => { const v = video.current; if (!v) return; if (v.paused) v.play().catch(() => {}); else v.pause(); };
+  // The round play button can sit over a caption: pressing it there hands the press to the caption too, so dragging
+  // from the button moves the caption; only a tap (no drag) plays.
+  const playFrom = useRef<{ x: number; y: number } | null>(null);
+  const playDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    playFrom.current = { x: e.clientX, y: e.clientY };
+    const btn = e.currentTarget;
+    btn.style.pointerEvents = "none"; // look through the button
+    const under = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>(".drag-handle");
+    btn.style.pointerEvents = "";
+    if (under) under.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY, pointerId: e.pointerId, pointerType: e.pointerType, isPrimary: true, button: 0, buttons: 1 }));
+  };
+  const playClick = (e: React.MouseEvent) => {
+    const f = playFrom.current;
+    playFrom.current = null;
+    if (f && Math.hypot(e.clientX - f.x, e.clientY - f.y) > 6) return; // that was a drag
+    togglePlay();
+  };
 
   // Full screen (computers): the player with its captions, at the size they'll really be seen. The video element alone
   // would leave the captions behind, as they're drawn over it. The controls fade when the mouse rests, to see the whole frame.
@@ -1581,7 +1598,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
               {fast && <span className="fast-badge" role="status">2× ▶▶</span>}
               {!playing && (
                 <>
-                  <button className="play-big" onClick={togglePlay} aria-label="Play"><Icon name="play" /></button>
+                  <button className="play-big" onPointerDown={playDown} onClick={playClick} aria-label="Play"><Icon name="play" /></button>
                   <div className="vrail vrail-desk" role="toolbar" aria-label="Add and change">
                     <button onClick={() => { addLayer("Your text"); openPane("layers"); }} title="Add a title"><Icon name="title" />Add title</button>
                     <button onClick={() => { openPane("style"); document.querySelector(".ed-side")?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }} title="Caption style"><Icon name="style" />Caption style</button>
