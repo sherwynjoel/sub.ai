@@ -973,6 +973,12 @@ a.signout { text-decoration: none; }
 .ed-hint-x { position: absolute; right: 8px; top: 6px; border: 0; background: none; font-size: 1.2rem; cursor: pointer; color: var(--ink); }
 @media (max-width: 720px) { .ed-flow { display: none; } }
 .style-all { justify-self: start; margin: 4px 0 8px; }
+/* The style list folded to the chosen one: its preview, name and what it does, and the button to change it. */
+.style-current { display: grid; grid-template-columns: 132px 1fr; gap: 12px; align-items: center; margin-bottom: 6px; }
+.style-current .sc-text { display: grid; gap: 4px; justify-items: start; }
+.style-current .sc-text b { font-size: .95rem; }
+.style-current .sc-text .muted { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.style-current .sc-text .btn { margin-top: 4px; }
 /* the projects as a compact list on phones */
 .project-rows { display: none; list-style: none; margin: 0; padding: 0; gap: 8px; }
 @media (max-width: 720px) {
