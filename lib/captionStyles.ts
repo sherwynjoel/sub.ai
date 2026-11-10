@@ -913,7 +913,7 @@ export const STYLE_GROUPS = (["Typography", "Templates", "Premiere", "Bold", "So
 
 export const DEFAULT_STYLE = "tall-caps";
 /** The styles shown first, the rest behind "See all styles". */
-export const POPULAR = ["cc-flash-box", "tall-caps", "cc-rise", "cc-word-cut", "cc-spark", "cc-rise-ultra", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-outline-cut"];
+export const POPULAR = ["cc-flash-box", "tall-caps", "cc-rise", "cc-word-cut", "cc-spark", "cc-rise-ultra", "cc-box-punch", "cc-bold-bar", "cc-card-slide", "cc-drop-cap", "cc-outline-cut", "setup-punch"];
 
 /** Fonts users can pick (bundled in public/caption-fonts): the Premiere templates' fonts that are free for the web. */
 export const CAPTION_FONTS = [
