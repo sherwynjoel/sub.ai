@@ -76,6 +76,8 @@ const ICON: Record<string, string> = {
   timeline: "M3 7h18M3 12h12M3 17h15M9 4v16",
   find: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-5-5",
   list: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01",
+  link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
+  unlink: "M9 15l-1 1a4 4 0 0 1-5.7-5.7l1-1M15 9l1-1a4 4 0 0 1 5.7 5.7l-1 1M8 2v3M2 8h3M16 22v-3M22 16h-3",
 };
 const Icon = ({ name }: { name: string }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICON[name]} /></svg>;
 const RATIO = { "9:16": 9 / 16, "4:5": 4 / 5, "1:1": 1, "16:9": 16 / 9 } as const;
@@ -649,6 +651,9 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [logoVer, setLogoVer] = useState(0); // bumps the logo image URL after an upload
   const bgCanvas = useRef<HTMLCanvasElement>(null);
   const [tab, setTab] = useState<Tab>("style");
+  // Linked (always on when the editor opens): dragging or resizing a caption on the video moves every caption.
+  // Unlinked: only that caption, which keeps its own place from then on (Put back returns it to the others).
+  const [linked, setLinked] = useState(true);
   const [stylesOpen, setStylesOpen] = useState(false); // the style list, folded to the chosen style once one is picked
   const inBrowser = useSyncExternalStore(noop, () => true, () => false); // false while rendered on the server
   // The video stays on the device: this page plays that file, in its original quality (lib/localVideo.ts).
@@ -1247,6 +1252,18 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       return out;
     }));
   }
+  /**
+   * A caption dragged or resized on the video. Linked: the shared place moves (a caption with its own place keeps it;
+   * the one dragged joins the others where it's dropped). Unlinked: only that caption, as its own place.
+   * `i` counts the captions shown: in the English view they're regrouped, so there it's the caption picked.
+   */
+  function placeCaption(i: number, patch: { x?: number; y?: number; size?: number }) {
+    const k = view === "en" ? target() : i;
+    if (!linked) { if (k >= 0) styleCue(k, patch); return; }
+    tweak(patch);
+    const c = cues[k];
+    if (c?.style && Object.keys(patch).some((key) => key in c.style!)) styleCue(k, Object.fromEntries(Object.keys(patch).map((key) => [key, undefined])) as CaptionCustom);
+  }
   /** Change the selected caption's own look; an empty look falls back to the project's. */
   function styleCue(i: number, patch: CaptionCustom | null) {
     const c = cues[i];
@@ -1398,6 +1415,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       return c.toDataURL("image/jpeg", 0.7);
     } catch { return undefined; } // a video from elsewhere can't be read back
   };
+  // The caption on hand has a place of its own (moved while unlinked): Put back offers to return it.
+  const ownPlace = (() => { const st = cues[target()]?.style; return !!st && ("x" in st || "y" in st || "size" in st); })();
 
   return (
     <div className="editor ed" data-pane={pane} data-sheet={sheet || undefined}>
@@ -1569,8 +1588,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 onTap={tapCaption} onEditOpen={() => { setWordBar(false); setInline(true); }} onEditDone={inlineDone}
                 wordBar={wordBar && pickedWord && !playing ? pickedWord : null} onWord={styleWord} onWordClose={() => setWordBar(false)}
                 onLook={(patch, all) => { if (all) lookAll(patch); else { const i = target(); if (i >= 0) styleCue(i, patch); } }}
-                onMove={(_, x, y) => lookAll({ x, y })}
-                onResize={(_, size) => lookAll({ size })} />
+                onMove={(i, x, y) => placeCaption(i, { x, y })}
+                onResize={(i, size) => placeCaption(i, { size })} />
               {freePlan && <span className="wm-preview" aria-hidden="true">Made with {BRAND.name}</span>}
               {canFull && !full && <button className="fs-open" onClick={toggleFull} aria-label="Full screen" title="Full screen (F)"><Icon name="expand" /></button>}
               {scan > 0 && <FitScan key={scan} cues={cues} styleId={styleId} custom={custom} portrait={portrait} ratio={frameRatio} view={view} memo={fitMemo.current} onDone={scanDone} />}
@@ -1639,6 +1658,11 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                   <button onClick={() => { current(); setInline(true); }}><Icon name="text" />Edit text</button>
                   {highlights(look) && <button onClick={highlight}><Icon name="mark" />Highlight</button>}
                   <button onClick={() => { current(); setNudging(true); }}><Icon name="clock" />Timing</button>
+                  <button className={`vt-link${linked ? "" : " off"}`} aria-pressed={!linked} onClick={() => setLinked((l) => !l)}
+                    title={linked ? "Linked: dragging a caption moves all of them. Tap to unlink and move just one." : "Unlinked: dragging moves only that caption. Tap to link again."}>
+                    <Icon name={linked ? "link" : "unlink"} />{linked ? "Linked" : "Unlinked"}
+                  </button>
+                  {ownPlace && <button className="vt-putback" onClick={() => styleCue(target(), { x: undefined, y: undefined, size: undefined })} title="Put this caption back with the others">Put back</button>}
                   <button onClick={() => remove(target())}><Icon name="delete" />Delete</button>
                   <button className="vt-more" onClick={split}><Icon name="split" />Split</button>
                   <button className="vt-more" onClick={merge}><Icon name="merge" />Merge</button>
