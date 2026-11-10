@@ -1,6 +1,6 @@
 "use client";
 import { cloneElement } from "react";
-import { metalCss, BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardLines, cardSchedule, dropCap, dropLines, dropSchedule, DROP_AT, DROP_TIME, textReveal, revealLines, revealSchedule, REVEAL_AT, REVEAL_TIME, REVEAL_SHADOW, REVEAL_LAYER, heroStack, stackPages, stackSchedule, dotStack, dotSchedule, DOT_AT, DOT_SHADOW, DOT_TIME, outlineCut, cutSchedule, CUT_AT, CUT_TIME, liftDot, liftSchedule, LIFT_AT, LIFT_SHADOW, LIFT_TIME, flashStack, flashSchedule, FLASH_AT, FLASH_SHADOW, FLASH_TIME, FLASH_STRIKE, FLASH_BURST, strikeAt, STACK_AT, STACK_SHADOW, STACK_TIME, mixHex, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
+import { metalCss, sheenAt, NEON_SHEEN, NEON_DEPTH, NEON_EDGE, BLENDS, byLetters, staggerBreaks, staggerFlush, POP_MS, SPARK_SLIDE, SPARK_FIT, STAR_AT, STAR_SLIDE, starSpin, boxPunchCut, boxPunchRows, boldBar, BAR_AT, BAR_TIME, cardSlide, cardLines, cardSchedule, dropCap, dropLines, dropSchedule, DROP_AT, DROP_TIME, textReveal, revealLines, revealSchedule, REVEAL_AT, REVEAL_TIME, REVEAL_SHADOW, REVEAL_LAYER, heroStack, stackPages, stackSchedule, dotStack, dotSchedule, DOT_AT, DOT_SHADOW, DOT_TIME, outlineCut, cutSchedule, CUT_AT, CUT_TIME, liftDot, liftSchedule, LIFT_AT, LIFT_SHADOW, LIFT_TIME, flashStack, flashSchedule, FLASH_AT, FLASH_SHADOW, FLASH_TIME, FLASH_STRIKE, FLASH_BURST, strikeAt, STACK_AT, STACK_SHADOW, STACK_TIME, mixHex, cardWidths, cardWidthAt, CARD_AT, CARD_TIME, easeInOut, boxStart, BOX_WIPE, BOX_RISE, BOX_PAD, SPARK_WORD_UP, starPoints, needsSlant, SLANT, CAPTION_FONTS, GLOW, caseOf, CINE_BIG, CINE_OVER, cineBig, cineFont, cineRows, GRADIENT_STOPS, highlights, lineBox, lineCount, linesOf, spacesLines, takesLineSpacing, nameOrKeyword, wordGroups, cornerRows, FLICKER, FLICKER2, flickerOn, HOOK_STEP, hookChunks, keywordIndex, resolveStyle, RISE, RISE_DY, revealUnits, stackBig, stackChunks, keywordRows, typoBreaks, typoSize, wordTimes, type CaptionCustom } from "@/lib/captionStyles";
 import { cssBaseline, lineScale, textWidth } from "@/lib/fontWidths";
 import { breakLines, lineBreaks, typedBreaks } from "@/lib/subtitles";
 import type { WordLook } from "@/db/schema";
@@ -645,24 +645,34 @@ export default function StyledCaption({ styleId, custom, text, sub, start, end, 
         {join(a, to).filter((x) => typeof x !== "object" || x === null || (x as React.ReactElement).type !== "br")}</span>;
     })}</span>;
   } else if (s.neon) {
-    // Neon Duo (as the MP4): each line its metal (across the whole line: each word showing its part of it), glow and
-    // dark depth, a thin bright rim round the letters
+    // Neon Duo (as the MP4): solid letters with a dark side going back, a lit edge, a metal face (across the whole line:
+    // each word showing its part of it) with a reflection over it, a neon glow
     const nn = s.neon, starts = [0, ...[...brk].filter((b) => b < words.length - 1).sort((a, b) => a - b).map((b) => b + 1)];
     const sp = textWidth(" ", s.font, s.fontTa), lineH = lineScale(s.font);
+    const sheen = `linear-gradient(transparent ${NEON_SHEEN[0][0] * 100}%, ${Array.from({ length: 41 }, (_, k) => {
+      const t = NEON_SHEEN[0][0] + ((NEON_SHEEN[NEON_SHEEN.length - 1][0] - NEON_SHEEN[0][0]) * k) / 40, v = sheenAt(t);
+      return `rgba(${v > 0 ? "255,255,255" : "0,0,0"},${Math.abs(v).toFixed(3)}) ${(t * 100).toFixed(2)}%`;
+    }).join(", ")}, transparent ${NEON_SHEEN[NEON_SHEEN.length - 1][0] * 100}%)`;
+    const noBr = (xs: React.ReactNode[]) => xs.filter((x) => typeof x !== "object" || x === null || (x as React.ReactElement).type !== "br");
     body = <span className="stagger">{starts.map((a, r) => {
       const look = nn.rows[r % nn.rows.length], to = r + 1 < starts.length ? starts[r + 1] : words.length;
       const ws = words.slice(a, to).map((w) => textWidth(w.w, s.font, s.fontTa)), W = Math.max(0.3, ws.reduce((t, x) => t + x, 0) + sp * (ws.length - 1));
       let left = 0;
-      const parts = join(a, to).filter((x) => typeof x !== "object" || x === null || (x as React.ReactElement).type !== "br").map((x) => {
+      const faceOf = (x: React.ReactNode) => {
         if (!x || typeof x !== "object") return x;
-        const el = x as React.ReactElement<{ style?: React.CSSProperties }>;
-        const at = left;
-        left += (ws.shift() ?? 0) + sp;
-        return grad ? el : cloneElement(el, { style: { ...el.props.style, backgroundImage: metalCss(look.metal), backgroundSize: `${W.toFixed(3)}em ${lineH}em`,
-          backgroundPosition: `${(-at).toFixed(3)}em 0`, backgroundRepeat: "no-repeat", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" } });
-      });
-      return <span key={a} style={{ textAlign: "center", WebkitTextStroke: `.02em ${nn.rim}`,
-        filter: `drop-shadow(.035em .045em 0 ${look.depth}) drop-shadow(0 0 .05em ${look.glow}) drop-shadow(0 0 .14em ${look.glow}c0) drop-shadow(.06em .08em .06em rgba(0,0,0,.85))` }}>{parts}</span>;
+        const el = x as React.ReactElement<{ style?: React.CSSProperties }>, at = left;
+        return grad ? cloneElement(el, { style: { ...el.props.style } }) : cloneElement(el, { style: { ...el.props.style, backgroundImage: `${sheen}, ${metalCss(look.metal)}`,
+          backgroundSize: `${W.toFixed(3)}em ${lineH}em, ${W.toFixed(3)}em ${lineH}em`, backgroundPosition: `${(-at).toFixed(3)}em 0, ${(-at).toFixed(3)}em 0`, backgroundRepeat: "no-repeat",
+          WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" } });
+      };
+      const faces = noBr(join(a, to)).map((x) => { const out = faceOf(x); if (x && typeof x === "object") left += (ws.shift() ?? 0) + sp; return out; });
+      const step = (k: number) => `drop-shadow(${(NEON_DEPTH.x / NEON_DEPTH.steps).toFixed(4)}em ${(NEON_DEPTH.y / NEON_DEPTH.steps).toFixed(4)}em 0 ${k ? look.depth : mixHex(look.depth, "#000000", 0.35)})`;
+      return <span key={a} style={{ textAlign: "center", position: "relative",
+        filter: `${Array.from({ length: NEON_DEPTH.steps }, (_, k) => step(k)).join(" ")} drop-shadow(0 0 .06em ${look.glow}) drop-shadow(0 0 .16em ${look.glow}b0)` }}>
+        <span style={grad ? { "--grad": `linear-gradient(${grad[0]} ${GRADIENT_STOPS[0] * 100}%, ${grad[1]} ${GRADIENT_STOPS[1] * 100}%)` } as React.CSSProperties : undefined} className={grad ? "grad" : undefined}>{faces}</span>
+        {/* the lit edge: a soft line of light round the letters in the line's pale tint (as the MP4) */}
+        <span aria-hidden="true" style={{ position: "absolute", inset: 0, color: "transparent", WebkitTextFillColor: "transparent", WebkitTextStroke: `${NEON_EDGE * 1.4}em ${look.edge}a6`, filter: `blur(${(NEON_EDGE * 0.7).toFixed(4)}em)` }}>{noBr(join(a, to))}</span>
+      </span>;
     })}</span>;
   } else {
     body = join(0, words.length);
