@@ -43,9 +43,9 @@ type Job = {
   captionStyle: string; captionCustom: CaptionCustom; renderStatus: string | null; renderProgress: number; renderError: string | null; renderLang: string;
 };
 type View = "ta" | "en" | "both";
-type Tab = "caption" | "layers" | "style" | "export";
+type Tab = "layers" | "style" | "export";
 type Pane = "list" | "caption" | "timeline" | "style" | "layers" | "export";
-const PANES: [Pane, string][] = [["list", "Captions"], ["caption", "Edit"], ["style", "Style"], ["timeline", "Timeline"], ["layers", "Layers"], ["export", "Export"]];
+const PANES: [Pane, string][] = [["list", "Captions"], ["style", "Style"], ["timeline", "Timeline"], ["layers", "Layers"], ["export", "Export"]];
 const noop = () => () => {};
 /** m:ss for the phone toolbar. */
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -648,7 +648,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   const [selLayer, setSelLayer] = useState(-1);
   const [logoVer, setLogoVer] = useState(0); // bumps the logo image URL after an upload
   const bgCanvas = useRef<HTMLCanvasElement>(null);
-  const [tab, setTab] = useState<Tab>("caption");
+  const [tab, setTab] = useState<Tab>("style");
   const inBrowser = useSyncExternalStore(noop, () => true, () => false); // false while rendered on the server
   // The video stays on the device: this page plays that file, in its original quality (lib/localVideo.ts).
   useSyncExternalStore(subscribeVideos, videosVersion, () => 0);
@@ -841,8 +841,6 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     return () => clearTimeout(t);
   }, [custom]); // eslint-disable-line react-hooks/exhaustive-deps
   const tweak = (patch: CaptionCustom) => setCustom((c) => ({ ...c, ...patch }));
-  // Look changes go to every caption unless "Only this caption" is picked.
-  const [onlyThis, setOnlyThis] = useState(false);
   const setView = (v: View) => { setViewState(v); setLang(v); tweak({ show: v }); };
   const look = resolveStyle(styleId, custom, portrait);
   const layers = custom.layers ?? [];
@@ -868,7 +866,6 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
   }
   const cv = custom.canvas, shaped = !!cv && cv.ratio !== "source";
   const frameRatio = shaped ? RATIO[cv!.ratio as keyof typeof RATIO] : ratio;
-  const hex = (c: string | undefined, fallback: string) => (c ?? fallback).slice(0, 7);
 
   useEffect(() => { latest.current = cues; }, [cues]);
   /** The captions to the server: true when they got there. */
@@ -1169,12 +1166,12 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
     setPane(k);
     setSheet(true);
     setTimeout(() => document.querySelectorAll(".ed-side, .ed-list, .ed-timeline").forEach((e) => { e.scrollTop = 0; }), 0); // each section opens at its top
-    if (k === "caption" || k === "style" || k === "layers" || k === "export") setTab(k);
+    if (k === "style" || k === "layers" || k === "export") setTab(k);
     if (k === "caption" && selected < 0 && activeIdx >= 0) setSelected(activeIdx);
   }
   function select(i: number) {
     setSelected(i);
-    if (i >= 0) { setSelLayer(-1); setTab("caption"); list.current?.children[i]?.scrollIntoView({ block: "nearest" }); }
+    if (i >= 0) { setSelLayer(-1); if (tab === "layers") setTab("style"); list.current?.children[i]?.scrollIntoView({ block: "nearest" }); }
   }
 
   // ---------- caption operations ----------
@@ -1395,11 +1392,6 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       return c.toDataURL("image/jpeg", 0.7);
     } catch { return undefined; } // a video from elsewhere can't be read back
   };
-  const selLook = sel ? resolveStyle(styleId, mergeCustom(custom, sel.style), portrait) : look;
-  const words = sel ? wordsOf(sel[line]) : [];
-  const starts = sel ? startsOf(sel, line) : [];
-  const colors = sel ? (line === "en" ? sel.wce : sel.wc) : undefined;
-  const own = sel?.style ?? {};
 
   return (
     <div className="editor ed" data-pane={pane} data-sheet={sheet || undefined}>
@@ -1571,8 +1563,8 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                 onTap={tapCaption} onEditOpen={() => { setWordBar(false); setInline(true); }} onEditDone={inlineDone}
                 wordBar={wordBar && pickedWord && !playing ? pickedWord : null} onWord={styleWord} onWordClose={() => setWordBar(false)}
                 onLook={(patch, all) => { if (all) lookAll(patch); else { const i = target(); if (i >= 0) styleCue(i, patch); } }}
-                onMove={(i, x, y) => { if (onlyThis && i === selected) styleCue(i, { x, y }); else lookAll({ x, y }); }}
-                onResize={(i, size) => { if (onlyThis && i === selected) styleCue(i, { size }); else lookAll({ size }); }} />
+                onMove={(_, x, y) => lookAll({ x, y })}
+                onResize={(_, size) => lookAll({ size })} />
               {freePlan && <span className="wm-preview" aria-hidden="true">Made with {BRAND.name}</span>}
               {canFull && !full && <button className="fs-open" onClick={toggleFull} aria-label="Full screen" title="Full screen (F)"><Icon name="expand" /></button>}
               {scan > 0 && <FitScan key={scan} cues={cues} styleId={styleId} custom={custom} portrait={portrait} ratio={frameRatio} view={view} memo={fitMemo.current} onDone={scanDone} />}
@@ -1684,58 +1676,11 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
 
         <aside className="ed-side">
           <div className="seg ed-tabs" role="tablist" aria-label="Inspector">
-            {([["caption", "Text"], ["style", "Style"], ["layers", "Titles & logo"], ["export", "Export"]] as const).map(([k, l]) => (
+            {([["style", "Style"], ["layers", "Titles & logo"], ["export", "Export"]] as const).map(([k, l]) => (
               <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>
             ))}
           </div>
           <div className="ed-side-body">{/* scrolls under the tabs, which stay put */}
-
-          {tab === "caption" && (sel ? (
-            <div className="insp">
-              <div className="insp-row">
-                <TimeInput key={`s${selected}-${sel.start}`} value={sel.start} label="Start" onChange={(v) => commit(retime(cues, selected, v, sel.end, duration))} />
-                <TimeInput key={`e${selected}-${sel.end}`} value={sel.end} label="End" onChange={(v) => commit(retime(cues, selected, sel.start, v, duration))} />
-                <span className="muted small">{(sel.end - sel.start).toFixed(2)} s</span>
-              </div>
-              {hasSpoken && <label className="insp-field">{language.name}
-                <textarea id="cap-text" lang={short} rows={2} value={sel.ta} onChange={(e) => editCue(selected, setText(sel, "ta", e.target.value))} />
-              </label>}
-              {hasEnglish && <label className="insp-field">English<textarea rows={2} value={sel.en} onChange={(e) => editCue(selected, setText(sel, "en", e.target.value))} /></label>}
-
-              <div className="insp-head">
-                <h3>Look</h3>
-                {onlyThis && <button className="btn ghost small" onClick={() => styleCue(selected, null)} disabled={!sel.style}>Use project style</button>}
-              </div>
-              {/* Every caption by default: changing one caption's look is the exception, picked on purpose. */}
-              <div className="seg look-scope" role="group" aria-label="Apply look changes to">
-                <button aria-pressed={!onlyThis} onClick={() => setOnlyThis(false)}>All captions</button>
-                <button aria-pressed={onlyThis} onClick={() => setOnlyThis(true)}>Only this caption</button>
-              </div>
-              <p className="muted small">{onlyThis ? "Changes here, and dragging or resizing this caption on the video, change only this caption." : "Changes here, and dragging or resizing a caption on the video, change every caption."}</p>
-              {onlyThis
-                ? <LookControls look={selLook} own={own} set={(patch) => styleCue(selected, patch)} tamil={tamil} project={look} setAll={lookAll} />
-                : <LookControls look={look} own={custom} set={lookAll} tamil={tamil} />}
-
-              <h3>Words</h3>
-              <p className="muted small">Edit a word, its start time (or drag it on the timeline) and its colour.</p>
-              <ol className="insp-words">
-                {words.map((w, j) => (
-                  <li key={`${selected}-${j}-${w}`}>
-                    <input className="w-text" lang={line === "ta" ? short : "en"} defaultValue={w} aria-label={`Word ${j + 1}`}
-                      onBlur={(e) => { if (e.target.value !== w) editCue(selected, setWord(sel, line, j, { text: e.target.value })); }} />
-                    <TimeInput key={`w${selected}-${j}-${starts[j]}`} value={starts[j]} label={`Word ${j + 1} start`} onChange={(v) => editCue(selected, setWord(sel, line, j, { start: v }))} />
-                    <ColorPicker value={hex(colors?.[j] ?? undefined, hex(selLook.color, "#ffffff"))} onChange={(c) => editCue(selected, setWord(sel, line, j, { color: c }))} label={`Word ${j + 1} colour`} />
-                    {colors?.[j] && <button className="link small" onClick={() => editCue(selected, setWord(sel, line, j, { color: null }))}>Reset</button>}
-                  </li>
-                ))}
-              </ol>
-            </div>
-          ) : (
-            <div className="insp">
-              <p className="muted">Select a caption in the list or on the timeline to edit its text, timing, look and words.</p>
-              <ShortcutHelp />
-            </div>
-          ))}
 
           {tab === "layers" && (
             <div className="insp">
@@ -2046,14 +1991,5 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
       </div>
       </>, document.body)}
     </div>
-  );
-}
-
-function ShortcutHelp() {
-  const keys: [string, string][] = [["Space", "Play / pause"], ["← →", "One frame (with ⇧: one second)"], ["↑ ↓", "Previous / next caption"], ["S", "Split at the playhead"], ["M", "Merge with the next"], ["[ ]", "Start / end the caption at the playhead"], [", .", "Move the caption one frame (with ⇧: ten)"], ["A", "Add a caption at the playhead"], ["Delete", "Delete the caption"], ["⌘Z / ⇧⌘Z", "Undo / redo"], ["⌘S", "Save"], ["+ / −", "Zoom the timeline"], ["G", "Centring guides on / off"], ["F", "Full screen"]];
-  return (
-    <dl className="keys">
-      {keys.map(([k, v]) => <div key={k}><dt><kbd>{k}</kbd></dt><dd>{v}</dd></div>)}
-    </dl>
   );
 }
