@@ -302,10 +302,6 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .insp-words .time { width: 118px; font-size: .8rem; padding: .3em .4em; }
 .insp-words input[type="color"] { width: 34px; height: 30px; padding: 2px; }
 .link { background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; color: var(--ink); }
-.keys { display: grid; gap: 4px; margin: 0; font-size: .85rem; }
-.keys div { display: flex; gap: 10px; }
-.keys dt { min-width: 92px; }
-.keys dd { margin: 0; color: var(--muted); }
 kbd { font: 600 .75rem/1 var(--font-body); padding: 3px 6px; border: 1px solid var(--line-hi); border-radius: 6px; background: var(--glass-strong); }
 
 .ed-timeline { display: grid; gap: 6px; background: var(--glass); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 10px 10px; }
