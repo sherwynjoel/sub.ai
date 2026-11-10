@@ -117,7 +117,8 @@
 @keyframes sw-eq { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
 
 /* A 9:16 frame in the middle of the screen, like the video itself, so every style lays out as it does in the MP4. */
-.sw-stage { container-type: size; position: absolute; left: 0; right: 0; top: 47%; translate: 0 -50%; aspect-ratio: 9 / 16; z-index: 3; display: grid; place-items: center; padding: 0 7%; }
+/* the caption sits low, just above the creator line (as on Reels), clear of the like/comment rail on the right */
+.sw-stage { container-type: size; position: absolute; left: 0; right: 0; bottom: 19%; aspect-ratio: 9 / 16; z-index: 3; display: grid; place-items: end center; padding: 0 17% 0 6%; }
 .sw-stage .cap-main { font-size: 7.5cqmin; }
 .sw-rail { position: absolute; z-index: 4; right: 3.5cqw; bottom: 15.5%; display: grid; gap: 4cqw; justify-items: center; color: #fff; font: 600 2.9cqw var(--font-body); text-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
 .sw-rail span { display: grid; justify-items: center; gap: .8cqw; }
