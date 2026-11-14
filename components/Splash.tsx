@@ -5,11 +5,11 @@ import { VasanamReveal } from "@/components/ui/liquid-glass-logo-reveal"
 /** After the reveal has played to the end, the finished logo stays this long before the screen fades. */
 const HOLD_MS = 250
 /** Only if the reveal never reports its end (a frozen tab, a broken GPU): lift anyway. CSS lifts it at 7 s too. */
-const CAP_MS = 2400
+const CAP_MS = 1400
 const SEEN = "vs-splash"
 /** The page shows by this time after the visit started (ms), even if the reveal is still playing or a picture is still loading:
  * on a slow connection the reveal starts late (it needs the page's code), and a visitor shouldn't wait for all of it. */
-const BUDGET_MS = 1500
+const BUDGET_MS = 900
 
 /**
  * The first screen of a visit: Vasanamm's mark in glass while the page loads, then it fades away. It always plays
@@ -31,7 +31,7 @@ export default function Splash() {
       if (d.left) return
       d.left = true
       setState("leaving")
-      setTimeout(() => setState("gone"), 450)
+      setTimeout(() => setState("gone"), 300)
     }
     // The reveal finished on a loaded page, or the time budget is used up: by then the page is drawn and working (this
     // runs after it has started), and what may still be arriving (below-the-fold pictures, a caption font) fills in.

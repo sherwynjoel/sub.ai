@@ -9,7 +9,8 @@ import "./globals.css";
 
 const sans = Instrument_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const display = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-display", display: "swap" });
-const tamil = Noto_Sans_Tamil({ subsets: ["tamil"], variable: "--font-tamil", display: "swap" });
+// Not preloaded: only a few lines of the first screen are Tamil, and its 50 KB would hold up the fonts every line uses.
+const tamil = Noto_Sans_Tamil({ subsets: ["tamil"], variable: "--font-tamil", display: "swap", preload: false });
 
 const description = "Upload a video and get timed Tamil and English subtitles you can edit, download as SRT/VTT, or drop straight into Premiere Pro and After Effects.";
 
@@ -35,9 +36,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${sans.variable} ${display.variable} ${tamil.variable}`} suppressHydrationWarning>
       <head>
-        {/* The intro plays once per visit: when this tab's visit already saw it, or the page itself took over 1.2 s to
+        {/* The intro plays once per visit: when this tab's visit already saw it, or the page itself took over 0.6 s to
             arrive (a slow connection: the visitor has waited enough), hide it before the first paint. */}
-        <script dangerouslySetInnerHTML={{ __html: `try{if(sessionStorage.getItem("vs-splash")||performance.now()>1200)document.documentElement.dataset.splash="seen"}catch(e){}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `try{if(sessionStorage.getItem("vs-splash")||performance.now()>600)document.documentElement.dataset.splash="seen"}catch(e){}` }} />
         {/* iOS ignores user-scalable=no: stop its pinch itself (gesture events in Safari; two-finger moves in in-app
             browsers such as WhatsApp's and Instagram's, which have no gesture events), and if a page did get zoomed (a
             field tapped), snap it back to 100% when the field is left. */}
