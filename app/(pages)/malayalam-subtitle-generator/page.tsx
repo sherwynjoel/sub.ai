@@ -4,7 +4,7 @@ import GuidePage from "@/components/GuidePage";
 const path = "/malayalam-subtitle-generator";
 export const metadata: Metadata = {
   title: "Malayalam subtitle generator: Malayalam and English subtitles from any video",
-  description: "Upload a Malayalam video and get timed Malayalam subtitles with an English translation. Manglish (Malayalam mixed with English) stays as spoken. Edit in the browser, download SRT or VTT, or burn them into an MP4. 15 minutes free.",
+  description: "Upload a Malayalam video and get timed Malayalam subtitles with an English translation. Manglish (Malayalam mixed with English) stays as spoken. Edit in the browser, download SRT or VTT, or burn them into an MP4. Plans from ₹499.",
   alternates: { canonical: path },
 };
 
@@ -22,13 +22,13 @@ export default function Page() {
         ["Every format you need", "Download SRT, WebVTT or plain text, or export an MP4 with the subtitles burned in, from 480p up to 4K, with presets for YouTube, Reels and WhatsApp."],
       ]}
       steps={[
-        "Create a free account and upload your video (MP4, MOV, MKV, MP3 or WAV, up to 4 GB).",
+        "Create an account, pick a plan and upload your video (MP4, MOV, MKV, MP3 or WAV, up to 4 GB).",
         "Choose Malayalam, and whether you want Malayalam + English, Malayalam in English letters, pure Malayalam or English only.",
         "Check the subtitles in the editor, fix anything you like and pick a style.",
         "Download the subtitle file or the finished MP4.",
       ]}
       faq={[
-        ["Is it free?", "The first 15 minutes of video are free, with no card needed. After that, plans start at ₹499 for 30 days and 300 minutes."],
+        ["Is there a free trial?", "Not right now. Plans start at ₹499 for 30 days and 300 minutes."],
         ["Does it handle Manglish (Malayalam mixed with English)?", "Yes. Mixed speech is written as spoken: Malayalam words in Malayalam script, English words in English."],
         ["Can I add the subtitles to YouTube?", "Yes. Download the SRT and add it in YouTube Studio, or export the MP4 with the subtitles burned in."],
         ["How accurate is it?", "Clear speech comes out well, but it is made by AI, so read the subtitles before you publish. Everything can be corrected in the editor."],

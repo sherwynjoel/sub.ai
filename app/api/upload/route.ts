@@ -27,7 +27,7 @@ const MAX_BYTES = 4 * 1024 ** 3; // 4 GB
 export async function POST(req: Request) {
   const u = await currentUser();
   if (!u) return unauthorized();
-  if (await mustConfirm(u)) return json({ error: `Confirm your email to start your free minutes: open the link we sent to ${u.email}.`, confirm: true }, 403);
+  if (await mustConfirm(u)) return json({ error: `Confirm your email first: open the link we sent to ${u.email}.`, confirm: true }, 403);
   if (secondsLeft(u) <= 0) return json({ error: outOfMinutes(u) }, 402);
   if (!req.body) return json({ error: "No file received." }, 400);
 

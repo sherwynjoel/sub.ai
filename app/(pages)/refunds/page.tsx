@@ -11,12 +11,6 @@ export default function Page() {
       <h1>Refund and cancellation policy</h1>
       <p className="updated">Last updated {BUSINESS.updated}</p>
 
-      <h2>Try before you pay</h2>
-      <p>
-        Every new account gets {PLANS.free.minutes} free minutes, with no card needed, so you can check {BRAND.name} on your own videos
-        before you subscribe.
-      </p>
-
       <h2>Cancelling</h2>
       <ul>
         <li>You can cancel your subscription at any time from <strong>Billing</strong> in your account.</li>
@@ -25,7 +19,7 @@ export default function Page() {
       </ul>
 
       <h2>Refunds</h2>
-      <p>Because you can try {BRAND.name} free first, monthly payments are generally not refunded once the month has started. We will refund you in full if:</p>
+      <p>Monthly payments are generally not refunded once the month has started. We will refund you in full if:</p>
       <ul>
         <li>you were charged twice for the same month, or charged after you cancelled;</li>
         <li>you ask within 7 days of a payment and have used none of that month&apos;s minutes;</li>

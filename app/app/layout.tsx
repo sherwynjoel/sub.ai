@@ -17,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <>
       {ann && <div className="announce" role="status">{ann.text}{ann.link && <a href={ann.link}>{ann.linkText || "See more"} →</a>}</div>}
-      <AppHeader brand={BRAND.name} isAdmin={u.isAdmin} seconds={left} meter={Math.min(1, left / total) * 100} plan={PLANS[plan].name} expires={passEnd(u) ? `${passExpired(u) ? "Pass ended" : "Unused minutes expire"} ${longDate(passEnd(u)!)}` : ""}
+      <AppHeader brand={BRAND.name} isAdmin={u.isAdmin} seconds={left} meter={total ? Math.min(1, left / total) * 100 : left > 0 ? 100 : 0} plan={PLANS[plan].name} expires={passEnd(u) ? `${passExpired(u) ? "Pass ended" : "Unused minutes expire"} ${longDate(passEnd(u)!)}` : ""}
         help={`mailto:${BUSINESS.email}?subject=${encodeURIComponent(`${BRAND.name} help (${u.email})`)}`} />
       <main className="wrap app-main">{children}</main>
       {reward.minutes > 0 && <InviteReward minutes={reward.minutes} reasons={reward.reasons} />}

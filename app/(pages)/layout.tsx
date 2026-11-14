@@ -15,7 +15,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
             <Link href="/" className="logo"><i /><LogoName name={BRAND.name} /></Link>
             <nav aria-label="Main">
               <Link href="/login">Sign in</Link>
-              <Link href="/signup" className="btn small">Start free</Link>
+              <Link href="/signup" className="btn small">Get started</Link>
             </nav>
           </div>
         </LiquidGlass>

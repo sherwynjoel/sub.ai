@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { mergeCustom, MIN_FIT, ownLook, resolveStyle, sanitizeCustom, tamilRuns } from "./captionStyles";
-import { minSec, passExpired, secondsLeft } from "./plans";
+import { minSec, passExpired, secondsLeft, outOfMinutes } from "./plans";
 
 test("a fit shrinks the caption in proportion", () => {
   const full = resolveStyle("minimal", {}), fitted = resolveStyle("minimal", { fit: 0.5 });
@@ -41,12 +41,12 @@ test("a pass's unused minutes expire when it ends", () => {
   const lapsed = { ...paid, periodEnd: new Date(now.getTime() - day) };
   assert.equal(secondsLeft(lapsed, now), 0); // not the trial's 15 minutes either
   assert.ok(passExpired(lapsed, now));
-  const fresh = { plan: "free", secondsUsed: 100, periodEnd: null, createdAt: new Date(now.getTime() - 5 * day) };
-  assert.equal(secondsLeft(fresh, now), 15 * 60 - 100);
-  const oldTrial = { ...fresh, createdAt: new Date(now.getTime() - 31 * day) };
-  assert.equal(secondsLeft(oldTrial, now), 0);
-  // accounts made before passes expired get their 30 days from then
-  const before = { ...fresh, createdAt: new Date("2025-06-01") };
-  assert.equal(secondsLeft(before, new Date("2026-11-20T00:00:00Z")), 15 * 60 - 100);
-  assert.equal(secondsLeft(before, new Date("2026-12-10T00:00:00Z")), 0);
+  // No free trial: a new account has no minutes
+  const fresh = { plan: "free", secondsUsed: 0, periodEnd: null, createdAt: new Date(now.getTime() - 5 * day) };
+  assert.equal(secondsLeft(fresh, now), 0);
+  assert.match(outOfMinutes(fresh, now), /Pick a plan/);
+  // only bonus minutes (an approved invite, an admin top-up), within 30 days of sign-up
+  const bonus = { ...fresh, secondsUsed: -600 };
+  assert.equal(secondsLeft(bonus, now), 600);
+  assert.equal(secondsLeft({ ...bonus, createdAt: new Date(now.getTime() - 31 * day) }, now), 0);
 });

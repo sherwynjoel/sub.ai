@@ -4,7 +4,7 @@ import GuidePage from "@/components/GuidePage";
 const path = "/tamil-to-english-subtitles";
 export const metadata: Metadata = {
   title: "Tamil to English subtitles: translate any Tamil video",
-  description: "Turn a Tamil video into English subtitles, timed to the speech. Keep the Tamil line above the English, or English only. Edit, download SRT or VTT, or burn them into an MP4. 15 minutes free.",
+  description: "Turn a Tamil video into English subtitles, timed to the speech. Keep the Tamil line above the English, or English only. Edit, download SRT or VTT, or burn them into an MP4. Plans from ₹499.",
   alternates: { canonical: path },
 };
 
@@ -22,13 +22,13 @@ export default function Page() {
         ["Every format you need", "Download SRT, WebVTT or plain text, or export an MP4 with the subtitles burned in, from 480p up to 4K, with presets for YouTube, Reels and WhatsApp."],
       ]}
       steps={[
-        "Create a free account and upload your Tamil video (MP4, MOV, MKV, MP3 or WAV, up to 4 GB).",
+        "Create an account, pick a plan and upload your Tamil video (MP4, MOV, MKV, MP3 or WAV, up to 4 GB).",
         "Choose Tamil, then English only, or Tamil with English underneath.",
         "Read the English in the editor and fix any line you like.",
         "Download the SRT for YouTube or the finished MP4.",
       ]}
       faq={[
-        ["Is it free?", "The first 15 minutes of video are free, with no card needed. After that, plans start at ₹499 for 30 days and 300 minutes."],
+        ["Is there a free trial?", "Not right now. Plans start at ₹499 for 30 days and 300 minutes."],
         ["Can I upload the English subtitles to YouTube?", "Yes. Download the SRT and add it in YouTube Studio as English subtitles, so viewers can switch them on."],
         ["Does it understand Tanglish?", "Yes. Mixed Tamil and English speech is understood as said, and the English line reads naturally."],
         ["Can I translate into other languages?", "Yes. In the editor, Translate turns the captions into any of 22 Indian languages, or English."],

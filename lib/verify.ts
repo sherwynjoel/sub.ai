@@ -22,7 +22,7 @@ export async function sendConfirmation(u: { id: string; name: string; email: str
   await db.insert(emailChecks).values({ tokenHash: sha256(token), userId: u.id, expiresAt: new Date(Date.now() + 48 * 3600e3) });
   const link = `${SITE_URL}/api/auth/confirm?token=${token}`;
   await sendEmail(u.email, `Confirm your email for ${BRAND.name}`,
-    `Hi ${u.name},\n\nWelcome to ${BRAND.name}! Confirm your email to start your free minutes:\n\n${link}\n\nThe link works for 2 days. If you didn't sign up, ignore this email.\n\n${BRAND.name}\n${BUSINESS.email}`);
+    `Hi ${u.name},\n\nWelcome to ${BRAND.name}! Confirm your email to finish setting up your account:\n\n${link}\n\nThe link works for 2 days. If you didn't sign up, ignore this email.\n\n${BRAND.name}\n${BUSINESS.email}`);
 }
 
 /** Confirms the email a link was sent for; the user's id, or null if the link is unknown or expired. */

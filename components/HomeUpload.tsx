@@ -81,7 +81,7 @@ export default function HomeUpload({ popular }: { popular: string[] }) {
   return (
     <section ref={box} className="wrap hu" id="upload" aria-labelledby="hu-h">
       <div className="hu-head">
-        <span className="hu-kicker">Try it now · free</span>
+        <span className="hu-kicker">Try it now</span>
         <h2 id="hu-h">Drop your video. <span className="mark">See it with subtitles.</span></h2>
         <p className="sec-lede">Your video plays right here with captions on it, before you sign up. Nothing is uploaded until you say go.</p>
       </div>
@@ -98,7 +98,7 @@ export default function HomeUpload({ popular }: { popular: string[] }) {
           </span>
           <strong>Drop a video here</strong>
           <span className="muted">or <u>choose one</u> from your device · MP4, MOV, MKV, MP3, WAV · up to 4 GB</span>
-          <span className="hu-trust"><span>15 minutes free</span><span>No card</span><span>{LANGUAGES.length} Indian languages + English</span></span>
+          <span className="hu-trust"><span>Plans from ₹499</span><span>{LANGUAGES.length} Indian languages + English</span></span>
         </div>
       ) : (
         <div className="hu-try">
@@ -128,13 +128,13 @@ export default function HomeUpload({ popular }: { popular: string[] }) {
                   })}
                 </div>
                 <p className="muted small">{STYLE_CHOICES.length} styles in all. Change any colour, font or size later.</p>
-                <button className="btn big hu-go" disabled={busy} onClick={go}>{busy ? "Getting ready…" : "Get my subtitles free"}</button>
-                <p className="muted small">{lang.name} with English on the same timing · 15 free minutes, no card</p>
+                <button className="btn big hu-go" disabled={busy} onClick={go}>{busy ? "Getting ready…" : "Get my subtitles"}</button>
+                <p className="muted small">{lang.name} with English on the same timing</p>
               </>
             ) : (
               <form className="hu-account" onSubmit={signup}>
-                <h3>Last step: your free account</h3>
-                <p className="muted small">Your video waits right here. After this it opens in the editor and your subtitles start.</p>
+                <h3>Last step: your account</h3>
+                <p className="muted small">Your video waits right here. After this, pick a plan and it opens in the editor.</p>
                 <a className="google-btn" href="/api/auth/google">
                   <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true">
                     <path fill="#EA4335" d="M24 9.5c3.5 0 6.7 1.2 9.2 3.6l6.8-6.8C35.9 2.4 30.5 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.2C12.4 13.7 17.7 9.5 24 9.5z" />

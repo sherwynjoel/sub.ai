@@ -28,7 +28,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
             {ended
               ? `Your pass ended on ${endDate}. Its unused minutes expired. Pick a plan below for a new pass.`
               : plan === "free"
-                ? `Trial: use your minutes by ${endDate}. Unused minutes expire then.`
+                ? (left > 0 ? `Bonus minutes: use them by ${endDate}. Unused minutes expire then.` : "No plan yet. Pick one below to start subtitling.")
                 : u.subscriptionStatus === "prepaid"
                   ? `Paid until ${date}. Unused minutes expire then. Paying again adds 30 days with fresh minutes.`
                   : u.subscriptionStatus === "cancelled"

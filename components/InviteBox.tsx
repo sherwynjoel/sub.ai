@@ -6,7 +6,7 @@ export default function InviteBox({ link, minutes, text, stats }: {
   link: string; minutes: number; text: string; stats: { joined: number; pending: number; approved: number; earned: number };
 }) {
   const [copied, setCopied] = useState(false);
-  const share = `I make my video subtitles with Vasanamm: Tamil, Tanglish and 21 more Indian languages with English. Try it free: ${link}`;
+  const share = `I make my video subtitles with Vasanamm: Tamil, Tanglish and 21 more Indian languages with English. Try it: ${link}`;
   const copy = async () => {
     try { await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* the field can still be selected */ }
   };

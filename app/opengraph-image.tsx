@@ -25,7 +25,7 @@ export default async function Image() {
           <div style={{ fontSize: 28, color: "#3d3d4d" }}>22 Indian languages · Premiere Pro & After Effects panel · SRT, VTT, MP4</div>
         </div>
         <div style={{ display: "flex" }}>
-          <div style={{ background: "#d4ff3f", borderRadius: 999, padding: "14px 30px", fontSize: 30 }}>15 minutes free</div>
+          <div style={{ background: "#d4ff3f", borderRadius: 999, padding: "14px 30px", fontSize: 30 }}>Plans from ₹499</div>
         </div>
       </div>
     ),

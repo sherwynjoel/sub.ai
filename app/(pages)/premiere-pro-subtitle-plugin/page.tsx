@@ -21,7 +21,7 @@ export default function Page() {
         ["22 languages plus English", "Tamil, Hindi, Telugu, Malayalam, Kannada and more, with an English line or a full English translation."],
       ]}
       steps={[
-        "Create a free account and download the panel from the Plugin page.",
+        "Create an account, pick a plan and download the panel from the Plugin page.",
         "Install it with the ZXP Installer, open Window → Extensions → Vasanamm, and paste your key.",
         "Select a clip on the timeline, pick the language and style, and click Generate subtitles.",
       ]}
@@ -29,7 +29,7 @@ export default function Page() {
         ["Which versions does it support?", "Premiere Pro and After Effects 2022 and newer. A few of the animated templates need Premiere Pro 2026."],
         ["Is there a DaVinci Resolve version?", "Yes, a script for DaVinci Resolve is on the Plugin page."],
         ["Does the panel upload my whole project?", "No. Only the sound of the clip you select is sent to us, and it is deleted from our server after 7 days. The clip stays on your computer, and styled captions are made there too."],
-        ["How much does it cost?", "15 minutes free, then plans from ₹499 a month. The panel is included in every plan."],
+        ["How much does it cost?", "Plans start at ₹499 for 30 days. The panel is included in every plan."],
       ]}
     />
   );

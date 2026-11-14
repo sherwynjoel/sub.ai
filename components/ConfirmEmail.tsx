@@ -23,12 +23,12 @@ export default function ConfirmEmail() {
     setSent(res?.ok ? "sent" : data.error || "Couldn't send it. Try again in a minute.");
   }
 
-  if (opened === "1" && !me?.confirm) return <p className="confirm-note ok" role="status">Email confirmed. Your free minutes are ready: upload a video to start.</p>;
+  if (opened === "1" && !me?.confirm) return <p className="confirm-note ok" role="status">Email confirmed. Pick a plan on Billing to start.</p>;
   if (!me?.confirm) return null;
   return (
     <div className="confirm-note" role="alert">
       <p>
-        <b>{opened === "0" ? "That link has expired or was already used." : "Confirm your email to start your free minutes."}</b>{" "}
+        <b>{opened === "0" ? "That link has expired or was already used." : "Confirm your email to finish setting up your account."}</b>{" "}
         {sent === "sent" ? `A new link is on its way to ${me.email}.` : `Open the link we sent to ${me.email}.`}
       </p>
       <p className="spam-tip">Not in your inbox? <b>Check your Spam folder</b>: our emails sometimes land there by mistake. If you find it there, tap “Not spam”.</p>

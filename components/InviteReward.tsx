@@ -11,7 +11,7 @@ export default function InviteReward({ minutes, reasons }: { minutes: number; re
   return (
     <dialog ref={ref} className="invite-reward" aria-labelledby="ir-title" onClose={seen}>
       <span className="ir-mins" aria-hidden="true">+{minutes}<small>min</small></span>
-      <h2 id="ir-title">{minutes} free minute{minutes === 1 ? "" : "s"} added to your account</h2>
+      <h2 id="ir-title">{minutes} bonus minute{minutes === 1 ? "" : "s"} added to your account</h2>
       <p className="muted">Thanks for inviting {reasons.length > 1 ? "friends" : "a friend"} to Vasanamm.</p>
       {reasons.length > 0 && <ul>{reasons.map((r, i) => <li key={i}>{r}</li>)}</ul>}
       <p className="muted small">They&apos;re in your minutes left now, and stay with you when a new pass starts.</p>
