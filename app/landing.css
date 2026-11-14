@@ -16,11 +16,11 @@ main { overflow-x: clip; }
 .hero { text-align: center; padding: 80px 0 48px; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; }
 .hero h1 { max-width: 14ch; overflow-wrap: break-word; }
 /* Rotating language name in the headline, in its own script */
-.lang-word { display: block; min-height: 1.35em; font-family: var(--font-tamil), "Nirmala UI", "Noto Sans", var(--font-sans), sans-serif; font-weight: 700; line-height: 1.35; padding-bottom: .05em; animation: wordIn .55s var(--ease) both; }
+.lang-word { display: block; min-height: 1.35em; font-family: var(--font-sans), var(--font-tamil), "Nirmala UI", "Noto Sans", sans-serif; font-weight: 700; line-height: 1.35; padding-bottom: .05em; animation: wordIn .55s var(--ease) both; }
 @keyframes wordIn { from { opacity: 0; transform: translateY(.35em); filter: blur(6px); } }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .hello { display: inline-flex; align-items: baseline; gap: 10px; padding: 8px 16px; border-radius: 999px; margin-bottom: 26px; font-weight: 600; }
-.hello-word { font-size: 1.15rem; animation: pop .5s var(--ease) both; font-family: var(--font-tamil), "Nirmala UI", var(--font-sans), sans-serif; }
+.hello-word { font-size: 1.15rem; animation: pop .5s var(--ease) both; font-family: var(--font-sans), var(--font-tamil), "Nirmala UI", sans-serif; }
 .hello-lang { font-size: .78rem; color: var(--muted); }
 @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.96); } }
 .lede { color: var(--ink-2); font-size: 1.15rem; max-width: 48ch; margin-bottom: 30px; }

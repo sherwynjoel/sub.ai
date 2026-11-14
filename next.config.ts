@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Every app page is per-user; classic dynamic rendering is simpler than Cache Components here.
   reactCompiler: true,
+  // Styles come inside the page instead of as separate files: a first visit on a slow phone draws without waiting
+  // for another round trip to the server (each one is ~0.25 s from India).
+  experimental: { inlineCss: true },
   serverExternalPackages: ["postgres"],
   // Which build this is, in the pages and on the server: open tabs compare the two to offer a refresh (UpdateBanner).
   env: { APP_BUILD: new Date().toISOString() },

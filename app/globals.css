@@ -66,7 +66,7 @@ body::before {
 }
 @keyframes drift { to { transform: translate3d(4vmax, -3vmax, 0) rotate(8deg) scale(1.06); } }
 
-[lang="ta"] { font-family: var(--font-tamil), var(--font-sans), sans-serif; }
+[lang="ta"] { font-family: var(--font-sans), var(--font-tamil), sans-serif; }
 ::selection { background: var(--lime); color: var(--black); }
 
 h1, h2, h3 { font-family: var(--font-head); font-weight: 700; letter-spacing: -.035em; line-height: 1.04; margin: 0 0 .45em; text-wrap: balance; }
@@ -165,7 +165,7 @@ select { appearance: none; -webkit-appearance: none; padding-right: 2.5em; curso
 .glass-reveal-fallback { position: absolute; inset: 0; margin: auto; display: block; max-width: 40%; max-height: 40%; mask-size: contain; -webkit-mask-size: contain; mask-repeat: no-repeat; -webkit-mask-repeat: no-repeat; mask-position: center; -webkit-mask-position: center; }
 
 /* The intro (components/Splash.tsx): over everything from the first paint, once per visit */
-.splash { position: fixed; inset: 0; z-index: 1000; background: #f4f3fb; display: grid; place-items: center; transition: opacity .45s ease, visibility .45s; animation: splash-cap .45s ease 2.4s forwards; }
+.splash { position: fixed; inset: 0; z-index: 1000; background: #f4f3fb; display: grid; place-items: center; transition: opacity .3s ease, visibility .3s; animation: splash-cap .3s ease .8s forwards; }
 .splash.leaving { opacity: 0; visibility: hidden; pointer-events: none; }
 .splash-glass { position: absolute; inset: 0; cursor: default; }
 /* Until the glass has its first frame (scripts still loading): the mark, still */

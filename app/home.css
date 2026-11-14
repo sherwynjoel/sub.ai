@@ -21,7 +21,7 @@
 .hm-ticker ul { display: flex; gap: clamp(28px, 4vw, 56px); width: max-content; list-style: none; margin: 0; padding: 10px 0; animation: hmSlide 70s linear infinite; }
 .hm-ticker.back ul { animation-direction: reverse; animation-duration: 80s; }
 .hm-ticker li { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
-.hm-ticker b { font: 700 clamp(1.6rem, 3.4vw, 2.6rem)/1.3 var(--font-tamil), "Nirmala UI", "Noto Sans", var(--font-sans), sans-serif; }
+.hm-ticker b { font: 700 clamp(1.6rem, 3.4vw, 2.6rem)/1.3 var(--font-sans), var(--font-tamil), "Nirmala UI", "Noto Sans", sans-serif; }
 .hm-ticker.back b { color: #8a87a3; }
 .hm-ticker small { font-size: .8rem; color: var(--muted); }
 .hm-ticker:hover ul { animation-play-state: paused; }
