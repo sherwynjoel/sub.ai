@@ -4,7 +4,7 @@ import GuidePage from "@/components/GuidePage";
 const path = "/tanglish-captions";
 export const metadata: Metadata = {
   title: "Tanglish captions: Tamil subtitles in English letters",
-  description: "Turn Tamil and code-mixed speech into Tanglish captions (Tamil in English letters) for Reels, Shorts and YouTube. Edit, style and export. 15 minutes free.",
+  description: "Turn Tamil and code-mixed speech into Tanglish captions (Tamil in English letters) for Reels, Shorts and YouTube. Edit, style and export. Plans from ₹499.",
   alternates: { canonical: path },
 };
 
@@ -27,9 +27,9 @@ export default function Page() {
       ]}
       faq={[
         ["What is Tanglish?", "Tamil written in English letters, the way most people type Tamil on their phones, often with English words mixed in."],
-        ["Can I switch to Tamil script later?", "The script is chosen when you upload. To get both, upload the video again with the other script; your free minutes cover short clips."],
+        ["Can I switch to Tamil script later?", "The script is chosen when you upload. To get both, upload the video again with the other script, which uses its minutes again."],
         ["Do the captions work on Instagram and YouTube Shorts?", "Yes. Export a 9:16 MP4 with the captions burned in, with the Instagram Reels or YouTube Shorts safe zone so nothing hides behind the buttons."],
-        ["Is there a free trial?", "Yes, 15 minutes of video free, with no card needed."],
+        ["Is there a free trial?", "Not right now. Plans start at ₹499 for 30 days and 300 minutes."],
       ]}
     />
   );

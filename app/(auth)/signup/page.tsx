@@ -7,7 +7,7 @@ export default async function Page() {
   const invited = !!(await cookies()).get(REF_COOKIE)?.value;
   return (
     <>
-      {invited && <p className="invite-note">A friend invited you. Sign up to start your free trial.</p>}
+      {invited && <p className="invite-note">A friend invited you. Sign up to get started.</p>}
       <Suspense>
         <AuthForm mode="signup" />
       </Suspense>

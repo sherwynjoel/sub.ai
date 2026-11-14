@@ -2013,7 +2013,7 @@ export default function Editor({ initial, mediaUrl }: { initial: Job; mediaUrl?:
                     <a className="btn ghost" href={made.url} download={made.name}>Download the older MP4</a>
                   </>}
                   {!made && (job.renderStatus === "done" || job.renderStatus === "stale") && <a className="btn ghost" href={`/api/jobs/${job.id}/render`} download>Download the older MP4</a>}
-                  {freePlan && <p className="muted small wm-note">Free plan videos carry a small &ldquo;Made with {BRAND.name}&rdquo; mark. <a href="/pricing">Upgrade</a> to export without it.</p>}
+                  {freePlan && <p className="muted small wm-note">Videos made without a plan carry a small &ldquo;Made with {BRAND.name}&rdquo; mark. <a href="/pricing">Upgrade</a> to export without it.</p>}
                 </div>
               )}
               {exportError && <p className="error">{exportError}</p>}

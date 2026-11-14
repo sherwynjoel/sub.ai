@@ -1,7 +1,7 @@
 export type PlanId = "free" | "creator" | "pro" | "studio";
 
 export const PLANS: Record<PlanId, { name: string; priceInr: number; minutes: number; blurb: string }> = {
-  free: { name: "Trial", priceInr: 0, minutes: 15, blurb: "Try it on a few clips" },
+  free: { name: "No plan", priceInr: 0, minutes: 0, blurb: "Pick a plan to start" }, // no free trial: only invite or admin-added minutes
   creator: { name: "Creator", priceInr: 499, minutes: 300, blurb: "For solo editors & YouTubers" },
   pro: { name: "Pro", priceInr: 1499, minutes: 1200, blurb: "For busy freelancers" },
   studio: { name: "Studio", priceInr: 3999, minutes: 4000, blurb: "For post-production teams" },
@@ -50,7 +50,9 @@ export function outOfMinutes(u: Quota, now = new Date()) {
   const end = passEnd(u);
   return passExpired(u, now) && end
     ? `Your pass ended on ${longDate(end)} and its unused minutes expired. Get a new pass on Billing to continue.`
-    : "You've used all your minutes. Upgrade your plan to continue.";
+    : u.plan === "free"
+      ? "Pick a plan on Billing to start subtitling your videos."
+      : "You've used all your minutes. Upgrade your plan to continue.";
 }
 
 /** Seconds as minutes and seconds, e.g. "12 min 5 s" ("45 s" under a minute). */

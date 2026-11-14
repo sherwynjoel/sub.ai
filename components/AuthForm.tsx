@@ -39,7 +39,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
   return (
     <form className="auth" onSubmit={submit}>
       <h1>{signup ? "Create your account" : "Welcome back"}</h1>
-      <p className="muted">{signup ? "Your first 15 minutes of subtitles are free." : "Sign in to your projects."}</p>
+      <p className="muted">{signup ? "Create your account, then pick a plan." : "Sign in to your projects."}</p>
       <a className="google-btn" href={`/api/auth/google${plan ? `?plan=${plan}` : ""}`}>
         <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true">
           <path fill="#EA4335" d="M24 9.5c3.5 0 6.7 1.2 9.2 3.6l6.8-6.8C35.9 2.4 30.5 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.2C12.4 13.7 17.7 9.5 24 9.5z" />

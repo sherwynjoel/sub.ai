@@ -34,7 +34,7 @@ export default function GuidePage({ h1, lead, points, steps, faq, path }: Props)
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, "\\u003c") }} />
       <h1>{h1}</h1>
       <p className="lead">{lead}</p>
-      <p className="guide-cta"><Link href="/signup" className="btn">Try it free · {PLANS.free.minutes} minutes</Link> <span className="muted small">No card needed</span></p>
+      <p className="guide-cta"><Link href="/signup" className="btn">Get started</Link> <span className="muted small">Plans from ₹{PLANS.creator.priceInr} for 30 days</span></p>
 
       <div className="guide-points">
         {points.map(([h, t]) => <section key={h} className="card"><h2>{h}</h2><p>{t}</p></section>)}
@@ -50,8 +50,8 @@ export default function GuidePage({ h1, lead, points, steps, faq, path }: Props)
 
       <div className="card guide-end">
         <h2>Subtitle your next video with {BRAND.name}</h2>
-        <p>Plans from ₹{PLANS.creator.priceInr} a month after the free minutes. Cancel any time.</p>
-        <Link href="/signup" className="btn">Start free</Link>
+        <p>Plans from ₹{PLANS.creator.priceInr} for 30 days. Cancel any time.</p>
+        <Link href="/signup" className="btn">Get started</Link>
       </div>
 
       <nav className="guide-more" aria-label="More guides">

@@ -261,8 +261,13 @@ export default function Dashboard() {
             <div className="wiz-body">
               {Number.isFinite(check.left) && Math.ceil(check.seconds) > check.left ? (
                 <div className="wiz-short">
-                  <h2>Not enough minutes</h2>
-                  <p>This video needs <b>{minSec(check.seconds)}</b>; you have <b>{minSec(check.left)}</b> left.</p>
+                  {check.left <= 0 ? <>
+                    <h2>Pick a plan to start</h2>
+                    <p>This video needs <b>{minSec(check.seconds)}</b>. Plans start at ₹499 for 30 days and 300 minutes; your video waits here.</p>
+                  </> : <>
+                    <h2>Not enough minutes</h2>
+                    <p>This video needs <b>{minSec(check.seconds)}</b>; you have <b>{minSec(check.left)}</b> left.</p>
+                  </>}
                   <div className="wiz-actions"><Link className="btn" href="/app/billing">See plans</Link><button className="btn ghost" onClick={cancel}>Choose another</button></div>
                 </div>
               ) : step === 1 ? (

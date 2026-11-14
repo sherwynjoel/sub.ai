@@ -10,7 +10,7 @@ import StyleWall from "@/components/StyleWall";
 import ClipCompare from "@/components/ClipCompare";
 import { BRAND, BUSINESS } from "@/lib/brand";
 import { LANGUAGES } from "@/lib/languages";
-import { PLANS, type PlanId } from "@/lib/plans";
+import { PAID, PLANS } from "@/lib/plans";
 import { STYLE_CHOICES } from "@/lib/captionStyles";
 import LogoName from "@/components/LogoName";
 import LiquidGlass, { GlassFilter } from "@/components/ui/liquid-glass";
@@ -29,14 +29,13 @@ const HELLO = [
 ];
 
 const t = {
-  nav: ["Features", "How it works", "Pricing"], signIn: "Sign in", start: "Start free", startShort: "Start",
-  cta: "Start free · 15 min", note: "No card. No setup.",
+  nav: ["Features", "How it works", "Pricing"], signIn: "Sign in", start: "Get started", startShort: "Start",
+  cta: "Get started", note: "Plans from ₹499 for 30 days.",
   faq: [
-    ["Is it really free to try?", "Yes. You get 15 minutes to use within 30 days, with every style. No card. Pay only if you pick a plan."],
     ["Does it get Tanglish?", "Yes. Mixed dialogue stays as spoken: Tamil words in Tamil script, English words in English, with an English translation under it."],
     ["Which languages work?", `Tamil, Hindi, Telugu, Malayalam, Kannada, Bengali, Marathi and ${LANGUAGES.length - 7} more Indian languages, each with English on the same timing.`],
     ["Does it work on my phone?", "Yes, in the browser on Android and iPhone. Long videos and 4K exports are quicker on a computer."],
-    ["Is there a watermark?", "Only on the free trial, as a small “Made with Vasanamm” mark. Paid plans have none, and SRT and VTT files never do."],
+    ["Is there a watermark?", "No. Videos exported on a plan have no watermark, and SRT and VTT files never do."],
     ["Can I upload the subtitles to YouTube?", "Yes. Download the SRT and add it in YouTube Studio, or export the MP4 with the captions burned in."],
     ["Is my video safe?", "Only the sound is sent to make the subtitles. The video stays on your device, and the styled MP4 is made there too."],
     ["How long can a video be?", "Files go up to 4 GB. Minutes come out of your plan."],
@@ -88,7 +87,7 @@ export default function Landing({ popular }: { popular: string[] }) {
       </header>
 
       <main>
-        {invited && <p className="wrap hm-invited" role="status">A friend invited you to {BRAND.name}. Start free: no card needed.</p>}
+        {invited && <p className="wrap hm-invited" role="status">A friend invited you to {BRAND.name}. Sign up to get started.</p>}
         {/* Hero: a headline that ends in a hand-written word (click it for another) with fruit stickers to play with. */}
         <FruitSticker
           as="section" headingTag="h1" className="hero-fruit"
@@ -320,19 +319,19 @@ export default function Landing({ popular }: { popular: string[] }) {
             <p className="hm-lede">A minute is one minute of your video. A 1-minute reel uses one minute, however many times you change the words or the style.</p>
           </div>
           <div className="hm-passes">
-            {(Object.keys(PLANS) as PlanId[]).map((id, n) => {
+            {PAID.map((id, n) => {
               const p = PLANS[id];
               return (
                 <article key={id} className={`hm-pass${id === "pro" ? " hot" : ""} rise`} style={d(n * 0.06)}>
                   <header><span>{p.name}</span>{id === "pro" && <em>Popular</em>}</header>
-                  <p className="hm-price">{p.priceInr ? <>₹{p.priceInr.toLocaleString("en-IN")}<small> / 30 days</small></> : <>Free<small> once</small></>}</p>
+                  <p className="hm-price">{p.priceInr ? <>₹{p.priceInr.toLocaleString("en-IN")}<small> / 30 days</small></> : null}</p>
                   <p className="hm-mins"><b>{p.minutes.toLocaleString("en-IN")}</b> minutes</p>
                   <ul>
-                    <li>{p.priceInr ? `₹${(p.priceInr / p.minutes).toFixed(2).replace(/\.00$/, "")} a minute` : "No card needed"}</li>
-                    <li>{p.priceInr ? `About ${p.minutes.toLocaleString("en-IN")} one-minute reels` : "Every style, with a small Vasanamm mark"}</li>
+                    <li>₹{(p.priceInr / p.minutes).toFixed(2).replace(/\.00$/, "")} a minute</li>
+                    <li>About {p.minutes.toLocaleString("en-IN")} one-minute reels</li>
                     <li>{p.blurb}</li>
                   </ul>
-                  <Link href={id === "free" ? "/signup" : `/signup?plan=${id}`} className={`btn${id === "pro" ? " lime" : id === "free" ? "" : " ghost"}`}>{id === "free" ? "Start free" : `Choose ${p.name}`}</Link>
+                  <Link href={`/signup?plan=${id}`} className={`btn${id === "pro" ? " lime" : " ghost"}`}>Choose {p.name}</Link>
                 </article>
               );
             })}
@@ -340,7 +339,7 @@ export default function Landing({ popular }: { popular: string[] }) {
           <ul className="hm-fine rise">
             <li>Pay in rupees with UPI or card, through Razorpay</li>
             <li>If a video fails, its minutes are given back</li>
-            <li>Paid plans have no watermark</li>
+            <li>No watermark on any plan</li>
             <li>Minutes not used in 30 days expire</li>
             <li>The Premiere Pro panel is in every plan</li>
           </ul>
@@ -375,7 +374,7 @@ export default function Landing({ popular }: { popular: string[] }) {
         chatHref="" /* no messaging number yet: hides the chat bubble */
         jobsLabel="start here"
         jobs={[
-          { title: "start free", href: "/signup" },
+          { title: "get started", href: "/signup" },
           { title: "sign in", href: "/login" },
           { title: "tamil subtitles", href: "/tamil-subtitle-generator" },
           { title: "tanglish captions", href: "/tanglish-captions" },

@@ -16,7 +16,7 @@ const ld = {
   applicationCategory: "MultimediaApplication",
   operatingSystem: "Web, macOS, Windows",
   description: "Timed subtitles for Tamil and 21 more Indian languages plus English, with a web editor and a Premiere Pro / After Effects panel.",
-  offers: (["free", "creator", "pro", "studio"] as const).map((p) => ({ "@type": "Offer", name: PLANS[p].name, price: PLANS[p].priceInr, priceCurrency: "INR" })),
+  offers: (["creator", "pro", "studio"] as const).map((p) => ({ "@type": "Offer", name: PLANS[p].name, price: PLANS[p].priceInr, priceCurrency: "INR" })),
 };
 
 // The most popular styles, worked out again each hour. Customers only, not the admins' tests.

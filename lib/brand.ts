@@ -11,5 +11,5 @@ export const BUSINESS = {
   address: "",
   city: "", // courts for disputes (Terms)
   grievanceOfficer: "", // a named person, as India's IT Rules ask
-  updated: "7 November 2026", // the policies' "last updated" date
+  updated: "14 November 2026", // the policies' "last updated" date
 };
